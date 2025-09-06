@@ -141,13 +141,13 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
   BLRandom rnd(0x123456789ABCDEF);
 
   auto rnd_f32 = [&]() -> float {
-    float sign = rnd.nextDouble() < 0.5 ? 1.0f : -1.0f;
-    return float(rnd.nextDouble() * float(1e25)) * sign;
+    float sign = rnd.next_double() < 0.5 ? 1.0f : -1.0f;
+    return float(rnd.next_double() * float(1e25)) * sign;
   };
 
   auto rnd_f64 = [&]() -> double {
-    double sign = rnd.nextDouble() < 0.5 ? 1.0 : -1.0;
-    return rnd.nextDouble() * double(1e52) * sign;
+    double sign = rnd.next_double() < 0.5 ? 1.0 : -1.0;
+    return rnd.next_double() * double(1e52) * sign;
   };
 
   INFO("Testing floating point rounding - trunc(float32)");
@@ -230,92 +230,92 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
     }
   }
 
-  INFO("bl::Math::floorToInt()");
+  INFO("bl::Math::floor_to_int()");
   {
-    EXPECT_EQ(Math::floorToInt(-1.5f),-2);
-    EXPECT_EQ(Math::floorToInt(-1.5 ),-2);
-    EXPECT_EQ(Math::floorToInt(-0.9f),-1);
-    EXPECT_EQ(Math::floorToInt(-0.9 ),-1);
-    EXPECT_EQ(Math::floorToInt(-0.5f),-1);
-    EXPECT_EQ(Math::floorToInt(-0.5 ),-1);
-    EXPECT_EQ(Math::floorToInt(-0.1f),-1);
-    EXPECT_EQ(Math::floorToInt(-0.1 ),-1);
-    EXPECT_EQ(Math::floorToInt( 0.0f), 0);
-    EXPECT_EQ(Math::floorToInt( 0.0 ), 0);
-    EXPECT_EQ(Math::floorToInt( 0.1f), 0);
-    EXPECT_EQ(Math::floorToInt( 0.1 ), 0);
-    EXPECT_EQ(Math::floorToInt( 0.5f), 0);
-    EXPECT_EQ(Math::floorToInt( 0.5 ), 0);
-    EXPECT_EQ(Math::floorToInt( 0.9f), 0);
-    EXPECT_EQ(Math::floorToInt( 0.9 ), 0);
-    EXPECT_EQ(Math::floorToInt( 1.5f), 1);
-    EXPECT_EQ(Math::floorToInt( 1.5 ), 1);
+    EXPECT_EQ(Math::floor_to_int(-1.5f),-2);
+    EXPECT_EQ(Math::floor_to_int(-1.5 ),-2);
+    EXPECT_EQ(Math::floor_to_int(-0.9f),-1);
+    EXPECT_EQ(Math::floor_to_int(-0.9 ),-1);
+    EXPECT_EQ(Math::floor_to_int(-0.5f),-1);
+    EXPECT_EQ(Math::floor_to_int(-0.5 ),-1);
+    EXPECT_EQ(Math::floor_to_int(-0.1f),-1);
+    EXPECT_EQ(Math::floor_to_int(-0.1 ),-1);
+    EXPECT_EQ(Math::floor_to_int( 0.0f), 0);
+    EXPECT_EQ(Math::floor_to_int( 0.0 ), 0);
+    EXPECT_EQ(Math::floor_to_int( 0.1f), 0);
+    EXPECT_EQ(Math::floor_to_int( 0.1 ), 0);
+    EXPECT_EQ(Math::floor_to_int( 0.5f), 0);
+    EXPECT_EQ(Math::floor_to_int( 0.5 ), 0);
+    EXPECT_EQ(Math::floor_to_int( 0.9f), 0);
+    EXPECT_EQ(Math::floor_to_int( 0.9 ), 0);
+    EXPECT_EQ(Math::floor_to_int( 1.5f), 1);
+    EXPECT_EQ(Math::floor_to_int( 1.5 ), 1);
   }
 
-  INFO("bl::Math::ceilToInt()");
+  INFO("bl::Math::ceil_to_int()");
   {
-    EXPECT_EQ(Math::ceilToInt(-1.5f),-1);
-    EXPECT_EQ(Math::ceilToInt(-1.5 ),-1);
-    EXPECT_EQ(Math::ceilToInt(-0.9f), 0);
-    EXPECT_EQ(Math::ceilToInt(-0.9 ), 0);
-    EXPECT_EQ(Math::ceilToInt(-0.5f), 0);
-    EXPECT_EQ(Math::ceilToInt(-0.5 ), 0);
-    EXPECT_EQ(Math::ceilToInt(-0.1f), 0);
-    EXPECT_EQ(Math::ceilToInt(-0.1 ), 0);
-    EXPECT_EQ(Math::ceilToInt( 0.0f), 0);
-    EXPECT_EQ(Math::ceilToInt( 0.0 ), 0);
-    EXPECT_EQ(Math::ceilToInt( 0.1f), 1);
-    EXPECT_EQ(Math::ceilToInt( 0.1 ), 1);
-    EXPECT_EQ(Math::ceilToInt( 0.5f), 1);
-    EXPECT_EQ(Math::ceilToInt( 0.5 ), 1);
-    EXPECT_EQ(Math::ceilToInt( 0.9f), 1);
-    EXPECT_EQ(Math::ceilToInt( 0.9 ), 1);
-    EXPECT_EQ(Math::ceilToInt( 1.5f), 2);
-    EXPECT_EQ(Math::ceilToInt( 1.5 ), 2);
+    EXPECT_EQ(Math::ceil_to_int(-1.5f),-1);
+    EXPECT_EQ(Math::ceil_to_int(-1.5 ),-1);
+    EXPECT_EQ(Math::ceil_to_int(-0.9f), 0);
+    EXPECT_EQ(Math::ceil_to_int(-0.9 ), 0);
+    EXPECT_EQ(Math::ceil_to_int(-0.5f), 0);
+    EXPECT_EQ(Math::ceil_to_int(-0.5 ), 0);
+    EXPECT_EQ(Math::ceil_to_int(-0.1f), 0);
+    EXPECT_EQ(Math::ceil_to_int(-0.1 ), 0);
+    EXPECT_EQ(Math::ceil_to_int( 0.0f), 0);
+    EXPECT_EQ(Math::ceil_to_int( 0.0 ), 0);
+    EXPECT_EQ(Math::ceil_to_int( 0.1f), 1);
+    EXPECT_EQ(Math::ceil_to_int( 0.1 ), 1);
+    EXPECT_EQ(Math::ceil_to_int( 0.5f), 1);
+    EXPECT_EQ(Math::ceil_to_int( 0.5 ), 1);
+    EXPECT_EQ(Math::ceil_to_int( 0.9f), 1);
+    EXPECT_EQ(Math::ceil_to_int( 0.9 ), 1);
+    EXPECT_EQ(Math::ceil_to_int( 1.5f), 2);
+    EXPECT_EQ(Math::ceil_to_int( 1.5 ), 2);
   }
 
-  INFO("bl::Math::truncToInt()");
+  INFO("bl::Math::trunc_to_int()");
   {
-    EXPECT_EQ(Math::truncToInt(-1.5f),-1);
-    EXPECT_EQ(Math::truncToInt(-1.5 ),-1);
-    EXPECT_EQ(Math::truncToInt(-0.9f), 0);
-    EXPECT_EQ(Math::truncToInt(-0.9 ), 0);
-    EXPECT_EQ(Math::truncToInt(-0.5f), 0);
-    EXPECT_EQ(Math::truncToInt(-0.5 ), 0);
-    EXPECT_EQ(Math::truncToInt(-0.1f), 0);
-    EXPECT_EQ(Math::truncToInt(-0.1 ), 0);
-    EXPECT_EQ(Math::truncToInt( 0.0f), 0);
-    EXPECT_EQ(Math::truncToInt( 0.0 ), 0);
-    EXPECT_EQ(Math::truncToInt( 0.1f), 0);
-    EXPECT_EQ(Math::truncToInt( 0.1 ), 0);
-    EXPECT_EQ(Math::truncToInt( 0.5f), 0);
-    EXPECT_EQ(Math::truncToInt( 0.5 ), 0);
-    EXPECT_EQ(Math::truncToInt( 0.9f), 0);
-    EXPECT_EQ(Math::truncToInt( 0.9 ), 0);
-    EXPECT_EQ(Math::truncToInt( 1.5f), 1);
-    EXPECT_EQ(Math::truncToInt( 1.5 ), 1);
+    EXPECT_EQ(Math::trunc_to_int(-1.5f),-1);
+    EXPECT_EQ(Math::trunc_to_int(-1.5 ),-1);
+    EXPECT_EQ(Math::trunc_to_int(-0.9f), 0);
+    EXPECT_EQ(Math::trunc_to_int(-0.9 ), 0);
+    EXPECT_EQ(Math::trunc_to_int(-0.5f), 0);
+    EXPECT_EQ(Math::trunc_to_int(-0.5 ), 0);
+    EXPECT_EQ(Math::trunc_to_int(-0.1f), 0);
+    EXPECT_EQ(Math::trunc_to_int(-0.1 ), 0);
+    EXPECT_EQ(Math::trunc_to_int( 0.0f), 0);
+    EXPECT_EQ(Math::trunc_to_int( 0.0 ), 0);
+    EXPECT_EQ(Math::trunc_to_int( 0.1f), 0);
+    EXPECT_EQ(Math::trunc_to_int( 0.1 ), 0);
+    EXPECT_EQ(Math::trunc_to_int( 0.5f), 0);
+    EXPECT_EQ(Math::trunc_to_int( 0.5 ), 0);
+    EXPECT_EQ(Math::trunc_to_int( 0.9f), 0);
+    EXPECT_EQ(Math::trunc_to_int( 0.9 ), 0);
+    EXPECT_EQ(Math::trunc_to_int( 1.5f), 1);
+    EXPECT_EQ(Math::trunc_to_int( 1.5 ), 1);
   }
 
-  INFO("bl::Math::roundToInt()");
+  INFO("bl::Math::round_to_int()");
   {
-    EXPECT_EQ(Math::roundToInt(-1.5f),-1);
-    EXPECT_EQ(Math::roundToInt(-1.5 ),-1);
-    EXPECT_EQ(Math::roundToInt(-0.9f),-1);
-    EXPECT_EQ(Math::roundToInt(-0.9 ),-1);
-    EXPECT_EQ(Math::roundToInt(-0.5f), 0);
-    EXPECT_EQ(Math::roundToInt(-0.5 ), 0);
-    EXPECT_EQ(Math::roundToInt(-0.1f), 0);
-    EXPECT_EQ(Math::roundToInt(-0.1 ), 0);
-    EXPECT_EQ(Math::roundToInt( 0.0f), 0);
-    EXPECT_EQ(Math::roundToInt( 0.0 ), 0);
-    EXPECT_EQ(Math::roundToInt( 0.1f), 0);
-    EXPECT_EQ(Math::roundToInt( 0.1 ), 0);
-    EXPECT_EQ(Math::roundToInt( 0.5f), 1);
-    EXPECT_EQ(Math::roundToInt( 0.5 ), 1);
-    EXPECT_EQ(Math::roundToInt( 0.9f), 1);
-    EXPECT_EQ(Math::roundToInt( 0.9 ), 1);
-    EXPECT_EQ(Math::roundToInt( 1.5f), 2);
-    EXPECT_EQ(Math::roundToInt( 1.5 ), 2);
+    EXPECT_EQ(Math::round_to_int(-1.5f),-1);
+    EXPECT_EQ(Math::round_to_int(-1.5 ),-1);
+    EXPECT_EQ(Math::round_to_int(-0.9f),-1);
+    EXPECT_EQ(Math::round_to_int(-0.9 ),-1);
+    EXPECT_EQ(Math::round_to_int(-0.5f), 0);
+    EXPECT_EQ(Math::round_to_int(-0.5 ), 0);
+    EXPECT_EQ(Math::round_to_int(-0.1f), 0);
+    EXPECT_EQ(Math::round_to_int(-0.1 ), 0);
+    EXPECT_EQ(Math::round_to_int( 0.0f), 0);
+    EXPECT_EQ(Math::round_to_int( 0.0 ), 0);
+    EXPECT_EQ(Math::round_to_int( 0.1f), 0);
+    EXPECT_EQ(Math::round_to_int( 0.1 ), 0);
+    EXPECT_EQ(Math::round_to_int( 0.5f), 1);
+    EXPECT_EQ(Math::round_to_int( 0.5 ), 1);
+    EXPECT_EQ(Math::round_to_int( 0.9f), 1);
+    EXPECT_EQ(Math::round_to_int( 0.9 ), 1);
+    EXPECT_EQ(Math::round_to_int( 1.5f), 2);
+    EXPECT_EQ(Math::round_to_int( 1.5 ), 2);
   }
 
   INFO("bl::Math::frac()");
@@ -352,32 +352,32 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
     EXPECT_FALSE(Math::isBetween0And1( 1.001 ));
   }
 
-  INFO("bl::Math::quadRoots");
+  INFO("bl::Math::quad_roots");
   {
     size_t count;
     double roots[2];
 
     // x^2 + 4x + 4 == 0
-    count = Math::quadRoots(roots, 1.0, 4.0, 4.0, Traits::minValue<double>(), Traits::maxValue<double>());
+    count = Math::quad_roots(roots, 1.0, 4.0, 4.0, Traits::min_value<double>(), Traits::max_value<double>());
 
     EXPECT_EQ(count, 1u);
     EXPECT_EQ(roots[0], -2.0);
 
     // -4x^2 + 8x + 12 == 0
-    count = Math::quadRoots(roots, -4.0, 8.0, 12.0, Traits::minValue<double>(), Traits::maxValue<double>());
+    count = Math::quad_roots(roots, -4.0, 8.0, 12.0, Traits::min_value<double>(), Traits::max_value<double>());
 
     EXPECT_EQ(count, 2u);
     EXPECT_EQ(roots[0], -1.0);
     EXPECT_EQ(roots[1],  3.0);
   }
 
-  INFO("bl::Math::cubicRoots");
+  INFO("bl::Math::cubic_roots");
   {
     size_t count;
     double roots[2];
 
     // 64x^3 - 64 == 1
-    count = Math::cubicRoots(roots, 64, 0.0, 0.0, -64, Traits::minValue<double>(), Traits::maxValue<double>());
+    count = Math::cubic_roots(roots, 64, 0.0, 0.0, -64, Traits::min_value<double>(), Traits::max_value<double>());
 
     EXPECT_EQ(count, 1u);
     EXPECT_EQ(roots[0], 1.0);

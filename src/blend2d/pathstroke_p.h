@@ -17,14 +17,14 @@
 namespace bl {
 namespace PathInternal {
 
-BL_HIDDEN BLResult strokePath(
+BL_HIDDEN BLResult stroke_path(
   const BLPathView& input,
   const BLStrokeOptions& options,
   const BLApproximationOptions& approx,
-  BLPath& aPath,
-  BLPath& bPath,
-  BLPath& cPath,
-  BLPathStrokeSinkFunc sink, void* userData) noexcept;
+  BLPath& a_path,
+  BLPath& b_path,
+  BLPath& c_path,
+  BLPathStrokeSinkFunc sink, void* user_data) noexcept;
 
 } // {PathInternal}
 } // {bl}

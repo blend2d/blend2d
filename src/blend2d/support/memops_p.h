@@ -202,7 +202,7 @@ template<typename T>
   memcpy(&tmp, p, sizeof(T));
 
   if (BL_BYTE_ORDER_NATIVE != BL_BYTE_ORDER_LE) {
-    tmp = IntOps::byteSwap(tmp);
+    tmp = IntOps::byte_swap(tmp);
   }
 
   return tmp;
@@ -326,7 +326,7 @@ static BL_INLINE_NODEBUG void storeu_le(void* p, const T& v) noexcept {
   T tmp = v;
 
   if constexpr (BL_BYTE_ORDER_NATIVE != BL_BYTE_ORDER_LE) {
-    tmp = IntOps::byteSwap(tmp);
+    tmp = IntOps::byte_swap(tmp);
   }
 
   memcpy(p, &tmp, sizeof(T));
@@ -338,17 +338,17 @@ static BL_INLINE_NODEBUG void storeu_le(void* p, const T& v) noexcept {
 //! \{
 
 template<typename T>
-static BL_INLINE void fillInlineT(T* dst, const T& pattern, size_t count) noexcept {
+static BL_INLINE void fill_inline_t(T* dst, const T& pattern, size_t count) noexcept {
   for (size_t i = 0; i < count; i++)
     dst[i] = pattern;
 }
 
 template<typename T>
-static BL_INLINE void fillSmallT(T* dst, const T& pattern, size_t count) noexcept {
-  fillInlineT(dst, pattern, count);
+static BL_INLINE void fill_small_t(T* dst, const T& pattern, size_t count) noexcept {
+  fill_inline_t(dst, pattern, count);
 }
 
-static BL_INLINE void fillSmall(void* dst, uint8_t pattern, size_t count) noexcept {
+static BL_INLINE void fill_small(void* dst, uint8_t pattern, size_t count) noexcept {
 #if defined(__GNUC__) && BL_TARGET_ARCH_X86 && !defined(BL_SANITIZE_MEMORY)
   size_t unused0, unused1;
   __asm__ __volatile__(
@@ -358,7 +358,7 @@ static BL_INLINE void fillSmall(void* dst, uint8_t pattern, size_t count) noexce
 #elif defined(_MSC_VER) && BL_TARGET_ARCH_X86
   __stosb(static_cast<unsigned char *>(dst), static_cast<unsigned char>(pattern), count);
 #else
-  fillSmallT(static_cast<uint8_t*>(dst), pattern, count);
+  fill_small_t(static_cast<uint8_t*>(dst), pattern, count);
 #endif
 }
 
@@ -368,13 +368,13 @@ static BL_INLINE void fillSmall(void* dst, uint8_t pattern, size_t count) noexce
 //! \{
 
 template<typename T>
-static BL_INLINE void copyForwardInlineT(T* dst, const T* src, size_t count) noexcept {
+static BL_INLINE void copy_forward_inline_t(T* dst, const T* src, size_t count) noexcept {
   for (size_t i = 0; i < count; i++)
     dst[i] = src[i];
 }
 
 template<typename T>
-static BL_INLINE void copyBackwardInlineT(T* dst, const T* src, size_t count) noexcept {
+static BL_INLINE void copy_backward_inline_t(T* dst, const T* src, size_t count) noexcept {
   size_t i = count;
   while (i) {
     i--;
@@ -383,7 +383,7 @@ static BL_INLINE void copyBackwardInlineT(T* dst, const T* src, size_t count) no
 }
 
 template<typename T>
-static BL_INLINE void copyForwardAndZeroT(T* dst, T* src, size_t count) noexcept {
+static BL_INLINE void copy_forward_and_zero_t(T* dst, T* src, size_t count) noexcept {
   for (size_t i = 0; i < count; i++) {
     T item = src[i];
     src[i] = T(0);
@@ -392,7 +392,7 @@ static BL_INLINE void copyForwardAndZeroT(T* dst, T* src, size_t count) noexcept
 }
 
 //! Copies `n` bytes from `src` to `dst` - optimized for small buffers.
-static BL_INLINE void copySmall(void* dst, const void* src, size_t n) noexcept {
+static BL_INLINE void copy_small(void* dst, const void* src, size_t n) noexcept {
 #if defined(__GNUC__) && BL_TARGET_ARCH_X86 && !defined(BL_SANITIZE_MEMORY)
   size_t unused;
   __asm__ __volatile__(
@@ -403,7 +403,7 @@ static BL_INLINE void copySmall(void* dst, const void* src, size_t n) noexcept {
 #elif defined(_MSC_VER) && BL_TARGET_ARCH_X86
   __movsb(static_cast<unsigned char *>(dst), static_cast<const unsigned char *>(src), n);
 #else
-  copyForwardInlineT<uint8_t>(static_cast<uint8_t*>(dst), static_cast<const uint8_t*>(src), n);
+  copy_forward_inline_t<uint8_t>(static_cast<uint8_t*>(dst), static_cast<const uint8_t*>(src), n);
 #endif
 }
 
@@ -419,7 +419,7 @@ static BL_INLINE void combine(T* dst, const T* src, size_t count) noexcept {
 }
 
 template<class CombineOp, typename T>
-static BL_INLINE void combineSmall(T* dst, const T* src, size_t count) noexcept {
+static BL_INLINE void combine_small(T* dst, const T* src, size_t count) noexcept {
   BL_NOUNROLL
   for (size_t i = 0; i < count; i++)
     dst[i] = CombineOp::op(dst[i], src[i]);
@@ -431,7 +431,7 @@ static BL_INLINE void combineSmall(T* dst, const T* src, size_t count) noexcept 
 //! \{
 
 template<typename T>
-static BL_INLINE bool testSmallT(const T* p, size_t count, const T& value) noexcept {
+static BL_INLINE bool test_small_t(const T* p, size_t count, const T& value) noexcept {
   BL_NOUNROLL
   for (size_t i = 0; i < count; i++)
     if (p[i] != value)

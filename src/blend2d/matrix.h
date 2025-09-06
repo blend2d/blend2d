@@ -95,15 +95,15 @@ BL_DEFINE_ENUM(BLTransformOp) {
 
 BL_BEGIN_C_DECLS
 
-BL_API BLResult BL_CDECL blMatrix2DSetIdentity(BLMatrix2D* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DSetTranslation(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DSetScaling(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DSetSkewing(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DSetRotation(BLMatrix2D* self, double angle, double cx, double cy) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DApplyOp(BLMatrix2D* self, BLTransformOp opType, const void* opData) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DInvert(BLMatrix2D* dst, const BLMatrix2D* src) BL_NOEXCEPT_C;
-BL_API BLTransformType BL_CDECL blMatrix2DGetType(const BLMatrix2D* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_matrix2d_set_identity(BLMatrix2D* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_matrix2d_set_translation(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_matrix2d_set_scaling(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_matrix2d_set_skewing(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_matrix2d_set_rotation(BLMatrix2D* self, double angle, double cx, double cy) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_matrix2d_apply_op(BLMatrix2D* self, BLTransformOp op_type, const void* op_data) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_matrix2d_invert(BLMatrix2D* dst, const BLMatrix2D* src) BL_NOEXCEPT_C;
+BL_API BLTransformType BL_CDECL bl_matrix2d_get_type(const BLMatrix2D* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_matrix2d_map_pointd_array(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
@@ -150,10 +150,10 @@ struct BLMatrix2D {
   //!   [m10 m11]
   //!   [m20 m21]
   //! ```
-  BL_INLINE constexpr BLMatrix2D(double m00Value, double m01Value, double m10Value, double m11Value, double m20Value, double m21Value) noexcept
-    : m00(m00Value), m01(m01Value),
-      m10(m10Value), m11(m11Value),
-      m20(m20Value), m21(m21Value) {}
+  BL_INLINE constexpr BLMatrix2D(double m00_value, double m01_value, double m10_value, double m11_value, double m20_value, double m21_value) noexcept
+    : m00(m00_value), m01(m01_value),
+      m10(m10_value), m11(m11_value),
+      m20(m20_value), m21(m21_value) {}
 
   //! \}
 
@@ -162,84 +162,84 @@ struct BLMatrix2D {
 
   //! Creates a new matrix initialized to identity.
   [[nodiscard]]
-  static BL_INLINE constexpr BLMatrix2D makeIdentity() noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, 0.0, 0.0); }
+  static BL_INLINE constexpr BLMatrix2D make_identity() noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, 0.0, 0.0); }
 
   //! \overload
   [[nodiscard]]
-  static BL_INLINE constexpr BLMatrix2D makeTranslation(double x, double y) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, x, y); }
+  static BL_INLINE constexpr BLMatrix2D make_translation(double x, double y) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, x, y); }
 
   //! Creates a new matrix initialized to translation.
   [[nodiscard]]
-  static BL_INLINE constexpr BLMatrix2D makeTranslation(const BLPointI& p) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, double(p.x), double(p.y)); }
+  static BL_INLINE constexpr BLMatrix2D make_translation(const BLPointI& p) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, double(p.x), double(p.y)); }
 
   //! \overload
   [[nodiscard]]
-  static BL_INLINE constexpr BLMatrix2D makeTranslation(const BLPoint& p) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, p.x, p.y); }
+  static BL_INLINE constexpr BLMatrix2D make_translation(const BLPoint& p) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, p.x, p.y); }
 
   //! Creates a new matrix initialized to scaling.
   [[nodiscard]]
-  static BL_INLINE constexpr BLMatrix2D makeScaling(double xy) noexcept { return BLMatrix2D(xy, 0.0, 0.0, xy, 0.0, 0.0); }
+  static BL_INLINE constexpr BLMatrix2D make_scaling(double xy) noexcept { return BLMatrix2D(xy, 0.0, 0.0, xy, 0.0, 0.0); }
 
   //! \overload
   [[nodiscard]]
-  static BL_INLINE constexpr BLMatrix2D makeScaling(double x, double y) noexcept { return BLMatrix2D(x, 0.0, 0.0, y, 0.0, 0.0); }
+  static BL_INLINE constexpr BLMatrix2D make_scaling(double x, double y) noexcept { return BLMatrix2D(x, 0.0, 0.0, y, 0.0, 0.0); }
 
   //! \overload
   [[nodiscard]]
-  static BL_INLINE constexpr BLMatrix2D makeScaling(const BLPointI& p) noexcept { return BLMatrix2D(double(p.x), 0.0, 0.0, double(p.y), 0.0, 0.0); }
+  static BL_INLINE constexpr BLMatrix2D make_scaling(const BLPointI& p) noexcept { return BLMatrix2D(double(p.x), 0.0, 0.0, double(p.y), 0.0, 0.0); }
 
   //! \overload
   [[nodiscard]]
-  static BL_INLINE constexpr BLMatrix2D makeScaling(const BLPoint& p) noexcept { return BLMatrix2D(p.x, 0.0, 0.0, p.y, 0.0, 0.0); }
+  static BL_INLINE constexpr BLMatrix2D make_scaling(const BLPoint& p) noexcept { return BLMatrix2D(p.x, 0.0, 0.0, p.y, 0.0, 0.0); }
 
   //! Creates a new matrix initialized to rotation.
   [[nodiscard]]
-  static BL_INLINE BLMatrix2D makeRotation(double angle) noexcept {
+  static BL_INLINE BLMatrix2D make_rotation(double angle) noexcept {
     BLMatrix2D result;
-    result.resetToRotation(angle, 0.0, 0.0);
+    result.reset_to_rotation(angle, 0.0, 0.0);
     return result;
   }
 
   //! \overload
   [[nodiscard]]
-  static BL_INLINE BLMatrix2D makeRotation(double angle, double x, double y) noexcept {
+  static BL_INLINE BLMatrix2D make_rotation(double angle, double x, double y) noexcept {
     BLMatrix2D result;
-    result.resetToRotation(angle, x, y);
+    result.reset_to_rotation(angle, x, y);
     return result;
   }
 
   //! \overload
   [[nodiscard]]
-  static BL_INLINE BLMatrix2D makeRotation(double angle, const BLPoint& origin) noexcept {
+  static BL_INLINE BLMatrix2D make_rotation(double angle, const BLPoint& origin) noexcept {
     BLMatrix2D result;
-    result.resetToRotation(angle, origin.x, origin.y);
+    result.reset_to_rotation(angle, origin.x, origin.y);
     return result;
   }
 
   //! Create a new skewing matrix.
   [[nodiscard]]
-  static BL_INLINE BLMatrix2D makeSkewing(double x, double y) noexcept {
+  static BL_INLINE BLMatrix2D make_skewing(double x, double y) noexcept {
     BLMatrix2D result;
-    result.resetToSkewing(x, y);
+    result.reset_to_skewing(x, y);
     return result;
   }
 
   //! \overload
   [[nodiscard]]
-  static BL_INLINE BLMatrix2D makeSkewing(const BLPoint& p) noexcept {
+  static BL_INLINE BLMatrix2D make_skewing(const BLPoint& p) noexcept {
     BLMatrix2D result;
-    result.resetToSkewing(p.x, p.y);
+    result.reset_to_skewing(p.x, p.y);
     return result;
   }
 
   [[nodiscard]]
-  static BL_INLINE BLMatrix2D makeSinCos(double sin, double cos, double tx = 0.0, double ty = 0.0) noexcept {
+  static BL_INLINE BLMatrix2D make_sin_cos(double sin, double cos, double tx = 0.0, double ty = 0.0) noexcept {
     return BLMatrix2D(cos, sin, -sin, cos, tx, ty);
   }
 
   [[nodiscard]]
-  static BL_INLINE BLMatrix2D makeSinCos(double sin, double cos, const BLPoint& t) noexcept {
-    return makeSinCos(sin, cos, t.x, t.y);
+  static BL_INLINE BLMatrix2D make_sin_cos(double sin, double cos, const BLPoint& t) noexcept {
+    return make_sin_cos(sin, cos, t.x, t.y);
   }
 
   //! \}
@@ -261,48 +261,48 @@ struct BLMatrix2D {
           other.m20, other.m21);
   }
 
-  //! Resets matrix to [`m00Value`, `m01Value`, `m10Value`, `m11Value`, `m20Value`, `m21Value`].
-  BL_INLINE void reset(double m00Value, double m01Value, double m10Value, double m11Value, double m20Value, double m21Value) noexcept {
-    m00 = m00Value;
-    m01 = m01Value;
-    m10 = m10Value;
-    m11 = m11Value;
-    m20 = m20Value;
-    m21 = m21Value;
+  //! Resets matrix to [`m00_value`, `m01_value`, `m10_value`, `m11_value`, `m20_value`, `m21_value`].
+  BL_INLINE void reset(double m00_value, double m01_value, double m10_value, double m11_value, double m20_value, double m21_value) noexcept {
+    m00 = m00_value;
+    m01 = m01_value;
+    m10 = m10_value;
+    m11 = m11_value;
+    m20 = m20_value;
+    m21 = m21_value;
   }
 
   //! Resets matrix to translation.
-  BL_INLINE void resetToTranslation(double x, double y) noexcept { reset(1.0, 0.0, 0.0, 1.0, x, y); }
+  BL_INLINE void reset_to_translation(double x, double y) noexcept { reset(1.0, 0.0, 0.0, 1.0, x, y); }
   //! Resets matrix to translation.
-  BL_INLINE void resetToTranslation(const BLPointI& p) noexcept { resetToTranslation(BLPoint(p)); }
+  BL_INLINE void reset_to_translation(const BLPointI& p) noexcept { reset_to_translation(BLPoint(p)); }
   //! Resets matrix to translation.
-  BL_INLINE void resetToTranslation(const BLPoint& p) noexcept { resetToTranslation(p.x, p.y); }
+  BL_INLINE void reset_to_translation(const BLPoint& p) noexcept { reset_to_translation(p.x, p.y); }
 
   //! Resets matrix to scaling.
-  BL_INLINE void resetToScaling(double xy) noexcept { resetToScaling(xy, xy); }
+  BL_INLINE void reset_to_scaling(double xy) noexcept { reset_to_scaling(xy, xy); }
   //! Resets matrix to scaling.
-  BL_INLINE void resetToScaling(double x, double y) noexcept { reset(x, 0.0, 0.0, y, 0.0, 0.0); }
+  BL_INLINE void reset_to_scaling(double x, double y) noexcept { reset(x, 0.0, 0.0, y, 0.0, 0.0); }
   //! Resets matrix to scaling.
-  BL_INLINE void resetToScaling(const BLPointI& p) noexcept { resetToScaling(BLPoint(p)); }
+  BL_INLINE void reset_to_scaling(const BLPointI& p) noexcept { reset_to_scaling(BLPoint(p)); }
   //! Resets matrix to scaling.
-  BL_INLINE void resetToScaling(const BLPoint& p) noexcept { resetToScaling(p.x, p.y); }
+  BL_INLINE void reset_to_scaling(const BLPoint& p) noexcept { reset_to_scaling(p.x, p.y); }
 
   //! Resets matrix to skewing.
-  BL_INLINE void resetToSkewing(double x, double y) noexcept { blMatrix2DSetSkewing(this, x, y); }
+  BL_INLINE void reset_to_skewing(double x, double y) noexcept { bl_matrix2d_set_skewing(this, x, y); }
   //! Resets matrix to skewing.
-  BL_INLINE void resetToSkewing(const BLPoint& p) noexcept { blMatrix2DSetSkewing(this, p.x, p.y); }
+  BL_INLINE void reset_to_skewing(const BLPoint& p) noexcept { bl_matrix2d_set_skewing(this, p.x, p.y); }
 
   //! Resets matrix to rotation specified by `sin` and `cos` and optional translation `tx` and `ty`.
-  BL_INLINE void resetToSinCos(double sin, double cos, double tx = 0.0, double ty = 0.0) noexcept { reset(cos, sin, -sin, cos, tx, ty); }
+  BL_INLINE void reset_to_sin_cos(double sin, double cos, double tx = 0.0, double ty = 0.0) noexcept { reset(cos, sin, -sin, cos, tx, ty); }
   //! Resets matrix to rotation specified by `sin` and `cos` and optional translation `t`.
-  BL_INLINE void resetToSinCos(double sin, double cos, const BLPoint& t) noexcept { resetToSinCos(sin, cos, t.x, t.y); }
+  BL_INLINE void reset_to_sin_cos(double sin, double cos, const BLPoint& t) noexcept { reset_to_sin_cos(sin, cos, t.x, t.y); }
 
   //! Resets matrix to rotation.
-  BL_INLINE void resetToRotation(double angle) noexcept { blMatrix2DSetRotation(this, angle, 0.0, 0.0); }
+  BL_INLINE void reset_to_rotation(double angle) noexcept { bl_matrix2d_set_rotation(this, angle, 0.0, 0.0); }
   //! Resets matrix to rotation around a point `[x, y]`.
-  BL_INLINE void resetToRotation(double angle, double x, double y) noexcept { blMatrix2DSetRotation(this, angle, x, y); }
+  BL_INLINE void reset_to_rotation(double angle, double x, double y) noexcept { bl_matrix2d_set_rotation(this, angle, x, y); }
   //! Resets matrix to rotation around a point `p`.
-  BL_INLINE void resetToRotation(double angle, const BLPoint& origin) noexcept { blMatrix2DSetRotation(this, angle, origin.x, origin.y); }
+  BL_INLINE void reset_to_rotation(double angle, const BLPoint& origin) noexcept { bl_matrix2d_set_rotation(this, angle, origin.x, origin.y); }
 
   //! \}
 
@@ -324,12 +324,12 @@ struct BLMatrix2D {
 
   [[nodiscard]]
   BL_INLINE bool equals(const BLMatrix2D& other) const noexcept {
-    return BLInternal::bool_and(blEquals(m00, other.m00),
-                                blEquals(m01, other.m01),
-                                blEquals(m10, other.m10),
-                                blEquals(m11, other.m11),
-                                blEquals(m20, other.m20),
-                                blEquals(m21, other.m21));
+    return BLInternal::bool_and(bl_equals(m00, other.m00),
+                                bl_equals(m01, other.m01),
+                                bl_equals(m10, other.m10),
+                                bl_equals(m11, other.m11),
+                                bl_equals(m20, other.m20),
+                                bl_equals(m21, other.m21));
   }
 
   //! \}
@@ -339,7 +339,7 @@ struct BLMatrix2D {
 
   //! Returns the matrix type, see \ref BLTransformType.
   [[nodiscard]]
-  BL_INLINE BLTransformType type() const noexcept { return blMatrix2DGetType(this); }
+  BL_INLINE BLTransformType type() const noexcept { return bl_matrix2d_get_type(this); }
 
   //! Calculates the matrix determinant.
   [[nodiscard]]
@@ -374,33 +374,33 @@ struct BLMatrix2D {
   BL_INLINE BLResult scale(const BLPoint& p) noexcept { return scale(p.x, p.y); }
 
   BL_INLINE BLResult skew(double x, double y) noexcept { return skew(BLPoint(x, y)); }
-  BL_INLINE BLResult skew(const BLPoint& p) noexcept { return blMatrix2DApplyOp(this, BL_TRANSFORM_OP_SKEW, &p); }
+  BL_INLINE BLResult skew(const BLPoint& p) noexcept { return bl_matrix2d_apply_op(this, BL_TRANSFORM_OP_SKEW, &p); }
 
-  BL_INLINE BLResult rotate(double angle) noexcept { return blMatrix2DApplyOp(this, BL_TRANSFORM_OP_ROTATE, &angle); }
+  BL_INLINE BLResult rotate(double angle) noexcept { return bl_matrix2d_apply_op(this, BL_TRANSFORM_OP_ROTATE, &angle); }
   BL_INLINE BLResult rotate(double angle, double x, double y) noexcept {
-    double opData[3] = { angle, x, y };
-    return blMatrix2DApplyOp(this, BL_TRANSFORM_OP_ROTATE_PT, opData);
+    double op_data[3] = { angle, x, y };
+    return bl_matrix2d_apply_op(this, BL_TRANSFORM_OP_ROTATE_PT, op_data);
   }
 
   BL_INLINE BLResult rotate(double angle, const BLPointI& origin) noexcept { return rotate(angle, double(origin.x), double(origin.y)); }
   BL_INLINE BLResult rotate(double angle, const BLPoint& origin) noexcept { return rotate(angle, origin.x, origin.y); }
 
   BL_INLINE BLResult transform(const BLMatrix2D& m) noexcept {
-    return blMatrix2DApplyOp(this, BL_TRANSFORM_OP_TRANSFORM, &m);
+    return bl_matrix2d_apply_op(this, BL_TRANSFORM_OP_TRANSFORM, &m);
   }
 
-  BL_INLINE BLResult postTranslate(double x, double y) noexcept {
+  BL_INLINE BLResult post_translate(double x, double y) noexcept {
     m20 += x;
     m21 += y;
 
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult postTranslate(const BLPointI& p) noexcept { return postTranslate(double(p.x), double(p.y)); }
-  BL_INLINE BLResult postTranslate(const BLPoint& p) noexcept { return postTranslate(p.x, p.y); }
+  BL_INLINE BLResult post_translate(const BLPointI& p) noexcept { return post_translate(double(p.x), double(p.y)); }
+  BL_INLINE BLResult post_translate(const BLPoint& p) noexcept { return post_translate(p.x, p.y); }
 
-  BL_INLINE BLResult postScale(double xy) noexcept { return postScale(xy, xy); }
-  BL_INLINE BLResult postScale(double x, double y) noexcept {
+  BL_INLINE BLResult post_scale(double xy) noexcept { return post_scale(xy, xy); }
+  BL_INLINE BLResult post_scale(double x, double y) noexcept {
     m00 *= x;
     m01 *= y;
     m10 *= x;
@@ -411,37 +411,37 @@ struct BLMatrix2D {
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult postScale(const BLPointI& p) noexcept { return postScale(double(p.x), double(p.y)); }
-  BL_INLINE BLResult postScale(const BLPoint& p) noexcept { return postScale(p.x, p.y); }
+  BL_INLINE BLResult post_scale(const BLPointI& p) noexcept { return post_scale(double(p.x), double(p.y)); }
+  BL_INLINE BLResult post_scale(const BLPoint& p) noexcept { return post_scale(p.x, p.y); }
 
-  BL_INLINE BLResult postSkew(double x, double y) noexcept { return postSkew(BLPoint(x, y)); }
-  BL_INLINE BLResult postSkew(const BLPoint& p) noexcept { return blMatrix2DApplyOp(this, BL_TRANSFORM_OP_POST_SKEW, &p); }
+  BL_INLINE BLResult post_skew(double x, double y) noexcept { return post_skew(BLPoint(x, y)); }
+  BL_INLINE BLResult post_skew(const BLPoint& p) noexcept { return bl_matrix2d_apply_op(this, BL_TRANSFORM_OP_POST_SKEW, &p); }
 
-  BL_INLINE BLResult postRotate(double angle) noexcept { return blMatrix2DApplyOp(this, BL_TRANSFORM_OP_POST_ROTATE, &angle); }
+  BL_INLINE BLResult post_rotate(double angle) noexcept { return bl_matrix2d_apply_op(this, BL_TRANSFORM_OP_POST_ROTATE, &angle); }
 
-  BL_INLINE BLResult postRotate(double angle, double x, double y) noexcept {
+  BL_INLINE BLResult post_rotate(double angle, double x, double y) noexcept {
     double params[3] = { angle, x, y };
-    return blMatrix2DApplyOp(this, BL_TRANSFORM_OP_POST_ROTATE_PT, params);
+    return bl_matrix2d_apply_op(this, BL_TRANSFORM_OP_POST_ROTATE_PT, params);
   }
 
-  BL_INLINE BLResult postRotate(double angle, const BLPointI& origin) noexcept { return postRotate(angle, double(origin.x), double(origin.y)); }
-  BL_INLINE BLResult postRotate(double angle, const BLPoint& origin) noexcept { return postRotate(angle, origin.x, origin.y); }
+  BL_INLINE BLResult post_rotate(double angle, const BLPointI& origin) noexcept { return post_rotate(angle, double(origin.x), double(origin.y)); }
+  BL_INLINE BLResult post_rotate(double angle, const BLPoint& origin) noexcept { return post_rotate(angle, origin.x, origin.y); }
 
-  BL_INLINE BLResult postTransform(const BLMatrix2D& m) noexcept { return blMatrix2DApplyOp(this, BL_TRANSFORM_OP_POST_TRANSFORM, &m); }
+  BL_INLINE BLResult post_transform(const BLMatrix2D& m) noexcept { return bl_matrix2d_apply_op(this, BL_TRANSFORM_OP_POST_TRANSFORM, &m); }
 
   //! Inverts the matrix, returns \ref BL_SUCCESS if the matrix has been inverted successfully.
-  BL_INLINE BLResult invert() noexcept { return blMatrix2DInvert(this, this); }
+  BL_INLINE BLResult invert() noexcept { return bl_matrix2d_invert(this, this); }
 
   //! \}
 
   //! \name Map Points and Primitives
   //! \{
 
-  BL_INLINE BLPoint mapPoint(double x, double y) const noexcept { return BLPoint(x * m00 + y * m10 + m20, x * m01 + y * m11 + m21); }
-  BL_INLINE BLPoint mapPoint(const BLPoint& p) const noexcept { return mapPoint(p.x, p.y); }
+  BL_INLINE BLPoint map_point(double x, double y) const noexcept { return BLPoint(x * m00 + y * m10 + m20, x * m01 + y * m11 + m21); }
+  BL_INLINE BLPoint map_point(const BLPoint& p) const noexcept { return map_point(p.x, p.y); }
 
-  BL_INLINE BLPoint mapVector(double x, double y) const noexcept { return BLPoint(x * m00 + y * m10, x * m01 + y * m11); }
-  BL_INLINE BLPoint mapVector(const BLPoint& v) const noexcept { return mapVector(v.x, v.y); }
+  BL_INLINE BLPoint map_vector(double x, double y) const noexcept { return BLPoint(x * m00 + y * m10, x * m01 + y * m11); }
+  BL_INLINE BLPoint map_vector(const BLPoint& v) const noexcept { return map_vector(v.x, v.y); }
 
   //! \}
 
@@ -451,7 +451,7 @@ struct BLMatrix2D {
   //! Inverts `src` matrix and stores the result in `dst.
   //!
   //! \overload
-  static BL_INLINE BLResult invert(BLMatrix2D& dst, const BLMatrix2D& src) noexcept { return blMatrix2DInvert(&dst, &src); }
+  static BL_INLINE BLResult invert(BLMatrix2D& dst, const BLMatrix2D& src) noexcept { return bl_matrix2d_invert(&dst, &src); }
 
   //! \}
 #endif

@@ -21,37 +21,37 @@ namespace Geometry {
 
 using Math::lerp;
 
-static BL_INLINE_NODEBUG bool isZero(const BLPoint& p) noexcept { return (p.x == 0) & (p.y == 0); }
+static BL_INLINE_NODEBUG bool is_zero(const BLPoint& p) noexcept { return (p.x == 0) & (p.y == 0); }
 
 
 //! \name Geometry Type Size
 //! \{
 
-static BL_INLINE bool isSimpleGeometryType(uint32_t geometryType) noexcept {
-  return geometryType <= BL_GEOMETRY_TYPE_SIMPLE_LAST;
+static BL_INLINE bool is_simple_geometry_type(uint32_t geometry_type) noexcept {
+  return geometry_type <= BL_GEOMETRY_TYPE_SIMPLE_LAST;
 }
 
-BL_HIDDEN extern const LookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1> geometryTypeSizeTable;
+BL_HIDDEN extern const LookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1> geometry_type_size_table;
 
 //! \}
 
 //! \name Validity Checks
 //! \{
 
-static BL_INLINE bool isValid(const BLSizeI& size) noexcept { return BLInternal::bool_and(size.w > 0, size.h > 0); }
-static BL_INLINE bool isValid(const BLSize& size) noexcept { return BLInternal::bool_and(size.w > 0, size.h > 0); }
+static BL_INLINE bool is_valid(const BLSizeI& size) noexcept { return BLInternal::bool_and(size.w > 0, size.h > 0); }
+static BL_INLINE bool is_valid(const BLSize& size) noexcept { return BLInternal::bool_and(size.w > 0, size.h > 0); }
 
-static BL_INLINE bool isValid(const BLBoxI& box) noexcept { return BLInternal::bool_and(box.x0 < box.x1, box.y0 < box.y1); }
-static BL_INLINE bool isValid(const BLBox& box) noexcept { return BLInternal::bool_and(box.x0 < box.x1, box.y0 < box.y1); }
+static BL_INLINE bool is_valid(const BLBoxI& box) noexcept { return BLInternal::bool_and(box.x0 < box.x1, box.y0 < box.y1); }
+static BL_INLINE bool is_valid(const BLBox& box) noexcept { return BLInternal::bool_and(box.x0 < box.x1, box.y0 < box.y1); }
 
-static BL_INLINE bool isValid(const BLRectI& rect) noexcept {
+static BL_INLINE bool is_valid(const BLRectI& rect) noexcept {
   OverflowFlag of = 0;
-  int x1 = IntOps::addOverflow(rect.x, rect.w, &of);
-  int y1 = IntOps::addOverflow(rect.y, rect.h, &of);
+  int x1 = IntOps::add_overflow(rect.x, rect.w, &of);
+  int y1 = IntOps::add_overflow(rect.y, rect.h, &of);
   return BLInternal::bool_and(rect.x < x1, rect.y < y1, !of);
 }
 
-static BL_INLINE bool isValid(const BLRect& rect) noexcept {
+static BL_INLINE bool is_valid(const BLRect& rect) noexcept {
   double x1 = rect.x + rect.w;
   double y1 = rect.y + rect.h;
   return BLInternal::bool_and(rect.x < x1, rect.y < y1);
@@ -62,19 +62,19 @@ static BL_INLINE bool isValid(const BLRect& rect) noexcept {
 //! \name Vector Operations
 //! \{
 
-static BL_INLINE double lengthSq(const BLPoint& v) noexcept { return v.x * v.x + v.y * v.y; }
-static BL_INLINE double lengthSq(const BLPoint& a, const BLPoint& b) noexcept { return lengthSq(b - a); }
+static BL_INLINE double length_sq(const BLPoint& v) noexcept { return v.x * v.x + v.y * v.y; }
+static BL_INLINE double length_sq(const BLPoint& a, const BLPoint& b) noexcept { return length_sq(b - a); }
 
-static BL_INLINE double length(const BLPoint& v) noexcept { return Math::sqrt(lengthSq(v)); }
-static BL_INLINE double length(const BLPoint& a, const BLPoint& b) noexcept { return Math::sqrt(lengthSq(a, b)); }
+static BL_INLINE double length(const BLPoint& v) noexcept { return Math::sqrt(length_sq(v)); }
+static BL_INLINE double length(const BLPoint& a, const BLPoint& b) noexcept { return Math::sqrt(length_sq(a, b)); }
 
 static BL_INLINE BLPoint normal(const BLPoint& v) noexcept { return BLPoint(-v.y, v.x); }
-static BL_INLINE BLPoint unitVector(const BLPoint& v) noexcept { return v / length(v); }
+static BL_INLINE BLPoint unit_vector(const BLPoint& v) noexcept { return v / length(v); }
 
 static BL_INLINE double dot(const BLPoint& a, const BLPoint& b) noexcept { return a.x * b.x + a.y * b.y; }
 static BL_INLINE double cross(const BLPoint& a, const BLPoint& b) noexcept { return a.x * b.y - a.y * b.x; }
 
-static BL_INLINE BLPoint lineVectorIntersection(const BLPoint& p0, const BLPoint& v0, const BLPoint& p1, const BLPoint& v1) noexcept {
+static BL_INLINE BLPoint line_vector_intersection(const BLPoint& p0, const BLPoint& v0, const BLPoint& p1, const BLPoint& v1) noexcept {
   return p0 + cross(p1 - p0, v1) / cross(v0, v1) * v0;
 }
 
@@ -84,29 +84,29 @@ static BL_INLINE BLPoint lineVectorIntersection(const BLPoint& p0, const BLPoint
 //! \{
 
 static BL_INLINE void bound(BLBox& box, const BLPoint& p) noexcept {
-  box.reset(blMin(box.x0, p.x), blMin(box.y0, p.y),
-            blMax(box.x1, p.x), blMax(box.y1, p.y));
+  box.reset(bl_min(box.x0, p.x), bl_min(box.y0, p.y),
+            bl_max(box.x1, p.x), bl_max(box.y1, p.y));
 }
 
 static BL_INLINE void bound(BLBox& box, const BLBox& other) noexcept {
-  box.reset(blMin(box.x0, other.x0), blMin(box.y0, other.y0),
-            blMax(box.x1, other.x1), blMax(box.y1, other.y1));
+  box.reset(bl_min(box.x0, other.x0), bl_min(box.y0, other.y0),
+            bl_max(box.x1, other.x1), bl_max(box.y1, other.y1));
 }
 
 static BL_INLINE void bound(BLBoxI& box, const BLBoxI& other) noexcept {
-  box.reset(blMin(box.x0, other.x0), blMin(box.y0, other.y0),
-            blMax(box.x1, other.x1), blMax(box.y1, other.y1));
+  box.reset(bl_min(box.x0, other.x0), bl_min(box.y0, other.y0),
+            bl_max(box.x1, other.x1), bl_max(box.y1, other.y1));
 }
 
 static BL_INLINE bool intersect(BLBoxI& dst, const BLBoxI& a, const BLBoxI& b) noexcept {
-  dst.reset(blMax(a.x0, b.x0), blMax(a.y0, b.y0),
-            blMin(a.x1, b.x1), blMin(a.y1, b.y1));
+  dst.reset(bl_max(a.x0, b.x0), bl_max(a.y0, b.y0),
+            bl_min(a.x1, b.x1), bl_min(a.y1, b.y1));
   return BLInternal::bool_and(dst.x0 < dst.x1,dst.y0 < dst.y1);
 }
 
 static BL_INLINE bool intersect(BLBox& dst, const BLBox& a, const BLBox& b) noexcept {
-  dst.reset(blMax(a.x0, b.x0), blMax(a.y0, b.y0),
-            blMin(a.x1, b.x1), blMin(a.y1, b.y1));
+  dst.reset(bl_max(a.x0, b.x0), bl_max(a.y0, b.y0),
+            bl_min(a.x1, b.x1), bl_min(a.y1, b.y1));
   return BLInternal::bool_and(dst.x0 < dst.x1, dst.y0 < dst.y1);
 }
 
@@ -149,7 +149,7 @@ static BL_INLINE bool overlaps(const BLBox& a, const BLBox& b) noexcept {
 //!
 //! \{
 
-static BL_INLINE void getQuadCoefficients(const BLPoint p[3], BLPoint& a, BLPoint& b, BLPoint& c) noexcept {
+static BL_INLINE void get_quad_coefficients(const BLPoint p[3], BLPoint& a, BLPoint& b, BLPoint& c) noexcept {
   BLPoint v1 = p[1] - p[0];
   BLPoint v2 = p[2] - p[1];
 
@@ -158,7 +158,7 @@ static BL_INLINE void getQuadCoefficients(const BLPoint p[3], BLPoint& a, BLPoin
   c = p[0];
 }
 
-static BL_INLINE void getQuadDerivativeCoefficients(const BLPoint p[3], BLPoint& a, BLPoint& b) noexcept {
+static BL_INLINE void get_quad_derivative_coefficients(const BLPoint p[3], BLPoint& a, BLPoint& b) noexcept {
   BLPoint v1 = p[1] - p[0];
   BLPoint v2 = p[2] - p[1];
 
@@ -166,34 +166,34 @@ static BL_INLINE void getQuadDerivativeCoefficients(const BLPoint p[3], BLPoint&
   b = 2.0 * v1;
 }
 
-static BL_INLINE BLPoint evalQuad(const BLPoint p[3], double t) noexcept {
+static BL_INLINE BLPoint eval_quad(const BLPoint p[3], double t) noexcept {
   BLPoint a, b, c;
-  getQuadCoefficients(p, a, b, c);
+  get_quad_coefficients(p, a, b, c);
   return (a * t + b) * t + c;
 }
 
-static BL_INLINE BLPoint evalQuad(const BLPoint p[3], const BLPoint& t) noexcept {
+static BL_INLINE BLPoint eval_quad(const BLPoint p[3], const BLPoint& t) noexcept {
   BLPoint a, b, c;
-  getQuadCoefficients(p, a, b, c);
+  get_quad_coefficients(p, a, b, c);
   return (a * t + b) * t + c;
 }
 
-static BL_INLINE BLPoint evalQuadPrecise(const BLPoint p[3], double t) noexcept {
+static BL_INLINE BLPoint eval_quad_precise(const BLPoint p[3], double t) noexcept {
   return lerp(lerp(p[0], p[1], t), lerp(p[1], p[2], t), t);
 }
 
-static BL_INLINE BLPoint evalQuadPrecise(const BLPoint p[3], const BLPoint& t) noexcept {
+static BL_INLINE BLPoint eval_quad_precise(const BLPoint p[3], const BLPoint& t) noexcept {
   return lerp(lerp(p[0], p[1], t), lerp(p[1], p[2], t), t);
 }
 
-static BL_INLINE BLPoint quadExtremaPoint(const BLPoint p[3]) noexcept {
-  BLPoint t = blClamp((p[0] - p[1]) / (p[0] - p[1] * 2.0 + p[2]), 0.0, 1.0);
-  return evalQuadPrecise(p, t);
+static BL_INLINE BLPoint quad_extrema_point(const BLPoint p[3]) noexcept {
+  BLPoint t = bl_clamp((p[0] - p[1]) / (p[0] - p[1] * 2.0 + p[2]), 0.0, 1.0);
+  return eval_quad_precise(p, t);
 }
 
-static BL_INLINE double quadParameterAtAngle(const BLPoint p[3], double m) noexcept {
+static BL_INLINE double quad_parameter_at_angle(const BLPoint p[3], double m) noexcept {
   BLPoint qa, qb;
-  getQuadDerivativeCoefficients(p, qa, qb);
+  get_quad_derivative_coefficients(p, qa, qb);
 
   double aob = dot(qa, qb);
   double axb = cross(qa, qb);
@@ -202,16 +202,16 @@ static BL_INLINE double quadParameterAtAngle(const BLPoint p[3], double m) noexc
     return 1.0;
 
   // m * (bx * bx + by * by) / (|ax * by - ay * bx| - m * (ax * bx + ay * by));
-  return m * lengthSq(qb) / (blAbs(axb) - m * aob);
+  return m * length_sq(qb) / (bl_abs(axb) - m * aob);
 }
 
-static BL_INLINE double quadCurvatureMetric(const BLPoint p[3]) noexcept {
+static BL_INLINE double quad_curvature_metric(const BLPoint p[3]) noexcept {
   return cross(p[2] - p[1], p[1] - p[0]);
 }
 
-static BL_INLINE size_t getQuadOffsetCuspTs(const BLPoint bez[3], double d, double tOut[2]) {
+static BL_INLINE size_t get_quad_offset_cusp_ts(const BLPoint bez[3], double d, double tOut[2]) {
   BLPoint qqa, qqb;
-  getQuadDerivativeCoefficients(bez, qqa, qqb);
+  get_quad_derivative_coefficients(bez, qqa, qqb);
 
   double bxa = cross(qqb, qqa);
   double boa = dot(qqb, qqa);
@@ -219,8 +219,8 @@ static BL_INLINE size_t getQuadOffsetCuspTs(const BLPoint bez[3], double d, doub
   if (bxa == 0)
     return 0;
 
-  double alen2 = lengthSq(qqa);
-  double blen2 = lengthSq(qqb);
+  double alen2 = length_sq(qqa);
+  double blen2 = length_sq(qqb);
 
   double fac = -1.0 / alen2;
   double sqrt_ = Math::sqrt(boa * boa - alen2 * (blen2 - Math::cbrt(d * d * bxa * bxa)));
@@ -229,7 +229,7 @@ static BL_INLINE size_t getQuadOffsetCuspTs(const BLPoint bez[3], double d, doub
   double t1 = fac * (boa - sqrt_);
 
   // We are only interested in (0, 1) range.
-  t0 = blMax(t0, 0.0);
+  t0 = bl_max(t0, 0.0);
 
   size_t n = size_t(t0 > 0.0 && t0 < 1.0);
   tOut[0] = t0;
@@ -237,31 +237,31 @@ static BL_INLINE size_t getQuadOffsetCuspTs(const BLPoint bez[3], double d, doub
   return n + size_t(t1 > t0 && t1 < 1.0);
 }
 
-static BL_INLINE void splitQuad(const BLPoint p[3], BLPoint aOut[3], BLPoint bOut[3]) noexcept {
+static BL_INLINE void split_quad(const BLPoint p[3], BLPoint a_out[3], BLPoint b_out[3]) noexcept {
   BLPoint p01(lerp(p[0], p[1]));
   BLPoint p12(lerp(p[1], p[2]));
 
-  aOut[0] = p[0];
-  aOut[1] = p01;
-  bOut[1] = p12;
-  bOut[2] = p[2];
-  aOut[2] = lerp(p01, p12);
-  bOut[0] = aOut[2];
+  a_out[0] = p[0];
+  a_out[1] = p01;
+  b_out[1] = p12;
+  b_out[2] = p[2];
+  a_out[2] = lerp(p01, p12);
+  b_out[0] = a_out[2];
 }
 
-static BL_INLINE void splitQuad(const BLPoint p[3], BLPoint aOut[3], BLPoint bOut[3], double t) noexcept {
+static BL_INLINE void split_quad(const BLPoint p[3], BLPoint a_out[3], BLPoint b_out[3], double t) noexcept {
   BLPoint p01(lerp(p[0], p[1], t));
   BLPoint p12(lerp(p[1], p[2], t));
 
-  aOut[0] = p[0];
-  aOut[1] = p01;
-  bOut[1] = p12;
-  bOut[2] = p[2];
-  aOut[2] = lerp(p01, p12, t);
-  bOut[0] = aOut[2];
+  a_out[0] = p[0];
+  a_out[1] = p01;
+  b_out[1] = p12;
+  b_out[2] = p[2];
+  a_out[2] = lerp(p01, p12, t);
+  b_out[0] = a_out[2];
 }
 
-static BL_INLINE void splitQuadBefore(const BLPoint p[3], BLPoint out[3], double t) noexcept {
+static BL_INLINE void split_quad_before(const BLPoint p[3], BLPoint out[3], double t) noexcept {
   BLPoint p01(lerp(p[0], p[1], t));
   BLPoint p12(lerp(p[1], p[2], t));
 
@@ -270,7 +270,7 @@ static BL_INLINE void splitQuadBefore(const BLPoint p[3], BLPoint out[3], double
   out[2] = lerp(p01, p12, t);
 }
 
-static BL_INLINE void splitQuadAfter(const BLPoint p[3], BLPoint out[3], double t) noexcept {
+static BL_INLINE void split_quad_after(const BLPoint p[3], BLPoint out[3], double t) noexcept {
   BLPoint p01(lerp(p[0], p[1], t));
   BLPoint p12(lerp(p[1], p[2], t));
 
@@ -279,7 +279,7 @@ static BL_INLINE void splitQuadAfter(const BLPoint p[3], BLPoint out[3], double 
   out[2] = p[2];
 }
 
-static BL_INLINE void splitQuadBetween(const BLPoint p[3], BLPoint out[3], double t0, double t1) noexcept {
+static BL_INLINE void split_quad_between(const BLPoint p[3], BLPoint out[3], double t0, double t1) noexcept {
   BLPoint t0p01 = lerp(p[0], p[1], t0);
   BLPoint t0p12 = lerp(p[1], p[2], t0);
 
@@ -301,7 +301,7 @@ BL_DEFINE_ENUM_FLAGS(SplitQuadOptions)
 
 
 template<SplitQuadOptions Options>
-static BL_INLINE BLPoint* splitQuadToSpline(const BLPoint p[3], BLPoint* out) noexcept {
+static BL_INLINE BLPoint* split_quad_to_spline(const BLPoint p[3], BLPoint* out) noexcept {
   static_assert(uint32_t(Options) != 0, "Split options cannot be empty");
 
   // 2 extrema and 1 terminating `1.0` value.
@@ -309,28 +309,28 @@ static BL_INLINE BLPoint* splitQuadToSpline(const BLPoint p[3], BLPoint* out) no
   FixedArray<double, kMaxTCount> ts;
 
   BLPoint Pa, Pb, Pc;
-  getQuadCoefficients(p, Pa, Pb, Pc);
+  get_quad_coefficients(p, Pa, Pb, Pc);
 
   // Find extrema.
   if ((Options & SplitQuadOptions::kExtremas) == SplitQuadOptions::kExtremas) {
-    BLPoint extremaTs = (p[0] - p[1]) / (p[0] - p[1] * 2.0 + p[2]);
-    double extremaT0 = blMin(extremaTs.x, extremaTs.y);
-    double extremaT1 = blMax(extremaTs.x, extremaTs.y);
+    BLPoint extrema_ts = (p[0] - p[1]) / (p[0] - p[1] * 2.0 + p[2]);
+    double extremaT0 = bl_min(extrema_ts.x, extrema_ts.y);
+    double extremaT1 = bl_max(extrema_ts.x, extrema_ts.y);
 
-    ts.appendIf(extremaT0, (extremaT0 > 0.0) & (extremaT0 < 1.0));
-    ts.appendIf(extremaT1, (extremaT1 > blMax(extremaT0, 0.0)) & (extremaT1 < 1.0));
+    ts.append_if(extremaT0, (extremaT0 > 0.0) & (extremaT0 < 1.0));
+    ts.append_if(extremaT1, (extremaT1 > bl_max(extremaT0, 0.0)) & (extremaT1 < 1.0));
   }
-  else if (blTestFlag(Options, SplitQuadOptions::kXExtrema)) {
-    double extremaTx = (p[0].x - p[1].x) / (p[0].x - p[1].x * 2.0 + p[2].x);
-    ts.appendIf(extremaTx, (extremaTx > 0.0) & (extremaTx < 1.0));
+  else if (bl_test_flag(Options, SplitQuadOptions::kXExtrema)) {
+    double extrema_tx = (p[0].x - p[1].x) / (p[0].x - p[1].x * 2.0 + p[2].x);
+    ts.append_if(extrema_tx, (extrema_tx > 0.0) & (extrema_tx < 1.0));
   }
-  else if (blTestFlag(Options, SplitQuadOptions::kYExtrema)) {
-    double extremaTy = (p[0].y - p[1].y) / (p[0].y - p[1].y * 2.0 + p[2].y);
-    ts.appendIf(extremaTy, (extremaTy > 0.0) & (extremaTy < 1.0));
+  else if (bl_test_flag(Options, SplitQuadOptions::kYExtrema)) {
+    double extrema_ty = (p[0].y - p[1].y) / (p[0].y - p[1].y * 2.0 + p[2].y);
+    ts.append_if(extrema_ty, (extrema_ty > 0.0) & (extrema_ty < 1.0));
   }
 
   // Split the curve into a spline, if necessary.
-  if (!ts.empty()) {
+  if (!ts.is_empty()) {
     // The last T we want is at 1.0.
     ts.append(1.0);
 
@@ -374,21 +374,21 @@ static BL_INLINE BLPoint* splitQuadToSpline(const BLPoint p[3], BLPoint* out) no
 //! cubic[2] = q2 + 2/3 * (q1 - q2)
 //! cubic[3] = q2
 //! \endcode
-static BL_INLINE void quadToCubic(const BLPoint p[3], BLPoint cubicOut[4]) noexcept {
+static BL_INLINE void quad_to_cubic(const BLPoint p[3], BLPoint cubic_out[4]) noexcept {
   constexpr double k1Div3 = 1.0 / 3.0;
   constexpr double k2Div3 = 2.0 / 3.0;
 
   BLPoint tmp = p[1] * k2Div3;
-  cubicOut[0] = p[0];
-  cubicOut[3] = p[2];
-  cubicOut[1].reset(cubicOut[0] * k1Div3 + tmp);
-  cubicOut[2].reset(cubicOut[2] * k1Div3 + tmp);
+  cubic_out[0] = p[0];
+  cubic_out[3] = p[2];
+  cubic_out[1].reset(cubic_out[0] * k1Div3 + tmp);
+  cubic_out[2].reset(cubic_out[2] * k1Div3 + tmp);
 }
 
 class QuadCurveTsIter {
 public:
   const double* ts;
-  const double* tsEnd;
+  const double* ts_end;
 
   BLPoint input[3];
   BLPoint part[3];
@@ -397,7 +397,7 @@ public:
 
   BL_INLINE QuadCurveTsIter() noexcept
     : ts(nullptr),
-      tsEnd(nullptr) {}
+      ts_end(nullptr) {}
 
   BL_INLINE QuadCurveTsIter(const BLPoint* input_, const double* ts_, size_t count_) noexcept {
     reset(input_, ts_, count_);
@@ -411,10 +411,10 @@ public:
     input[1] = input_[1];
     input[2] = input_[2];
     ts = ts_;
-    tsEnd = ts + count_;
+    ts_end = ts + count_;
 
     // The first iterated curve is the same as if we split left side at `t`.
-    // This behaves identically to `splitQuadBefore()`, however, we cache
+    // This behaves identically to `split_quad_before()`, however, we cache
     // `pTmp01`  and `pTmp12` for reuse in `next()`.
     double t = *ts++;
     pTmp01 = lerp(input[0], input[1], t);
@@ -426,7 +426,7 @@ public:
   }
 
   BL_INLINE bool next() noexcept {
-    if (ts >= tsEnd)
+    if (ts >= ts_end)
       return false;
 
     double t = *ts++;
@@ -464,7 +464,7 @@ public:
 //!
 //! \{
 
-static BL_INLINE void getCubicCoefficients(const BLPoint p[4], BLPoint& a, BLPoint& b, BLPoint& c, BLPoint& d) noexcept {
+static BL_INLINE void get_cubic_coefficients(const BLPoint p[4], BLPoint& a, BLPoint& b, BLPoint& c, BLPoint& d) noexcept {
   BLPoint v1 = p[1] - p[0];
   BLPoint v2 = p[2] - p[1];
   BLPoint v3 = p[3] - p[2];
@@ -475,7 +475,7 @@ static BL_INLINE void getCubicCoefficients(const BLPoint p[4], BLPoint& a, BLPoi
   d = p[0];
 }
 
-static BL_INLINE void getCubicDerivativeCoefficients(const BLPoint p[4], BLPoint& a, BLPoint& b, BLPoint& c) noexcept {
+static BL_INLINE void get_cubic_derivative_coefficients(const BLPoint p[4], BLPoint& a, BLPoint& b, BLPoint& c) noexcept {
   BLPoint v1 = p[1] - p[0];
   BLPoint v2 = p[2] - p[1];
   BLPoint v3 = p[3] - p[2];
@@ -485,19 +485,19 @@ static BL_INLINE void getCubicDerivativeCoefficients(const BLPoint p[4], BLPoint
   c = 3.0 * v1;
 }
 
-static BL_INLINE BLPoint evalCubic(const BLPoint p[4], double t) noexcept {
+static BL_INLINE BLPoint eval_cubic(const BLPoint p[4], double t) noexcept {
   BLPoint a, b, c, d;
-  getCubicCoefficients(p, a, b, c, d);
+  get_cubic_coefficients(p, a, b, c, d);
   return ((a * t + b) * t + c) * t + d;
 }
 
-static BL_INLINE BLPoint evalCubic(const BLPoint p[4], const BLPoint& t) noexcept {
+static BL_INLINE BLPoint eval_cubic(const BLPoint p[4], const BLPoint& t) noexcept {
   BLPoint a, b, c, d;
-  getCubicCoefficients(p, a, b, c, d);
+  get_cubic_coefficients(p, a, b, c, d);
   return ((a * t + b) * t + c) * t + d;
 }
 
-static BL_INLINE BLPoint evalCubicPrecise(const BLPoint p[4], double t) noexcept {
+static BL_INLINE BLPoint eval_cubic_precise(const BLPoint p[4], double t) noexcept {
   BLPoint p01(lerp(p[0], p[1], t));
   BLPoint p12(lerp(p[1], p[2], t));
   BLPoint p23(lerp(p[2], p[3], t));
@@ -505,14 +505,14 @@ static BL_INLINE BLPoint evalCubicPrecise(const BLPoint p[4], double t) noexcept
   return lerp(lerp(p01, p12, t), lerp(p12, p23, t), t);
 }
 
-static BL_INLINE BLPoint evalCubicPrecise(const BLPoint p[4], const BLPoint& t) noexcept {
+static BL_INLINE BLPoint eval_cubic_precise(const BLPoint p[4], const BLPoint& t) noexcept {
   BLPoint p01(lerp(p[0], p[1], t));
   BLPoint p12(lerp(p[1], p[2], t));
   BLPoint p23(lerp(p[2], p[3], t));
   return lerp(lerp(p01, p12, t), lerp(p12, p23, t), t);
 }
 
-static BL_INLINE BLPoint cubicDerivativeAt(const BLPoint p[4], double t) noexcept {
+static BL_INLINE BLPoint cubic_derivative_at(const BLPoint p[4], double t) noexcept {
   BLPoint p01 = lerp(p[0], p[1], t);
   BLPoint p12 = lerp(p[1], p[2], t);
   BLPoint p23 = lerp(p[2], p[3], t);
@@ -520,25 +520,25 @@ static BL_INLINE BLPoint cubicDerivativeAt(const BLPoint p[4], double t) noexcep
   return 3.0 * (lerp(p12, p23, t) - lerp(p01, p12, t));
 }
 
-static BL_INLINE void getCubicExtremaPoints(const BLPoint p[4], BLPoint out[2]) noexcept {
+static BL_INLINE void get_cubic_extrema_points(const BLPoint p[4], BLPoint out[2]) noexcept {
   BLPoint a, b, c;
-  getCubicDerivativeCoefficients(p, a, b, c);
+  get_cubic_derivative_coefficients(p, a, b, c);
 
   BLPoint t[2];
-  Math::simplifiedQuadRoots(t, a, b, c);
+  Math::simplified_quad_roots(t, a, b, c);
 
-  t[0] = blClamp(t[0], 0.0, 1.0);
-  t[1] = blClamp(t[1], 0.0, 1.0);
+  t[0] = bl_clamp(t[0], 0.0, 1.0);
+  t[1] = bl_clamp(t[1], 0.0, 1.0);
 
-  out[0] = evalCubicPrecise(p, t[0]);
-  out[1] = evalCubicPrecise(p, t[1]);
+  out[0] = eval_cubic_precise(p, t[0]);
+  out[1] = eval_cubic_precise(p, t[1]);
 }
 
-static BL_INLINE BLPoint cubicMidPoint(const BLPoint p[4]) noexcept {
+static BL_INLINE BLPoint cubic_mid_point(const BLPoint p[4]) noexcept {
   return (p[0] + p[3]) * 0.125 + (p[1] + p[2]) * 0.375;
 }
 
-static BL_INLINE BLPoint cubicIdentity(const BLPoint p[4]) noexcept {
+static BL_INLINE BLPoint cubic_identity(const BLPoint p[4]) noexcept {
   BLPoint v1 = p[1] - p[0];
   BLPoint v2 = p[2] - p[1];
   BLPoint v3 = p[3] - p[2];
@@ -546,23 +546,23 @@ static BL_INLINE BLPoint cubicIdentity(const BLPoint p[4]) noexcept {
   return v3 - v2 - v2 + v1;
 }
 
-static BL_INLINE bool isCubicFlat(const BLPoint p[4], double f) {
+static BL_INLINE bool is_cubic_flat(const BLPoint p[4], double f) {
   if (p[3] == p[0]) {
     BLPoint v = p[2] - p[1];
     double a = cross(v, p[1] - p[0]);
-    return 0.5625 * a * a <= f * f * lengthSq(v);
+    return 0.5625 * a * a <= f * f * length_sq(v);
   }
   else {
     BLPoint v = p[3] - p[0];
     double a1 = cross(v, p[1] - p[0]);
     double a2 = cross(v, p[2] - p[0]);
-    return 0.5625 * blMax(a1 * a1, a2 * a2) <= f * f * lengthSq(v);
+    return 0.5625 * bl_max(a1 * a1, a2 * a2) <= f * f * length_sq(v);
   }
 }
 
-static BL_INLINE void getCubicInflectionParameter(const BLPoint p[4], double& tc, double& tl) noexcept {
+static BL_INLINE void get_cubic_inflection_parameter(const BLPoint p[4], double& tc, double& tl) noexcept {
   BLPoint a, b, c;
-  getCubicDerivativeCoefficients(p, a, b, c);
+  get_cubic_derivative_coefficients(p, a, b, c);
 
   // To get the inflections C'(t) cross C''(t) = at^2 + bt + c = 0 needs to be solved for 't'.
   // The first cooefficient of the quadratic formula is also the denominator.
@@ -586,29 +586,29 @@ static BL_INLINE void getCubicInflectionParameter(const BLPoint p[4], double& tc
   }
 }
 
-static BL_INLINE BLPoint cubicStartTangent(const BLPoint p[4]) noexcept {
+static BL_INLINE BLPoint cubic_start_tangent(const BLPoint p[4]) noexcept {
   BLPoint out = p[1] - p[0];
   BLPoint t20 = p[2] - p[0];
   BLPoint t30 = p[3] - p[0];
 
-  if (isZero(out)) out = t20;
-  if (isZero(out)) out = t30;
+  if (is_zero(out)) out = t20;
+  if (is_zero(out)) out = t30;
 
   return out;
 }
 
-static BL_INLINE BLPoint cubicEndTangent(const BLPoint p[4]) noexcept {
+static BL_INLINE BLPoint cubic_end_tangent(const BLPoint p[4]) noexcept {
   BLPoint out = p[3] - p[2];
   BLPoint t31 = p[3] - p[1];
   BLPoint t30 = p[3] - p[0];
 
-  if (isZero(out)) out = t31;
-  if (isZero(out)) out = t30;
+  if (is_zero(out)) out = t31;
+  if (is_zero(out)) out = t30;
 
   return out;
 }
 
-static BL_INLINE void splitCubic(const BLPoint p[4], BLPoint a[4], BLPoint b[4]) noexcept {
+static BL_INLINE void split_cubic(const BLPoint p[4], BLPoint a[4], BLPoint b[4]) noexcept {
   BLPoint p01(lerp(p[0], p[1]));
   BLPoint p12(lerp(p[1], p[2]));
   BLPoint p23(lerp(p[2], p[3]));
@@ -624,7 +624,7 @@ static BL_INLINE void splitCubic(const BLPoint p[4], BLPoint a[4], BLPoint b[4])
   b[0] = a[3];
 }
 
-static BL_INLINE void splitCubic(const BLPoint p[4], BLPoint a[4], BLPoint b[4], double t) noexcept {
+static BL_INLINE void split_cubic(const BLPoint p[4], BLPoint a[4], BLPoint b[4], double t) noexcept {
   BLPoint p01(lerp(p[0], p[1], t));
   BLPoint p12(lerp(p[1], p[2], t));
   BLPoint p23(lerp(p[2], p[3], t));
@@ -640,7 +640,7 @@ static BL_INLINE void splitCubic(const BLPoint p[4], BLPoint a[4], BLPoint b[4],
   b[0] = a[3];
 }
 
-static BL_INLINE void splitCubicBefore(const BLPoint p[4], BLPoint a[4], double t) noexcept {
+static BL_INLINE void split_cubic_before(const BLPoint p[4], BLPoint a[4], double t) noexcept {
   BLPoint p01(lerp(p[0], p[1], t));
   BLPoint p12(lerp(p[1], p[2], t));
   BLPoint p23(lerp(p[2], p[3], t));
@@ -651,7 +651,7 @@ static BL_INLINE void splitCubicBefore(const BLPoint p[4], BLPoint a[4], double 
   a[3] = lerp(a[2], lerp(p12, p23, t), t);
 }
 
-static BL_INLINE void splitCubicAfter(const BLPoint p[4], BLPoint b[4], double t) noexcept {
+static BL_INLINE void split_cubic_after(const BLPoint p[4], BLPoint b[4], double t) noexcept {
   BLPoint p01(lerp(p[0], p[1], t));
   BLPoint p12(lerp(p[1], p[2], t));
   BLPoint p23(lerp(p[2], p[3], t));
@@ -674,7 +674,7 @@ enum class SplitCubicOptions : uint32_t {
 BL_DEFINE_ENUM_FLAGS(SplitCubicOptions)
 
 template<SplitCubicOptions Options>
-static BL_INLINE BLPoint* splitCubicToSpline(const BLPoint p[4], BLPoint* out) noexcept {
+static BL_INLINE BLPoint* split_cubic_to_spline(const BLPoint p[4], BLPoint* out) noexcept {
   static_assert(uint32_t(Options) != 0, "Split options cannot be empty");
 
   // 4 extrema, 2 inflections, 1 cusp, and 1 terminating `1.0` value.
@@ -682,42 +682,42 @@ static BL_INLINE BLPoint* splitCubicToSpline(const BLPoint p[4], BLPoint* out) n
   FixedArray<double, kMaxTCount> ts;
 
   BLPoint Pa, Pb, Pc, Pd;
-  getCubicCoefficients(p, Pa, Pb, Pc, Pd);
+  get_cubic_coefficients(p, Pa, Pb, Pc, Pd);
 
   // Find cusp and/or inflections.
-  if (blTestFlag(Options, SplitCubicOptions::kCusp | SplitCubicOptions::kInflections)) {
+  if (bl_test_flag(Options, SplitCubicOptions::kCusp | SplitCubicOptions::kInflections)) {
     double q0 = cross(Pb, Pa);
     double q1 = cross(Pc, Pa);
     double q2 = cross(Pc, Pb);
 
     // Find cusp.
-    if (blTestFlag(Options, SplitCubicOptions::kCusp)) {
+    if (bl_test_flag(Options, SplitCubicOptions::kCusp)) {
       double tCusp = (q1 / q0) * -0.5;
-      ts.appendIf(tCusp, (tCusp > 0.0) & (tCusp < 1.0));
+      ts.append_if(tCusp, (tCusp > 0.0) & (tCusp < 1.0));
     }
 
     // Find inflections.
-    if (blTestFlag(Options, SplitCubicOptions::kInflections))
-      ts._incrementSize(Math::quadRoots(ts.end(), q0 * 6.0, q1 * 6.0, q2 * 2.0, Math::kAfter0, Math::kBefore1));
+    if (bl_test_flag(Options, SplitCubicOptions::kInflections))
+      ts._increment_size(Math::quad_roots(ts.end(), q0 * 6.0, q1 * 6.0, q2 * 2.0, Math::kAfter0, Math::kBefore1));
   }
 
   // Find extrema.
-  if (blTestFlag(Options, SplitCubicOptions::kXExtremas | SplitCubicOptions::kYExtremas)) {
+  if (bl_test_flag(Options, SplitCubicOptions::kXExtremas | SplitCubicOptions::kYExtremas)) {
     BLPoint Da, Db, Dc;
-    getCubicDerivativeCoefficients(p, Da, Db, Dc);
+    get_cubic_derivative_coefficients(p, Da, Db, Dc);
 
-    if (blTestFlag(Options, SplitCubicOptions::kXExtremas))
-      ts._incrementSize(Math::quadRoots(ts.end(), Da.x, Db.x, Dc.x, Math::kAfter0, Math::kBefore1));
+    if (bl_test_flag(Options, SplitCubicOptions::kXExtremas))
+      ts._increment_size(Math::quad_roots(ts.end(), Da.x, Db.x, Dc.x, Math::kAfter0, Math::kBefore1));
 
-    if (blTestFlag(Options, SplitCubicOptions::kYExtremas))
-      ts._incrementSize(Math::quadRoots(ts.end(), Da.y, Db.y, Dc.y, Math::kAfter0, Math::kBefore1));
+    if (bl_test_flag(Options, SplitCubicOptions::kYExtremas))
+      ts._increment_size(Math::quad_roots(ts.end(), Da.y, Db.y, Dc.y, Math::kAfter0, Math::kBefore1));
   }
 
   // Split the curve into a spline, if necessary.
-  if (!ts.empty()) {
+  if (!ts.is_empty()) {
     // If 2 or more flags were specified, sort Ts, otherwise we have them sorted already.
-    if (!IntOps::isPowerOf2(uint32_t(Options)))
-      insertionSort(ts.data(), ts.size());
+    if (!IntOps::is_power_of_2(uint32_t(Options)))
+      insertion_sort(ts.data(), ts.size());
 
     // The last T we want is at 1.0.
     ts.append(1.0);
@@ -763,16 +763,16 @@ static BL_INLINE BLPoint* splitCubicToSpline(const BLPoint p[4], BLPoint* out) n
   return out;
 }
 
-static BL_INLINE void approximateCubicWithTwoQuads(const BLPoint p[4], BLPoint quads[7]) noexcept {
+static BL_INLINE void approximate_cubic_with_two_quads(const BLPoint p[4], BLPoint quads[7]) noexcept {
   BLPoint c1 = lerp(p[0], p[1], 0.75);
   BLPoint c2 = lerp(p[3], p[2], 0.75);
   BLPoint pm = lerp(c1, c2);
 
   if (c1 == p[0])
-    c1 = lineVectorIntersection(p[0], cubicStartTangent(p), pm, cubicDerivativeAt(p, 0.5));
+    c1 = line_vector_intersection(p[0], cubic_start_tangent(p), pm, cubic_derivative_at(p, 0.5));
 
   if (c2 == p[3])
-    c2 = lineVectorIntersection(p[3], cubicEndTangent(p), pm, cubicDerivativeAt(p, 0.5));
+    c2 = line_vector_intersection(p[3], cubic_end_tangent(p), pm, cubic_derivative_at(p, 0.5));
 
   quads[0] = p[0];
   quads[1] = c1;
@@ -782,12 +782,12 @@ static BL_INLINE void approximateCubicWithTwoQuads(const BLPoint p[4], BLPoint q
 }
 
 template<typename Callback>
-static BL_INLINE BLResult approximateCubicWithQuads(const BLPoint p[4], double simplifyTolerance, const Callback& callback) noexcept {
-  // Tolerance consists of a prefactor (27/4 * 2^3) combined with `simplifyTolerance`.
-  double toleranceSq = Math::square(54.0 * simplifyTolerance);
+static BL_INLINE BLResult approximate_cubic_with_quads(const BLPoint p[4], double simplify_tolerance, const Callback& callback) noexcept {
+  // Tolerance consists of a prefactor (27/4 * 2^3) combined with `simplify_tolerance`.
+  double tolerance_sq = Math::square(54.0 * simplify_tolerance);
 
   // Smallest parameter step to satisfy tolerance condition.
-  double t = Math::pow(toleranceSq / lengthSq(cubicIdentity(p)), 1.0 / 6.0);
+  double t = Math::pow(tolerance_sq / length_sq(cubic_identity(p)), 1.0 / 6.0);
 
   BLPoint cubic[7];
   cubic[3] = p[0];
@@ -797,7 +797,7 @@ static BL_INLINE BLResult approximateCubicWithQuads(const BLPoint p[4], double s
 
   for (;;) {
     BLPoint quads[5];
-    t = blMin(1.0, t);
+    t = bl_min(1.0, t);
 
     if (t >= 0.999)
       t = 1.0;
@@ -805,8 +805,8 @@ static BL_INLINE BLResult approximateCubicWithQuads(const BLPoint p[4], double s
     // Split the cubic:
     //   - cubic[0:3] contains the part before `t`.
     //   - cubic[3:7] contains the part after `t`.
-    splitCubic(cubic + 3, cubic, cubic + 3, t);
-    approximateCubicWithTwoQuads(cubic, quads);
+    split_cubic(cubic + 3, cubic, cubic + 3, t);
+    approximate_cubic_with_two_quads(cubic, quads);
 
     for (size_t i = 0; i <= 2; i += 2)
       BL_PROPAGATE(callback(quads + i));
@@ -833,7 +833,7 @@ static BL_INLINE BLResult approximateCubicWithQuads(const BLPoint p[4], double s
 //! \{
 
 template<SplitQuadOptions Options>
-static BL_INLINE BLPoint* splitConicToSpline(const BLPoint p[3], BLPoint* out) noexcept {
+static BL_INLINE BLPoint* split_conic_to_spline(const BLPoint p[3], BLPoint* out) noexcept {
   static_assert(uint32_t(Options) != 0, "Split options cannot be empty");
 
   // 2 extremas and 1 terminating `1.0` value.
@@ -841,28 +841,28 @@ static BL_INLINE BLPoint* splitConicToSpline(const BLPoint p[3], BLPoint* out) n
   FixedArray<double, kMaxTCount> ts;
 
   BLPoint Pa, Pb, Pc;
-  getQuadCoefficients(p, Pa, Pb, Pc);
+  get_quad_coefficients(p, Pa, Pb, Pc);
 
   // Find extremas.
   if ((Options & SplitQuadOptions::kExtremas) == SplitQuadOptions::kExtremas) {
-    BLPoint extremaTs = (p[0] - p[1]) / (p[0] - p[1] * 2.0 + p[2]);
-    double extremaT0 = blMin(extremaTs.x, extremaTs.y);
-    double extremaT1 = blMax(extremaTs.x, extremaTs.y);
+    BLPoint extrema_ts = (p[0] - p[1]) / (p[0] - p[1] * 2.0 + p[2]);
+    double extremaT0 = bl_min(extrema_ts.x, extrema_ts.y);
+    double extremaT1 = bl_max(extrema_ts.x, extrema_ts.y);
 
-    ts.appendIf(extremaT0, (extremaT0 > 0.0) & (extremaT0 < 1.0));
-    ts.appendIf(extremaT1, (extremaT1 > blMax(extremaT0, 0.0)) & (extremaT1 < 1.0));
+    ts.append_if(extremaT0, (extremaT0 > 0.0) & (extremaT0 < 1.0));
+    ts.append_if(extremaT1, (extremaT1 > bl_max(extremaT0, 0.0)) & (extremaT1 < 1.0));
   }
-  else if (blTestFlag(Options, SplitQuadOptions::kXExtrema)) {
-    double extremaTx = (p[0].x - p[1].x) / (p[0].x - p[1].x * 2.0 + p[2].x);
-    ts.appendIf(extremaTx, (extremaTx > 0.0) & (extremaTx < 1.0));
+  else if (bl_test_flag(Options, SplitQuadOptions::kXExtrema)) {
+    double extrema_tx = (p[0].x - p[1].x) / (p[0].x - p[1].x * 2.0 + p[2].x);
+    ts.append_if(extrema_tx, (extrema_tx > 0.0) & (extrema_tx < 1.0));
   }
-  else if (blTestFlag(Options, SplitQuadOptions::kYExtrema)) {
-    double extremaTy = (p[0].y - p[1].y) / (p[0].y - p[1].y * 2.0 + p[2].y);
-    ts.appendIf(extremaTy, (extremaTy > 0.0) & (extremaTy < 1.0));
+  else if (bl_test_flag(Options, SplitQuadOptions::kYExtrema)) {
+    double extrema_ty = (p[0].y - p[1].y) / (p[0].y - p[1].y * 2.0 + p[2].y);
+    ts.append_if(extrema_ty, (extrema_ty > 0.0) & (extrema_ty < 1.0));
   }
 
   // Split the curve into a spline, if necessary.
-  if (!ts.empty()) {
+  if (!ts.is_empty()) {
     // The last T we want is at 1.0.
     ts.append(1.0);
 
@@ -899,7 +899,7 @@ static BL_INLINE BLPoint* splitConicToSpline(const BLPoint p[3], BLPoint* out) n
 }
 
 
-static BL_INLINE void getConicDerivativeCoefficients(const BLPoint p[4], BLPoint& a, BLPoint& b, BLPoint& c) noexcept {
+static BL_INLINE void get_conic_derivative_coefficients(const BLPoint p[4], BLPoint& a, BLPoint& b, BLPoint& c) noexcept {
   BLPoint p0 = p[0];
   BLPoint p1 = p[1];
   double w = p[2].x;
@@ -914,7 +914,7 @@ static BL_INLINE void getConicDerivativeCoefficients(const BLPoint p[4], BLPoint
   c = 2 * w * v1;
 }
 
-static BL_INLINE void getProjectivePoints(const BLPoint p[4], BLPoint out[6]) noexcept {
+static BL_INLINE void get_projective_points(const BLPoint p[4], BLPoint out[6]) noexcept {
   BLPoint p0 = p[0];
   BLPoint p1 = p[1];
   double w = p[2].x;
@@ -929,9 +929,9 @@ static BL_INLINE void getProjectivePoints(const BLPoint p[4], BLPoint out[6]) no
   out[5] = BLPoint(p2.y, 1);
 }
 
-static BL_INLINE BLPoint evalConicPrecise(const BLPoint p[4], const BLPoint& t) noexcept {
+static BL_INLINE BLPoint eval_conic_precise(const BLPoint p[4], const BLPoint& t) noexcept {
   BLPoint pp[6];
-  getProjectivePoints(p, pp);
+  get_projective_points(p, pp);
 
   BLPoint ppx01(lerp(pp[0], pp[1], t.x));
   BLPoint ppy01(lerp(pp[3], pp[4], t.y));
@@ -946,18 +946,18 @@ static BL_INLINE BLPoint evalConicPrecise(const BLPoint p[4], const BLPoint& t) 
 }
 
 
-static BL_INLINE void getConicExtremaPoints(const BLPoint p[4], BLPoint out[2]) noexcept {
+static BL_INLINE void get_conic_extrema_points(const BLPoint p[4], BLPoint out[2]) noexcept {
   BLPoint a, b, c;
-  getConicDerivativeCoefficients(p, a, b, c);
+  get_conic_derivative_coefficients(p, a, b, c);
 
   BLPoint t[2];
-  Math::simplifiedQuadRoots(t, a, b, c);
+  Math::simplified_quad_roots(t, a, b, c);
 
-  t[0] = blClamp(t[0], 0.0, 1.0);
-  t[1] = blClamp(t[1], 0.0, 1.0);
+  t[0] = bl_clamp(t[0], 0.0, 1.0);
+  t[1] = bl_clamp(t[1], 0.0, 1.0);
 
-  out[0] = evalConicPrecise(p, t[0]);
-  out[1] = evalConicPrecise(p, t[1]);
+  out[0] = eval_conic_precise(p, t[0]);
+  out[1] = eval_conic_precise(p, t[1]);
 }
 
 //! \}

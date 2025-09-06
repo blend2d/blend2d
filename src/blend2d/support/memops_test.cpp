@@ -38,7 +38,7 @@ UNIT(support_memops, BL_TEST_GROUP_SUPPORT_UTILITIES) {
   {
     uint8_t data[5] = { 1, 2, 3, 4, 5 };
 
-    MemOps::copyForwardInlineT(data, data + 1, 4);
+    MemOps::copy_forward_inline_t(data, data + 1, 4);
     EXPECT_EQ(data[0], 2);
     EXPECT_EQ(data[1], 3);
     EXPECT_EQ(data[2], 4);

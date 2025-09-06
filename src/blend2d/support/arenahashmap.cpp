@@ -151,7 +151,7 @@ struct BLPrimeNumber {
 };
 
 //! Table of prime numbers that we use as buckets count in our hash table.
-static const BLPrimeNumber blPrimeNumberTable[] = {
+static const BLPrimeNumber bl_prime_number_table[] = {
   #define E(PRIME, RCP, SHIFT) { PRIME, RCP }
   BLEND2D_POPULATE_PRIMES(E)
   #undef E
@@ -160,7 +160,7 @@ static const BLPrimeNumber blPrimeNumberTable[] = {
 //! How many bits to shift to get the final result after 64-bit multiplication.
 //!
 //! \note In 32-bit mode we only shift the higher half (faster).
-static const uint8_t blPrimeShiftTable[] = {
+static const uint8_t bl_prime_shift_table[] = {
   #define E(PRIME, RCP, SHIFT) uint8_t(BL_TARGET_ARCH_BITS >= 64 ? SHIFT : SHIFT - 32)
   BLEND2D_POPULATE_PRIMES(E)
   #undef E
@@ -169,73 +169,73 @@ static const uint8_t blPrimeShiftTable[] = {
 // bl::ArenaHashMap - API
 // ======================
 
-void ArenaHashMapBase::_rehash(uint32_t primeIndex) noexcept {
-  BL_ASSERT(primeIndex < BL_ARRAY_SIZE(blPrimeNumberTable));
+void ArenaHashMapBase::_rehash(uint32_t prime_index) noexcept {
+  BL_ASSERT(prime_index < BL_ARRAY_SIZE(bl_prime_number_table));
 
-  uint32_t newCount = blPrimeNumberTable[primeIndex].prime;
-  ArenaHashMapNode** newData = _allocator->allocZeroedT<ArenaHashMapNode*>(newCount * sizeof(ArenaHashMapNode*));
+  uint32_t new_count = bl_prime_number_table[prime_index].prime;
+  ArenaHashMapNode** new_data = _allocator->alloc_zeroedT<ArenaHashMapNode*>(new_count * sizeof(ArenaHashMapNode*));
 
   // We can still store nodes into the table, but it will degrade.
-  if (BL_UNLIKELY(newData == nullptr))
+  if (BL_UNLIKELY(new_data == nullptr))
     return;
 
-  ArenaHashMapNode** oldData = _data;
-  uint32_t oldCount = _bucketCount;
+  ArenaHashMapNode** old_data = _data;
+  uint32_t old_count = _bucket_count;
 
   // 92.8% is the occupancy that causes rehashing. The multiplication should not overflow
   // as we don't store such a large prime that would require 64-bit intermediate result.
-  _data = newData;
-  _bucketCount = newCount;
-  _bucketGrow = (newCount * 13) / 14;
-  _rcpValue = blPrimeNumberTable[primeIndex].rcp;
-  _rcpShift = blPrimeShiftTable[primeIndex];
-  _primeIndex = uint8_t(primeIndex);
+  _data = new_data;
+  _bucket_count = new_count;
+  _bucket_grow = (new_count * 13) / 14;
+  _rcp_value = bl_prime_number_table[prime_index].rcp;
+  _rcp_shift = bl_prime_shift_table[prime_index];
+  _prime_index = uint8_t(prime_index);
 
-  for (uint32_t i = 0; i < oldCount; i++) {
-    ArenaHashMapNode* node = oldData[i];
+  for (uint32_t i = 0; i < old_count; i++) {
+    ArenaHashMapNode* node = old_data[i];
     while (node) {
-      ArenaHashMapNode* next = node->_hashNext;
-      uint32_t hashMod = _calcMod(node->_hashCode);
+      ArenaHashMapNode* next = node->_hash_next;
+      uint32_t hash_mod = _calc_mod(node->_hash_code);
 
-      node->_hashNext = newData[hashMod];
-      newData[hashMod] = node;
+      node->_hash_next = new_data[hash_mod];
+      new_data[hash_mod] = node;
       node = next;
     }
   }
 
   memset(_embedded, 0, sizeof(_embedded));
-  if (oldData != _embedded)
-    _allocator->release(reinterpret_cast<void*>(oldData), oldCount * sizeof(ArenaHashMapNode*));
+  if (old_data != _embedded)
+    _allocator->release(reinterpret_cast<void*>(old_data), old_count * sizeof(ArenaHashMapNode*));
 }
 
 void ArenaHashMapBase::_insert(ArenaHashMapNode* node) noexcept {
-  uint32_t hashMod = _calcMod(node->_hashCode);
-  ArenaHashMapNode* next = _data[hashMod];
+  uint32_t hash_mod = _calc_mod(node->_hash_code);
+  ArenaHashMapNode* next = _data[hash_mod];
 
-  node->_hashNext = next;
-  _data[hashMod] = node;
+  node->_hash_next = next;
+  _data[hash_mod] = node;
 
-  if (++_size > _bucketGrow) {
-    uint32_t primeIndex = blMin<uint32_t>(_primeIndex + 2, BL_ARRAY_SIZE(blPrimeNumberTable) - 1);
-    if (primeIndex > _primeIndex)
-      _rehash(primeIndex);
+  if (++_size > _bucket_grow) {
+    uint32_t prime_index = bl_min<uint32_t>(_prime_index + 2, BL_ARRAY_SIZE(bl_prime_number_table) - 1);
+    if (prime_index > _prime_index)
+      _rehash(prime_index);
   }
 }
 
 bool ArenaHashMapBase::_remove(ArenaHashMapNode* node) noexcept {
-  uint32_t hashMod = _calcMod(node->_hashCode);
+  uint32_t hash_mod = _calc_mod(node->_hash_code);
 
-  ArenaHashMapNode** pPrev = &_data[hashMod];
+  ArenaHashMapNode** pPrev = &_data[hash_mod];
   ArenaHashMapNode* p = *pPrev;
 
   while (p) {
     if (p == node) {
-      *pPrev = p->_hashNext;
+      *pPrev = p->_hash_next;
       _size--;
       return true;
     }
 
-    pPrev = &p->_hashNext;
+    pPrev = &p->_hash_next;
     p = *pPrev;
   }
 

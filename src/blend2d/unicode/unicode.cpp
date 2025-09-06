@@ -15,7 +15,7 @@ namespace bl::Unicode {
 
 // NOTE: Theoretically UTF-8 sequence can be extended to support sequences up to 6 bytes, however, since UCS-4
 // code-point's maximum value is 0x10FFFF it also limits the maximum length of a UTF-8 encoded character to 4 bytes.
-const uint8_t utf8SizeData[256] = {
+const uint8_t utf8_size_data[256] = {
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0   - 15
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 16  - 31
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 32  - 47
@@ -38,76 +38,76 @@ const uint8_t utf8SizeData[256] = {
 // ========================
 
 // Not really anything to validate, we just want to calculate a corresponding UTF-8 size.
-static BL_INLINE BLResult validateLatin1String(const char* data, size_t size, ValidationState& state) noexcept {
+static BL_INLINE BLResult validate_latin1_string(const char* data, size_t size, ValidationState& state) noexcept {
   size_t extra = 0;
-  state.utf16Index = size;
-  state.utf32Index = size;
+  state.utf16_index = size;
+  state.utf32_index = size;
 
   for (size_t i = 0; i < size; i++)
     extra += size_t(uint8_t(data[i])) >> 7;
 
   bl::OverflowFlag of{};
-  size_t utf8Size = bl::IntOps::addOverflow(size, extra, &of);
+  size_t utf8_size = bl::IntOps::add_overflow(size, extra, &of);
 
   if (BL_UNLIKELY(of))
-    return blTraceError(BL_ERROR_DATA_TOO_LARGE);
+    return bl_trace_error(BL_ERROR_DATA_TOO_LARGE);
 
-  state.utf8Index = utf8Size;
+  state.utf8_index = utf8_size;
   return BL_SUCCESS;
 }
 
 template<typename Iterator, IOFlags kFlags>
-static BL_INLINE BLResult validateUnicodeString(const void* data, size_t size, ValidationState& state) noexcept {
+static BL_INLINE BLResult validate_unicode_string(const void* data, size_t size, ValidationState& state) noexcept {
   Iterator it(data, size);
   BLResult result = it.template validate<kFlags | IOFlags::kCalcIndex>();
-  state.utf8Index = it.utf8Index(data);
-  state.utf16Index = it.utf16Index(data);
-  state.utf32Index = it.utf32Index(data);
+  state.utf8_index = it.utf8_index(data);
+  state.utf16_index = it.utf16_index(data);
+  state.utf32_index = it.utf32_index(data);
   return result;
 }
 
-BLResult blValidateUnicode(const void* data, size_t sizeInBytes, BLTextEncoding encoding, ValidationState& state) noexcept {
+BLResult bl_validate_unicode(const void* data, size_t size_in_bytes, BLTextEncoding encoding, ValidationState& state) noexcept {
   BLResult result;
   state.reset();
 
   switch (encoding) {
     case BL_TEXT_ENCODING_LATIN1:
-      return validateLatin1String(static_cast<const char*>(data), sizeInBytes, state);
+      return validate_latin1_string(static_cast<const char*>(data), size_in_bytes, state);
 
     case BL_TEXT_ENCODING_UTF8:
-      return validateUnicodeString<Utf8Reader, IOFlags::kStrict>(data, sizeInBytes, state);
+      return validate_unicode_string<Utf8Reader, IOFlags::kStrict>(data, size_in_bytes, state);
 
     case BL_TEXT_ENCODING_UTF16:
       // This will make sure we won't compile specialized code for architectures that don't penalize unaligned reads.
-      if (MemOps::kUnalignedMem16 || !IntOps::isAligned(data, 2))
-        result = validateUnicodeString<Utf16Reader, IOFlags::kStrict | IOFlags::kUnaligned>(data, sizeInBytes, state);
+      if (MemOps::kUnalignedMem16 || !IntOps::is_aligned(data, 2))
+        result = validate_unicode_string<Utf16Reader, IOFlags::kStrict | IOFlags::kUnaligned>(data, size_in_bytes, state);
       else
-        result = validateUnicodeString<Utf16Reader, IOFlags::kStrict>(data, sizeInBytes, state);
+        result = validate_unicode_string<Utf16Reader, IOFlags::kStrict>(data, size_in_bytes, state);
 
-      if (result == BL_SUCCESS && BL_UNLIKELY(sizeInBytes & 0x1))
-        result = blTraceError(BL_ERROR_DATA_TRUNCATED);
+      if (result == BL_SUCCESS && BL_UNLIKELY(size_in_bytes & 0x1))
+        result = bl_trace_error(BL_ERROR_DATA_TRUNCATED);
       return result;
 
     case BL_TEXT_ENCODING_UTF32:
       // This will make sure we won't compile specialized code for architectures that don't penalize unaligned reads.
-      if (MemOps::kUnalignedMem32 || !IntOps::isAligned(data, 4))
-        result = validateUnicodeString<Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(data, sizeInBytes, state);
+      if (MemOps::kUnalignedMem32 || !IntOps::is_aligned(data, 4))
+        result = validate_unicode_string<Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(data, size_in_bytes, state);
       else
-        result = validateUnicodeString<Utf32Reader, IOFlags::kStrict>(data, sizeInBytes, state);
+        result = validate_unicode_string<Utf32Reader, IOFlags::kStrict>(data, size_in_bytes, state);
 
-      if (result == BL_SUCCESS && BL_UNLIKELY(sizeInBytes & 0x3))
-        result = blTraceError(BL_ERROR_DATA_TRUNCATED);
+      if (result == BL_SUCCESS && BL_UNLIKELY(size_in_bytes & 0x3))
+        result = bl_trace_error(BL_ERROR_DATA_TRUNCATED);
       return result;
 
     default:
-      return blTraceError(BL_ERROR_INVALID_VALUE);
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
   }
 }
 
 // bl::Unicode - Conversion
 // ========================
 
-static BL_INLINE size_t offsetOfPtr(const void* base, const void* advanced) noexcept {
+static BL_INLINE size_t offset_of_ptr(const void* base, const void* advanced) noexcept {
   return (size_t)(static_cast<const char*>(advanced) - static_cast<const char*>(base));
 }
 
@@ -115,41 +115,41 @@ static BL_INLINE size_t offsetOfPtr(const void* base, const void* advanced) noex
 // implementation is that switching `Writer` and `Iterator` can customize strictness, endianness, etc, so we don't
 // have to repeat the code for different variations of UTF16 and UTF32.
 template<typename Writer, typename Iterator, IOFlags kFlags>
-static BL_INLINE BLResult convertUnicodeImpl(void* dst, size_t dstSizeInBytes, const void* src, size_t srcSizeInBytes, ConversionState& state) noexcept {
+static BL_INLINE BLResult convert_unicode_impl(void* dst, size_t dst_size_in_bytes, const void* src, size_t src_size_in_bytes, ConversionState& state) noexcept {
   typedef typename Writer::CharType DstChar;
 
-  Writer writer(static_cast<DstChar*>(dst), dstSizeInBytes / sizeof(DstChar));
-  Iterator iter(src, IntOps::alignDown(srcSizeInBytes, Iterator::kCharSize));
+  Writer writer(static_cast<DstChar*>(dst), dst_size_in_bytes / sizeof(DstChar));
+  Iterator iter(src, IntOps::align_down(src_size_in_bytes, Iterator::kCharSize));
 
   BLResult result = BL_SUCCESS;
-  while (iter.hasNext()) {
+  while (iter.has_next()) {
     uint32_t uc;
-    size_t ucSizeInBytes;
+    size_t uc_size_in_bytes;
 
-    result = iter.template next<kFlags>(uc, ucSizeInBytes);
+    result = iter.template next<kFlags>(uc, uc_size_in_bytes);
     if (BL_UNLIKELY(result != BL_SUCCESS))
       break;
 
     result = writer.write(uc);
     if (BL_UNLIKELY(result != BL_SUCCESS)) {
-      state.dstIndex = offsetOfPtr(dst, writer._ptr);
-      state.srcIndex = offsetOfPtr(src, iter._ptr) - ucSizeInBytes;
+      state.dst_index = offset_of_ptr(dst, writer._ptr);
+      state.src_index = offset_of_ptr(src, iter._ptr) - uc_size_in_bytes;
       return result;
     }
   }
 
-  state.dstIndex = offsetOfPtr(dst, writer._ptr);
-  state.srcIndex = offsetOfPtr(src, iter._ptr);
+  state.dst_index = offset_of_ptr(dst, writer._ptr);
+  state.src_index = offset_of_ptr(src, iter._ptr);
 
-  if (Iterator::kCharSize > 1 && result == BL_SUCCESS && !IntOps::isAligned(state.srcIndex, Iterator::kCharSize))
-    return blTraceError(BL_ERROR_DATA_TRUNCATED);
+  if (Iterator::kCharSize > 1 && result == BL_SUCCESS && !IntOps::is_aligned(state.src_index, Iterator::kCharSize))
+    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
   else
     return result;
 }
 
-BLResult convertUnicode(
-  void* dst, size_t dstSizeInBytes, uint32_t dstEncoding,
-  const void* src, size_t srcSizeInBytes, uint32_t srcEncoding,
+BLResult convert_unicode(
+  void* dst, size_t dst_size_in_bytes, uint32_t dst_encoding,
+  const void* src, size_t src_size_in_bytes, uint32_t src_encoding,
   ConversionState& state) noexcept {
 
   constexpr bool kUnalignedAny = MemOps::kUnalignedMem16 && MemOps::kUnalignedMem32;
@@ -157,20 +157,20 @@ BLResult convertUnicode(
   BLResult result = BL_SUCCESS;
   state.reset();
 
-  uint32_t encodingCombined = (dstEncoding << 2) | srcEncoding;
-  switch (encodingCombined) {
+  uint32_t encoding_combined = (dst_encoding << 2) | src_encoding;
+  switch (encoding_combined) {
     // MemCpy
     // ------
 
     case (BL_TEXT_ENCODING_LATIN1 << 2) | BL_TEXT_ENCODING_LATIN1: {
-      size_t copySize = blMin(dstSizeInBytes, srcSizeInBytes);
-      memcpy(dst, src, copySize);
+      size_t copy_size = bl_min(dst_size_in_bytes, src_size_in_bytes);
+      memcpy(dst, src, copy_size);
 
-      state.dstIndex = copySize;
-      state.srcIndex = copySize;
+      state.dst_index = copy_size;
+      state.src_index = copy_size;
 
-      if (dstSizeInBytes < srcSizeInBytes)
-        result = blTraceError(BL_ERROR_NO_SPACE_LEFT);
+      if (dst_size_in_bytes < src_size_in_bytes)
+        result = bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
       break;
     }
 
@@ -178,33 +178,33 @@ BLResult convertUnicode(
     // --------------
 
     case (BL_TEXT_ENCODING_UTF8 << 2) | BL_TEXT_ENCODING_LATIN1: {
-      Utf8Writer writer(static_cast<char*>(dst), dstSizeInBytes);
+      Utf8Writer writer(static_cast<char*>(dst), dst_size_in_bytes);
       const uint8_t* src8 = static_cast<const uint8_t*>(src);
 
-      if (dstSizeInBytes / 2 >= srcSizeInBytes) {
+      if (dst_size_in_bytes / 2 >= src_size_in_bytes) {
         // Fast case, there is enough space in `dst` even for the worst-case scenario.
-        for (size_t i = 0; i < srcSizeInBytes; i++) {
+        for (size_t i = 0; i < src_size_in_bytes; i++) {
           uint32_t uc = src8[i];
           if (uc <= 0x7F)
-            writer.writeByteUnsafe(uc);
+            writer.write_byte_unsafe(uc);
           else
-            writer.write2BytesUnsafe(uc);
+            writer.write2_bytes_unsafe(uc);
         }
 
-        state.srcIndex = srcSizeInBytes;
-        state.dstIndex = writer.index(static_cast<char*>(dst));
+        state.src_index = src_size_in_bytes;
+        state.dst_index = writer.index(static_cast<char*>(dst));
       }
       else {
-        for (size_t i = 0; i < srcSizeInBytes; i++) {
+        for (size_t i = 0; i < src_size_in_bytes; i++) {
           uint32_t uc = src8[i];
           if (uc <= 0x7F)
-            result = writer.writeByte(uc);
+            result = writer.write_byte(uc);
           else
-            result = writer.write2Bytes(uc);
+            result = writer.write2_bytes(uc);
 
           if (BL_UNLIKELY(result != BL_SUCCESS)) {
-            state.dstIndex = writer.index(static_cast<char*>(dst));
-            state.srcIndex = i;
+            state.dst_index = writer.index(static_cast<char*>(dst));
+            state.src_index = i;
             break;
           }
         }
@@ -217,21 +217,21 @@ BLResult convertUnicode(
     // ------------
 
     case (BL_TEXT_ENCODING_UTF8 << 2) | BL_TEXT_ENCODING_UTF8: {
-      size_t copySize = blMin(dstSizeInBytes, srcSizeInBytes);
-      ValidationState validationState;
+      size_t copy_size = bl_min(dst_size_in_bytes, src_size_in_bytes);
+      ValidationState validation_state;
 
-      result = blValidateUnicode(src, copySize, BL_TEXT_ENCODING_UTF8, validationState);
-      size_t validatedSize = validationState.utf8Index;
+      result = bl_validate_unicode(src, copy_size, BL_TEXT_ENCODING_UTF8, validation_state);
+      size_t validated_size = validation_state.utf8_index;
 
-      if (validatedSize)
-        memcpy(dst, src, validatedSize);
+      if (validated_size)
+        memcpy(dst, src, validated_size);
 
       // Prevent `BL_ERROR_DATA_TRUNCATED` in case there is not enough space in destination.
-      if (copySize < srcSizeInBytes && (result == BL_SUCCESS || result == BL_ERROR_DATA_TRUNCATED))
-        result = blTraceError(BL_ERROR_NO_SPACE_LEFT);
+      if (copy_size < src_size_in_bytes && (result == BL_SUCCESS || result == BL_ERROR_DATA_TRUNCATED))
+        result = bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
 
-      state.dstIndex = validatedSize;
-      state.srcIndex = validatedSize;
+      state.dst_index = validated_size;
+      state.src_index = validated_size;
       break;
     }
 
@@ -239,20 +239,20 @@ BLResult convertUnicode(
     // -------------
 
     case (BL_TEXT_ENCODING_UTF8 << 2) | BL_TEXT_ENCODING_UTF16:
-      if (MemOps::kUnalignedMem16 || !IntOps::isAligned(src, 2))
-        result = convertUnicodeImpl<Utf8Writer, Utf16Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+      if (MemOps::kUnalignedMem16 || !IntOps::is_aligned(src, 2))
+        result = convert_unicode_impl<Utf8Writer, Utf16Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convertUnicodeImpl<Utf8Writer, Utf16Reader, IOFlags::kStrict>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+        result = convert_unicode_impl<Utf8Writer, Utf16Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
 
     // Utf8 <- Utf32
     // -------------
 
     case (BL_TEXT_ENCODING_UTF8 << 2) | BL_TEXT_ENCODING_UTF32: {
-      if (MemOps::kUnalignedMem32 || !IntOps::isAligned(src, 4))
-        result = convertUnicodeImpl<Utf8Writer, Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+      if (MemOps::kUnalignedMem32 || !IntOps::is_aligned(src, 4))
+        result = convert_unicode_impl<Utf8Writer, Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convertUnicodeImpl<Utf8Writer, Utf32Reader, IOFlags::kStrict>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+        result = convert_unicode_impl<Utf8Writer, Utf32Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
     }
 
@@ -260,9 +260,9 @@ BLResult convertUnicode(
     // ---------------
 
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_LATIN1: {
-      size_t count = blMin(dstSizeInBytes / 2, srcSizeInBytes);
+      size_t count = bl_min(dst_size_in_bytes / 2, src_size_in_bytes);
 
-      if (MemOps::kUnalignedMem16 || IntOps::isAligned(dst, 2)) {
+      if (MemOps::kUnalignedMem16 || IntOps::is_aligned(dst, 2)) {
         for (size_t i = 0; i < count; i++)
           MemOps::writeU16aLE(static_cast<uint8_t*>(dst) + i * 2u, static_cast<const uint8_t*>(src)[i]);
       }
@@ -271,11 +271,11 @@ BLResult convertUnicode(
           MemOps::writeU16uLE(static_cast<uint8_t*>(dst) + i * 2u, static_cast<const uint8_t*>(src)[i]);
       }
 
-      if (count < srcSizeInBytes)
-        result = blTraceError(BL_ERROR_NO_SPACE_LEFT);
+      if (count < src_size_in_bytes)
+        result = bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
 
-      state.dstIndex = count * 2u;
-      state.srcIndex = count;
+      state.dst_index = count * 2u;
+      state.src_index = count;
       break;
     }
 
@@ -283,10 +283,10 @@ BLResult convertUnicode(
     // -------------
 
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_UTF8: {
-      if (MemOps::kUnalignedMem16 || !IntOps::isAligned(dst, 2))
-        result = convertUnicodeImpl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf8Reader, IOFlags::kStrict>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+      if (MemOps::kUnalignedMem16 || !IntOps::is_aligned(dst, 2))
+        result = convert_unicode_impl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convertUnicodeImpl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 2>, Utf8Reader, IOFlags::kStrict>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+        result = convert_unicode_impl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 2>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
     }
 
@@ -294,25 +294,25 @@ BLResult convertUnicode(
     // --------------
 
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_UTF16: {
-      size_t copySize = IntOps::alignDown(blMin(dstSizeInBytes, srcSizeInBytes), 2);
-      ValidationState validationState;
+      size_t copy_size = IntOps::align_down(bl_min(dst_size_in_bytes, src_size_in_bytes), 2);
+      ValidationState validation_state;
 
-      result = blValidateUnicode(src, copySize, BL_TEXT_ENCODING_UTF16, validationState);
-      size_t validatedSize = validationState.utf16Index * 2;
+      result = bl_validate_unicode(src, copy_size, BL_TEXT_ENCODING_UTF16, validation_state);
+      size_t validated_size = validation_state.utf16_index * 2;
 
-      memmove(dst, src, validatedSize);
+      memmove(dst, src, validated_size);
 
       // Prevent `BL_ERROR_DATA_TRUNCATED` in case there is not enough space in destination.
-      if (copySize < srcSizeInBytes && (result == BL_SUCCESS || result == BL_ERROR_DATA_TRUNCATED))
-        result = blTraceError(BL_ERROR_NO_SPACE_LEFT);
+      if (copy_size < src_size_in_bytes && (result == BL_SUCCESS || result == BL_ERROR_DATA_TRUNCATED))
+        result = bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
 
       // Report `BL_ERROR_DATA_TRUNCATED` is everything went right, but the
       // source size was not aligned to 2 bytes.
-      if (result == BL_SUCCESS && !IntOps::isAligned(srcSizeInBytes, 2))
-        result = blTraceError(BL_ERROR_DATA_TRUNCATED);
+      if (result == BL_SUCCESS && !IntOps::is_aligned(src_size_in_bytes, 2))
+        result = bl_trace_error(BL_ERROR_DATA_TRUNCATED);
 
-      state.dstIndex = validatedSize;
-      state.srcIndex = validatedSize;
+      state.dst_index = validated_size;
+      state.src_index = validated_size;
       break;
     }
 
@@ -320,10 +320,10 @@ BLResult convertUnicode(
     // --------------
 
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_UTF32: {
-      if (kUnalignedAny || !IntOps::isAligned(dst, 2) || !IntOps::isAligned(src, 4))
-        result = convertUnicodeImpl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+      if (kUnalignedAny || !IntOps::is_aligned(dst, 2) || !IntOps::is_aligned(src, 4))
+        result = convert_unicode_impl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convertUnicodeImpl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 2>, Utf32Reader, IOFlags::kStrict>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+        result = convert_unicode_impl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 2>, Utf32Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
     }
 
@@ -331,9 +331,9 @@ BLResult convertUnicode(
     // ---------------
 
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_LATIN1: {
-      size_t count = blMin(dstSizeInBytes / 4, srcSizeInBytes);
+      size_t count = bl_min(dst_size_in_bytes / 4, src_size_in_bytes);
 
-      if (MemOps::kUnalignedMem32 || IntOps::isAligned(dst, 4)) {
+      if (MemOps::kUnalignedMem32 || IntOps::is_aligned(dst, 4)) {
         for (size_t i = 0; i < count; i++)
           MemOps::writeU32a(static_cast<uint8_t*>(dst) + i * 4u, static_cast<const uint8_t*>(src)[i]);
       }
@@ -342,11 +342,11 @@ BLResult convertUnicode(
           MemOps::writeU32u(static_cast<uint8_t*>(dst) + i * 4u, static_cast<const uint8_t*>(src)[i]);
       }
 
-      if (count < srcSizeInBytes)
-        result = blTraceError(BL_ERROR_NO_SPACE_LEFT);
+      if (count < src_size_in_bytes)
+        result = bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
 
-      state.dstIndex = count * 4u;
-      state.srcIndex = count;
+      state.dst_index = count * 4u;
+      state.src_index = count;
       break;
     }
 
@@ -354,10 +354,10 @@ BLResult convertUnicode(
     // -------------
 
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_UTF8: {
-      if (MemOps::kUnalignedMem32 || !IntOps::isAligned(dst, 4))
-        result = convertUnicodeImpl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf8Reader, IOFlags::kStrict>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+      if (MemOps::kUnalignedMem32 || !IntOps::is_aligned(dst, 4))
+        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convertUnicodeImpl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 4>, Utf8Reader, IOFlags::kStrict>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 4>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
     }
 
@@ -365,10 +365,10 @@ BLResult convertUnicode(
     // --------------
 
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_UTF16: {
-      if (kUnalignedAny || !IntOps::isAligned(dst, 4) || !IntOps::isAligned(src, 2))
-        result = convertUnicodeImpl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf16Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+      if (kUnalignedAny || !IntOps::is_aligned(dst, 4) || !IntOps::is_aligned(src, 2))
+        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf16Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convertUnicodeImpl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 4>, Utf16Reader, IOFlags::kStrict>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 4>, Utf16Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
     }
 
@@ -376,10 +376,10 @@ BLResult convertUnicode(
     // --------------
 
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_UTF32: {
-      if (MemOps::kUnalignedMem32 || !IntOps::isAligned(dst, 4) || !IntOps::isAligned(src, 4))
-        result = convertUnicodeImpl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf32Reader, IOFlags::kStrict>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+      if (MemOps::kUnalignedMem32 || !IntOps::is_aligned(dst, 4) || !IntOps::is_aligned(src, 4))
+        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf32Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convertUnicodeImpl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 4>, Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
+        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 4>, Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
     }
 
@@ -387,7 +387,7 @@ BLResult convertUnicode(
     // -------
 
     default: {
-      return blTraceError(BL_ERROR_INVALID_VALUE);
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
     }
   }
 

@@ -22,10 +22,10 @@ public:
   //! \{
 
   PipeCompiler* pc {};
-  bool _isRectFill {};
-  Gp _dmPosition;
+  bool _is_rect_fill {};
+  Gp _dm_position;
   Gp _dmOriginX;
-  Vec _dmValues;
+  Vec _dm_values;
 
   //! \}
 
@@ -33,60 +33,60 @@ public:
     : pc(pc) {}
 
   //! Returns whether this dithering context is used in a rectangular fill.
-  BL_INLINE_NODEBUG bool isRectFill() const noexcept { return _isRectFill; }
+  BL_INLINE_NODEBUG bool is_rect_fill() const noexcept { return _is_rect_fill; }
 
   void initY(const PipeFunction& fn, const Gp& x, const Gp& y) noexcept;
   void advanceY() noexcept;
 
   void startAtX(const Gp& x) noexcept;
-  void advanceX(const Gp& x, const Gp& diff, bool diffWithinBounds) noexcept;
+  void advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
   void advanceXAfterFetch(uint32_t n) noexcept;
 
-  void ditherUnpackedPixels(Pixel& p, AdvanceMode advanceMode) noexcept;
+  void dither_unpacked_pixels(Pixel& p, AdvanceMode advance_mode) noexcept;
 };
 
 //! Base class for all gradient fetch parts.
 class FetchGradientPart : public FetchPart {
 public:
-  ExtendMode _extendMode {};
-  bool _ditheringEnabled {};
+  ExtendMode _extend_mode {};
+  bool _dithering_enabled {};
 
-  Gp _tablePtr;
-  GradientDitheringContext _ditheringContext;
+  Gp _table_ptr;
+  GradientDitheringContext _dithering_context;
 
-  FetchGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
+  FetchGradientPart(PipeCompiler* pc, FetchType fetch_type, FormatExt format) noexcept;
 
   //! Returns the gradient extend mode.
-  BL_INLINE_NODEBUG ExtendMode extendMode() const noexcept { return _extendMode; }
+  BL_INLINE_NODEBUG ExtendMode extend_mode() const noexcept { return _extend_mode; }
 
   //! Returns true if the gradient extend mode is Pad.
-  BL_INLINE_NODEBUG bool isPad() const noexcept { return _extendMode == ExtendMode::kPad; }
+  BL_INLINE_NODEBUG bool is_pad() const noexcept { return _extend_mode == ExtendMode::kPad; }
   //! Returns true if the gradient extend mode is RoR.
-  BL_INLINE_NODEBUG bool isRoR() const noexcept { return _extendMode == ExtendMode::kRoR; }
+  BL_INLINE_NODEBUG bool isRoR() const noexcept { return _extend_mode == ExtendMode::kRoR; }
 
-  BL_INLINE_NODEBUG bool ditheringEnabled() const noexcept { return _ditheringEnabled; }
+  BL_INLINE_NODEBUG bool dithering_enabled() const noexcept { return _dithering_enabled; }
 
-  BL_INLINE_NODEBUG void setDitheringEnabled(bool value) noexcept {
-    _ditheringEnabled = value;
+  BL_INLINE_NODEBUG void set_dithering_enabled(bool value) noexcept {
+    _dithering_enabled = value;
     if (value)
-      _partFlags |= PipePartFlags::kAdvanceXNeedsX;
+      _part_flags |= PipePartFlags::kAdvanceXNeedsX;
   }
 
-  BL_INLINE_NODEBUG int tablePtrShift() const noexcept { return _ditheringEnabled ? 3 : 2; }
+  BL_INLINE_NODEBUG int table_ptr_shift() const noexcept { return _dithering_enabled ? 3 : 2; }
 
-  void fetchSinglePixel(Pixel& dst, PixelFlags flags, const Gp& idx) noexcept;
+  void fetch_single_pixel(Pixel& dst, PixelFlags flags, const Gp& idx) noexcept;
 
-  void fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, FetchUtils::IndexLayout indexLayout, GatherMode mode, InterleaveCallback cb, void* cbData) noexcept;
+  void fetch_multiple_pixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, FetchUtils::IndexLayout index_layout, GatherMode mode, InterleaveCallback cb, void* cb_data) noexcept;
 
-  inline void fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, FetchUtils::IndexLayout indexLayout, GatherMode mode) noexcept {
-    fetchMultiplePixels(dst, n, flags, idx, indexLayout, mode, dummyInterleaveCallback, nullptr);
+  inline void fetch_multiple_pixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, FetchUtils::IndexLayout index_layout, GatherMode mode) noexcept {
+    fetch_multiple_pixels(dst, n, flags, idx, index_layout, mode, dummy_interleave_callback, nullptr);
   }
 
   template<class InterleaveFunc>
-  inline void fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, FetchUtils::IndexLayout indexLayout, GatherMode mode, InterleaveFunc&& interleaveFunc) noexcept {
-    fetchMultiplePixels(dst, n, flags, idx, indexLayout, mode, [](uint32_t step, void* data) noexcept {
+  inline void fetch_multiple_pixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, FetchUtils::IndexLayout index_layout, GatherMode mode, InterleaveFunc&& interleave_func) noexcept {
+    fetch_multiple_pixels(dst, n, flags, idx, index_layout, mode, [](uint32_t step, void* data) noexcept {
       (*static_cast<const InterleaveFunc*>(data))(step);
-    }, (void*)&interleaveFunc);
+    }, (void*)&interleave_func);
   }
 };
 
@@ -94,7 +94,7 @@ public:
 class FetchLinearGradientPart : public FetchGradientPart {
 public:
   struct LinearRegs {
-    Gp dtGp;
+    Gp dt_gp;
     Vec pt;
     Vec dt;
     Vec dtN;
@@ -102,24 +102,24 @@ public:
     Vec dy;
     Vec maxi;
     Vec rori;
-    Vec vIdx;
+    Vec v_idx;
   };
 
   Wrap<LinearRegs> f;
 
-  FetchLinearGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
+  FetchLinearGradientPart(PipeCompiler* pc, FetchType fetch_type, FormatExt format) noexcept;
 
-  BL_INLINE_NODEBUG VecWidth vecWidth() const noexcept { return blMin(pc->vecWidth(), VecWidth::k256); }
+  BL_INLINE_NODEBUG VecWidth vec_width() const noexcept { return bl_min(pc->vec_width(), VecWidth::k256); }
 
-  void preparePart() noexcept override;
+  void prepare_part() noexcept override;
 
-  void _initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
-  void _finiPart() noexcept override;
+  void _init_part(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
+  void _fini_part() noexcept override;
 
   void advanceY() noexcept override;
   void startAtX(const Gp& x) noexcept override;
   void advanceX(const Gp& x, const Gp& diff) noexcept override;
-  void advanceX(const Gp& x, const Gp& diff, bool diffWithinBounds) noexcept;
+  void advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
   void calcAdvanceX(const Vec& dst, const Gp& diff) const noexcept;
 
   void enterN() noexcept override;
@@ -163,27 +163,27 @@ public:
 
   Wrap<RadialRegs> f;
 
-  FetchRadialGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
+  FetchRadialGradientPart(PipeCompiler* pc, FetchType fetch_type, FormatExt format) noexcept;
 
-  BL_INLINE_NODEBUG VecWidth vecWidth() const noexcept { return blMin(pc->vecWidth(), VecWidth::k256); }
+  BL_INLINE_NODEBUG VecWidth vec_width() const noexcept { return bl_min(pc->vec_width(), VecWidth::k256); }
 
-  void preparePart() noexcept override;
+  void prepare_part() noexcept override;
 
-  void _initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
-  void _finiPart() noexcept override;
+  void _init_part(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
+  void _fini_part() noexcept override;
 
   void advanceY() noexcept override;
   void startAtX(const Gp& x) noexcept override;
   void advanceX(const Gp& x, const Gp& diff) noexcept override;
-  void advanceX(const Gp& x, const Gp& diff, bool diffWithinBounds) noexcept;
+  void advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
 
   void prefetchN() noexcept override;
   void postfetchN() noexcept override;
 
   void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 
-  void initVx(const Vec& vx, const Gp& x) noexcept;
-  FetchUtils::IndexLayout applyExtend(const Vec& idx0, const Vec& idx1, const Vec& tmp) noexcept;
+  void init_vx(const Vec& vx, const Gp& x) noexcept;
+  FetchUtils::IndexLayout apply_extend(const Vec& idx0, const Vec& idx1, const Vec& tmp) noexcept;
 };
 
 //! Conic gradient fetch part.
@@ -220,27 +220,27 @@ public:
 
   Wrap<ConicRegs> f;
 
-  FetchConicGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
+  FetchConicGradientPart(PipeCompiler* pc, FetchType fetch_type, FormatExt format) noexcept;
 
-  BL_INLINE_NODEBUG VecWidth vecWidth(uint32_t nPixels) const noexcept {
-    return blMin(pc->vecWidth(), VecWidth(nPixels >> 3));
+  BL_INLINE_NODEBUG VecWidth vec_width(uint32_t n_pixels) const noexcept {
+    return bl_min(pc->vec_width(), VecWidth(n_pixels >> 3));
   }
 
-  void preparePart() noexcept override;
+  void prepare_part() noexcept override;
 
-  void _initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
-  void _finiPart() noexcept override;
+  void _init_part(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
+  void _fini_part() noexcept override;
 
   void advanceY() noexcept override;
   void startAtX(const Gp& x) noexcept override;
   void advanceX(const Gp& x, const Gp& diff) noexcept override;
-  void advanceX(const Gp& x, const Gp& diff, bool diffWithinBounds) noexcept;
+  void advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
 
   void prefetchN() noexcept override;
 
   void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 
-  void initVx(const Vec& vx, const Gp& x) noexcept;
+  void init_vx(const Vec& vx, const Gp& x) noexcept;
 };
 
 } // {bl::Pipeline::JIT}

@@ -25,11 +25,11 @@ BL_HIDDEN void simd_test_arm_asimd() noexcept;
 
 static void simd_test_arm(BLRuntimeContext& rt) noexcept {
 #if defined(BL_BUILD_OPT_ASIMD)
-  if (blRuntimeHasASIMD(&rt))
+  if (bl_runtime_has_asimd(&rt))
     simd_test_arm_asimd();
 #endif // BL_BUILD_OPT_ASIMD
 
-  blUnused(rt);
+  bl_unused(rt);
 }
 #endif // BL_TARGET_ARCH_ARM
 
@@ -68,41 +68,41 @@ BL_HIDDEN void simd_test_x86_avx512() noexcept;
 
 static void simd_test_x86(BLRuntimeContext& rt) noexcept {
 #if defined(BL_BUILD_OPT_SSE2)
-  if (blRuntimeHasSSE2(&rt))
+  if (bl_runtime_has_sse2(&rt))
     simd_test_x86_sse2();
 #endif // BL_BUILD_OPT_SSE2
 
 #if defined(BL_BUILD_OPT_SSSE3)
-  if (blRuntimeHasSSSE3(&rt))
+  if (bl_runtime_has_ssse3(&rt))
     simd_test_x86_ssse3();
 #endif // BL_BUILD_OPT_SSSE3
 
 #if defined(BL_BUILD_OPT_SSE4_1)
-  if (blRuntimeHasSSE4_1(&rt))
+  if (bl_runtime_has_sse4_1(&rt))
     simd_test_x86_sse4_1();
 #endif // BL_BUILD_OPT_SSE4_1
 
 #if defined(BL_BUILD_OPT_SSE4_2)
-  if (blRuntimeHasSSE4_2(&rt))
+  if (bl_runtime_has_sse4_2(&rt))
     simd_test_x86_sse4_2();
 #endif // BL_BUILD_OPT_SSE4_2
 
 #if defined(BL_BUILD_OPT_AVX)
-  if (blRuntimeHasAVX(&rt))
+  if (bl_runtime_has_avx(&rt))
     simd_test_x86_avx();
 #endif // BL_BUILD_OPT_AVX
 
 #if defined(BL_BUILD_OPT_AVX2)
-  if (blRuntimeHasAVX2(&rt))
+  if (bl_runtime_has_avx2(&rt))
     simd_test_x86_avx2();
 #endif // BL_BUILD_OPT_AVX2
 
 #if defined(BL_BUILD_OPT_AVX512)
-  if (blRuntimeHasAVX512(&rt))
+  if (bl_runtime_has_avx512(&rt))
     simd_test_x86_avx512();
 #endif // BL_BUILD_OPT_AVX512
 
-  blUnused(rt);
+  bl_unused(rt);
 }
 #endif // BL_TARGET_ARCH_X86
 
@@ -111,11 +111,11 @@ static void simd_test_x86(BLRuntimeContext& rt) noexcept {
 
 UNIT(simd, BL_TEST_GROUP_SIMD) {
 #if BL_TARGET_ARCH_ARM
-  simd_test_arm(blRuntimeContext);
+  simd_test_arm(bl_runtime_context);
 #endif
 
 #if BL_TARGET_ARCH_X86
-  simd_test_x86(blRuntimeContext);
+  simd_test_x86(bl_runtime_context);
 #endif
 }
 

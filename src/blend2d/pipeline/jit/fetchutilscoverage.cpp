@@ -13,55 +13,55 @@ namespace bl::Pipeline::JIT {
 // bl::Pipeline::JIT - GlobalAlpha
 // ===============================
 
-void GlobalAlpha::_initInternal(PipeCompiler* pc) noexcept {
+void GlobalAlpha::_init_internal(PipeCompiler* pc) noexcept {
   _pc = pc;
   _pc->cc->comment("[[Global Alpha]]");
   _hook = pc->cc->cursor();
 }
 
-void GlobalAlpha::initFromMem(PipeCompiler* pc, const Mem& mem) noexcept {
+void GlobalAlpha::init_from_mem(PipeCompiler* pc, const Mem& mem) noexcept {
   // Can only be initialized once.
-  BL_ASSERT(!isInitialized());
+  BL_ASSERT(!is_initialized());
 
-  _initInternal(pc);
+  _init_internal(pc);
   _mem = mem;
 }
 
-void GlobalAlpha::initFromScalar(PipeCompiler* pc, const Gp& sa) noexcept {
+void GlobalAlpha::init_from_scalar(PipeCompiler* pc, const Gp& sa) noexcept {
   // Can only be initialized once.
-  BL_ASSERT(!isInitialized());
+  BL_ASSERT(!is_initialized());
 
-  _initInternal(pc);
+  _init_internal(pc);
   _sa = sa;
 }
 
-void GlobalAlpha::initFromPacked(PipeCompiler* pc, const Vec& pa) noexcept {
+void GlobalAlpha::init_from_packed(PipeCompiler* pc, const Vec& pa) noexcept {
   // Can only be initialized once.
-  BL_ASSERT(!isInitialized());
+  BL_ASSERT(!is_initialized());
 
-  _initInternal(pc);
+  _init_internal(pc);
   _pa = pa;
 }
 
-void GlobalAlpha::initFromUnpacked(PipeCompiler* pc, const Vec& ua) noexcept {
+void GlobalAlpha::init_from_unpacked(PipeCompiler* pc, const Vec& ua) noexcept {
   // Can only be initialized once.
-  BL_ASSERT(!isInitialized());
+  BL_ASSERT(!is_initialized());
 
-  _initInternal(pc);
+  _init_internal(pc);
   _ua = ua;
 }
 
 const Gp& GlobalAlpha::sa() noexcept {
-  BL_ASSERT(isInitialized());
+  BL_ASSERT(is_initialized());
 
-  if (!_sa.isValid()) {
+  if (!_sa.is_valid()) {
     ScopedInjector injector(_pc->cc, &_hook);
-    _sa = _pc->newGp32("ga.sa");
+    _sa = _pc->new_gp32("ga.sa");
 
-    if (_ua.isValid()) {
+    if (_ua.is_valid()) {
       _pc->s_extract_u16(_sa, _ua, 0u);
     }
-    else if (_pa.isValid()) {
+    else if (_pa.is_valid()) {
       _pc->s_extract_u8(_sa, _ua, 0u);
     }
     else {
@@ -73,16 +73,16 @@ const Gp& GlobalAlpha::sa() noexcept {
 }
 
 const Vec& GlobalAlpha::pa() noexcept {
-  BL_ASSERT(isInitialized());
+  BL_ASSERT(is_initialized());
 
-  if (!_pa.isValid()) {
+  if (!_pa.is_valid()) {
     ScopedInjector injector(_pc->cc, &_hook);
-    _pa = _pc->newVec("ga.pa");
+    _pa = _pc->new_vec("ga.pa");
 
-    if (_ua.isValid()) {
+    if (_ua.is_valid()) {
       _pc->v_packs_i16_u8(_pa, _ua, _ua);
     }
-    else if (_sa.isValid()) {
+    else if (_sa.is_valid()) {
       _pc->v_broadcast_u8z(_pa, _sa);
     }
     else {
@@ -94,16 +94,16 @@ const Vec& GlobalAlpha::pa() noexcept {
 }
 
 const Vec& GlobalAlpha::ua() noexcept {
-  BL_ASSERT(isInitialized());
+  BL_ASSERT(is_initialized());
 
-  if (!_ua.isValid()) {
+  if (!_ua.is_valid()) {
     ScopedInjector injector(_pc->cc, &_hook);
-    _ua = _pc->newVec("ga.ua");
+    _ua = _pc->new_vec("ga.ua");
 
-    if (_pa.isValid()) {
+    if (_pa.is_valid()) {
       _pc->v_cvt_u8_lo_to_u16(_ua, _pa);
     }
-    else if (_sa.isValid()) {
+    else if (_sa.is_valid()) {
       _pc->v_broadcast_u16z(_ua, _sa);
     }
     else {

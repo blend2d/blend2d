@@ -12,13 +12,13 @@ namespace bl::Compression::Deflate::Fast {
 
 DecoderFastResult decode(
   Decoder* ctx,
-  uint8_t* dstStart,
-  uint8_t* dstPtr,
-  uint8_t* dstEnd,
-  const uint8_t* srcPtr,
-  const uint8_t* srcEnd
+  uint8_t* dst_start,
+  uint8_t* dst_ptr,
+  uint8_t* dst_end,
+  const uint8_t* src_ptr,
+  const uint8_t* src_end
 ) noexcept {
-  return decodeImpl(ctx, dstStart, dstPtr, dstEnd, srcPtr, srcEnd);
+  return decode_impl(ctx, dst_start, dst_ptr, dst_end, src_ptr, src_end);
 }
 
 } // {bl::Compression::Deflate::Fast}

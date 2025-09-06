@@ -18,10 +18,10 @@ struct BitCountOfByteTableGen {
   }
 };
 
-static constexpr const LookupTable<uint8_t, 256> bitCountByteTable_
-  = makeLookupTable<uint8_t, 256, BitCountOfByteTableGen>();
+static constexpr const LookupTable<uint8_t, 256> bit_count_byte_table_
+  = make_lookup_table<uint8_t, 256, BitCountOfByteTableGen>();
 
-const LookupTable<uint8_t, 256> bitCountByteTable = bitCountByteTable_;
+const LookupTable<uint8_t, 256> bit_count_byte_table = bit_count_byte_table_;
 
 // bl::ModuloTable
 // ===============
@@ -29,7 +29,7 @@ const LookupTable<uint8_t, 256> bitCountByteTable = bitCountByteTable_;
 #define INV()  {{ 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0   , 0   , 0   , 0   , 0   , 0   , 0    }}
 #define DEF(N) {{ 1%N, 2%N, 3%N, 4%N, 5%N, 6%N, 7%N, 8%N, 9%N, 10%N, 11%N, 12%N, 13%N, 14%N, 15%N, 16%N }}
 
-const ModuloTable moduloTable[18] = {
+const ModuloTable modulo_table[18] = {
   INV(  ), DEF( 1), DEF( 2), DEF( 3),
   DEF( 4), DEF( 5), DEF( 6), DEF( 7),
   DEF( 8), DEF( 9), DEF(10), DEF(11),
@@ -43,10 +43,10 @@ const ModuloTable moduloTable[18] = {
 // bl::CommonTable
 // ===============
 
-// NOTE: We must go through `commonTable` as it's the only way to convince MSVC to emit constexpr. If this step
+// NOTE: We must go through `common_table` as it's the only way to convince MSVC to emit constexpr. If this step
 // is missing it will emit initialization code for this const data, which is exactly what we don't want. Also, we
-// cannot just add `constexpr` to the real `commonTable` as MSVC would complain about different storage type.
-static constexpr const CommonTable commonTable_;
-const CommonTable commonTable = commonTable_;
+// cannot just add `constexpr` to the real `common_table` as MSVC would complain about different storage type.
+static constexpr const CommonTable common_table_;
+const CommonTable common_table = common_table_;
 
 } // {bl}

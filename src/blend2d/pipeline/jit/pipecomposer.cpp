@@ -20,56 +20,55 @@ namespace bl::Pipeline::JIT {
 // bl::Pipeline::PipeComposer - Construction & Destruction
 // =======================================================
 
-// TODO: [JIT] There should be a getter on asmjit side that will return
-// the `ZoneAllocator` object that can be used for these kind of purposes.
-// It doesn't make sense to create another ZoneAllocator.
+// TODO: [JIT] There should be a getter on asmjit side that will return the `Arena` instance that can
+// be used for these kind of purposes. It doesn't make sense to create another Arena for our use-case.
 PipeComposer::PipeComposer(PipeCompiler& pc) noexcept
   : _pc(pc),
-    _zone(pc.cc->_codeZone) {}
+    _arena(pc.cc->_builder_arena) {}
 
 // bl::Pipeline::PipeComposer - Pipeline Parts Construction
 // ========================================================
 
-FillPart* PipeComposer::newFillPart(FillType fillType, FetchPart* dstPart, CompOpPart* compOpPart) noexcept {
-  if (fillType == FillType::kBoxA)
-    return newPartT<FillBoxAPart>(dstPart->as<FetchPixelPtrPart>(), compOpPart);
+FillPart* PipeComposer::new_fill_part(FillType fill_type, FetchPart* dst_part, CompOpPart* comp_op_part) noexcept {
+  if (fill_type == FillType::kBoxA)
+    return new_part_t<FillBoxAPart>(dst_part->as<FetchPixelPtrPart>(), comp_op_part);
 
-  if (fillType == FillType::kMask)
-    return newPartT<FillMaskPart>(dstPart->as<FetchPixelPtrPart>(), compOpPart);
+  if (fill_type == FillType::kMask)
+    return new_part_t<FillMaskPart>(dst_part->as<FetchPixelPtrPart>(), comp_op_part);
 
-  if (fillType == FillType::kAnalytic)
-    return newPartT<FillAnalyticPart>(dstPart->as<FetchPixelPtrPart>(), compOpPart);
-
-  return nullptr;
-}
-
-FetchPart* PipeComposer::newFetchPart(FetchType fetchType, FormatExt format) noexcept {
-  if (fetchType == FetchType::kSolid)
-    return newPartT<FetchSolidPart>(format);
-
-  if (fetchType >= FetchType::kGradientLinearFirst && fetchType <= FetchType::kGradientLinearLast)
-    return newPartT<FetchLinearGradientPart>(fetchType, format);
-
-  if (fetchType >= FetchType::kGradientRadialFirst && fetchType <= FetchType::kGradientRadialLast)
-    return newPartT<FetchRadialGradientPart>(fetchType, format);
-
-  if (fetchType >= FetchType::kGradientConicFirst && fetchType <= FetchType::kGradientConicLast)
-    return newPartT<FetchConicGradientPart>(fetchType, format);
-
-  if (fetchType >= FetchType::kPatternSimpleFirst && fetchType <= FetchType::kPatternSimpleLast)
-    return newPartT<FetchSimplePatternPart>(fetchType, format);
-
-  if (fetchType >= FetchType::kPatternAffineFirst && fetchType <= FetchType::kPatternAffineLast)
-    return newPartT<FetchAffinePatternPart>(fetchType, format);
-
-  if (fetchType == FetchType::kPixelPtr)
-    return newPartT<FetchPixelPtrPart>(fetchType, format);
+  if (fill_type == FillType::kAnalytic)
+    return new_part_t<FillAnalyticPart>(dst_part->as<FetchPixelPtrPart>(), comp_op_part);
 
   return nullptr;
 }
 
-CompOpPart* PipeComposer::newCompOpPart(CompOpExt compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept {
-  return newPartT<CompOpPart>(compOp, dstPart, srcPart);
+FetchPart* PipeComposer::new_fetch_part(FetchType fetch_type, FormatExt format) noexcept {
+  if (fetch_type == FetchType::kSolid)
+    return new_part_t<FetchSolidPart>(format);
+
+  if (fetch_type >= FetchType::kGradientLinearFirst && fetch_type <= FetchType::kGradientLinearLast)
+    return new_part_t<FetchLinearGradientPart>(fetch_type, format);
+
+  if (fetch_type >= FetchType::kGradientRadialFirst && fetch_type <= FetchType::kGradientRadialLast)
+    return new_part_t<FetchRadialGradientPart>(fetch_type, format);
+
+  if (fetch_type >= FetchType::kGradientConicFirst && fetch_type <= FetchType::kGradientConicLast)
+    return new_part_t<FetchConicGradientPart>(fetch_type, format);
+
+  if (fetch_type >= FetchType::kPatternSimpleFirst && fetch_type <= FetchType::kPatternSimpleLast)
+    return new_part_t<FetchSimplePatternPart>(fetch_type, format);
+
+  if (fetch_type >= FetchType::kPatternAffineFirst && fetch_type <= FetchType::kPatternAffineLast)
+    return new_part_t<FetchAffinePatternPart>(fetch_type, format);
+
+  if (fetch_type == FetchType::kPixelPtr)
+    return new_part_t<FetchPixelPtrPart>(fetch_type, format);
+
+  return nullptr;
+}
+
+CompOpPart* PipeComposer::new_comp_op_part(CompOpExt comp_op, FetchPart* dst_part, FetchPart* src_part) noexcept {
+  return new_part_t<CompOpPart>(comp_op, dst_part, src_part);
 }
 
 } // {bl::Pipeline::JIT}

@@ -53,7 +53,7 @@ template<> struct make_index_sequence<0> : index_sequence<> {};
 template<> struct make_index_sequence<1> : index_sequence<0> {};
 
 template<typename T, size_t N, class Gen, size_t... Indexes>
-BL_INLINE_CONSTEXPR LookupTable<T, N> makeLookupTableImpl(index_sequence<Indexes...>) noexcept {
+BL_INLINE_CONSTEXPR LookupTable<T, N> make_lookup_table_impl(index_sequence<Indexes...>) noexcept {
   return LookupTable<T, N> {{ T(Gen::value(Indexes))... }};
 }
 
@@ -99,9 +99,9 @@ struct BitTableGeneratorAdapter {
 
 //! Creates a lookup table of `LookupTable<T[N]>` by using the generator `Gen`.
 template<typename T, size_t N, class Gen>
-static BL_INLINE_CONSTEXPR LookupTable<T, N> makeLookupTable() noexcept {
+static BL_INLINE_CONSTEXPR LookupTable<T, N> make_lookup_table() noexcept {
   // Make sure the table is a constant expression - we never want to have it runtime initialized.
-  constexpr LookupTable<T, N> table = Internal::makeLookupTableImpl<T, N, Gen>(Internal::make_index_sequence<N>{});
+  constexpr LookupTable<T, N> table = Internal::make_lookup_table_impl<T, N, Gen>(Internal::make_index_sequence<N>{});
 
   return table;
 }
@@ -123,15 +123,15 @@ struct BitLookupTable {
 };
 
 template<size_t N, class Generator>
-static BL_INLINE_CONSTEXPR BitLookupTable<N> makeBitTable() noexcept {
+static BL_INLINE_CONSTEXPR BitLookupTable<N> make_bit_table() noexcept {
   return BitLookupTable<N>{
-    Internal::makeLookupTableImpl<BLBitWord, BitLookupTable<N>::kWordCount,
+    Internal::make_lookup_table_impl<BLBitWord, BitLookupTable<N>::kWordCount,
                                   Internal::BitTableGeneratorAdapter<Generator>>(Internal::make_index_sequence<BitLookupTable<N>::kWordCount>{})
   };
 }
 
 #define BL_CONSTEXPR_TABLE(Name, Generator, T, N) \
-  static constexpr const LookupTable<T, N> Name##_constexpr = makeLookupTable<T, N, Generator>(); \
+  static constexpr const LookupTable<T, N> Name##_constexpr = make_lookup_table<T, N, Generator>(); \
   const LookupTable<T, N> Name = Name##_constexpr
 
 //! \}

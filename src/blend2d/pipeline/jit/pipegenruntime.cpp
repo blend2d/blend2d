@@ -27,19 +27,19 @@ Wrap<PipeDynamicRuntime> PipeDynamicRuntime::_global;
 
 FunctionCache::FunctionCache() noexcept
   : _allocator(4096),
-    _funcMap(&_allocator) {}
+    _func_map(&_allocator) {}
 FunctionCache::~FunctionCache() noexcept {}
 
 BLResult FunctionCache::put(uint32_t signature, void* func) noexcept {
-  FuncNode* node = _funcMap.get(FuncMatcher(signature));
+  FuncNode* node = _func_map.get(FuncMatcher(signature));
   if (node)
-    return blTraceError(BL_ERROR_ALREADY_EXISTS);
+    return bl_trace_error(BL_ERROR_ALREADY_EXISTS);
 
-  node = _allocator.newT<FuncNode>(signature, func);
+  node = _allocator.new_t<FuncNode>(signature, func);
   if (BL_UNLIKELY(!node))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-  _funcMap.insert(node);
+  _func_map.insert(node);
   return BL_SUCCESS;
 }
 
@@ -51,55 +51,55 @@ class CompilerErrorHandler : public asmjit::ErrorHandler {
 public:
   asmjit::Error _err;
 
-  CompilerErrorHandler() noexcept : _err(asmjit::kErrorOk) {}
+  CompilerErrorHandler() noexcept : _err(asmjit::Error::kOk) {}
   ~CompilerErrorHandler() noexcept override {}
 
-  void handleError(asmjit::Error err, const char* message, asmjit::BaseEmitter* origin) override {
-    blUnused(origin);
+  void handle_error(asmjit::Error err, const char* message, asmjit::BaseEmitter* origin) override {
+    bl_unused(origin);
     _err = err;
-    blRuntimeMessageFmt("bl::Pipeline::JIT assembling error: %s\n", message);
+    bl_runtime_message_fmt("bl::Pipeline::JIT assembling error: %s\n", message);
   }
 };
 
 // bl::Pipeline::JIT::Runtime - Dynamic Runtime Implementation
 // ===========================================================
 
-static void BL_CDECL blPipeGenRuntimeDestroy(PipeRuntime* self_) noexcept {
+static void BL_CDECL bl_pipe_gen_runtime_destroy(PipeRuntime* self_) noexcept {
   PipeDynamicRuntime* self = static_cast<PipeDynamicRuntime*>(self_);
   self->~PipeDynamicRuntime();
 }
 
-static BLResult BL_CDECL blPipeGenRuntimeTest(PipeRuntime* self_, uint32_t signature, DispatchData* out, PipeLookupCache* cache) noexcept {
-  blUnused(cache);
+static BLResult BL_CDECL bl_pipe_gen_runtime_test(PipeRuntime* self_, uint32_t signature, DispatchData* out, PipeLookupCache* cache) noexcept {
+  bl_unused(cache);
 
   PipeDynamicRuntime* self = static_cast<PipeDynamicRuntime*>(self_);
-  FillFunc fillFunc = self->_mutex.protectShared([&] { return (FillFunc)self->_functionCache.get(signature); });
+  FillFunc fill_func = self->_mutex.protect_shared([&] { return (FillFunc)self->_function_cache.get(signature); });
 
-  // NOTE: This is not traced by blTraceError() as this case is expected.
-  if (!fillFunc)
+  // NOTE: This is not traced by bl_trace_error() as this case is expected.
+  if (!fill_func)
     return BL_ERROR_NO_ENTRY;
 
-  out->init(fillFunc);
+  out->init(fill_func);
   cache->store(signature, out);
 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signature, DispatchData* out, PipeLookupCache* cache) noexcept {
+static BLResult BL_CDECL bl_pipe_gen_runtime_get(PipeRuntime* self_, uint32_t signature, DispatchData* out, PipeLookupCache* cache) noexcept {
   PipeDynamicRuntime* self = static_cast<PipeDynamicRuntime*>(self_);
-  FillFunc fillFunc = self->_mutex.protectShared([&] { return (FillFunc)self->_functionCache.get(signature); });
+  FillFunc fill_func = self->_mutex.protect_shared([&] { return (FillFunc)self->_function_cache.get(signature); });
 
-  if (!fillFunc) {
-    fillFunc = self->_compileFillFunc(signature);
-    if (BL_UNLIKELY(!fillFunc))
-      return blTraceError(BL_ERROR_INVALID_STATE);
+  if (!fill_func) {
+    fill_func = self->_compile_fill_func(signature);
+    if (BL_UNLIKELY(!fill_func))
+      return bl_trace_error(BL_ERROR_INVALID_STATE);
 
-    BLResult result = self->_mutex.protect([&] { return self->_functionCache.put(signature, (void*)fillFunc); });
+    BLResult result = self->_mutex.protect([&] { return self->_function_cache.put(signature, (void*)fill_func); });
     if (result == BL_SUCCESS) {
-      self->_pipelineCount++;
+      self->_pipeline_count++;
     }
     else {
-      self->_jitRuntime.release(fillFunc);
+      self->_jit_runtime.release(fill_func);
       if (result != BL_ERROR_ALREADY_EXISTS) {
         return result;
       }
@@ -107,64 +107,64 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
         // NOTE: There is a slight chance that some other thread registered the pipeline meanwhile
         // it was being compiled. In that case we drop the one we have just compiled and use the
         // one that is already in the function cache.
-        fillFunc = self->_mutex.protectShared([&] { return (FillFunc)self->_functionCache.get(signature); });
+        fill_func = self->_mutex.protect_shared([&] { return (FillFunc)self->_function_cache.get(signature); });
 
         // It must be there...
-        if (!fillFunc)
-          return blTraceError(BL_ERROR_INVALID_STATE);
+        if (!fill_func)
+          return bl_trace_error(BL_ERROR_INVALID_STATE);
       }
     }
   }
 
-  out->init(fillFunc);
+  out->init(fill_func);
   cache->store(signature, out);
 
   return BL_SUCCESS;
 }
 
-PipeDynamicRuntime::PipeDynamicRuntime(PipeRuntimeFlags runtimeFlags) noexcept
-  : _jitRuntime(),
-    _functionCache(),
-    _pipelineCount(0),
-    _cpuFeatures(),
-    _maxPixels(0),
-    _loggerEnabled(false),
-    _emitStackFrames(false) {
+PipeDynamicRuntime::PipeDynamicRuntime(PipeRuntimeFlags runtime_flags) noexcept
+  : _jit_runtime(),
+    _function_cache(),
+    _pipeline_count(0),
+    _cpu_features(),
+    _max_pixels(0),
+    _logger_enabled(false),
+    _emit_stack_frames(false) {
 
   // Setup the `PipeRuntime` base.
-  _runtimeType = PipeRuntimeType::kJIT;
-  _runtimeFlags = runtimeFlags;
-  _runtimeSize = uint16_t(sizeof(PipeDynamicRuntime));
+  _runtime_type = PipeRuntimeType::kJIT;
+  _runtime_flags = runtime_flags;
+  _runtime_size = uint16_t(sizeof(PipeDynamicRuntime));
 
   // PipeDynamicRuntime destructor - callable from other places.
-  _destroy = blPipeGenRuntimeDestroy;
+  _destroy = bl_pipe_gen_runtime_destroy;
 
   // PipeDynamicRuntime interface - used by the rendering context and `PipeProvider`.
-  _funcs.test = blPipeGenRuntimeTest;
-  _funcs.get = blPipeGenRuntimeGet;
+  _funcs.test = bl_pipe_gen_runtime_test;
+  _funcs.get = bl_pipe_gen_runtime_get;
 
-  _initCpuInfo(asmjit::CpuInfo::host());
+  _init_cpu_info(asmjit::CpuInfo::host());
 }
 
 PipeDynamicRuntime::~PipeDynamicRuntime() noexcept {}
 
-void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
-  _cpuFeatures = cpuInfo.features();
-  _optFlags = PipeOptFlags::kNone;
+void PipeDynamicRuntime::_init_cpu_info(const asmjit::CpuInfo& cpu_info) noexcept {
+  _cpu_features = cpu_info.features();
+  _opt_flags = PipeOptFlags::kNone;
 
 #if defined(BL_JIT_ARCH_X86)
-  const CpuFeatures::X86& f = _cpuFeatures.x86();
+  const CpuFeatures::X86& f = _cpu_features.x86();
 
   // Vendor Independent CPU Features
   // -------------------------------
 
-  if (f.hasAVX2()) {
-    _optFlags |= PipeOptFlags::kMaskOps32Bit |
+  if (f.has_avx2()) {
+    _opt_flags |= PipeOptFlags::kMaskOps32Bit |
                  PipeOptFlags::kMaskOps64Bit ;
   }
 
-  if (f.hasAVX512_BW()) {
-    _optFlags |= PipeOptFlags::kMaskOps8Bit  |
+  if (f.has_avx512_bw()) {
+    _opt_flags |= PipeOptFlags::kMaskOps8Bit  |
                  PipeOptFlags::kMaskOps16Bit |
                  PipeOptFlags::kMaskOps32Bit |
                  PipeOptFlags::kMaskOps64Bit ;
@@ -175,42 +175,42 @@ void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
   // AMD Specific CPU Features
   // -------------------------
 
-  if (strcmp(cpuInfo.vendor(), "AMD") == 0) {
+  if (strcmp(cpu_info.vendor(), "AMD") == 0) {
     // Zen 3+ has fast gathers, scalar loads and shuffles are faster on Zen 2 and older CPUs.
-    if (cpuInfo.familyId() >= 0x19u) {
-      _optFlags |= PipeOptFlags::kFastGather;
+    if (cpu_info.family_id() >= 0x19u) {
+      _opt_flags |= PipeOptFlags::kFastGather;
     }
 
     // Zen 1+ provides a low-latency VPMULLD instruction.
-    if (_cpuFeatures.x86().hasAVX2()) {
-      _optFlags |= PipeOptFlags::kFastVpmulld;
+    if (_cpu_features.x86().has_avx2()) {
+      _opt_flags |= PipeOptFlags::kFastVpmulld;
     }
 
     // Zen 4+ provides a low-latency VPMULLQ instruction.
-    if (_cpuFeatures.x86().hasAVX512_DQ()) {
-      _optFlags |= PipeOptFlags::kFastVpmullq;
+    if (_cpu_features.x86().has_avx512_dq()) {
+      _opt_flags |= PipeOptFlags::kFastVpmullq;
     }
 
     // Zen 4+ has fast mask operations (starts with AVX-512).
-    if (_cpuFeatures.x86().hasAVX512_F()) {
-      _optFlags |= PipeOptFlags::kFastStoreWithMask;
+    if (_cpu_features.x86().has_avx512_f()) {
+      _opt_flags |= PipeOptFlags::kFastStoreWithMask;
     }
   }
 
   // Intel Specific CPU Features
   // ---------------------------
 
-  if (strcmp(cpuInfo.vendor(), "INTEL") == 0) {
-    if (_cpuFeatures.x86().hasAVX2()) {
-      uint32_t familyId = cpuInfo.familyId();
-      uint32_t modelId = cpuInfo.modelId();
+  if (strcmp(cpu_info.vendor(), "INTEL") == 0) {
+    if (_cpu_features.x86().has_avx2()) {
+      uint32_t family_id = cpu_info.family_id();
+      uint32_t model_id = cpu_info.model_id();
 
       // NOTE: We only want to hint fast gathers in cases the CPU is immune to DOWNFALL. The reason is that the
       // DOWNFALL mitigation delivered via a micro-code update makes gathers almost useless in a way that scalar
       // loads can beat it significantly (in Blend2D case scalar loads can offer up to 50% more performance).
       // This table basically picks CPUs that are known to not be affected by DOWNFALL.
-      if (familyId == 0x06u) {
-        switch (modelId) {
+      if (family_id == 0x06u) {
+        switch (model_id) {
           case 0x8Fu: // Sapphire Rapids.
           case 0x96u: // Elkhart Lake.
           case 0x97u: // Alder Lake / Catlow.
@@ -232,7 +232,7 @@ void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
           case 0xC6u: // Arrow Lake.
           case 0xCFu: // Emerald Rapids.
           case 0xDDu: // Clearwater Forest.
-            _optFlags |= PipeOptFlags::kFastGather;
+            _opt_flags |= PipeOptFlags::kFastGather;
             break;
 
           default:
@@ -242,38 +242,38 @@ void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
     }
 
     // TODO: [JIT] It seems that masked stores are very expensive on consumer CPUs supporting AVX2 and AVX-512.
-    // _optFlags |= PipeOptFlags::kFastStoreWithMask;
+    // _opt_flags |= PipeOptFlags::kFastStoreWithMask;
   }
 #endif // BL_JIT_ARCH_X86
 
   // Other vendors should follow here, if any...
 }
 
-void PipeDynamicRuntime::_restrictFeatures(uint32_t mask) noexcept {
+void PipeDynamicRuntime::_restrict_features(uint32_t mask) noexcept {
 #if defined(BL_JIT_ARCH_X86)
   if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX512)) {
-    _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX512_F,
+    _cpu_features.remove(asmjit::CpuFeatures::X86::kAVX512_F,
                         asmjit::CpuFeatures::X86::kAVX512_BW,
                         asmjit::CpuFeatures::X86::kAVX512_DQ,
                         asmjit::CpuFeatures::X86::kAVX512_CD,
                         asmjit::CpuFeatures::X86::kAVX512_VL);
 
     if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX2)) {
-      _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX2);
-      _cpuFeatures.remove(asmjit::CpuFeatures::X86::kFMA);
-      _cpuFeatures.remove(asmjit::CpuFeatures::X86::kF16C);
-      _cpuFeatures.remove(asmjit::CpuFeatures::X86::kGFNI);
-      _cpuFeatures.remove(asmjit::CpuFeatures::X86::kVPCLMULQDQ);
+      _cpu_features.remove(asmjit::CpuFeatures::X86::kAVX2);
+      _cpu_features.remove(asmjit::CpuFeatures::X86::kFMA);
+      _cpu_features.remove(asmjit::CpuFeatures::X86::kF16C);
+      _cpu_features.remove(asmjit::CpuFeatures::X86::kGFNI);
+      _cpu_features.remove(asmjit::CpuFeatures::X86::kVPCLMULQDQ);
       if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX)) {
-        _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX);
+        _cpu_features.remove(asmjit::CpuFeatures::X86::kAVX);
         if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSE4_2)) {
-          _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSE4_2);
+          _cpu_features.remove(asmjit::CpuFeatures::X86::kSSE4_2);
           if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSE4_1)) {
-            _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSE4_1);
+            _cpu_features.remove(asmjit::CpuFeatures::X86::kSSE4_1);
             if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSSE3)) {
-              _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSSE3);
+              _cpu_features.remove(asmjit::CpuFeatures::X86::kSSSE3);
               if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSE3)) {
-                _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSE3);
+                _cpu_features.remove(asmjit::CpuFeatures::X86::kSSE3);
               }
             }
           }
@@ -281,20 +281,20 @@ void PipeDynamicRuntime::_restrictFeatures(uint32_t mask) noexcept {
       }
     }
 
-    _optFlags &= ~(PipeOptFlags::kMaskOps8Bit       |
-                   PipeOptFlags::kMaskOps16Bit      |
-                   PipeOptFlags::kMaskOps32Bit      |
-                   PipeOptFlags::kMaskOps64Bit      |
-                   PipeOptFlags::kFastStoreWithMask |
-                   PipeOptFlags::kFastGather        );
+    _opt_flags &= ~(PipeOptFlags::kMaskOps8Bit       |
+                    PipeOptFlags::kMaskOps16Bit      |
+                    PipeOptFlags::kMaskOps32Bit      |
+                    PipeOptFlags::kMaskOps64Bit      |
+                    PipeOptFlags::kFastStoreWithMask |
+                    PipeOptFlags::kFastGather        );
   }
 #else
-  blUnused(mask);
+  bl_unused(mask);
 #endif
 }
 
 #ifndef ASMJIT_NO_LOGGING
-static const char* stringifyFormat(FormatExt value) noexcept {
+static const char* stringify_format(FormatExt value) noexcept {
   switch (value) {
     case FormatExt::kNone  : return "None";
     case FormatExt::kPRGB32: return "PRGB32";
@@ -308,7 +308,7 @@ static const char* stringifyFormat(FormatExt value) noexcept {
   }
 }
 
-static const char* stringifyCompOp(CompOpExt value) noexcept {
+static const char* stringify_comp_op(CompOpExt value) noexcept {
   switch (value) {
     case CompOpExt::kSrcOver    : return "SrcOver";
     case CompOpExt::kSrcCopy    : return "SrcCopy";
@@ -346,7 +346,7 @@ static const char* stringifyCompOp(CompOpExt value) noexcept {
   }
 }
 
-static const char* stringifyFillType(FillType value) noexcept {
+static const char* stringify_fill_type(FillType value) noexcept {
   switch (value) {
     case FillType::kNone    : return "None";
     case FillType::kBoxA    : return "BoxA";
@@ -358,7 +358,7 @@ static const char* stringifyFillType(FillType value) noexcept {
   }
 }
 
-static const char* stringifyFetchType(FetchType value) noexcept {
+static const char* stringify_fetch_type(FetchType value) noexcept {
   switch (value) {
     case FetchType::kSolid                  : return "Solid";
     case FetchType::kPatternAlignedBlit     : return "PatternAlignedBlit";
@@ -393,106 +393,114 @@ static const char* stringifyFetchType(FetchType value) noexcept {
 }
 #endif
 
-FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
+FillFunc PipeDynamicRuntime::_compile_fill_func(uint32_t signature) noexcept {
   Signature sig{signature};
 
   // CLEAR is Always simplified to SRC_COPY.
   // DST_COPY is NOP, which should never be propagated to the compiler
-  if (sig.compOp() == CompOpExt::kClear || sig.compOp() == CompOpExt::kDstCopy || uint32_t(sig.compOp()) >= kCompOpExtCount)
+  if (sig.comp_op() == CompOpExt::kClear || sig.comp_op() == CompOpExt::kDstCopy || uint32_t(sig.comp_op()) >= kCompOpExtCount)
     return nullptr;
 
-  if (sig.fillType() == FillType::kNone)
+  if (sig.fill_type() == FillType::kNone)
     return nullptr;
 
-  if (sig.dstFormat() == FormatExt::kNone)
+  if (sig.dst_format() == FormatExt::kNone)
     return nullptr;
 
-  if (sig.srcFormat() == FormatExt::kNone)
+  if (sig.src_format() == FormatExt::kNone)
     return nullptr;
 
   CompilerErrorHandler eh;
   asmjit::CodeHolder code;
 
-  code.init(_jitRuntime.environment());
-  code.setErrorHandler(&eh);
+  code.init(_jit_runtime.environment());
+  code.set_error_handler(&eh);
 
 #ifndef ASMJIT_NO_LOGGING
   asmjit::StringLogger logger;
   asmjit::FileLogger fl(stdout);
 
-  if (_loggerEnabled) {
+  if (_logger_enabled) {
     const asmjit::FormatFlags kFormatFlags =
       asmjit::FormatFlags::kMachineCode |
       asmjit::FormatFlags::kShowAliases |
       asmjit::FormatFlags::kExplainImms |
       asmjit::FormatFlags::kRegCasts    ;
 
-    fl.addFlags(kFormatFlags);
-    code.setLogger(&fl);
+    fl.add_flags(kFormatFlags);
+    code.set_logger(&fl);
   }
 #endif
 
   AsmCompiler cc(&code);
-  cc.addEncodingOptions(
+  cc.add_encoding_options(
     asmjit::EncodingOptions::kOptimizeForSize |
     asmjit::EncodingOptions::kOptimizedAlign);
 
 #ifdef BL_BUILD_DEBUG
-  cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateIntermediate);
+  cc.add_diagnostic_options(asmjit::DiagnosticOptions::kValidateIntermediate);
 #endif
-  cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kRAAnnotate);
+  cc.add_diagnostic_options(asmjit::DiagnosticOptions::kRAAnnotate);
 
 #ifndef ASMJIT_NO_LOGGING
-  if (_loggerEnabled) {
-    cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kRAAnnotate);
+  if (_logger_enabled) {
+    cc.add_diagnostic_options(asmjit::DiagnosticOptions::kRAAnnotate);
     cc.commentf("Signature 0x%08X DstFmt=%s SrcFmt=%s CompOp=%s FillType=%s FetchType=%s",
       sig.value,
-      stringifyFormat(sig.dstFormat()),
-      stringifyFormat(sig.srcFormat()),
-      stringifyCompOp(sig.compOp()),
-      stringifyFillType(sig.fillType()),
-      stringifyFetchType(sig.fetchType()));
+      stringify_format(sig.dst_format()),
+      stringify_format(sig.src_format()),
+      stringify_comp_op(sig.comp_op()),
+      stringify_fill_type(sig.fill_type()),
+      stringify_fetch_type(sig.fetch_type()));
   }
 #endif
 
   // Construct the pipeline and compile it.
   {
     // TODO: [JIT] Limit MaxPixels.
-    PipeCompiler pc(&cc, _cpuFeatures, _optFlags);
+    PipeCompiler pc(&cc, _cpu_features, _opt_flags);
 
-    PipeComposer pipeComposer(pc);
-    FetchPart* dstPart = pipeComposer.newFetchPart(FetchType::kPixelPtr, sig.dstFormat());
-    FetchPart* srcPart = pipeComposer.newFetchPart(sig.fetchType(), sig.srcFormat());
-    CompOpPart* compOpPart = pipeComposer.newCompOpPart(sig.compOp(), dstPart, srcPart);
-    FillPart* fillPart = pipeComposer.newFillPart(sig.fillType(), dstPart, compOpPart);
+    PipeComposer pipe_composer(pc);
+    FetchPart* dst_part = pipe_composer.new_fetch_part(FetchType::kPixelPtr, sig.dst_format());
+    FetchPart* src_part = pipe_composer.new_fetch_part(sig.fetch_type(), sig.src_format());
+    CompOpPart* comp_op_part = pipe_composer.new_comp_op_part(sig.comp_op(), dst_part, src_part);
+    FillPart* fill_part = pipe_composer.new_fill_part(sig.fill_type(), dst_part, comp_op_part);
 
-    PipeFunction pipeFunction;
+    PipeFunction pipe_function;
 
-    pipeFunction.prepare(pc, fillPart);
-    pipeFunction.beginFunction(pc);
+    pipe_function.prepare(pc, fill_part);
+    pipe_function.begin_function(pc);
 
-    if (_emitStackFrames)
-      pc._funcNode->frame().addAttributes(asmjit::FuncAttributes::kHasPreservedFP);
-    fillPart->compile(pipeFunction);
+    if (_emit_stack_frames)
+      pc._func_node->frame().add_attributes(asmjit::FuncAttributes::kHasPreservedFP);
+    fill_part->compile(pipe_function);
 
-    pipeFunction.endFunction(pc);
+    pipe_function.end_function(pc);
   }
 
-  if (eh._err)
+  if (eh._err != asmjit::Error::kOk) {
     return nullptr;
+  }
 
-  if (cc.finalize() != asmjit::kErrorOk)
+  if (cc.finalize() != asmjit::Error::kOk) {
+#ifndef ASMJIT_NO_LOGGING
+    if (_logger_enabled) {
+      bl_runtime_message_out(logger.data());
+    }
+#endif
+
     return nullptr;
+  }
 
 #ifndef ASMJIT_NO_LOGGING
-  if (_loggerEnabled) {
-    blRuntimeMessageOut(logger.data());
-    blRuntimeMessageFmt("[Pipeline size: %u bytes]\n\n", uint32_t(code.codeSize()));
+  if (_logger_enabled) {
+    bl_runtime_message_out(logger.data());
+    bl_runtime_message_fmt("[Pipeline size: %u bytes]\n\n", uint32_t(code.code_size()));
   }
 #endif
 
   FillFunc func = nullptr;
-  _jitRuntime.add(&func, &code);
+  _jit_runtime.add(&func, &code);
   return func;
 }
 
@@ -501,29 +509,29 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
 // bl::Pipeline::JIT::Runtime - Runtime Registration
 // =================================================
 
-static void BL_CDECL blDynamicPipeRtResourceInfo(BLRuntimeContext* rt, BLRuntimeResourceInfo* resourceInfo) noexcept {
-  blUnused(rt);
+static void BL_CDECL bl_dynamic_pipe_rt_resource_info(BLRuntimeContext* rt, BLRuntimeResourceInfo* resource_info) noexcept {
+  bl_unused(rt);
 
-  bl::Pipeline::JIT::PipeDynamicRuntime& pipeGenRuntime = bl::Pipeline::JIT::PipeDynamicRuntime::_global();
-  asmjit::JitAllocator::Statistics pipeStats = pipeGenRuntime._jitRuntime.allocator()->statistics();
+  bl::Pipeline::JIT::PipeDynamicRuntime& pipe_gen_runtime = bl::Pipeline::JIT::PipeDynamicRuntime::_global();
+  asmjit::JitAllocator::Statistics pipe_stats = pipe_gen_runtime._jit_runtime.allocator().statistics();
 
-  resourceInfo->vmUsed += pipeStats.usedSize();
-  resourceInfo->vmReserved += pipeStats.reservedSize();
-  resourceInfo->vmOverhead += pipeStats.overheadSize();
-  resourceInfo->vmBlockCount += pipeStats.blockCount();
-  resourceInfo->dynamicPipelineCount += pipeGenRuntime._pipelineCount.load();
+  resource_info->vm_used += pipe_stats.used_size();
+  resource_info->vm_reserved += pipe_stats.reserved_size();
+  resource_info->vm_overhead += pipe_stats.overhead_size();
+  resource_info->vm_block_count += pipe_stats.block_count();
+  resource_info->dynamic_pipeline_count += pipe_gen_runtime._pipeline_count.load();
 }
 
-static void BL_CDECL blDynamicPipeRtShutdown(BLRuntimeContext* rt) noexcept {
-  blUnused(rt);
+static void BL_CDECL bl_dynamic_pipe_rt_shutdown(BLRuntimeContext* rt) noexcept {
+  bl_unused(rt);
   bl::Pipeline::JIT::PipeDynamicRuntime::_global.destroy();
 }
 
-void blDynamicPipelineRtInit(BLRuntimeContext* rt) noexcept {
+void bl_dynamic_pipeline_rt_init(BLRuntimeContext* rt) noexcept {
   bl::Pipeline::JIT::PipeDynamicRuntime::_global.init();
 
-  rt->shutdownHandlers.add(blDynamicPipeRtShutdown);
-  rt->resourceInfoHandlers.add(blDynamicPipeRtResourceInfo);
+  rt->shutdown_handlers.add(bl_dynamic_pipe_rt_shutdown);
+  rt->resource_info_handlers.add(bl_dynamic_pipe_rt_resource_info);
 }
 
 #endif // !BL_BUILD_NO_JIT

@@ -22,44 +22,44 @@ PipeFunction::PipeFunction() noexcept {}
 
 void PipeFunction::prepare(PipeCompiler& pc, PipePart* root) noexcept {
   // Initialize SIMD width and everything that relies on it.
-  VecWidth vw = pc.maxVecWidthFromCpuFeatures();
+  VecWidth vw = pc.max_vec_width_from_cpu_features();
 
   // NOTE 1: It depends on parts which SIMD width will be used by the pipeline. We set the maximum SIMD width
   // available for this host CPU, but if any part doesn't support such width it will end up lower. For example
   // it's possible that the pipeline would use only 128-bit SIMD width even when the CPU has support for AVX-512.
 
-  root->forEachPart([&](PipePart* part) {
-    vw = VecWidth(blMin<uint32_t>(uint32_t(vw), uint32_t(part->maxVecWidthSupported())));
+  root->for_each_part([&](PipePart* part) {
+    vw = VecWidth(bl_min<uint32_t>(uint32_t(vw), uint32_t(part->max_vec_width_supported())));
   });
 
-  pc.initVecWidth(vw);
+  pc.init_vec_width(vw);
 
   // Prepare all parts (the flag marks all visited parts).
-  root->forEachPartAndMark(PipePartFlags::kPrepareDone, [&](PipePart* part) {
-    part->preparePart();
+  root->for_each_part_and_mark(PipePartFlags::kPrepareDone, [&](PipePart* part) {
+    part->prepare_part();
   });
 }
 
-void PipeFunction::beginFunction(PipeCompiler& pc) noexcept {
+void PipeFunction::begin_function(PipeCompiler& pc) noexcept {
   AsmCompiler* cc = pc.cc;
-  asmjit::FuncNode* funcNode = cc->newFunc(asmjit::FuncSignature::build<void, ContextData*, const void*, const void*>(asmjit::CallConvId::kCDecl));
+  asmjit::FuncNode* func_node = cc->new_func(asmjit::FuncSignature::build<void, ContextData*, const void*, const void*>(asmjit::CallConvId::kCDecl));
 
-  pc.initFunction(funcNode);
+  pc.init_function(func_node);
 
-  _ctxData = pc.newGpPtr("ctxData");
-  _fillData = pc.newGpPtr("fillData");
-  _fetchData = pc.newGpPtr("fetchData");
+  _ctx_data = pc.new_gp("ctx_data");
+  _fill_data = pc.new_gp("fill_data");
+  _fetch_data = pc.new_gp("fetch_data");
 
-  funcNode->setArg(0, _ctxData);
-  funcNode->setArg(1, _fillData);
-  funcNode->setArg(2, _fetchData);
+  func_node->set_arg(0, _ctx_data);
+  func_node->set_arg(1, _fill_data);
+  func_node->set_arg(2, _fetch_data);
 }
 
-void PipeFunction::endFunction(PipeCompiler& pc) noexcept {
+void PipeFunction::end_function(PipeCompiler& pc) noexcept {
   AsmCompiler* cc = pc.cc;
 
   // Finalize the pipeline function.
-  cc->endFunc();
+  cc->end_func();
 }
 
 } // {bl::Pipeline::JIT}

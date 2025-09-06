@@ -18,32 +18,32 @@ namespace bl::Pipeline::JIT::FetchUtils {
 // bl::Pipeline::Jit::FetchUtils -- FillSpan & FillRect Loops
 // ==========================================================
 
-void inlineFillSpanLoop(
+void inline_fill_span_loop(
   PipeCompiler* pc,
   Gp dst,
   Vec src,
   Gp i,
-  uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept;
+  uint32_t main_loop_size, uint32_t item_size, uint32_t item_granularity) noexcept;
 
-void inlineFillRectLoop(
+void inline_fill_rect_loop(
   PipeCompiler* pc,
-  Gp dstPtr,
+  Gp dst_ptr,
   Gp stride,
   Gp w,
   Gp h,
   Vec src,
-  uint32_t itemSize,
+  uint32_t item_size,
   const Label& end) noexcept;
 
 // bl::Pipeline::Jit::FetchUtils -- CopySpan & CopyRect Loops
 // ==========================================================
 
-void inlineCopySpanLoop(
+void inline_copy_span_loop(
   PipeCompiler* pc,
   Gp dst,
   Gp src,
   Gp i,
-  uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity, FormatExt format) noexcept;
+  uint32_t main_loop_size, uint32_t item_size, uint32_t item_granularity, FormatExt format) noexcept;
 
 } // {bl::Pipeline::JIT::FetchUtils}
 

@@ -17,27 +17,27 @@ namespace bl::Pipeline::JIT {
 //! Pipeline solid-fetch part.
 class FetchSolidPart : public FetchPart {
 public:
-  //! Pointer to fetch data, which is needed in `initSolidFlags()` - initially retrieved from \ref PipeFunction.
-  Gp _fetchData;
+  //! Pointer to fetch data, which is needed in `init_solid_flags()` - initially retrieved from \ref PipeFunction.
+  Gp _fetch_data;
 
   //! Source pixel, expanded to the whole register if necessary.
   Pixel _pixel;
 
   FetchSolidPart(PipeCompiler* pc, FormatExt format) noexcept;
 
-  void preparePart() noexcept override;
+  void prepare_part() noexcept override;
 
-  void _initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
-  void _finiPart() noexcept override;
+  void _init_part(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
+  void _fini_part() noexcept override;
 
   //! Injects code at the beginning of the pipeline that is required to prepare the requested variables that will
   //! be used by a special compositor that can composite the destination with solid pixels. Multiple calls to
-  //! `prepareSolid()` are allowed and this feature is used to setup variables required by various parts of the
+  //! `prepare_solid()` are allowed and this feature is used to setup variables required by various parts of the
   //! pipeline.
   //!
-  //! \note Initialization means code injection, calling `prepareSolid()` will not emit any code at the current
+  //! \note Initialization means code injection, calling `prepare_solid()` will not emit any code at the current
   //! position, it will instead inject code to the position saved by `init()`.
-  void initSolidFlags(PixelFlags flags) noexcept;
+  void init_solid_flags(PixelFlags flags) noexcept;
 
   void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 };

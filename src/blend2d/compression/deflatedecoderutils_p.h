@@ -38,29 +38,29 @@ BL_INLINE_NODEBUG uint32_t mask32(const T& n) noexcept { return (1u << n) - 1u; 
 
 BL_INLINE_NODEBUG uint32_t extract_n(BLBitWord src, size_t n) noexcept { return (uint32_t(src) & mask32(uint32_t(n))); }
 
-BL_INLINE_NODEBUG uint32_t extract_entry(BLBitWord src, DecodeEntry entry) noexcept { return uint32_t(src) & ((1u << (entry.value & uint32_t(IntOps::bitSizeOf<BLBitWord>() - 1))) - 1u); }
+BL_INLINE_NODEBUG uint32_t extract_entry(BLBitWord src, DecodeEntry entry) noexcept { return uint32_t(src) & ((1u << (entry.value & uint32_t(IntOps::bit_size_of<BLBitWord>() - 1))) - 1u); }
 #endif
 
-BL_INLINE_NODEBUG bool isLiteral(DecodeEntry e) noexcept { return (e.value & DecodeEntry::kLiteralFlag) != 0u; }
-BL_INLINE_NODEBUG bool isOffOrLen(DecodeEntry e) noexcept { return (e.value & DecodeEntry::kOffOrLenFlag) != 0u; }
-BL_INLINE_NODEBUG bool isOffAndLen(DecodeEntry e) noexcept { return (e.value & DecodeEntry::kOffAndLenFlag) != 0u; }
-BL_INLINE_NODEBUG bool isEndOfBlock(DecodeEntry e) noexcept { return (e.value & (DecodeEntry::kEndOfBlockFlag)) != 0u; }
-BL_INLINE_NODEBUG bool isEndOfBlockInvalid(DecodeEntry e) noexcept { return (e.value & DecodeEntry::kEndOfBlockInvalidFlag) != 0u; }
+BL_INLINE_NODEBUG bool is_literal(DecodeEntry e) noexcept { return (e.value & DecodeEntry::kLiteralFlag) != 0u; }
+BL_INLINE_NODEBUG bool is_off_or_len(DecodeEntry e) noexcept { return (e.value & DecodeEntry::kOffOrLenFlag) != 0u; }
+BL_INLINE_NODEBUG bool is_off_and_len(DecodeEntry e) noexcept { return (e.value & DecodeEntry::kOffAndLenFlag) != 0u; }
+BL_INLINE_NODEBUG bool is_end_of_block(DecodeEntry e) noexcept { return (e.value & (DecodeEntry::kEndOfBlockFlag)) != 0u; }
+BL_INLINE_NODEBUG bool is_end_of_block_invalid(DecodeEntry e) noexcept { return (e.value & DecodeEntry::kEndOfBlockInvalidFlag) != 0u; }
 
 // Extracts a field from DecodeEntry.
 template<uint32_t kOffset, uint32_t kNBits>
-BL_INLINE_NODEBUG uint32_t extractField(DecodeEntry e) noexcept { return (e.value >> kOffset) & mask32(kNBits); }
+BL_INLINE_NODEBUG uint32_t extract_field(DecodeEntry e) noexcept { return (e.value >> kOffset) & mask32(kNBits); }
 
-BL_INLINE_NODEBUG uint32_t baseLength(DecodeEntry e) noexcept { return extractField<DecodeEntry::kBaseLengthOffset, DecodeEntry::kBaseLengthNBits>(e); }
-BL_INLINE_NODEBUG uint32_t fullLength(DecodeEntry e) noexcept { return extractField<DecodeEntry::kFullLengthOffset, DecodeEntry::kFullLengthNBits>(e); }
+BL_INLINE_NODEBUG uint32_t base_length(DecodeEntry e) noexcept { return extract_field<DecodeEntry::kBaseLengthOffset, DecodeEntry::kBaseLengthNBits>(e); }
+BL_INLINE_NODEBUG uint32_t full_length(DecodeEntry e) noexcept { return extract_field<DecodeEntry::kFullLengthOffset, DecodeEntry::kFullLengthNBits>(e); }
 
-BL_INLINE_NODEBUG uint32_t rawPayload(DecodeEntry e) noexcept { return (e.value >> DecodeEntry::kPayloadOffset) & 0xFFFFu; }
-BL_INLINE_NODEBUG uint32_t payloadField(DecodeEntry e) noexcept { return extractField<DecodeEntry::kPayloadOffset, DecodeEntry::kPayloadNBits>(e); }
+BL_INLINE_NODEBUG uint32_t raw_payload(DecodeEntry e) noexcept { return (e.value >> DecodeEntry::kPayloadOffset) & 0xFFFFu; }
+BL_INLINE_NODEBUG uint32_t payload_field(DecodeEntry e) noexcept { return extract_field<DecodeEntry::kPayloadOffset, DecodeEntry::kPayloadNBits>(e); }
 
-BL_INLINE_NODEBUG uint32_t precodeValue(DecodeEntry e) noexcept { return extractField<DecodeEntry::kPrecodeValueOffset, DecodeEntry::kPrecodeValueNBits>(e); }
-BL_INLINE_NODEBUG uint32_t precodeRepeat(DecodeEntry e) noexcept { return extractField<DecodeEntry::kPrecodeRepeatOffset, DecodeEntry::kPrecodeRepeatNBits>(e); }
+BL_INLINE_NODEBUG uint32_t precode_value(DecodeEntry e) noexcept { return extract_field<DecodeEntry::kPrecodeValueOffset, DecodeEntry::kPrecodeValueNBits>(e); }
+BL_INLINE_NODEBUG uint32_t precode_repeat(DecodeEntry e) noexcept { return extract_field<DecodeEntry::kPrecodeRepeatOffset, DecodeEntry::kPrecodeRepeatNBits>(e); }
 
-BL_INLINE_NODEBUG uint32_t extractExtra(BLBitWord src, DecodeEntry e) noexcept { return extract_entry(src, e) >> baseLength(e); }
+BL_INLINE_NODEBUG uint32_t extract_extra(BLBitWord src, DecodeEntry e) noexcept { return extract_entry(src, e) >> base_length(e); }
 
 } // {anonymous}
 } // {bl::Compression::Deflate::DecoderUtils}
@@ -77,108 +77,108 @@ struct DecoderTableMask {
   BL_INLINE_NODEBUG explicit DecoderTableMask(uint32_t bitlen) noexcept
     : _mask(DecoderUtils::mask32(bitlen)) {}
 
-  BL_INLINE_NODEBUG uint32_t extractIndex(BLBitWord bits) const noexcept {
+  BL_INLINE_NODEBUG uint32_t extract_index(BLBitWord bits) const noexcept {
     return uint32_t(bits & _mask);
   }
 };
 
 struct DecoderBits {
-  BLBitWord bitWord {};
-  size_t bitLength {};
+  BLBitWord bit_word {};
+  size_t bit_length {};
 
   BL_INLINE_NODEBUG void reset() noexcept {
-    bitWord = 0;
-    bitLength = 0;
+    bit_word = 0;
+    bit_length = 0;
   }
 
-  BL_INLINE_NODEBUG void loadState(Decoder* ctx) noexcept {
-    bitWord = ctx->_bitWord;
-    bitLength = ctx->_bitLength;
+  BL_INLINE_NODEBUG void load_state(Decoder* ctx) noexcept {
+    bit_word = ctx->_bit_word;
+    bit_length = ctx->_bit_length;
   }
 
-  BL_INLINE_NODEBUG void storeState(Decoder* ctx) noexcept {
-    ctx->_bitWord = bitWord;
-    ctx->_bitLength = bitLength;
+  BL_INLINE_NODEBUG void store_state(Decoder* ctx) noexcept {
+    ctx->_bit_word = bit_word;
+    ctx->_bit_length = bit_length;
   }
 
-  BL_INLINE_NODEBUG BLBitWord all() const noexcept { return bitWord; }
-  BL_INLINE_NODEBUG size_t length() const noexcept { return bitLength; }
+  BL_INLINE_NODEBUG BLBitWord all() const noexcept { return bit_word; }
+  BL_INLINE_NODEBUG size_t length() const noexcept { return bit_length; }
 
-  BL_INLINE_NODEBUG bool empty() const noexcept { return bitLength == 0; }
-  BL_INLINE_NODEBUG bool overflown() const noexcept { return bitLength > IntOps::bitSizeOf<BLBitWord>(); }
+  BL_INLINE_NODEBUG bool is_empty() const noexcept { return bit_length == 0; }
+  BL_INLINE_NODEBUG bool overflown() const noexcept { return bit_length > IntOps::bit_size_of<BLBitWord>(); }
 
-  BL_INLINE_NODEBUG bool canRefillByte() const noexcept {
+  BL_INLINE_NODEBUG bool can_refill_byte() const noexcept {
     if constexpr (sizeof(BLBitWord) >= 8)
-      return bitLength < (IntOps::bitSizeOf<BLBitWord>() - 8u);
+      return bit_length < (IntOps::bit_size_of<BLBitWord>() - 8u);
     else
-      return bitLength <= (IntOps::bitSizeOf<BLBitWord>() - 8u);
+      return bit_length <= (IntOps::bit_size_of<BLBitWord>() - 8u);
   }
 
-  BL_INLINE_NODEBUG void refillByte(uint8_t b) noexcept {
-    BL_ASSERT(canRefillByte());
+  BL_INLINE_NODEBUG void refill_byte(uint8_t b) noexcept {
+    BL_ASSERT(can_refill_byte());
 
-    bitWord |= BLBitWord(b) << bitLength;
-    bitLength += 8;
+    bit_word |= BLBitWord(b) << bit_length;
+    bit_length += 8;
   }
 
-  BL_INLINE_NODEBUG size_t calculateBitWordRefillCount() const noexcept {
+  BL_INLINE_NODEBUG size_t calculate_bit_word_refill_count() const noexcept {
     constexpr size_t kFullMinusOne = sizeof(BLBitWord) - 1;
-    return kFullMinusOne - ((bitLength >> 3) & 0x7u);
+    return kFullMinusOne - ((bit_length >> 3) & 0x7u);
   }
 
-  BL_INLINE_NODEBUG size_t refillBitWord(BLBitWord b) noexcept {
-    bitWord |= b << (bitLength & (IntOps::bitSizeOf<BLBitWord>() - 1));
-    size_t refillSize = (~bitLength >> 3) & (sizeof(BLBitWord) - 1);
+  BL_INLINE_NODEBUG size_t refill_bit_word(BLBitWord b) noexcept {
+    bit_word |= b << (bit_length & (IntOps::bit_size_of<BLBitWord>() - 1));
+    size_t refill_size = (~bit_length >> 3) & (sizeof(BLBitWord) - 1);
 
-    bitLength |= IntOps::bitSizeOf<BLBitWord>() - 8u;
-    return refillSize;
+    bit_length |= IntOps::bit_size_of<BLBitWord>() - 8u;
+    return refill_size;
   }
 
   template<size_t Index = 0>
   BL_INLINE_NODEBUG uint32_t extract(size_t n) const noexcept {
-    return DecoderUtils::extract_n(bitWord >> Index, n);
+    return DecoderUtils::extract_n(bit_word >> Index, n);
   }
 
   BL_INLINE_NODEBUG uint32_t extract(DecoderTableMask msk) const noexcept {
-    return msk.extractIndex(bitWord);
+    return msk.extract_index(bit_word);
   }
 
   BL_INLINE_NODEBUG uint32_t extract(DecodeEntry entry) const noexcept {
-    return DecoderUtils::extract_n(bitWord, entry.value);
+    return DecoderUtils::extract_n(bit_word, entry.value);
   }
 
-  BL_INLINE_NODEBUG uint32_t extractExtra(DecodeEntry entry) noexcept {
-    return DecoderUtils::extractExtra(bitWord, entry);
+  BL_INLINE_NODEBUG uint32_t extract_extra(DecodeEntry entry) noexcept {
+    return DecoderUtils::extract_extra(bit_word, entry);
   }
 
   BL_INLINE_NODEBUG uint32_t and_(uint32_t mask) const noexcept {
-    return uint32_t(bitWord & mask);
+    return uint32_t(bit_word & mask);
   }
 
   BL_INLINE_NODEBUG uint32_t operator&(uint32_t mask) const noexcept {
-    return uint32_t(bitWord & mask);
+    return uint32_t(bit_word & mask);
   }
 
   BL_INLINE_NODEBUG void consumed(size_t n) noexcept {
-    bitWord >>= n;
-    bitLength -= n;
+    bit_word >>= n;
+    bit_length -= n;
   }
 
-  BL_INLINE_NODEBUG void consumedUnsafe(uint32_t n) noexcept {
-    bitWord >>= n & (IntOps::bitSizeOf<BLBitWord>() - 1u);
-    bitLength -= n;
+  BL_INLINE_NODEBUG void consumed_unsafe(uint32_t n) noexcept {
+    bit_word >>= n & (IntOps::bit_size_of<BLBitWord>() - 1u);
+    bit_length -= n;
   }
 
   BL_INLINE_NODEBUG void consumed(DecodeEntry n) noexcept {
-    consumedUnsafe(n.value);
+    consumed_unsafe(n.value);
   }
 
-  BL_INLINE_NODEBUG bool isByteAligned() const noexcept { return (bitLength & 0x7u) == 0u; }
-  BL_INLINE_NODEBUG void makeByteAligned() noexcept { consumed(bitLength & 0x7u); }
+  BL_INLINE_NODEBUG bool is_byte_aligned() const noexcept { return (bit_length & 0x7u) == 0u; }
+  BL_INLINE_NODEBUG void make_byte_aligned() noexcept { consumed(bit_length & 0x7u); }
 
-  BL_INLINE_NODEBUG void fixLengthAfterFastLoop() noexcept {
+  BL_INLINE_NODEBUG void fix_length_after_fast_loop() noexcept {
     if constexpr (sizeof(BLBitWord) >= 8) {
-      bitLength &= (IntOps::bitSizeOf<BLBitWord>() - 1u);
+      bit_length &= (IntOps::bit_size_of<BLBitWord>() - 1u);
     }
   }
 };
@@ -219,23 +219,23 @@ class ScalarCopyContext {
 public:
   using Register = BLBitWord;
 
-  Register repeatMask;
-  Register repeatPred;
-  Register rotateLeft;
-  Register rotateRight;
+  Register repeat_mask;
+  Register repeat_pred;
+  Register rotate_left;
+  Register rotate_right;
 
-  BL_INLINE void initRepeat(size_t offset) noexcept {
+  BL_INLINE void init_repeat(size_t offset) noexcept {
     BL_ASSERT(offset < sizeof(Register));
 
-    repeatMask = IntOps::allOnes<BLBitWord>() >> (64u - (offset * 8u));
-    repeatPred = BLBitWord(kScalarRepeatMultiply[offset]);
+    repeat_mask = IntOps::all_ones<BLBitWord>() >> (64u - (offset * 8u));
+    repeat_pred = BLBitWord(kScalarRepeatMultiply[offset]);
   }
 
-  BL_INLINE void initRotate(size_t offset) noexcept {
+  BL_INLINE void init_rotate(size_t offset) noexcept {
     BL_ASSERT(offset < sizeof(Register));
 
-    rotateLeft = kScalarRotatePredicateL[offset];
-    rotateRight = kScalarRotatePredicateR[offset];
+    rotate_left = kScalarRotatePredicateL[offset];
+    rotate_right = kScalarRotatePredicateR[offset];
   }
 
   static BL_INLINE Register load(const uint8_t* src) noexcept { return MemOps::loadu_le<BLBitWord>(src); }
@@ -244,8 +244,8 @@ public:
   static BL_INLINE void store(uint8_t* dst, Register r) noexcept { MemOps::storeu_le(dst, r); }
   static BL_INLINE void store_raw(uint8_t* dst, Register r) noexcept { MemOps::storeu(dst, r); }
 
-  BL_INLINE Register repeat(Register r) const noexcept { return (r & repeatMask) * repeatPred; }
-  BL_INLINE Register rotate(Register r) noexcept { return (r >> rotateRight) | (r << rotateLeft); }
+  BL_INLINE Register repeat(Register r) const noexcept { return (r & repeat_mask) * repeat_pred; }
+  BL_INLINE Register rotate(Register r) noexcept { return (r >> rotate_right) | (r << rotate_left); }
 };
 
 #if defined(BL_DECODER_USE_SWIZZLEV)
@@ -253,23 +253,23 @@ class SimdCopyContext {
 public:
   using Register = SIMD::Vec16xU8;
 
-  Register repeatPredicate;
-  Register rotatePredicate;
+  Register repeat_predicate;
+  Register rotate_predicate;
 
-  BL_INLINE void initRepeat(size_t offset) noexcept {
+  BL_INLINE void init_repeat(size_t offset) noexcept {
     BL_ASSERT(offset < sizeof(Register));
 
-    repeatPredicate = SIMD::loada_128<SIMD::Vec16xU8>(&kSimdRepeatTable16[offset]);
+    repeat_predicate = SIMD::loada_128<SIMD::Vec16xU8>(&kSimdRepeatTable16[offset]);
   }
 
-  BL_INLINE void initRotate(size_t offset) noexcept {
+  BL_INLINE void init_rotate(size_t offset) noexcept {
     BL_ASSERT(offset < sizeof(Register));
 
-    rotatePredicate = SIMD::loada_128<SIMD::Vec16xU8>(&kSimdRotateTable16[offset]);
+    rotate_predicate = SIMD::loada_128<SIMD::Vec16xU8>(&kSimdRotateTable16[offset]);
   }
 
-  BL_INLINE Register repeat(Register r) const noexcept { return SIMD::swizzlev_u8(r, repeatPredicate); }
-  BL_INLINE Register rotate(Register r) const noexcept { return SIMD::swizzlev_u8(r, rotatePredicate); }
+  BL_INLINE Register repeat(Register r) const noexcept { return SIMD::swizzlev_u8(r, repeat_predicate); }
+  BL_INLINE Register rotate(Register r) const noexcept { return SIMD::swizzlev_u8(r, rotate_predicate); }
 
   static BL_INLINE Register load(const uint8_t* src) noexcept { return SIMD::loadu_128<Register>(src); }
   static BL_INLINE Register load_raw(const uint8_t* src) noexcept { return SIMD::loadu_128<Register>(src); }

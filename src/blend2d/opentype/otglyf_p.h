@@ -30,13 +30,13 @@ struct LocaTable {
 
   /*
   union {
-    Offset16 offsetArray16[...];
-    Offset32 offsetArray32[...];
+    Offset16 offset_array16[...];
+    Offset32 offset_array32[...];
   };
   */
 
-  BL_INLINE const Offset16* offsetArray16() const noexcept { return PtrOps::offset<const Offset16>(this, 0); }
-  BL_INLINE const Offset32* offsetArray32() const noexcept { return PtrOps::offset<const Offset32>(this, 0); }
+  BL_INLINE const Offset16* offset_array16() const noexcept { return PtrOps::offset<const Offset16>(this, 0); }
+  BL_INLINE const Offset32* offset_array32() const noexcept { return PtrOps::offset<const Offset32>(this, 0); }
 };
 
 //! OpenType 'glyf' table.
@@ -61,12 +61,12 @@ struct GlyfTable {
     };
 
     /*
-    UInt16 endPtsOfContours[numberOfContours];
-    UInt16 instructionLength;
-    UInt8 instructions[instructionLength];
+    UInt16 end_pts_of_contours[number_of_contours];
+    UInt16 instruction_length;
+    UInt8 instructions[instruction_length];
     UInt8 flags[...];
-    UInt8/UInt16 xCoordinates[...];
-    UInt8/UInt16 yCoordinates[...];
+    UInt8/UInt16 x_coordinates[...];
+    UInt8/UInt16 y_coordinates[...];
     */
   };
 
@@ -84,17 +84,12 @@ struct GlyfTable {
       kOverlappedCompound       = 0x0400u,
       kScaledComponentOffset    = 0x0800u,
       kUnscaledComponentOffset  = 0x1000u,
-
-      kAnyCompoundScale         = kWeHaveScale
-                                | kWeHaveScaleXY
-                                | kWeHave2x2,
-
-      kAnyCompoundOffset        = kScaledComponentOffset
-                                | kUnscaledComponentOffset
+      kAnyCompoundScale         = kWeHaveScale | kWeHaveScaleXY | kWeHave2x2,
+      kAnyCompoundOffset        = kScaledComponentOffset | kUnscaledComponentOffset
     };
 
     UInt16 flags;
-    UInt16 glyphId;
+    UInt16 glyph_id;
     /*
     Var arguments[...];
     Var transformations[...];
@@ -102,37 +97,37 @@ struct GlyfTable {
   };
 
   struct GlyphData {
-    Int16 numberOfContours;
-    FWord xMin;
-    FWord yMin;
-    FWord xMax;
-    FWord yMax;
+    Int16 number_of_contours;
+    FWord x_min;
+    FWord y_min;
+    FWord x_max;
+    FWord y_max;
 
     const Simple* simple() const noexcept { return PtrOps::offset<const Simple>(this, sizeof(GlyphData)); }
     const Compound* compound() const noexcept { return PtrOps::offset<const Compound>(this, sizeof(GlyphData)); }
   };
 
   /*
-  GlyphData glyphData[...] // Indexed by LOCA.
+  GlyphData glyph_data[...] // Indexed by LOCA.
   */
 };
 
 struct GlyfData {
   //! Content of 'glyf' table.
-  RawTable glyfTable;
+  RawTable glyf_table;
   //! Content of 'loca' table.
-  RawTable locaTable;
+  RawTable loca_table;
 };
 
 namespace {
 
-// Used by getGlyphOutline() implementation.
+// Used by get_glyph_outline() implementation.
 struct CompoundEntry {
   enum : uint32_t { kMaxLevel = 16 };
 
   const uint8_t* gPtr;
-  size_t remainingSize;
-  uint32_t compoundFlags;
+  size_t remaining_size;
+  uint32_t compound_flags;
   BLMatrix2D transform;
 };
 
@@ -140,39 +135,39 @@ struct CompoundEntry {
 
 namespace GlyfImpl {
 
-BL_HIDDEN extern const LookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1)> vertexSizeTable;
+BL_HIDDEN extern const LookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1)> vertex_size_table;
 
 #if defined(BL_BUILD_OPT_SSE4_2)
-BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_SSE4_2(
-  const BLFontFaceImpl* faceI_,
-  BLGlyphId glyphId,
+BL_HIDDEN BLResult BL_CDECL get_glyph_outlines_sse4_2(
+  const BLFontFaceImpl* face_impl,
+  BLGlyphId glyph_id,
   const BLMatrix2D* transform,
   BLPath* out,
-  size_t* contourCountOut,
-  ScopedBuffer* tmpBuffer) noexcept;
+  size_t* contour_count_out,
+  ScopedBuffer* tmp_buffer) noexcept;
 #endif // BL_BUILD_OPT_SSE4_2
 
 #if defined(BL_BUILD_OPT_AVX2)
-BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_AVX2(
-  const BLFontFaceImpl* faceI_,
-  BLGlyphId glyphId,
+BL_HIDDEN BLResult BL_CDECL get_glyph_outlines_avx2(
+  const BLFontFaceImpl* face_impl,
+  BLGlyphId glyph_id,
   const BLMatrix2D* transform,
   BLPath* out,
-  size_t* contourCountOut,
-  ScopedBuffer* tmpBuffer) noexcept;
+  size_t* contour_count_out,
+  ScopedBuffer* tmp_buffer) noexcept;
 #endif // BL_BUILD_OPT_AVX2
 
 #if BL_TARGET_ARCH_ARM >= 64 && defined(BL_BUILD_OPT_ASIMD)
-BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_ASIMD(
-  const BLFontFaceImpl* faceI_,
-  BLGlyphId glyphId,
+BL_HIDDEN BLResult BL_CDECL get_glyph_outlines_asimd(
+  const BLFontFaceImpl* face_impl,
+  BLGlyphId glyph_id,
   const BLMatrix2D* transform,
   BLPath* out,
-  size_t* contourCountOut,
-  ScopedBuffer* tmpBuffer) noexcept;
+  size_t* contour_count_out,
+  ScopedBuffer* tmp_buffer) noexcept;
 #endif // BL_BUILD_OPT_ASIMD
 
-BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
+BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept;
 
 } // {GlyfImpl}
 } // {bl::OpenType}

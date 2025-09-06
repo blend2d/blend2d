@@ -31,7 +31,7 @@ struct CompOp_SrcCopy_Op {
   };
 
   static BL_INLINE PixelType op_prgb32_prgb32(PixelType d, PixelType s) noexcept {
-    blUnused(d);
+    bl_unused(d);
     return s;
   }
 
@@ -91,95 +91,95 @@ struct CompOp_Base {
     kOptimizeOpaque = Op::kOptimizeOpaque
   };
 
-  FetchOp fetchOp;
+  FetchOp fetch_op;
 
   static constexpr FormatExt kFormat = PixelTypeToFormat<PixelT>::kFormat;
 
-  BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
-    fetchOp.rectInitFetch(ctxData, fetchData, xPos, yPos, rectWidth);
+  BL_INLINE void rect_init_fetch(ContextData* ctx_data, const void* fetch_data, uint32_t x_pos, uint32_t y_pos, uint32_t rect_width) noexcept {
+    fetch_op.rect_init_fetch(ctx_data, fetch_data, x_pos, y_pos, rect_width);
   }
 
-  BL_INLINE void rectStartX(uint32_t xPos) noexcept {
-    fetchOp.rectStartX(xPos);
+  BL_INLINE void rectStartX(uint32_t x_pos) noexcept {
+    fetch_op.rectStartX(x_pos);
   }
 
-  BL_INLINE void spanInitY(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
-    fetchOp.spanInitY(ctxData, fetchData, yPos);
+  BL_INLINE void spanInitY(ContextData* ctx_data, const void* fetch_data, uint32_t y_pos) noexcept {
+    fetch_op.spanInitY(ctx_data, fetch_data, y_pos);
   }
 
-  BL_INLINE void spanStartX(uint32_t xPos) noexcept {
-    fetchOp.spanStartX(xPos);
+  BL_INLINE void spanStartX(uint32_t x_pos) noexcept {
+    fetch_op.spanStartX(x_pos);
   }
 
-  BL_INLINE void spanAdvanceX(uint32_t xPos, uint32_t xDiff) noexcept {
-    fetchOp.spanAdvanceX(xPos, xDiff);
+  BL_INLINE void spanAdvanceX(uint32_t x_pos, uint32_t x_diff) noexcept {
+    fetch_op.spanAdvanceX(x_pos, x_diff);
   }
 
-  BL_INLINE void spanEndX(uint32_t xPos) noexcept {
-    fetchOp.spanEndX(xPos);
+  BL_INLINE void spanEndX(uint32_t x_pos) noexcept {
+    fetch_op.spanEndX(x_pos);
   }
 
   BL_INLINE void advanceY() noexcept {
-    fetchOp.advanceY();
+    fetch_op.advanceY();
   }
 
-  BL_INLINE uint8_t* compositePixelOpaque(uint8_t* dstPtr) noexcept {
+  BL_INLINE uint8_t* composite_pixel_opaque(uint8_t* dst_ptr) noexcept {
     if (uint32_t(OpT::kCompOp) == BL_COMP_OP_SRC_COPY) {
-      PixelIO<PixelT, kFormat>::store(dstPtr, fetchOp.fetch());
-      return dstPtr + kDstBPP;
+      PixelIO<PixelT, kFormat>::store(dst_ptr, fetch_op.fetch());
+      return dst_ptr + kDstBPP;
     }
     else {
-      PixelIO<PixelT, kFormat>::store(dstPtr, OpT::op_prgb32_prgb32(PixelIO<PixelT, kFormat>::fetch(dstPtr), fetchOp.fetch()));
-      return dstPtr + kDstBPP;
+      PixelIO<PixelT, kFormat>::store(dst_ptr, OpT::op_prgb32_prgb32(PixelIO<PixelT, kFormat>::fetch(dst_ptr), fetch_op.fetch()));
+      return dst_ptr + kDstBPP;
     }
   }
 
-  BL_INLINE uint8_t* compositePixelMasked(uint8_t* dstPtr, uint32_t m) noexcept {
-    PixelIO<PixelT, kFormat>::store(dstPtr, OpT::op_prgb32_prgb32(PixelIO<PixelT, kFormat>::fetch(dstPtr), fetchOp.fetch(), m));
-    return dstPtr + kDstBPP;
+  BL_INLINE uint8_t* composite_pixel_masked(uint8_t* dst_ptr, uint32_t m) noexcept {
+    PixelIO<PixelT, kFormat>::store(dst_ptr, OpT::op_prgb32_prgb32(PixelIO<PixelT, kFormat>::fetch(dst_ptr), fetch_op.fetch(), m));
+    return dst_ptr + kDstBPP;
   }
 
-  BL_INLINE uint8_t* compositeCSpanOpaque(uint8_t* dstPtr, size_t w) noexcept {
+  BL_INLINE uint8_t* compositeCSpanOpaque(uint8_t* dst_ptr, size_t w) noexcept {
     size_t i = w;
     do {
-      dstPtr = compositePixelOpaque(dstPtr);
+      dst_ptr = composite_pixel_opaque(dst_ptr);
     } while (--i);
-    return dstPtr;
+    return dst_ptr;
   }
 
-  BL_INLINE uint8_t* compositeCSpanMasked(uint8_t* dstPtr, size_t w, uint32_t m) noexcept {
+  BL_INLINE uint8_t* compositeCSpanMasked(uint8_t* dst_ptr, size_t w, uint32_t m) noexcept {
     size_t i = w;
     do {
-      dstPtr = compositePixelMasked(dstPtr, m);
+      dst_ptr = composite_pixel_masked(dst_ptr, m);
     } while (--i);
-    return dstPtr;
+    return dst_ptr;
   }
 
-  BL_INLINE uint8_t* compositeCSpan(uint8_t* dstPtr, size_t w, uint32_t m) noexcept {
+  BL_INLINE uint8_t* compositeCSpan(uint8_t* dst_ptr, size_t w, uint32_t m) noexcept {
     if (kOptimizeOpaque && m == 255)
-      return compositeCSpanOpaque(dstPtr, w);
+      return compositeCSpanOpaque(dst_ptr, w);
     else
-      return compositeCSpanMasked(dstPtr, w, m);
+      return compositeCSpanMasked(dst_ptr, w, m);
   }
 
-  BL_INLINE uint8_t* compositeVSpanWithGA(uint8_t* BL_RESTRICT dstPtr, const uint8_t* BL_RESTRICT maskPtr, size_t w) noexcept {
+  BL_INLINE uint8_t* compositeVSpanWithGA(uint8_t* BL_RESTRICT dst_ptr, const uint8_t* BL_RESTRICT mask_ptr, size_t w) noexcept {
     size_t i = w;
     do {
-      uint32_t msk = maskPtr[0];
-      dstPtr = compositePixelMasked(dstPtr, msk);
-      maskPtr++;
+      uint32_t msk = mask_ptr[0];
+      dst_ptr = composite_pixel_masked(dst_ptr, msk);
+      mask_ptr++;
     } while (--i);
-    return dstPtr;
+    return dst_ptr;
   }
 
-  BL_INLINE uint8_t* compositeVSpanWithoutGA(uint8_t* BL_RESTRICT dstPtr, const uint8_t* BL_RESTRICT maskPtr, uint32_t globalAlpha, size_t w) noexcept {
+  BL_INLINE uint8_t* compositeVSpanWithoutGA(uint8_t* BL_RESTRICT dst_ptr, const uint8_t* BL_RESTRICT mask_ptr, uint32_t global_alpha, size_t w) noexcept {
     size_t i = w;
     do {
-      uint32_t msk = PixelOps::Scalar::udiv255(uint32_t(maskPtr[0]) * globalAlpha);
-      maskPtr++;
-      dstPtr = compositePixelMasked(dstPtr, msk);
+      uint32_t msk = PixelOps::Scalar::udiv255(uint32_t(mask_ptr[0]) * global_alpha);
+      mask_ptr++;
+      dst_ptr = composite_pixel_masked(dst_ptr, msk);
     } while (--i);
-    return dstPtr;
+    return dst_ptr;
   }
 };
 

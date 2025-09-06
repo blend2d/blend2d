@@ -16,43 +16,43 @@ namespace PatternInternal {
 // bl::Pattern - Globals
 // =====================
 
-static BLObjectEternalImpl<BLPatternPrivateImpl> defaultImpl;
+static BLObjectEternalImpl<BLPatternPrivateImpl> default_impl;
 
 // bl::Pattern - Internals
 // =======================
 
-static BL_INLINE BLResult allocImpl(BLPatternCore* self, const BLImageCore* image, const BLRectI& area, BLExtendMode extendMode, const BLMatrix2D* transform, BLTransformType transformType) noexcept {
-  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_PATTERN);
-  BL_PROPAGATE(ObjectInternal::allocImplT<BLPatternPrivateImpl>(self, info));
+static BL_INLINE BLResult alloc_impl(BLPatternCore* self, const BLImageCore* image, const BLRectI& area, BLExtendMode extend_mode, const BLMatrix2D* transform, BLTransformType transform_type) noexcept {
+  BLObjectInfo info = BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_PATTERN);
+  BL_PROPAGATE(ObjectInternal::alloc_impl_t<BLPatternPrivateImpl>(self, info));
 
-  setExtendMode(self, extendMode);
-  setTransformType(self, transformType);
+  set_extend_mode(self, extend_mode);
+  set_transform_type(self, transform_type);
 
-  BLPatternPrivateImpl* impl = getImpl(self);
-  blCallCtor(impl->image.dcast(), image->dcast());
+  BLPatternPrivateImpl* impl = get_impl(self);
+  bl_call_ctor(impl->image.dcast(), image->dcast());
   impl->transform = *transform;
   impl->area = area;
 
   return BL_SUCCESS;
 }
 
-BLResult freeImpl(BLPatternPrivateImpl* impl) noexcept {
-  blImageDestroy(&impl->image);
-  return ObjectInternal::freeImpl(impl);
+BLResult free_impl(BLPatternPrivateImpl* impl) noexcept {
+  bl_image_destroy(&impl->image);
+  return ObjectInternal::free_impl(impl);
 }
 
-static BL_NOINLINE BLResult makeMutableCopyOf(BLPatternCore* self, const BLPatternCore* other) noexcept {
-  BLPatternPrivateImpl* otherI = getImpl(other);
+static BL_NOINLINE BLResult make_mutable_copy_of(BLPatternCore* self, const BLPatternCore* other) noexcept {
+  BLPatternPrivateImpl* other_impl = get_impl(other);
 
   BLPatternCore newO;
-  BL_PROPAGATE(allocImpl(&newO, &otherI->image, otherI->area, getExtendMode(self), &otherI->transform, getTransformType(self)));
+  BL_PROPAGATE(alloc_impl(&newO, &other_impl->image, other_impl->area, get_extend_mode(self), &other_impl->transform, get_transform_type(self)));
 
-  return replaceInstance(self, &newO);
+  return replace_instance(self, &newO);
 }
 
-static BL_INLINE BLResult makeMutable(BLPatternCore* self) noexcept {
-  if (!isImplMutable(getImpl(self)))
-    return makeMutableCopyOf(self, self);
+static BL_INLINE BLResult make_mutable(BLPatternCore* self) noexcept {
+  if (!is_impl_mutable(get_impl(self)))
+    return make_mutable_copy_of(self, self);
   else
     return BL_SUCCESS;
 }
@@ -63,310 +63,310 @@ static BL_INLINE BLResult makeMutable(BLPatternCore* self) noexcept {
 // bl::Pattern - API - Init & Destroy
 // ==================================
 
-BL_API_IMPL BLResult blPatternInit(BLPatternCore* self) noexcept {
+BL_API_IMPL BLResult bl_pattern_init(BLPatternCore* self) noexcept {
   using namespace bl::PatternInternal;
 
-  self->_d = blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d;
+  self->_d = bl_object_defaults[BL_OBJECT_TYPE_PATTERN]._d;
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blPatternInitMove(BLPatternCore* self, BLPatternCore* other) noexcept {
+BL_API_IMPL BLResult bl_pattern_init_move(BLPatternCore* self, BLPatternCore* other) noexcept {
   using namespace bl::PatternInternal;
 
   BL_ASSERT(self != other);
-  BL_ASSERT(other->_d.isPattern());
+  BL_ASSERT(other->_d.is_pattern());
 
   self->_d = other->_d;
-  other->_d = blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d;
+  other->_d = bl_object_defaults[BL_OBJECT_TYPE_PATTERN]._d;
 
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blPatternInitWeak(BLPatternCore* self, const BLPatternCore* other) noexcept {
+BL_API_IMPL BLResult bl_pattern_init_weak(BLPatternCore* self, const BLPatternCore* other) noexcept {
   using namespace bl::PatternInternal;
 
   BL_ASSERT(self != other);
-  BL_ASSERT(other->_d.isPattern());
+  BL_ASSERT(other->_d.is_pattern());
 
   self->_d = other->_d;
-  return retainInstance(self);
+  return retain_instance(self);
 }
 
-BL_API_IMPL BLResult blPatternInitAs(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, BLExtendMode extendMode, const BLMatrix2D* transform) noexcept {
+BL_API_IMPL BLResult bl_pattern_init_as(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, BLExtendMode extend_mode, const BLMatrix2D* transform) noexcept {
   using namespace bl::PatternInternal;
 
-  self->_d = blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d;
+  self->_d = bl_object_defaults[BL_OBJECT_TYPE_PATTERN]._d;
 
   if (!image)
-    image = static_cast<BLImageCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE]);
+    image = static_cast<BLImageCore*>(&bl_object_defaults[BL_OBJECT_TYPE_IMAGE]);
 
-  BLImageImpl* imageI = bl::ImageInternal::getImpl(image);
-  BLRectI imageArea(0, 0, imageI->size.w, imageI->size.h);
+  BLImageImpl* image_impl = bl::ImageInternal::get_impl(image);
+  BLRectI image_area(0, 0, image_impl->size.w, image_impl->size.h);
 
-  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(extend_mode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
   if (!area)
-    area = &imageArea;
-  else if (*area != imageArea && !isAreaValid(*area, imageI->size))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    area = &image_area;
+  else if (*area != image_area && !is_area_valid(*area, image_impl->size))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  BLTransformType transformType = BL_TRANSFORM_TYPE_IDENTITY;
+  BLTransformType transform_type = BL_TRANSFORM_TYPE_IDENTITY;
   if (!transform)
-    transform = &bl::TransformInternal::identityTransform;
+    transform = &bl::TransformInternal::identity_transform;
   else
-    transformType = transform->type();
+    transform_type = transform->type();
 
-  return allocImpl(self, image, *area, extendMode, transform, transformType);
+  return alloc_impl(self, image, *area, extend_mode, transform, transform_type);
 }
 
-BL_API_IMPL BLResult blPatternDestroy(BLPatternCore* self) noexcept {
+BL_API_IMPL BLResult bl_pattern_destroy(BLPatternCore* self) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  return releaseInstance(self);
+  return release_instance(self);
 }
 
 // bl::Pattern - API - Reset
 // =========================
 
-BL_API_IMPL BLResult blPatternReset(BLPatternCore* self) noexcept {
+BL_API_IMPL BLResult bl_pattern_reset(BLPatternCore* self) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  return replaceInstance(self, static_cast<BLPatternCore*>(&blObjectDefaults[BL_OBJECT_TYPE_PATTERN]));
+  return replace_instance(self, static_cast<BLPatternCore*>(&bl_object_defaults[BL_OBJECT_TYPE_PATTERN]));
 }
 
 // bl::Pattern - API - Assign
 // ==========================
 
-BL_API_IMPL BLResult blPatternAssignMove(BLPatternCore* self, BLPatternCore* other) noexcept {
+BL_API_IMPL BLResult bl_pattern_assign_move(BLPatternCore* self, BLPatternCore* other) noexcept {
   using namespace bl::PatternInternal;
 
-  BL_ASSERT(self->_d.isPattern());
-  BL_ASSERT(other->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
+  BL_ASSERT(other->_d.is_pattern());
 
   BLPatternCore tmp = *other;
-  other->_d = blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d;
-  return replaceInstance(self, &tmp);
+  other->_d = bl_object_defaults[BL_OBJECT_TYPE_PATTERN]._d;
+  return replace_instance(self, &tmp);
 }
 
-BL_API_IMPL BLResult blPatternAssignWeak(BLPatternCore* self, const BLPatternCore* other) noexcept {
+BL_API_IMPL BLResult bl_pattern_assign_weak(BLPatternCore* self, const BLPatternCore* other) noexcept {
   using namespace bl::PatternInternal;
 
-  BL_ASSERT(self->_d.isPattern());
-  BL_ASSERT(other->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
+  BL_ASSERT(other->_d.is_pattern());
 
-  retainInstance(other);
-  return replaceInstance(self, other);
+  retain_instance(other);
+  return replace_instance(self, other);
 }
 
-BL_API_IMPL BLResult blPatternAssignDeep(BLPatternCore* self, const BLPatternCore* other) noexcept {
+BL_API_IMPL BLResult bl_pattern_assign_deep(BLPatternCore* self, const BLPatternCore* other) noexcept {
   using namespace bl::PatternInternal;
 
-  BL_ASSERT(self->_d.isPattern());
-  BL_ASSERT(other->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
+  BL_ASSERT(other->_d.is_pattern());
 
-  if (!isInstanceMutable(self))
-    return makeMutableCopyOf(self, other);
+  if (!is_instance_mutable(self))
+    return make_mutable_copy_of(self, other);
 
-  BLPatternPrivateImpl* selfI = getImpl(self);
-  BLPatternPrivateImpl* otherI = getImpl(other);
+  BLPatternPrivateImpl* self_impl = get_impl(self);
+  BLPatternPrivateImpl* other_impl = get_impl(other);
 
-  self->_d.info.setBField(other->_d.info.bField());
-  self->_d.info.setCField(other->_d.info.cField());
-  selfI->transform = otherI->transform;
-  selfI->area = otherI->area;
-  return blImageAssignWeak(&selfI->image, &otherI->image);
+  self->_d.info.set_b_field(other->_d.info.b_field());
+  self->_d.info.set_c_field(other->_d.info.c_field());
+  self_impl->transform = other_impl->transform;
+  self_impl->area = other_impl->area;
+  return bl_image_assign_weak(&self_impl->image, &other_impl->image);
 }
 
 // bl::Pattern - API - Create
 // ==========================
 
-BL_API_IMPL BLResult blPatternCreate(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, BLExtendMode extendMode, const BLMatrix2D* transform) noexcept {
+BL_API_IMPL BLResult bl_pattern_create(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, BLExtendMode extend_mode, const BLMatrix2D* transform) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
   if (!image)
-    image = static_cast<BLImageCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE]);
+    image = static_cast<BLImageCore*>(&bl_object_defaults[BL_OBJECT_TYPE_IMAGE]);
 
-  BLImageImpl* imageI = bl::ImageInternal::getImpl(image);
-  BLRectI imageArea(0, 0, imageI->size.w, imageI->size.h);
+  BLImageImpl* image_impl = bl::ImageInternal::get_impl(image);
+  BLRectI image_area(0, 0, image_impl->size.w, image_impl->size.h);
 
-  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(extend_mode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
   if (!area)
-    area = &imageArea;
-  else if (*area != imageArea && !isAreaValid(*area, imageI->size))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    area = &image_area;
+  else if (*area != image_area && !is_area_valid(*area, image_impl->size))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  BLTransformType transformType = BL_TRANSFORM_TYPE_IDENTITY;
+  BLTransformType transform_type = BL_TRANSFORM_TYPE_IDENTITY;
   if (!transform)
-    transform = &bl::TransformInternal::identityTransform;
+    transform = &bl::TransformInternal::identity_transform;
   else
-    transformType = transform->type();
+    transform_type = transform->type();
 
-  if (!isInstanceMutable(self)) {
+  if (!is_instance_mutable(self)) {
     BLPatternCore newO;
-    BL_PROPAGATE(allocImpl(&newO, image, *area, extendMode, transform, transformType));
+    BL_PROPAGATE(alloc_impl(&newO, image, *area, extend_mode, transform, transform_type));
 
-    return replaceInstance(self, &newO);
+    return replace_instance(self, &newO);
   }
   else {
-    BLPatternPrivateImpl* selfI = getImpl(self);
+    BLPatternPrivateImpl* self_impl = get_impl(self);
 
-    setExtendMode(self, extendMode);
-    setTransformType(self, transformType);
-    selfI->area = *area;
-    selfI->transform = *transform;
+    set_extend_mode(self, extend_mode);
+    set_transform_type(self, transform_type);
+    self_impl->area = *area;
+    self_impl->transform = *transform;
 
-    return blImageAssignWeak(&selfI->image, image);
+    return bl_image_assign_weak(&self_impl->image, image);
   }
 }
 
 // bl::Pattern - API - Image & Area
 // ================================
 
-BL_API_IMPL BLResult blPatternGetImage(const BLPatternCore* self, BLImageCore* image) noexcept {
+BL_API_IMPL BLResult bl_pattern_get_image(const BLPatternCore* self, BLImageCore* image) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  BLPatternPrivateImpl* selfI = getImpl(self);
-  return blImageAssignWeak(image, &selfI->image);
+  BLPatternPrivateImpl* self_impl = get_impl(self);
+  return bl_image_assign_weak(image, &self_impl->image);
 }
 
-BL_API_IMPL BLResult blPatternSetImage(BLPatternCore* self, const BLImageCore* image, const BLRectI* area) noexcept {
+BL_API_IMPL BLResult bl_pattern_set_image(BLPatternCore* self, const BLImageCore* image, const BLRectI* area) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
   if (!image)
-    image = static_cast<BLImageCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE]);
+    image = static_cast<BLImageCore*>(&bl_object_defaults[BL_OBJECT_TYPE_IMAGE]);
 
-  BLImageImpl* imageI = bl::ImageInternal::getImpl(image);
-  BLRectI imageArea(0, 0, imageI->size.w, imageI->size.h);
+  BLImageImpl* image_impl = bl::ImageInternal::get_impl(image);
+  BLRectI image_area(0, 0, image_impl->size.w, image_impl->size.h);
 
   if (!area)
-    area = &imageArea;
-  else if (*area != imageArea && !isAreaValid(*area, image->dcast().size()))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    area = &image_area;
+  else if (*area != image_area && !is_area_valid(*area, image->dcast().size()))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  BL_PROPAGATE(makeMutable(self));
-  BLPatternPrivateImpl* selfI = getImpl(self);
+  BL_PROPAGATE(make_mutable(self));
+  BLPatternPrivateImpl* self_impl = get_impl(self);
 
-  selfI->area = *area;
-  return blImageAssignWeak(&selfI->image, image);
+  self_impl->area = *area;
+  return bl_image_assign_weak(&self_impl->image, image);
 }
 
-BL_API_IMPL BLResult blPatternResetImage(BLPatternCore* self) noexcept {
+BL_API_IMPL BLResult bl_pattern_reset_image(BLPatternCore* self) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  return blPatternSetImage(self, nullptr, nullptr);
+  return bl_pattern_set_image(self, nullptr, nullptr);
 }
 
-BL_API_IMPL BLResult blPatternGetArea(const BLPatternCore* self, BLRectI* areaOut) noexcept {
+BL_API_IMPL BLResult bl_pattern_get_area(const BLPatternCore* self, BLRectI* area_out) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  BLPatternPrivateImpl* selfI = getImpl(self);
-  *areaOut = selfI->area;
+  BLPatternPrivateImpl* self_impl = get_impl(self);
+  *area_out = self_impl->area;
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blPatternSetArea(BLPatternCore* self, const BLRectI* area) noexcept {
+BL_API_IMPL BLResult bl_pattern_set_area(BLPatternCore* self, const BLRectI* area) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  BLPatternPrivateImpl* selfI = getImpl(self);
-  BLImageImpl* imageI = bl::ImageInternal::getImpl(&selfI->image);
+  BLPatternPrivateImpl* self_impl = get_impl(self);
+  BLImageImpl* image_impl = bl::ImageInternal::get_impl(&self_impl->image);
 
-  if (BL_UNLIKELY(!isAreaValid(*area, imageI->size)))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(!is_area_valid(*area, image_impl->size)))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  BL_PROPAGATE(makeMutable(self));
-  selfI = getImpl(self);
-  selfI->area = *area;
+  BL_PROPAGATE(make_mutable(self));
+  self_impl = get_impl(self);
+  self_impl->area = *area;
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blPatternResetArea(BLPatternCore* self) noexcept {
+BL_API_IMPL BLResult bl_pattern_reset_area(BLPatternCore* self) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  BLPatternPrivateImpl* selfI = getImpl(self);
-  BLSizeI size = bl::ImageInternal::getImpl(&selfI->image)->size;
+  BLPatternPrivateImpl* self_impl = get_impl(self);
+  BLSizeI size = bl::ImageInternal::get_impl(&self_impl->image)->size;
 
-  if (selfI->area == BLRectI(0, 0, size.w, size.h))
+  if (self_impl->area == BLRectI(0, 0, size.w, size.h))
     return BL_SUCCESS;
 
-  BL_PROPAGATE(makeMutable(self));
-  selfI = getImpl(self);
-  selfI->area.reset(0, 0, size.w, size.h);
+  BL_PROPAGATE(make_mutable(self));
+  self_impl = get_impl(self);
+  self_impl->area.reset(0, 0, size.w, size.h);
   return BL_SUCCESS;
 }
 
 // bl::Pattern - API - Extend Mode
 // ===============================
 
-BL_API_IMPL BLExtendMode blPatternGetExtendMode(const BLPatternCore* self) noexcept {
+BL_API_IMPL BLExtendMode bl_pattern_get_extend_mode(const BLPatternCore* self) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  return getExtendMode(self);
+  return get_extend_mode(self);
 }
 
-BL_API_IMPL BLResult blPatternSetExtendMode(BLPatternCore* self, BLExtendMode extendMode) noexcept {
+BL_API_IMPL BLResult bl_pattern_set_extend_mode(BLPatternCore* self, BLExtendMode extend_mode) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(extend_mode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  setExtendMode(self, extendMode);
+  set_extend_mode(self, extend_mode);
   return BL_SUCCESS;
 }
 
 // bl::Pattern - API - Transform
 // =============================
 
-BL_API_IMPL BLResult blPatternGetTransform(const BLPatternCore* self, BLMatrix2D* transformOut) noexcept {
+BL_API_IMPL BLResult bl_pattern_get_transform(const BLPatternCore* self, BLMatrix2D* transform_out) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  if (getTransformType(self) == BL_TRANSFORM_TYPE_IDENTITY) {
-    transformOut->reset();
+  if (get_transform_type(self) == BL_TRANSFORM_TYPE_IDENTITY) {
+    transform_out->reset();
   }
   else {
-    BLPatternPrivateImpl* selfI = getImpl(self);
-    *transformOut = selfI->transform;
+    BLPatternPrivateImpl* self_impl = get_impl(self);
+    *transform_out = self_impl->transform;
   }
 
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLTransformType blPatternGetTransformType(const BLPatternCore* self) noexcept {
+BL_API_IMPL BLTransformType bl_pattern_get_transform_type(const BLPatternCore* self) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  return getTransformType(self);
+  return get_transform_type(self);
 }
 
-BL_API_IMPL BLResult blPatternApplyTransformOp(BLPatternCore* self, BLTransformOp opType, const void* opData) noexcept {
+BL_API_IMPL BLResult bl_pattern_apply_transform_op(BLPatternCore* self, BLTransformOp op_type, const void* op_data) noexcept {
   using namespace bl::PatternInternal;
-  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(self->_d.is_pattern());
 
-  if (BL_UNLIKELY(uint32_t(opType) > BL_TRANSFORM_OP_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(uint32_t(op_type) > BL_TRANSFORM_OP_MAX_VALUE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  if (opType == BL_TRANSFORM_OP_RESET && getTransformType(self) == BL_TRANSFORM_TYPE_IDENTITY)
+  if (op_type == BL_TRANSFORM_OP_RESET && get_transform_type(self) == BL_TRANSFORM_TYPE_IDENTITY)
     return BL_SUCCESS;
 
-  BL_PROPAGATE(makeMutable(self));
-  BLPatternPrivateImpl* selfI = getImpl(self);
+  BL_PROPAGATE(make_mutable(self));
+  BLPatternPrivateImpl* self_impl = get_impl(self);
 
-  blMatrix2DApplyOp(&selfI->transform, opType, opData);
-  setTransformType(self, selfI->transform.type());
+  bl_matrix2d_apply_op(&self_impl->transform, op_type, op_data);
+  set_transform_type(self, self_impl->transform.type());
 
   return BL_SUCCESS;
 }
@@ -374,40 +374,40 @@ BL_API_IMPL BLResult blPatternApplyTransformOp(BLPatternCore* self, BLTransformO
 // bl::Pattern - API - Equality & Comparison
 // =========================================
 
-BL_API_IMPL bool blPatternEquals(const BLPatternCore* a, const BLPatternCore* b) noexcept {
+BL_API_IMPL bool bl_pattern_equals(const BLPatternCore* a, const BLPatternCore* b) noexcept {
   using namespace bl::PatternInternal;
 
-  BL_ASSERT(a->_d.isPattern());
-  BL_ASSERT(b->_d.isPattern());
+  BL_ASSERT(a->_d.is_pattern());
+  BL_ASSERT(b->_d.is_pattern());
 
-  unsigned eq = unsigned(getExtendMode(a) == getExtendMode(b)) &
-                unsigned(getTransformType(a) == getTransformType(b)) ;
+  unsigned eq = unsigned(get_extend_mode(a) == get_extend_mode(b)) &
+                unsigned(get_transform_type(a) == get_transform_type(b)) ;
 
   if (!eq)
     return false;
 
-  const BLPatternPrivateImpl* aI = getImpl(a);
-  const BLPatternPrivateImpl* bI = getImpl(b);
+  const BLPatternPrivateImpl* a_impl = get_impl(a);
+  const BLPatternPrivateImpl* b_impl = get_impl(b);
 
-  if (aI == bI)
+  if (a_impl == b_impl)
     return true;
 
-  if (!(unsigned(aI->transform == bI->transform) & unsigned(aI->area == bI->area)))
+  if (!(unsigned(a_impl->transform == b_impl->transform) & unsigned(a_impl->area == b_impl->area)))
     return false;
 
-  return aI->image.dcast() == bI->image.dcast();
+  return a_impl->image.dcast() == b_impl->image.dcast();
 }
 
 // bl::Pattern - Runtime Registration
 // ==================================
 
-void blPatternRtInit(BLRuntimeContext* rt) noexcept {
-  blUnused(rt);
+void bl_pattern_rt_init(BLRuntimeContext* rt) noexcept {
+  bl_unused(rt);
 
-  blCallCtor(bl::PatternInternal::defaultImpl.impl->image.dcast());
-  bl::PatternInternal::defaultImpl.impl->transform.reset();
+  bl_call_ctor(bl::PatternInternal::default_impl.impl->image.dcast());
+  bl::PatternInternal::default_impl.impl->transform.reset();
 
-  blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d.initDynamic(
-    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_PATTERN) | BLObjectInfo::fromAbcp(0u, BL_EXTEND_MODE_REPEAT),
-    &bl::PatternInternal::defaultImpl.impl);
+  bl_object_defaults[BL_OBJECT_TYPE_PATTERN]._d.init_dynamic(
+    BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_PATTERN) | BLObjectInfo::from_abcp(0u, BL_EXTEND_MODE_REPEAT),
+    &bl::PatternInternal::default_impl.impl);
 }

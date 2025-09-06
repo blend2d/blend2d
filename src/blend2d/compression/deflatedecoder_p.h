@@ -10,6 +10,8 @@
 #include "../array.h"
 #include "../compression/deflatedefs_p.h"
 
+//! \cond INTERNAL
+
 // #define BL_COMPRESSION_STATISTICS
 
 #ifdef BL_COMPRESSION_STATISTICS
@@ -17,8 +19,6 @@
 #else
   #define BL_DECODER_UPDATE_STATISTICS(...)
 #endif
-
-//! \cond INTERNAL
 
 namespace bl::Compression::Deflate {
 
@@ -293,11 +293,11 @@ struct DecodeTables {
 //! Information of a decode table that the decoder can take advantage of.
 struct DecodeTableInfo {
   //! The number of table bits (table size in bits) - if this value is 0 the table is invalid.
-  uint8_t tableBits;
+  uint8_t table_bits;
   //! Maximum codeword bit-length.
-  uint8_t maxCodeLen;
+  uint8_t max_code_len;
   //! Mask of lengths of all symbols below 256 (used to build a multi-literal table metadata).
-  uint16_t literalMask;
+  uint16_t literal_mask;
 };
 
 enum class DecoderFastStatus : uint32_t {
@@ -309,86 +309,86 @@ enum class DecoderFastStatus : uint32_t {
 struct DecoderFastResult {
   DecoderFastStatus status;
 
-  uint8_t* dstPtr;
-  const uint8_t* srcPtr;
+  uint8_t* dst_ptr;
+  const uint8_t* src_ptr;
 };
 
 typedef DecoderFastResult (BL_CDECL* DecoderFastFunc)(
   Decoder* ctx,
-  uint8_t* dstStart,
-  uint8_t* dstPtr,
-  uint8_t* dstEnd,
-  const uint8_t* srcPtr,
-  const uint8_t* srcEnd
+  uint8_t* dst_start,
+  uint8_t* dst_ptr,
+  uint8_t* dst_end,
+  const uint8_t* src_ptr,
+  const uint8_t* src_end
 ) noexcept;
 
 //! Decompression context
 class Decoder {
 public:
-  DecoderState _state {};               // Decoder state - it's stateful to support data streaming.
-  DecoderFlags _flags {};               // Decoder flags - for example last block flag.
-  DecoderOptions _options {};           // Decoder options.
+  DecoderState _state {};                 // Decoder state - it's stateful to support data streaming.
+  DecoderFlags _flags {};                 // Decoder flags - for example last block flag.
+  DecoderOptions _options {};             // Decoder options.
 
-  BLBitWord _bitWord {};                // Current bit-buffer data (always persisted to support streaming).
-  size_t _bitLength {};                 // Number of bits in `_bitWord` data.
-  size_t _copyRemaining {};             // Valid when copying uncompressed data (DecoderState::kCopyUncompressedBlock).
+  BLBitWord _bit_word {};                 // Current bit-buffer data (always persisted to support streaming).
+  size_t _bit_length {};                  // Number of bits in `_bit_word` data.
+  size_t _copy_remaining {};              // Valid when copying uncompressed data (DecoderState::kCopyUncompressedBlock).
 
-  uint32_t _litlenSymbolCount {};       // Number of litlen symbols in the current Huffman block.
-  uint32_t _offsetSymbolCount {};       // Number of offset symbols in the current Huffman block.
+  uint32_t _litlen_symbol_count {};       // Number of litlen symbols in the current Huffman block.
+  uint32_t _offset_symbol_count {};       // Number of offset symbols in the current Huffman block.
 
-  uint32_t _workIndex {};               // Work index used during decode table construction (meaning depends on state).
-  uint32_t _workCount {};               // Number of work items indexed by _workIndex (meaning depends on state).
-  uint64_t _processedBytes {};          // Total number of processed input bytes.
+  uint32_t _work_index {};                // Work index used during decode table construction (meaning depends on state).
+  uint32_t _work_count {};                // Number of work items indexed by _work_index (meaning depends on state).
+  uint64_t _processed_bytes {};           // Total number of processed input bytes.
 
-  DecodeTableInfo _precodeTableInfo {}; // Precode table information.
-  DecodeTableInfo _offsetTableInfo {};  // Offset table information.
-  DecodeTableInfo _litlenTableInfo {};  // LitLen table information.
-  uint32_t _litlenFastTableBits {};     // Number of bits used by the fast table.
+  DecodeTableInfo _precode_table_info {}; // Precode table information.
+  DecodeTableInfo _offset_table_info {};  // Offset table information.
+  DecodeTableInfo _litlen_table_info {};  // LitLen table information.
+  uint32_t _litlen_fast_table_bits {};    // Number of bits used by the fast table.
 
 #ifdef BL_COMPRESSION_STATISTICS
   struct Statistics {
     struct Stream {
-      uint64_t dynamicBlockCount;
-      uint64_t staticBlockCount;
+      uint64_t dynamic_block_count;
+      uint64_t static_block_count;
     } stream;
     struct Fast {
-      uint64_t numRestarts;
-      uint64_t numIterations;
-      uint64_t quickLiteralEntries;
-      uint64_t quickLiteralLoops;
-      uint64_t matchEntries;
-      uint64_t matchLoops;
-      uint64_t matchBailsBecauseOfLiteral;
-      uint64_t matchBailsBecauseOfSubOffset;
-      uint64_t matchNear;
-      uint64_t matchUpTo8;
-      uint64_t matchUpTo16;
-      uint64_t matchUpTo32;
-      uint64_t matchUpTo64;
-      uint64_t matchMoreThan8;
-      uint64_t matchMoreThan16;
-      uint64_t matchMoreThan32;
-      uint64_t matchMoreThan64;
-      uint64_t subtableLookups;
-      uint64_t subtableLiteralEntries;
-      uint64_t subtableOffsetEntries;
-      uint64_t subtableLengthEntries;
+      uint64_t num_restarts;
+      uint64_t num_iterations;
+      uint64_t quick_literal_entries;
+      uint64_t quick_literal_loops;
+      uint64_t match_entries;
+      uint64_t match_loops;
+      uint64_t match_bails_because_of_literal;
+      uint64_t match_bails_because_of_sub_offset;
+      uint64_t match_near;
+      uint64_t match_up_to_8;
+      uint64_t match_up_to_16;
+      uint64_t match_up_to_32;
+      uint64_t match_up_to_64;
+      uint64_t match_more_than_8;
+      uint64_t match_more_than_16;
+      uint64_t match_more_than_32;
+      uint64_t match_more_than_64;
+      uint64_t subtable_lookups;
+      uint64_t subtable_literal_entries;
+      uint64_t subtable_offset_entries;
+      uint64_t subtable_length_entries;
     } fast;
     struct Tail {
-      uint64_t numRestarts;
-      uint64_t numIterations;
-      uint64_t quickLiteralEntries;
-      uint64_t matchEntries;
-      uint64_t subtableLookups;
-      uint64_t subtableLiteralEntries;
-      uint64_t subtableOffsetEntries;
-      uint64_t subtableLengthEntries;
+      uint64_t num_restarts;
+      uint64_t num_iterations;
+      uint64_t quick_literal_entries;
+      uint64_t match_entries;
+      uint64_t subtable_lookups;
+      uint64_t subtable_literal_entries;
+      uint64_t subtable_offset_entries;
+      uint64_t subtable_length_entries;
     } tail;
   } statistics {};
 #endif // BL_COMPRESSION_STATISTICS
 
 #if BL_TARGET_ARCH_BITS >= 64
-  DecoderFastFunc _fastDecodeFunc {};
+  DecoderFastFunc _fast_decode_func {};
 #endif // BL_TARGET_ARCH_BITS
 
   DecodeTables tables;

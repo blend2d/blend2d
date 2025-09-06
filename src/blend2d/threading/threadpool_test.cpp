@@ -32,11 +32,11 @@ struct ThreadTestData {
 
 static void BL_CDECL test_thread_entry(BLThread* thread, void* data_) noexcept {
   ThreadTestData* data = static_cast<ThreadTestData*>(data_);
-  uint32_t iter = blAtomicFetchStrong(&data->iter);
+  uint32_t iter = bl_atomic_fetch_strong(&data->iter);
 
   INFO("[#%u] Thread %p running\n", iter, thread);
 
-  if (blAtomicFetchSubStrong(&data->counter) == 1) {
+  if (bl_atomic_fetch_sub_strong(&data->counter) == 1) {
     BLLockGuard<BLMutex> guard(data->mutex);
     if (data->waiting) {
       INFO("[#%u] Thread %p signaling to main thread\n", iter, thread);
@@ -46,7 +46,7 @@ static void BL_CDECL test_thread_entry(BLThread* thread, void* data_) noexcept {
 }
 
 UNIT(thread_pool, BL_TEST_GROUP_THREADING) {
-  BLThreadPool* tp = blThreadPoolGlobal();
+  BLThreadPool* tp = bl_thread_pool_global();
   ThreadTestData data;
 
   constexpr uint32_t kThreadCount = 4;
@@ -56,7 +56,7 @@ UNIT(thread_pool, BL_TEST_GROUP_THREADING) {
   INFO("Trying to allocate very high number of threads that should fail");
   {
     BLResult reason;
-    uint32_t n = tp->acquireThreads(nullptr, 1000000, BL_THREAD_POOL_ACQUIRE_FLAG_ALL_OR_NOTHING, &reason);
+    uint32_t n = tp->acquire_threads(nullptr, 1000000, BL_THREAD_POOL_ACQUIRE_FLAG_ALL_OR_NOTHING, &reason);
 
     EXPECT_EQ(n, 0u);
     EXPECT_EQ(reason, BL_ERROR_THREAD_POOL_EXHAUSTED);
@@ -64,16 +64,16 @@ UNIT(thread_pool, BL_TEST_GROUP_THREADING) {
 
   INFO("Repeatedly acquiring / releasing %u threads with a simple task", kThreadCount);
   for (uint32_t i = 0; i < 10; i++) {
-    blAtomicFetchAddStrong(&data.iter);
+    bl_atomic_fetch_add_strong(&data.iter);
 
     INFO("[#%u] Acquiring %u threads from thread-pool", i, kThreadCount);
     BLResult reason;
-    uint32_t n = tp->acquireThreads(threads, kThreadCount, 0, &reason);
+    uint32_t n = tp->acquire_threads(threads, kThreadCount, 0, &reason);
 
     EXPECT_SUCCESS(reason);
     EXPECT_EQ(n, kThreadCount);
 
-    blAtomicStoreRelaxed(&data.counter, n);
+    bl_atomic_store_relaxed(&data.counter, n);
     INFO("[#%u] Running %u threads", i, n);
     for (BLThread* thread : threads) {
       BLResult result = thread->run(test_thread_entry, &data);
@@ -84,11 +84,11 @@ UNIT(thread_pool, BL_TEST_GROUP_THREADING) {
     {
       BLLockGuard<BLMutex> guard(data.mutex);
       data.waiting = true;
-      while (blAtomicFetchStrong(&data.counter) != 0)
+      while (bl_atomic_fetch_strong(&data.counter) != 0)
         data.condition.wait(data.mutex);
     }
 
-    tp->releaseThreads(threads, n);
+    tp->release_threads(threads, n);
   }
 
 

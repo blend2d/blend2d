@@ -25,14 +25,14 @@ UNIT(random, BL_TEST_GROUP_CORE_UTILITIES) {
     BLRandom a(0);
     BLRandom b(0);
 
-    SIMD::Vec2xU64 bLo = RandomInternal::nextUInt64AsI128(&b);
-    SIMD::Vec2xU64 bHi = SIMD::swizzle_u32<2, 3, 0, 1>(bLo);
+    SIMD::Vec2xU64 b_lo = RandomInternal::next_uint64AsI128(&b);
+    SIMD::Vec2xU64 b_hi = SIMD::swizzle_u32<2, 3, 0, 1>(b_lo);
 
-    uint64_t aVal = a.nextUInt64();
-    uint64_t bVal = (uint64_t(SIMD::cast_to_i32(bLo))      ) +
-                    (uint64_t(SIMD::cast_to_i32(bHi)) << 32) ;
+    uint64_t a_val = a.next_uint64();
+    uint64_t b_val = (uint64_t(SIMD::cast_to_i32(b_lo))      ) +
+                    (uint64_t(SIMD::cast_to_i32(b_hi)) << 32) ;
 
-    EXPECT_EQ(aVal, bVal);
+    EXPECT_EQ(a_val, b_val);
   }
   #endif
 
@@ -40,7 +40,7 @@ UNIT(random, BL_TEST_GROUP_CORE_UTILITIES) {
   {
     BLRandom a(0);
     BLRandom b(0);
-    EXPECT_EQ(uint32_t(a.nextUInt64() >> 32), b.nextUInt32());
+    EXPECT_EQ(uint32_t(a.next_uint64() >> 32), b.next_uint32());
   }
 
   INFO("Test whether returned double precision values satisfy [0..1) condition");
@@ -52,7 +52,7 @@ UNIT(random, BL_TEST_GROUP_CORE_UTILITIES) {
     uint32_t above = 0;
 
     for (uint32_t i = 0; i < kCount; i++) {
-      double x = rnd.nextDouble();
+      double x = rnd.next_double();
       below += x <  0.5;
       above += x >= 0.5;
       EXPECT_GE(x, 0.0);

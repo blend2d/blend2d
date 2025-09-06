@@ -18,7 +18,7 @@ namespace BLUniqueIdGenerator {
 struct alignas(BL_CACHE_LINE_SIZE) GlobalState {
   std::atomic<uint64_t> index;
 
-  BL_INLINE uint64_t fetchAdd(uint32_t n) noexcept {
+  BL_INLINE uint64_t fetch_add(uint32_t n) noexcept {
     return index.fetch_add(uint64_t(n));
   }
 };
@@ -32,20 +32,20 @@ struct alignas(BL_CACHE_LINE_SIZE) GlobalState {
   std::atomic<uint32_t> _hi;
   std::atomic<uint32_t> _lo;
 
-  BL_INLINE uint64_t fetchAdd(uint32_t n) noexcept {
+  BL_INLINE uint64_t fetch_add(uint32_t n) noexcept {
     // This implementation doesn't always return an incrementing value as it's not the point. The requirement is to
     // never return the same value, so it sacrifices one bit in `_lo` counter that would tell us to increment `_hi`
     // counter and try again.
     const uint32_t kThresholdLo32 = 0x80000000u;
 
     for (;;) {
-      uint32_t hiValue = _hi.load();
-      uint32_t loValue = _lo.fetch_add(n);
+      uint32_t hi_value = _hi.load();
+      uint32_t lo_value = _lo.fetch_add(n);
 
       // This MUST support even cases when the thread executing this function right now is terminated. When we reach
       // the threshold we increment `_hi`, which would contain a new HIGH value that will be used immediately, then
       // we remove the threshold mark from LOW value and try to get a new LOW and HIGH values to return.
-      if (BL_UNLIKELY(loValue & kThresholdLo32)) {
+      if (BL_UNLIKELY(lo_value & kThresholdLo32)) {
         _hi++;
 
         // If the thread is interrupted here we only incremented the HIGH value. In this case another thread that might
@@ -54,7 +54,7 @@ struct alignas(BL_CACHE_LINE_SIZE) GlobalState {
         continue;
       }
 
-      return (uint64_t(hiValue) << 32) | loValue;
+      return (uint64_t(hi_value) << 32) | lo_value;
     }
   }
 };
@@ -64,7 +64,7 @@ struct alignas(BL_CACHE_LINE_SIZE) GlobalState {
 // UniqueIdGenerator - Globals
 // ===========================
 
-static GlobalState globalState[uint32_t(Domain::kMaxValue) + 1];
+static GlobalState global_state[uint32_t(Domain::kMaxValue) + 1];
 
 #if !defined(BL_BUILD_NO_TLS)
 
@@ -75,14 +75,14 @@ static GlobalState globalState[uint32_t(Domain::kMaxValue) + 1];
 // and only requests next `kLocalCacheCount` IDs when the local cache was exhausted. This makes the common path
 // (using TLS) order of magnitude faster than going through atomics.
 static constexpr uint32_t kLocalCacheCount = 256;
-static thread_local uint64_t tlsIdState[uint32_t(Domain::kMaxValue) + 1];
+static thread_local uint64_t tls_id_state[uint32_t(Domain::kMaxValue) + 1];
 
-BLUniqueId generateId(Domain domain) noexcept {
-  uint32_t domainIndex = uint32_t(domain);
-  if ((tlsIdState[domainIndex] & (kLocalCacheCount - 1)) == 0)
-    tlsIdState[domainIndex] = globalState[domainIndex].fetchAdd(kLocalCacheCount);
+BLUniqueId generate_id(Domain domain) noexcept {
+  uint32_t domain_index = uint32_t(domain);
+  if ((tls_id_state[domain_index] & (kLocalCacheCount - 1)) == 0)
+    tls_id_state[domain_index] = global_state[domain_index].fetch_add(kLocalCacheCount);
 
-  return ++tlsIdState[domainIndex];
+  return ++tls_id_state[domain_index];
 }
 
 #else
@@ -90,9 +90,9 @@ BLUniqueId generateId(Domain domain) noexcept {
 // UniqueIdGenerator - API - No TLS Support
 // ========================================
 
-BLUniqueId generateId(Domain domain) noexcept {
-  uint32_t domainIndex = uint32_t(domain);
-  return globalState[domainIndex].fetchAdd(1) + 1;
+BLUniqueId generate_id(Domain domain) noexcept {
+  uint32_t domain_index = uint32_t(domain);
+  return global_state[domain_index].fetch_add(1) + 1;
 }
 
 #endif

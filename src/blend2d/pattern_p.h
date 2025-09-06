@@ -33,15 +33,15 @@ namespace PatternInternal {
 //! \name BLPattern - Internals - Common Functionality (Impl)
 //! \{
 
-static BL_INLINE bool isImplMutable(BLPatternImpl* impl) noexcept {
-  return ObjectInternal::isImplMutable(impl);
+static BL_INLINE bool is_impl_mutable(BLPatternImpl* impl) noexcept {
+  return ObjectInternal::is_impl_mutable(impl);
 }
 
-BL_HIDDEN BLResult freeImpl(BLPatternPrivateImpl* impl) noexcept;
+BL_HIDDEN BLResult free_impl(BLPatternPrivateImpl* impl) noexcept;
 
 template<RCMode kRCMode>
-static BL_INLINE BLResult releaseImpl(BLPatternPrivateImpl* impl) noexcept {
-  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+static BL_INLINE BLResult release_impl(BLPatternPrivateImpl* impl) noexcept {
+  return ObjectInternal::deref_impl_and_test<kRCMode>(impl) ? free_impl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -49,26 +49,26 @@ static BL_INLINE BLResult releaseImpl(BLPatternPrivateImpl* impl) noexcept {
 //! \name BLPattern - Internals - Common Functionality (Instance)
 //! \{
 
-static BL_INLINE BLPatternPrivateImpl* getImpl(const BLPatternCore* self) noexcept {
+static BL_INLINE BLPatternPrivateImpl* get_impl(const BLPatternCore* self) noexcept {
   return static_cast<BLPatternPrivateImpl*>(self->_d.impl);
 }
 
-static BL_INLINE bool isInstanceMutable(const BLPatternCore* self) noexcept {
-  return isImplMutable(getImpl(self));
+static BL_INLINE bool is_instance_mutable(const BLPatternCore* self) noexcept {
+  return is_impl_mutable(get_impl(self));
 }
 
-static BL_INLINE BLResult retainInstance(const BLPatternCore* self, size_t n = 1) noexcept {
-  return ObjectInternal::retainInstance(self, n);
+static BL_INLINE BLResult retain_instance(const BLPatternCore* self, size_t n = 1) noexcept {
+  return ObjectInternal::retain_instance(self, n);
 }
 
-static BL_INLINE BLResult releaseInstance(BLPatternCore* self) noexcept {
-  return releaseImpl<RCMode::kMaybe>(getImpl(self));
+static BL_INLINE BLResult release_instance(BLPatternCore* self) noexcept {
+  return release_impl<RCMode::kMaybe>(get_impl(self));
 }
 
-static BL_INLINE BLResult replaceInstance(BLPatternCore* self, const BLPatternCore* other) noexcept {
-  BLPatternPrivateImpl* impl = getImpl(self);
+static BL_INLINE BLResult replace_instance(BLPatternCore* self, const BLPatternCore* other) noexcept {
+  BLPatternPrivateImpl* impl = get_impl(self);
   self->_d = other->_d;
-  return releaseImpl<RCMode::kMaybe>(impl);
+  return release_impl<RCMode::kMaybe>(impl);
 }
 
 //! \}
@@ -76,13 +76,13 @@ static BL_INLINE BLResult replaceInstance(BLPatternCore* self, const BLPatternCo
 //! \name BLPattern - Internals - Accessors
 //! \{
 
-static BL_INLINE BLExtendMode getExtendMode(const BLPatternCore* self) noexcept { return (BLExtendMode)self->_d.info.bField(); }
-static BL_INLINE BLTransformType getTransformType(const BLPatternCore* self) noexcept { return (BLTransformType)self->_d.info.cField(); }
+static BL_INLINE BLExtendMode get_extend_mode(const BLPatternCore* self) noexcept { return (BLExtendMode)self->_d.info.b_field(); }
+static BL_INLINE BLTransformType get_transform_type(const BLPatternCore* self) noexcept { return (BLTransformType)self->_d.info.c_field(); }
 
-static BL_INLINE void setExtendMode(BLPatternCore* self, BLExtendMode extendMode) noexcept { self->_d.info.setBField(uint32_t(extendMode)); }
-static BL_INLINE void setTransformType(BLPatternCore* self, BLTransformType transformType) noexcept { self->_d.info.setCField(uint32_t(transformType)); }
+static BL_INLINE void set_extend_mode(BLPatternCore* self, BLExtendMode extend_mode) noexcept { self->_d.info.set_b_field(uint32_t(extend_mode)); }
+static BL_INLINE void set_transform_type(BLPatternCore* self, BLTransformType transform_type) noexcept { self->_d.info.set_c_field(uint32_t(transform_type)); }
 
-static BL_INLINE bool isAreaValid(const BLRectI& area, const BLSizeI& size) noexcept {
+static BL_INLINE bool is_area_valid(const BLRectI& area, const BLSizeI& size) noexcept {
   typedef unsigned U;
   return bool((U(area.x) < U(size.w)) &
               (U(area.y) < U(size.h)) &
@@ -90,7 +90,7 @@ static BL_INLINE bool isAreaValid(const BLRectI& area, const BLSizeI& size) noex
               (U(area.h) <= U(size.h) - U(area.y)));
 }
 
-static BL_INLINE bool isAreaValidAndNonZero(const BLRectI& area, const BLSizeI& size) noexcept {
+static BL_INLINE bool is_area_valid_and_non_zero(const BLRectI& area, const BLSizeI& size) noexcept {
   typedef unsigned U;
   return bool((U(area.x) < U(size.w)) &
               (U(area.y) < U(size.h)) &

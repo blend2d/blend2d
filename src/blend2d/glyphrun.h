@@ -68,20 +68,20 @@ struct BLGlyphRun {
   //! \name Members
   //! \{
 
-  //! Glyph id data (abstract, incremented by `glyphAdvance`).
-  void* glyphData;
-  //! Glyph placement data (abstract, incremented by `placementAdvance`).
-  void* placementData;
+  //! Glyph id data (abstract, incremented by `glyph_advance`).
+  void* glyph_data;
+  //! Glyph placement data (abstract, incremented by `placement_advance`).
+  void* placement_data;
   //! Size of the glyph-run in glyph units.
   size_t size;
   //! Reserved for future use, muse be zero.
   uint8_t reserved;
   //! Type of placement, see \ref BLGlyphPlacementType.
-  uint8_t placementType;
-  //! Advance of `glyphData` array.
-  int8_t glyphAdvance;
-  //! Advance of `placementData` array.
-  int8_t placementAdvance;
+  uint8_t placement_type;
+  //! Advance of `glyph_data` array.
+  int8_t glyph_advance;
+  //! Advance of `placement_data` array.
+  int8_t placement_advance;
   //! Glyph-run flags.
   uint32_t flags;
 
@@ -98,39 +98,39 @@ struct BLGlyphRun {
   //! \name Accessors
   //! \{
 
-  BL_INLINE_NODEBUG bool empty() const noexcept { return size == 0; }
+  BL_INLINE_NODEBUG bool is_empty() const noexcept { return size == 0; }
 
   template<typename T>
-  BL_INLINE_NODEBUG T* glyphDataAs() const noexcept { return static_cast<T*>(glyphData); }
+  BL_INLINE_NODEBUG T* glyph_data_as() const noexcept { return static_cast<T*>(glyph_data); }
 
   template<typename T>
-  BL_INLINE_NODEBUG T* placementDataAs() const noexcept { return static_cast<T*>(placementData); }
+  BL_INLINE_NODEBUG T* placement_data_as() const noexcept { return static_cast<T*>(placement_data); }
 
-  BL_INLINE_NODEBUG void setGlyphData(const uint32_t* glyphData) noexcept { setGlyphData(glyphData, intptr_t(sizeof(uint32_t))); }
+  BL_INLINE_NODEBUG void set_glyph_data(const uint32_t* glyph_data) noexcept { set_glyph_data(glyph_data, intptr_t(sizeof(uint32_t))); }
 
-  BL_INLINE_NODEBUG void setGlyphData(const void* data, intptr_t advance) noexcept {
-    this->glyphData = const_cast<void*>(data);
-    this->glyphAdvance = int8_t(advance);
+  BL_INLINE_NODEBUG void set_glyph_data(const void* data, intptr_t advance) noexcept {
+    this->glyph_data = const_cast<void*>(data);
+    this->glyph_advance = int8_t(advance);
   }
 
-  BL_INLINE_NODEBUG void resetGlyphIdData() noexcept {
-    this->glyphData = nullptr;
-    this->glyphAdvance = 0;
+  BL_INLINE_NODEBUG void reset_glyph_id_data() noexcept {
+    this->glyph_data = nullptr;
+    this->glyph_advance = 0;
   }
 
   template<typename T>
-  BL_INLINE_NODEBUG void setPlacementData(const T* data) noexcept {
-    setPlacementData(data, sizeof(T));
+  BL_INLINE_NODEBUG void set_placement_data(const T* data) noexcept {
+    set_placement_data(data, sizeof(T));
   }
 
-  BL_INLINE_NODEBUG void setPlacementData(const void* data, intptr_t advance) noexcept {
-    this->placementData = const_cast<void*>(data);
-    this->placementAdvance = int8_t(advance);
+  BL_INLINE_NODEBUG void set_placement_data(const void* data, intptr_t advance) noexcept {
+    this->placement_data = const_cast<void*>(data);
+    this->placement_advance = int8_t(advance);
   }
 
-  BL_INLINE_NODEBUG void resetPlacementData() noexcept {
-    this->placementData = nullptr;
-    this->placementAdvance = 0;
+  BL_INLINE_NODEBUG void reset_placement_data() noexcept {
+    this->placement_data = nullptr;
+    this->placement_advance = 0;
   }
 
   //! \}
@@ -150,23 +150,23 @@ struct BLGlyphRun {
 //! Example:
 //!
 //! ```
-//! void inspectGlyphRun(const BLGlyphRun& glyphRun) noexcept {
-//!   BLGlyphRunIterator it(glyphRun);
-//!   if (it.hasOffsets()) {
-//!     while (!it.atEnd()) {
-//!       BLGlyphId glyphId = it.glyphId();
+//! void inspect_glyph_run(const BLGlyphRun& glyph_run) noexcept {
+//!   BLGlyphRunIterator it(glyph_run);
+//!   if (it.has_offsets()) {
+//!     while (!it.at_end()) {
+//!       BLGlyphId glyph_id = it.glyph_id();
 //!       BLPoint offset = it.placement();
 //!
-//!       // Do something with `glyphId` and `offset`.
+//!       // Do something with `glyph_id` and `offset`.
 //!
 //!       it.advance();
 //!     }
 //!   }
 //!   else {
-//!     while (!it.atEnd()) {
-//!       BLGlyphId glyphId = it.glyphId();
+//!     while (!it.at_end()) {
+//!       BLGlyphId glyph_id = it.glyph_id();
 //!
-//!       // Do something with `glyphId`.
+//!       // Do something with `glyph_id`.
 //!
 //!       it.advance();
 //!     }
@@ -180,10 +180,10 @@ public:
 
   size_t index;
   size_t size;
-  void* glyphData;
-  void* placementData;
-  intptr_t glyphAdvance;
-  intptr_t placementAdvance;
+  void* glyph_data;
+  void* placement_data;
+  intptr_t glyph_advance;
+  intptr_t placement_advance;
 
   //! \}
 
@@ -191,7 +191,7 @@ public:
   //! \{
 
   BL_INLINE BLGlyphRunIterator() noexcept { reset(); }
-  BL_INLINE explicit BLGlyphRunIterator(const BLGlyphRun& glyphRun) noexcept { reset(glyphRun); }
+  BL_INLINE explicit BLGlyphRunIterator(const BLGlyphRun& glyph_run) noexcept { reset(glyph_run); }
 
   //! \}
 
@@ -201,19 +201,19 @@ public:
   BL_INLINE void reset() noexcept {
     index = 0;
     size = 0;
-    glyphData = nullptr;
-    placementData = nullptr;
-    glyphAdvance = 0;
-    placementAdvance = 0;
+    glyph_data = nullptr;
+    placement_data = nullptr;
+    glyph_advance = 0;
+    placement_advance = 0;
   }
 
-  BL_INLINE void reset(const BLGlyphRun& glyphRun) noexcept {
+  BL_INLINE void reset(const BLGlyphRun& glyph_run) noexcept {
     index = 0;
-    size = glyphRun.size;
-    glyphData = glyphRun.glyphData;
-    placementData = glyphRun.placementData;
-    glyphAdvance = glyphRun.glyphAdvance;
-    placementAdvance = glyphRun.placementAdvance;
+    size = glyph_run.size;
+    glyph_data = glyph_run.glyph_data;
+    placement_data = glyph_run.placement_data;
+    glyph_advance = glyph_run.glyph_advance;
+    placement_advance = glyph_run.placement_advance;
   }
 
   //! \}
@@ -221,14 +221,14 @@ public:
   //! \name Accessors
   //! \{
 
-  BL_INLINE_NODEBUG bool empty() const noexcept { return size == 0; }
-  BL_INLINE_NODEBUG bool atEnd() const noexcept { return index == size; }
-  BL_INLINE_NODEBUG bool hasPlacement() const noexcept { return placementData != nullptr; }
+  BL_INLINE_NODEBUG bool is_empty() const noexcept { return size == 0; }
+  BL_INLINE_NODEBUG bool at_end() const noexcept { return index == size; }
+  BL_INLINE_NODEBUG bool has_placement() const noexcept { return placement_data != nullptr; }
 
-  BL_INLINE_NODEBUG BLGlyphId glyphId() const noexcept { return *static_cast<const BLGlyphId*>(glyphData); }
+  BL_INLINE_NODEBUG BLGlyphId glyph_id() const noexcept { return *static_cast<const BLGlyphId*>(glyph_data); }
 
   template<typename T>
-  BL_INLINE_NODEBUG const T& placement() const noexcept { return *static_cast<const T*>(placementData); }
+  BL_INLINE_NODEBUG const T& placement() const noexcept { return *static_cast<const T*>(placement_data); }
 
   //! \}
 
@@ -236,11 +236,11 @@ public:
   //! \{
 
   BL_INLINE void advance() noexcept {
-    BL_ASSERT(!atEnd());
+    BL_ASSERT(!at_end());
 
     index++;
-    glyphData = static_cast<uint8_t*>(glyphData) + glyphAdvance;
-    placementData = static_cast<uint8_t*>(placementData) + placementAdvance;
+    glyph_data = static_cast<uint8_t*>(glyph_data) + glyph_advance;
+    placement_data = static_cast<uint8_t*>(placement_data) + placement_advance;
   }
 
   //! \}

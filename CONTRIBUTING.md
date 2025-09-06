@@ -41,15 +41,15 @@ int main(int argc, char* argv[]) {
   // This will query and dump Blend2D build and system information. We
   // need this information to make the initial guess of where the problem
   // could be. Some JIT and SIMD bugs can depend on this information.
-  blDebugRuntime();
+  bl_debug_runtime();
 
   // Now dump everything you have by using the following functions.
-  blDebugArray(&arr);         // Dumps the content of BLArray
-  blDebugContext(&ctx);       // Dumps the state of BLContext
+  bl_debug_array(&arr);         // Dumps the content of BLArray
+  bl_debug_context(&ctx);       // Dumps the state of BLContext
   blDebugMatrix2D(&mat);      // Dumps the content of BLMatrix2D
-  blDebugImage(&img);         // Dumps the content of BLImage (without pixels)
-  blDebugPath(&path);         // Dumps the content of BLPath
-  blDebugStrokeOptions(&opt); // Dumps the content of BLStrokeOptions
+  bl_debug_image(&img);         // Dumps the content of BLImage (without pixels)
+  bl_debug_path(&path);         // Dumps the content of BLPath
+  bl_debug_stroke_options(&opt); // Dumps the content of BLStrokeOptions
 }
 ```
 
@@ -127,7 +127,7 @@ If you are planning to contribute to Blend2D, please read our coding conventions
 
 * Indent by 2 spaces and never use TABs
 * Class and struct names are *CamelCased* and always start with `BL` prefix (`BLClassName`)
-* Global functions and variables are *CamelCased* and always start with `bl` prefix (`blFunctionName`)
+* Global functions and variables are *CamelCased* and always start with `bl` prefix (`bl_function_name`)
 * Structs are used for everything that doesn't have initialization and must be compatible with C API
 * Structs can have utility member functions available in C++ mode like `.reset()`
 * Classes are only used for implementing C++ API that is based on C API
@@ -144,7 +144,7 @@ namespace BLSomeNamespace {
 
 ```c++
 class BLSomeClass {
-  void someFunction() {
+  void some_function() {
     for (uint32_t i = 0; i < 10; i++) {
       if (i & 0x1) {
         [...]
@@ -159,11 +159,11 @@ class BLSomeClass {
 ```c++
 // Right:
 if (x)
-  someFunction(x);
+  some_function(x);
 
 /* WRONG:
 if( x )
-  someFunction ( x );
+  some_function ( x );
 */
 ```
 
@@ -216,13 +216,13 @@ else
 ```c++
 switch (expression) {
   case 0:
-    doSomething();
+    do_something();
     break;
 
   // Case that requires a block.
   case 1: {
     int var = something;
-    doSomethingElseWithVar(var);
+    do_something_else_with_var(var);
     break;
   }
 
@@ -236,8 +236,8 @@ switch (expression) {
 
 ```c++
 switch (condition) {
-  case 0: doSomething(); break;
-  case 1: doSomethingElse(); break;
+  case 0: do_something(); break;
+  case 1: do_something_else(); break;
 }
 ```
 

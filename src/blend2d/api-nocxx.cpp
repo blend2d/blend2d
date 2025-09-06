@@ -17,7 +17,7 @@ BL_BEGIN_C_DECLS
 // implementation). We provide a replacement with `BL_HIDDEN` attribute to
 // make it local to Blend2D library.
 BL_HIDDEN void __cxa_pure_virtual() noexcept {
-  blRuntimeFailure("[Blend2D] __cxa_pure_virtual(): Pure virtual function called");
+  bl_runtime_failure("[Blend2D] __cxa_pure_virtual(): Pure virtual function called");
 }
 
 BL_END_C_DECLS

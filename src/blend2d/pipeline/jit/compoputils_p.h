@@ -48,9 +48,9 @@ static void div255_pack(PipeCompiler* pc, const VecArray& dst, const VecArray& s
 }
 #endif
 
-static void combineDiv255AndOutA8(PipeCompiler* pc, Pixel& out, PixelFlags flags, const VecArray& pix) noexcept {
+static void combine_div255_and_out_a8(PipeCompiler* pc, Pixel& out, PixelFlags flags, const VecArray& pix) noexcept {
 #if defined(BL_JIT_ARCH_A64)
-  if (!blTestFlag(flags, PixelFlags::kUA)) {
+  if (!bl_test_flag(flags, PixelFlags::kUA)) {
     pc->v_srli_rnd_acc_u16(pix, pix, 8);
     for (uint32_t i = 0; i < pix.size(); i++) {
       if ((i & 1) == 0)
@@ -63,7 +63,7 @@ static void combineDiv255AndOutA8(PipeCompiler* pc, Pixel& out, PixelFlags flags
   else
 #endif // BL_JIT_ARCH_A64
   {
-    blUnused(flags);
+    bl_unused(flags);
 
     pc->v_div255_u16(pix);
     out.ua.init(pix);
@@ -72,7 +72,7 @@ static void combineDiv255AndOutA8(PipeCompiler* pc, Pixel& out, PixelFlags flags
 
 static void combineDiv255AndOutRGBA32(PipeCompiler* pc, Pixel& out, PixelFlags flags, const VecArray& pix) noexcept {
 #if defined(BL_JIT_ARCH_A64)
-  if (!blTestFlag(flags, PixelFlags::kUC)) {
+  if (!bl_test_flag(flags, PixelFlags::kUC)) {
     pc->v_srli_rnd_acc_u16(pix, pix, 8);
     for (uint32_t i = 0; i < pix.size(); i++) {
       if ((i & 1) == 0)
@@ -85,7 +85,7 @@ static void combineDiv255AndOutRGBA32(PipeCompiler* pc, Pixel& out, PixelFlags f
   else
 #endif // BL_JIT_ARCH_A64
   {
-    blUnused(flags);
+    bl_unused(flags);
 
     pc->v_div255_u16(pix);
     out.uc.init(pix);

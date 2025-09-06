@@ -12,19 +12,19 @@ class PerformanceTimer {
 public:
   typedef std::chrono::high_resolution_clock::time_point TimePoint;
 
-  TimePoint _startTime {};
-  TimePoint _endTime {};
+  TimePoint _start_time {};
+  TimePoint _end_time {};
 
   inline void start() {
-    _startTime = std::chrono::high_resolution_clock::now();
+    _start_time = std::chrono::high_resolution_clock::now();
   }
 
   inline void stop() {
-    _endTime = std::chrono::high_resolution_clock::now();
+    _end_time = std::chrono::high_resolution_clock::now();
   }
 
   inline double duration() const {
-    std::chrono::duration<double> elapsed = _endTime - _startTime;
+    std::chrono::duration<double> elapsed = _end_time - _start_time;
     return elapsed.count() * 1000;
   }
 };

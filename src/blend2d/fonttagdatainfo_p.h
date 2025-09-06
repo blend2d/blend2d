@@ -23,25 +23,25 @@ namespace FontTagData {
 static constexpr uint32_t kInvalidFeatureBitId = 63;
 
 struct FeatureInfo {
-  uint8_t enabledByDefault : 1;
-  uint8_t userControl : 1;
-  uint8_t bitId : 6;
+  uint8_t enabled_by_default : 1;
+  uint8_t user_control : 1;
+  uint8_t bit_id : 6;
 
-  BL_INLINE bool hasBitId() const noexcept { return bitId != kInvalidFeatureBitId; };
+  BL_INLINE bool has_bit_id() const noexcept { return bit_id != kInvalidFeatureBitId; };
 };
 
-extern const LookupTable<FeatureInfo, kFeatureIdCount + 1u> featureInfoTable;
+extern const LookupTable<FeatureInfo, kFeatureIdCount + 1u> feature_info_table;
 
-extern const uint8_t featureBitIdToFeatureIdTable[32];
+extern const uint8_t feature_bit_id_to_feature_id_table[32];
 
-static BL_INLINE FeatureId featureBitIdToFeatureId(uint32_t bitId) noexcept {
-  BL_ASSERT(bitId < 32u);
-  return FeatureId(featureBitIdToFeatureIdTable[bitId]);
+static BL_INLINE FeatureId feature_bit_id_to_feature_id(uint32_t bit_id) noexcept {
+  BL_ASSERT(bit_id < 32u);
+  return FeatureId(feature_bit_id_to_feature_id_table[bit_id]);
 }
 
-static BL_INLINE uint32_t featureIdToFeatureBitId(FeatureId featureId) noexcept {
-  BL_ASSERT(uint32_t(featureId) < kFeatureIdCount);
-  return featureInfoTable[size_t(featureId)].bitId;
+static BL_INLINE uint32_t feature_id_to_feature_bit_id(FeatureId feature_id) noexcept {
+  BL_ASSERT(uint32_t(feature_id) < kFeatureIdCount);
+  return feature_info_table[size_t(feature_id)].bit_id;
 }
 
 } // {FontTagData}

@@ -21,7 +21,7 @@ static constexpr uint32_t kMinOutputBufferPadding = sizeof(BLBitWord);
 
 namespace {
 
-static constexpr bool canBufferN(size_t n) noexcept { return n + 7 < IntOps::bitSizeOf<BLBitWord>(); }
+static constexpr bool can_buffer_n(size_t n) noexcept { return n + 7 < IntOps::bit_size_of<BLBitWord>(); }
 
 struct OutputBuffer {
   //! Pointer to the beginning of the output buffer.
@@ -39,10 +39,10 @@ struct OutputBuffer {
   }
 
   BL_INLINE_NODEBUG void reset() noexcept { *this = OutputBuffer{}; }
-  BL_INLINE_NODEBUG bool canWrite() const noexcept { return ptr < end; }
+  BL_INLINE_NODEBUG bool can_write() const noexcept { return ptr < end; }
 
-  BL_INLINE_NODEBUG size_t byteOffset() const noexcept { return PtrOps::byteOffset(begin, ptr); }
-  BL_INLINE_NODEBUG size_t remainingBytes() const noexcept { return PtrOps::bytesUntil(ptr, end); }
+  BL_INLINE_NODEBUG size_t byte_offset() const noexcept { return PtrOps::byte_offset(begin, ptr); }
+  BL_INLINE_NODEBUG size_t remaining_bytes() const noexcept { return PtrOps::bytes_until(ptr, end); }
 };
 
 //! Bit-buffer used by the output stream.
@@ -53,71 +53,71 @@ struct OutputBuffer {
 //! full.
 struct OutputBits {
   //! Bits to flush.
-  BLBitWord bitWord;
-  //! Number of bits in `bitWord`, cannot exceed `sizeof(bitWord) * 8 - 1`.
-  size_t bitLength;
+  BLBitWord bit_word;
+  //! Number of bits in `bit_word`, cannot exceed `sizeof(bit_word) * 8 - 1`.
+  size_t bit_length;
 
   BL_INLINE_NODEBUG void reset() noexcept { *this = OutputBits{}; }
 
-  BL_INLINE_NODEBUG BLBitWord all() const noexcept { return bitWord; }
-  BL_INLINE_NODEBUG size_t length() const noexcept { return bitLength; }
+  BL_INLINE_NODEBUG BLBitWord all() const noexcept { return bit_word; }
+  BL_INLINE_NODEBUG size_t length() const noexcept { return bit_length; }
 
-  BL_INLINE_NODEBUG bool empty() const noexcept { return bitLength == 0; }
-  BL_INLINE_NODEBUG bool wasProperlyFlushed() const noexcept { return bitLength <= 7 && (bitWord >> bitLength) == 0; }
-  BL_INLINE_NODEBUG size_t remainingBits() const noexcept { return (IntOps::bitSizeOf<BLBitWord>() - 1u) - bitLength; }
+  BL_INLINE_NODEBUG bool is_empty() const noexcept { return bit_length == 0; }
+  BL_INLINE_NODEBUG bool was_properly_flushed() const noexcept { return bit_length <= 7 && (bit_word >> bit_length) == 0; }
+  BL_INLINE_NODEBUG size_t remaining_bits() const noexcept { return (IntOps::bit_size_of<BLBitWord>() - 1u) - bit_length; }
 
   template<typename T>
   BL_INLINE_NODEBUG void add(const T& bits, size_t count) noexcept {
-    BL_ASSERT(bitLength + count < IntOps::bitSizeOf<BLBitWord>());
+    BL_ASSERT(bit_length + count < IntOps::bit_size_of<BLBitWord>());
 
-    bitWord |= size_t(bits) << bitLength;
-    bitLength += count;
+    bit_word |= size_t(bits) << bit_length;
+    bit_length += count;
   }
 
-  BL_INLINE_NODEBUG void alignToBytes() noexcept {
-    bitLength = (bitLength + 7u) & ~size_t(7);
+  BL_INLINE_NODEBUG void align_to_bytes() noexcept {
+    bit_length = (bit_length + 7u) & ~size_t(7);
   }
 
   BL_INLINE_NODEBUG void flush(OutputBuffer& buffer) noexcept {
-    size_t n = bitLength / 8u;
+    size_t n = bit_length / 8u;
 
-    BL_ASSERT(n != IntOps::bitSizeOf<BLBitWord>());
-    BL_ASSERT(buffer.canWrite());
+    BL_ASSERT(n != IntOps::bit_size_of<BLBitWord>());
+    BL_ASSERT(buffer.can_write());
 
     if constexpr (MemOps::kUnalignedMemIO) {
-      MemOps::storeu_le(buffer.ptr, bitWord);
+      MemOps::storeu_le(buffer.ptr, bit_word);
       buffer.ptr += n;
 
-      bitWord >>= n * 8u;
-      bitLength &= 7;
+      bit_word >>= n * 8u;
+      bit_length &= 7;
     }
     else {
       // Flush a byte at a time.
       while (n) {
-        buffer.ptr[0] = uint8_t(bitWord & 0xFFu);
+        buffer.ptr[0] = uint8_t(bit_word & 0xFFu);
         buffer.ptr++;
-        bitWord >>= 8;
+        bit_word >>= 8;
         n--;
       }
-      bitLength &= 7;
+      bit_length &= 7;
     }
   }
 
   template<size_t kN>
   BL_INLINE_NODEBUG void flushIfCannotBufferN(OutputBuffer& buffer) noexcept {
-    if constexpr (!canBufferN(kN)) {
+    if constexpr (!can_buffer_n(kN)) {
       flush(buffer);
     }
   }
 
-  BL_INLINE_NODEBUG void flushFinalByte(OutputBuffer& buffer) noexcept {
-    if (!empty()) {
+  BL_INLINE_NODEBUG void flush_final_byte(OutputBuffer& buffer) noexcept {
+    if (!is_empty()) {
       BL_ASSERT(length() <= 7u);
-      buffer.ptr[0] = uint8_t(bitWord & 0xFFu);
+      buffer.ptr[0] = uint8_t(bit_word & 0xFFu);
       buffer.ptr++;
 
-      bitWord = 0;
-      bitLength = 0;
+      bit_word = 0;
+      bit_length = 0;
     }
   }
 };

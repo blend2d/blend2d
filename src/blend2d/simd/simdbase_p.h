@@ -82,34 +82,34 @@ BL_INLINE_NODEBUG uint64_t scalar_u64_from_8x_u8(uint8_t x7, uint8_t x6, uint8_t
 
 //! Define a blit that processes 4 (32-bit) pixels at a time in main loop.
 #define BL_SIMD_LOOP_32x4_INIT()                                              \
-  size_t miniLoopCnt;                                                         \
-  size_t mainLoopCnt;
+  size_t mini_loop_cnt;                                                         \
+  size_t main_loop_cnt;
 
 #define BL_SIMD_LOOP_32x4_MINI_BEGIN(LOOP, DST, COUNT)                        \
-  miniLoopCnt = blMin(size_t((uintptr_t(0) - ((uintptr_t)(DST) / 4)) & 0x3),  \
+  mini_loop_cnt = bl_min(size_t((uintptr_t(0) - ((uintptr_t)(DST) / 4)) & 0x3),  \
                       size_t(COUNT));                                         \
-  mainLoopCnt = size_t(COUNT) - miniLoopCnt;                                  \
-  if (!miniLoopCnt) goto On##LOOP##_MiniSkip;                                 \
+  main_loop_cnt = size_t(COUNT) - mini_loop_cnt;                                  \
+  if (!mini_loop_cnt) goto On##LOOP##_MiniSkip;                                 \
                                                                               \
 On##LOOP##_MiniBegin:                                                         \
   do {
 
 #define BL_SIMD_LOOP_32x4_MINI_END(LOOP)                                      \
-  } while (--miniLoopCnt);                                                    \
+  } while (--mini_loop_cnt);                                                    \
                                                                               \
 On##LOOP##_MiniSkip:                                                          \
-  miniLoopCnt = mainLoopCnt & 3;                                              \
-  mainLoopCnt /= 4;                                                           \
-  if (!mainLoopCnt) goto On##LOOP##_MainSkip;
+  mini_loop_cnt = main_loop_cnt & 3;                                              \
+  main_loop_cnt /= 4;                                                           \
+  if (!main_loop_cnt) goto On##LOOP##_MainSkip;
 
 #define BL_SIMD_LOOP_32x4_MAIN_BEGIN(LOOP)                                    \
   do {
 
 #define BL_SIMD_LOOP_32x4_MAIN_END(LOOP)                                      \
-  } while (--mainLoopCnt);                                                    \
+  } while (--main_loop_cnt);                                                    \
                                                                               \
 On##LOOP##_MainSkip:                                                          \
-  if (miniLoopCnt) goto On##LOOP##_MiniBegin;
+  if (mini_loop_cnt) goto On##LOOP##_MiniBegin;
 
 } // {SIMD}
 

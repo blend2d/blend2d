@@ -72,19 +72,19 @@ enum class DecoderStatusFlags : uint32_t {
 
 BL_DEFINE_ENUM_FLAGS(DecoderStatusFlags)
 
-BL_HIDDEN void pngCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
+BL_HIDDEN void png_codec_on_init(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
 //! Frame control chunk data.
 struct FCTL {
-  uint32_t sequenceNumber;
+  uint32_t sequence_number;
   uint32_t w;
   uint32_t h;
   uint32_t x;
   uint32_t y;
-  uint16_t delayNum;
-  uint16_t delayDen;
-  uint8_t disposeOp;
-  uint8_t blendOp;
+  uint16_t delay_num;
+  uint16_t delay_den;
+  uint8_t dispose_op;
+  uint8_t blend_op;
   uint8_t padding[6];
 };
 
@@ -95,39 +95,39 @@ struct BLPngDecoderImpl : public BLImageDecoderImpl {
   //! \{
 
   //! Decoder image information.
-  BLImageInfo imageInfo;
+  BLImageInfo image_info;
   //! Decoder status flags.
-  bl::Png::DecoderStatusFlags statusFlags;
+  bl::Png::DecoderStatusFlags status_flags;
   //! Color type.
-  uint8_t colorType;
+  uint8_t color_type;
   //! Depth (depth per one sample).
-  uint8_t sampleDepth;
+  uint8_t sample_depth;
   //! Number of samples (1, 2, 3, 4).
-  uint8_t sampleCount;
+  uint8_t sample_count;
   //! Pixel format of BLImage.
-  uint8_t outputFormat;
+  uint8_t output_format;
 
   //! Color key.
-  BLRgba64 colorKey;
+  BLRgba64 color_key;
   //! Palette entries.
-  BLRgba32 paletteData[256];
+  BLRgba32 palette_data[256];
   //! Palette size.
-  uint32_t paletteSize;
+  uint32_t palette_size;
   //! The current frame control chunk.
-  bl::Png::FCTL prevCtrl;
+  bl::Png::FCTL prev_ctrl;
   //! The current frame control chunk.
-  bl::Png::FCTL frameCtrl;
+  bl::Png::FCTL frame_ctrl;
   //! First 'fcTL' chunk offset in the PNG data.
-  size_t firstFCTLOffset;
+  size_t first_fctl_offset;
 
   //! Decoded PNG pixel data (reused in case this is APNG where each frame needs a new decode).
-  BLArray<uint8_t> pngPixelData;
+  BLArray<uint8_t> png_pixel_data;
   //! Pixel converter used to convert PNG pixel data into a BLImage compatible format.
-  BLPixelConverter pixelConverter;
+  BLPixelConverter pixel_converter;
   //! Deflate decoder.
-  bl::Compression::Deflate::Decoder deflateDecoder;
+  bl::Compression::Deflate::Decoder deflate_decoder;
   //! Buffer used for storing previous frame content for APNG_DISPOSE_OP_PREVIOUS case.
-  bl::ScopedBuffer previousPixelBuffer;
+  bl::ScopedBuffer previous_pixel_buffer;
 
   //! \}
 
@@ -137,14 +137,14 @@ struct BLPngDecoderImpl : public BLImageDecoderImpl {
   //! Explicit constructor that constructs this Impl.
   BL_INLINE void ctor(const BLImageDecoderVirt* virt_, const BLImageCodecCore* codec_) noexcept {
     BLImageDecoderImpl::ctor(virt_, codec_);
-    blCallCtor(pngPixelData);
-    blCallCtor(pixelConverter);
+    bl_call_ctor(png_pixel_data);
+    bl_call_ctor(pixel_converter);
   }
 
   //! Explicit destructor that destructs this Impl.
   BL_INLINE void dtor() noexcept {
-    blCallDtor(pixelConverter);
-    blCallDtor(pngPixelData);
+    bl_call_dtor(pixel_converter);
+    bl_call_dtor(png_pixel_data);
     BLImageDecoderImpl::dtor();
   }
 
@@ -154,23 +154,23 @@ struct BLPngDecoderImpl : public BLImageDecoderImpl {
   //! \{
 
   //! Tests whether the PNG decoder has the given `flag` set.
-  BL_INLINE_NODEBUG bool hasFlag(bl::Png::DecoderStatusFlags flag) const noexcept { return blTestFlag(statusFlags, flag); }
+  BL_INLINE_NODEBUG bool has_flag(bl::Png::DecoderStatusFlags flag) const noexcept { return bl_test_flag(status_flags, flag); }
 
-  BL_INLINE_NODEBUG void addFlag(bl::Png::DecoderStatusFlags flag) noexcept { statusFlags |= flag; }
-  BL_INLINE_NODEBUG void clearFlag(bl::Png::DecoderStatusFlags flag) noexcept { statusFlags &= ~flag; }
+  BL_INLINE_NODEBUG void add_flag(bl::Png::DecoderStatusFlags flag) noexcept { status_flags |= flag; }
+  BL_INLINE_NODEBUG void clear_flag(bl::Png::DecoderStatusFlags flag) noexcept { status_flags &= ~flag; }
 
   //! Tests whether the image is 'APNG' (animated PNG).
-  BL_INLINE_NODEBUG bool isAPNG() const noexcept { return hasFlag(bl::Png::DecoderStatusFlags::kRead_acTL); }
+  BL_INLINE_NODEBUG bool isAPNG() const noexcept { return has_flag(bl::Png::DecoderStatusFlags::kRead_acTL); }
   //! Tests whether the image is 'CgBI' and not PNG - 'CgBI' chunk before 'IHDR' and other violations.
-  BL_INLINE_NODEBUG bool isCGBI() const noexcept { return hasFlag(bl::Png::DecoderStatusFlags::kRead_CgBI); }
+  BL_INLINE_NODEBUG bool isCGBI() const noexcept { return has_flag(bl::Png::DecoderStatusFlags::kRead_CgBI); }
 
   //! Tests whether the image uses a color key.
-  BL_INLINE_NODEBUG bool hasColorKey() const noexcept { return hasFlag(bl::Png::DecoderStatusFlags::kHasColorKey); }
+  BL_INLINE_NODEBUG bool has_color_key() const noexcept { return has_flag(bl::Png::DecoderStatusFlags::kHasColorKey); }
   //! Tests whether the 'fcTL' chunk was already processed for the next frame.
-  BL_INLINE_NODEBUG bool hasFCTL() const noexcept { return hasFlag(bl::Png::DecoderStatusFlags::kRead_fcTL); }
+  BL_INLINE_NODEBUG bool has_fctl() const noexcept { return has_flag(bl::Png::DecoderStatusFlags::kRead_fcTL); }
 
   // By default PNG uses a ZLIB header, however, when CgBI non-conforming image is decoded, it's a RAW DEFLATE stream.
-  BL_INLINE_NODEBUG bl::Compression::Deflate::FormatType deflateFormat() const noexcept {
+  BL_INLINE_NODEBUG bl::Compression::Deflate::FormatType deflate_format() const noexcept {
     return isCGBI() ? bl::Compression::Deflate::FormatType::kRaw
                     : bl::Compression::Deflate::FormatType::kZlib;
   }
@@ -179,7 +179,7 @@ struct BLPngDecoderImpl : public BLImageDecoderImpl {
 };
 
 struct BLPngEncoderImpl : public BLImageEncoderImpl {
-  uint8_t compressionLevel;
+  uint8_t compression_level;
 };
 
 struct BLPngCodecImpl : public BLImageCodecImpl {};

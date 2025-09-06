@@ -20,53 +20,53 @@ typedef uint32_t BLTag;
 
 int main(int argc, char* argv[]) {
   printf("-- Finding table tags to ids hash function --\n");
-  StupidHash::Finder tableTagsFinder(bl::FontTagData::tableIdToTagTable, bl::FontTagData::kTableIdCount);
-  if (!tableTagsFinder.findSolution()) {
+  StupidHash::Finder table_tags_finder(bl::FontTagData::table_id_to_tag_table, bl::FontTagData::kTableIdCount);
+  if (!table_tags_finder.find_solution()) {
     printf("Solution not found!\n");
     return 1;
   }
 
   printf("-- Finding script tags to ids hash function --\n");
-  StupidHash::Finder scriptTagsFinder(bl::FontTagData::scriptIdToTagTable, bl::FontTagData::kScriptIdCount);
-  if (!scriptTagsFinder.findSolution()) {
+  StupidHash::Finder script_tags_finder(bl::FontTagData::script_id_to_tag_table, bl::FontTagData::kScriptIdCount);
+  if (!script_tags_finder.find_solution()) {
     printf("Solution not found!\n");
     return 1;
   }
 
   printf("-- Finding language tags to ids hash function --\n");
-  StupidHash::Finder languageTagsFinder(bl::FontTagData::languageIdToTagTable, bl::FontTagData::kLanguageIdCount);
-  if (!languageTagsFinder.findSolution()) {
+  StupidHash::Finder language_tags_finder(bl::FontTagData::language_id_to_tag_table, bl::FontTagData::kLanguageIdCount);
+  if (!language_tags_finder.find_solution()) {
     printf("Solution not found!\n");
     return 1;
   }
 
   printf("-- Finding feature tags to ids hash function --\n");
-  StupidHash::Finder featureTagsFinder(bl::FontTagData::featureIdToTagTable, bl::FontTagData::kFeatureIdCount);
-  if (!featureTagsFinder.findSolution()) {
+  StupidHash::Finder feature_tags_finder(bl::FontTagData::feature_id_to_tag_table, bl::FontTagData::kFeatureIdCount);
+  if (!feature_tags_finder.find_solution()) {
     printf("Solution not found!\n");
     return 1;
   }
 
   printf("-- Finding baseline tags to ids hash function --\n");
-  StupidHash::Finder baselineTagsFinder(bl::FontTagData::baselineIdToTagTable, bl::FontTagData::kBaselineIdCount);
-  if (!baselineTagsFinder.findSolution()) {
+  StupidHash::Finder baseline_tags_finder(bl::FontTagData::baseline_id_to_tag_table, bl::FontTagData::kBaselineIdCount);
+  if (!baseline_tags_finder.find_solution()) {
     printf("Solution not found!\n");
     return 1;
   }
 
   printf("-- Finding variation tags to ids hash function --\n");
-  StupidHash::Finder variationTagsFinder(bl::FontTagData::variationIdToTagTable, bl::FontTagData::kVariationIdCount);
-  if (!variationTagsFinder.findSolution()) {
+  StupidHash::Finder variation_tags_finder(bl::FontTagData::variation_id_to_tag_table, bl::FontTagData::kVariationIdCount);
+  if (!variation_tags_finder.find_solution()) {
     printf("Solution not found!\n");
     return 1;
   }
 
-  printf("%s\n", tableTagsFinder._hf.body("static BL_INLINE uint32_t tableTagToId(uint32_t tag) noexcept", "tag", "tableIdToTagTable[", "]").data());
-  printf("%s\n", scriptTagsFinder._hf.body("static BL_INLINE uint32_t scriptTagToId(uint32_t tag) noexcept", "tag", "scriptIdToTagTable[", "]").data());
-  printf("%s\n", languageTagsFinder._hf.body("static BL_INLINE uint32_t languageTagToId(uint32_t tag) noexcept", "tag", "languageIdToTagTable[", "]").data());
-  printf("%s\n", featureTagsFinder._hf.body("static BL_INLINE uint32_t featureTagToId(uint32_t tag) noexcept", "tag", "featureIdToTagTable[", "]").data());
-  printf("%s\n", baselineTagsFinder._hf.body("static BL_INLINE uint32_t baselineTagToId(uint32_t tag) noexcept", "tag", "baselineIdToTagTable[", "]").data());
-  printf("%s\n", variationTagsFinder._hf.body("static BL_INLINE uint32_t variationTagToId(uint32_t tag) noexcept", "tag", "variationIdToTagTable[", "]").data());
+  printf("%s\n", table_tags_finder._hf.body("static BL_INLINE uint32_t table_tag_to_id(uint32_t tag) noexcept", "tag", "table_id_to_tag_table[", "]").data());
+  printf("%s\n", script_tags_finder._hf.body("static BL_INLINE uint32_t script_tag_to_id(uint32_t tag) noexcept", "tag", "script_id_to_tag_table[", "]").data());
+  printf("%s\n", language_tags_finder._hf.body("static BL_INLINE uint32_t language_tag_to_id(uint32_t tag) noexcept", "tag", "language_id_to_tag_table[", "]").data());
+  printf("%s\n", feature_tags_finder._hf.body("static BL_INLINE uint32_t feature_tag_to_id(uint32_t tag) noexcept", "tag", "feature_id_to_tag_table[", "]").data());
+  printf("%s\n", baseline_tags_finder._hf.body("static BL_INLINE uint32_t baseline_tag_to_id(uint32_t tag) noexcept", "tag", "baseline_id_to_tag_table[", "]").data());
+  printf("%s\n", variation_tags_finder._hf.body("static BL_INLINE uint32_t variation_tag_to_id(uint32_t tag) noexcept", "tag", "variation_id_to_tag_table[", "]").data());
 
   return 0;
 }

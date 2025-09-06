@@ -22,8 +22,8 @@ namespace Threading {
 struct Barrier {
   uint32_t barrier;
 
-  BL_INLINE void release() const noexcept { blAtomicStoreStrong(&barrier, uint32_t(0)); }
-  BL_INLINE void acquire() const noexcept { (void)blAtomicFetchStrong(&barrier); }
+  BL_INLINE void release() const noexcept { bl_atomic_store_strong(&barrier, uint32_t(0)); }
+  BL_INLINE void acquire() const noexcept { (void)bl_atomic_fetch_strong(&barrier); }
 };
 
 //! TSAN barrier implements \ref Barrier only when TSAN is running, otherwise it does nothing.

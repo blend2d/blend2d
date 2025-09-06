@@ -27,22 +27,22 @@ struct MyKeyMatcher {
   inline MyKeyMatcher(uint32_t key) noexcept
     : _key(key) {}
 
-  inline uint32_t hashCode() const noexcept { return _key; }
+  inline uint32_t hash_code() const noexcept { return _key; }
   inline bool matches(const MyHashMapNode* node) const noexcept { return node->_key == _key; }
 
   uint32_t _key;
 };
 
 UNIT(arena_hashmap, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
-  uint32_t kCount = BrokenAPI::hasArg("--quick") ? 1000 : 10000;
+  uint32_t kCount = BrokenAPI::has_arg("--quick") ? 1000 : 10000;
 
   ArenaAllocator allocator(4096);
-  ArenaHashMap<MyHashMapNode> hashTable(&allocator);
+  ArenaHashMap<MyHashMapNode> hash_table(&allocator);
   uint32_t key;
 
   INFO("Inserting %u elements to HashTable", unsigned(kCount));
   for (key = 0; key < kCount; key++) {
-    hashTable.insert(allocator.newT<MyHashMapNode>(key));
+    hash_table.insert(allocator.new_t<MyHashMapNode>(key));
   }
 
   INFO("Removing %u elements from HashTable and validating each operation", unsigned(kCount));
@@ -51,22 +51,22 @@ UNIT(arena_hashmap, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
     MyHashMapNode* node;
 
     for (key = 0; key < count; key++) {
-      node = hashTable.get(MyKeyMatcher(key));
+      node = hash_table.get(MyKeyMatcher(key));
       EXPECT_NE(node, nullptr);
       EXPECT_EQ(node->_key, key);
     }
 
     {
       count--;
-      node = hashTable.get(MyKeyMatcher(count));
-      hashTable.remove(node);
+      node = hash_table.get(MyKeyMatcher(count));
+      hash_table.remove(node);
 
-      node = hashTable.get(MyKeyMatcher(count));
+      node = hash_table.get(MyKeyMatcher(count));
       EXPECT_EQ(node, nullptr);
     }
   } while (count);
 
-  EXPECT_TRUE(hashTable.empty());
+  EXPECT_TRUE(hash_table.is_empty());
 }
 
 } // {Tests}

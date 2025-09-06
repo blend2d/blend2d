@@ -10,8 +10,8 @@
 
 namespace bl::Png::Ops {
 
-void initFuncTable_ASIMD(FunctionTable& ft) noexcept {
-  initSimdFunctions(ft);
+void init_func_table_asimd(FunctionTable& ft) noexcept {
+  init_simd_functions(ft);
 }
 
 } // {bl::Png::Ops}

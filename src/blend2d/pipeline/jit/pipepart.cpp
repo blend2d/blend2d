@@ -12,13 +12,13 @@
 
 namespace bl::Pipeline::JIT {
 
-PipePart::PipePart(PipeCompiler* pc, PipePartType partType) noexcept
+PipePart::PipePart(PipeCompiler* pc, PipePartType part_type) noexcept
   : pc(pc),
     cc(pc->cc),
-    ct(commonTable),
-    _partType(partType) {}
+    ct(common_table),
+    _part_type(part_type) {}
 
-void PipePart::preparePart() noexcept {}
+void PipePart::prepare_part() noexcept {}
 
 } // {bl::Pipeline::JIT}
 

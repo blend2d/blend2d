@@ -43,7 +43,7 @@ public:
   //! \name Members
   //! \{
 
-  WorkData* _workData;
+  WorkData* _work_data;
   RenderBatch* _batch;
 
   uint32_t _bandY0;
@@ -51,75 +51,75 @@ public:
   uint32_t _bandFixedY0;
   uint32_t _bandFixedY1;
 
-  SlotData* _stateSlotData;
-  size_t _stateSlotCount;
+  SlotData* _state_slot_data;
+  size_t _state_slot_count;
 
-  BLBitWord* _pendingCommandBitSetData;
-  size_t _pendingCommandBitSetSize;
-  BLBitWord _pendingCommandBitSetMask;
+  BLBitWord* _pending_command_bit_set_data;
+  size_t _pending_command_bit_set_size;
+  BLBitWord _pending_command_bit_set_mask;
 
-  AnalyticActiveEdge<int>* _pooledEdges;
+  AnalyticActiveEdge<int>* _pooled_edges;
 
   //! \}
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE ProcData(WorkData* workData, RenderBatch* batch) noexcept
-    : _workData(workData),
+  BL_INLINE ProcData(WorkData* work_data, RenderBatch* batch) noexcept
+    : _work_data(work_data),
       _batch(batch),
       _bandY0(0),
       _bandY1(0),
       _bandFixedY0(0),
       _bandFixedY1(0),
-      _stateSlotData(nullptr),
-      _stateSlotCount(0),
-      _pendingCommandBitSetData(nullptr),
-      _pendingCommandBitSetSize(0),
-      _pendingCommandBitSetMask(0),
-      _pooledEdges(nullptr) {}
+      _state_slot_data(nullptr),
+      _state_slot_count(0),
+      _pending_command_bit_set_data(nullptr),
+      _pending_command_bit_set_size(0),
+      _pending_command_bit_set_mask(0),
+      _pooled_edges(nullptr) {}
 
   //! \}
 
   //! \name Initialization
   //! \{
 
-  BL_INLINE BLResult initProcData() noexcept {
-    size_t commandCount = _batch->commandCount();
-    size_t stateSlotCount = _batch->stateSlotCount();
+  BL_INLINE BLResult init_proc_data() noexcept {
+    size_t command_count = _batch->command_count();
+    size_t state_slot_count = _batch->state_slot_count();
 
-    size_t bitWordCount = IntOps::wordCountFromBitCount<BLBitWord>(commandCount);
-    size_t remainingBits = commandCount & (IntOps::bitSizeOf<BLBitWord>() - 1);
+    size_t bit_word_count = IntOps::word_count_from_bit_count<BLBitWord>(command_count);
+    size_t remaining_bits = command_count & (IntOps::bit_size_of<BLBitWord>() - 1);
 
-    _stateSlotData = _workData->workZone.allocT<SlotData>(stateSlotCount * sizeof(SlotData));
-    _pendingCommandBitSetData = _workData->workZone.allocT<BLBitWord>(bitWordCount * sizeof(BLBitWord), sizeof(BLBitWord));
+    _state_slot_data = _work_data->work_zone.allocT<SlotData>(state_slot_count * sizeof(SlotData));
+    _pending_command_bit_set_data = _work_data->work_zone.allocT<BLBitWord>(bit_word_count * sizeof(BLBitWord), sizeof(BLBitWord));
 
-    if (!_stateSlotData || !_pendingCommandBitSetData)
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    if (!_state_slot_data || !_pending_command_bit_set_data)
+      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-    _stateSlotCount = stateSlotCount;
-    _pendingCommandBitSetSize = bitWordCount;
+    _state_slot_count = state_slot_count;
+    _pending_command_bit_set_size = bit_word_count;
 
     // Initialize the last BitWord as it can have bits that are outside of the command count. We rely on these bits,
     // they cannot be wrong...
-    if (remainingBits)
-      _pendingCommandBitSetData[bitWordCount - 1] = BitOps::nonZeroStartMask(remainingBits);
+    if (remaining_bits)
+      _pending_command_bit_set_data[bit_word_count - 1] = BitOps::non_zero_start_mask(remaining_bits);
     else
-      _pendingCommandBitSetData[bitWordCount - 1] = BitOps::ones();
+      _pending_command_bit_set_data[bit_word_count - 1] = BitOps::ones();
 
-    if (bitWordCount > 1)
-      _pendingCommandBitSetMask = IntOps::allOnes<BLBitWord>();
+    if (bit_word_count > 1)
+      _pending_command_bit_set_mask = IntOps::all_ones<BLBitWord>();
     else
-      _pendingCommandBitSetMask = 0;
+      _pending_command_bit_set_mask = 0;
 
     return BL_SUCCESS;
   }
 
-  BL_INLINE void initBand(uint32_t bandId, uint32_t bandHeight, uint32_t fpScale) noexcept {
-    _bandY0 = bandId * bandHeight;
-    _bandY1 = _bandY0 + bandHeight;
-    _bandFixedY0 = _bandY0 * fpScale;
-    _bandFixedY1 = _bandY1 * fpScale;
+  BL_INLINE void init_band(uint32_t band_id, uint32_t band_height, uint32_t fp_scale) noexcept {
+    _bandY0 = band_id * band_height;
+    _bandY1 = _bandY0 + band_height;
+    _bandFixedY0 = _bandY0 * fp_scale;
+    _bandFixedY1 = _bandY1 * fp_scale;
   }
 
   //! \}
@@ -127,7 +127,7 @@ public:
   //! \name Accessors
   //! \{
 
-  BL_INLINE WorkData* workData() const noexcept { return _workData; }
+  BL_INLINE WorkData* work_data() const noexcept { return _work_data; }
   BL_INLINE RenderBatch* batch() const noexcept { return _batch; }
 
   BL_INLINE uint32_t bandY0() const noexcept { return _bandY0; }
@@ -135,59 +135,59 @@ public:
   BL_INLINE uint32_t bandFixedY0() const noexcept { return _bandFixedY0; }
   BL_INLINE uint32_t bandFixedY1() const noexcept { return _bandFixedY1; }
 
-  BL_INLINE BLBitWord* pendingCommandBitSetData() const noexcept { return _pendingCommandBitSetData; }
-  BL_INLINE BLBitWord* pendingCommandBitSetEnd() const noexcept { return _pendingCommandBitSetData + _pendingCommandBitSetSize; }
-  BL_INLINE size_t pendingCommandBitSetSize() const noexcept { return _pendingCommandBitSetSize; }
+  BL_INLINE BLBitWord* pending_command_bit_set_data() const noexcept { return _pending_command_bit_set_data; }
+  BL_INLINE BLBitWord* pending_command_bit_set_end() const noexcept { return _pending_command_bit_set_data + _pending_command_bit_set_size; }
+  BL_INLINE size_t pending_command_bit_set_size() const noexcept { return _pending_command_bit_set_size; }
 
-  BL_INLINE BLBitWord pendingCommandBitSetMask() const noexcept { return _pendingCommandBitSetMask; }
-  BL_INLINE void clearPendingCommandBitSetMask() noexcept { _pendingCommandBitSetMask = 0; }
+  BL_INLINE BLBitWord pending_command_bit_set_mask() const noexcept { return _pending_command_bit_set_mask; }
+  BL_INLINE void clear_pending_command_bit_set_mask() noexcept { _pending_command_bit_set_mask = 0; }
 
-  BL_INLINE SlotData& stateDataAt(size_t index) noexcept {
-    BL_ASSERT(index < _stateSlotCount);
-    return _stateSlotData[index];
+  BL_INLINE SlotData& state_data_at(size_t index) noexcept {
+    BL_ASSERT(index < _state_slot_count);
+    return _state_slot_data[index];
   }
 
   //! \}
 };
 
-static BL_INLINE CommandStatus fillBoxA(ProcData& procData, const RenderCommand& command) noexcept {
-  int y0 = blMax(command.boxI().y0, int(procData.bandY0()));
-  int y1 = blMin(command.boxI().y1, int(procData.bandY1()));
+static BL_INLINE CommandStatus fill_box_a(ProcData& proc_data, const RenderCommand& command) noexcept {
+  int y0 = bl_max(command.box_i().y0, int(proc_data.bandY0()));
+  int y1 = bl_min(command.box_i().y1, int(proc_data.bandY1()));
 
   if (y0 < y1) {
-    Pipeline::FillData fillData;
-    fillData.initBoxA8bpc(command.alpha(), command.boxI().x0, y0, command.boxI().x1, y1);
+    Pipeline::FillData fill_data;
+    fill_data.init_box_a_8bpc(command.alpha(), command.box_i().x0, y0, command.box_i().x1, y1);
 
-    Pipeline::FillFunc fillFunc = command.pipeDispatchData()->fillFunc;
-    Pipeline::FetchFunc fetchFunc = command.pipeDispatchData()->fetchFunc;
-    const void* fetchData = command.getPipeFetchData();
+    Pipeline::FillFunc fill_func = command.pipe_dispatch_data()->fill_func;
+    Pipeline::FetchFunc fetch_func = command.pipe_dispatch_data()->fetch_func;
+    const void* fetch_data = command.get_pipe_fetch_data();
 
-    if (fetchFunc == nullptr) {
-      fillFunc(&procData.workData()->ctxData, &fillData, fetchData);
+    if (fetch_func == nullptr) {
+      fill_func(&proc_data.work_data()->ctx_data, &fill_data, fetch_data);
     }
     else {
       // TODO:
     }
   }
 
-  return CommandStatus(command.boxI().y1 <= int(procData.bandY1()));
+  return CommandStatus(command.box_i().y1 <= int(proc_data.bandY1()));
 }
 
-static BL_INLINE CommandStatus fillBoxU(ProcData& procData, const RenderCommand& command) noexcept {
-  int y0 = blMax(command.boxI().y0, int(procData.bandFixedY0()));
-  int y1 = blMin(command.boxI().y1, int(procData.bandFixedY1()));
+static BL_INLINE CommandStatus fill_box_u(ProcData& proc_data, const RenderCommand& command) noexcept {
+  int y0 = bl_max(command.box_i().y0, int(proc_data.bandFixedY0()));
+  int y1 = bl_min(command.box_i().y1, int(proc_data.bandFixedY1()));
 
   if (y0 < y1) {
-    Pipeline::FillData fillData;
+    Pipeline::FillData fill_data;
     Pipeline::BoxUToMaskData boxUToMaskData;
 
-    if (fillData.initBoxU8bpc24x8(command.alpha(), command.boxI().x0, y0, command.boxI().x1, y1, boxUToMaskData)) {
-      Pipeline::FillFunc fillFunc = command.pipeDispatchData()->fillFunc;
-      Pipeline::FetchFunc fetchFunc = command.pipeDispatchData()->fetchFunc;
-      const void* fetchData = command.getPipeFetchData();
+    if (fill_data.init_box_u_8bpc_24x8(command.alpha(), command.box_i().x0, y0, command.box_i().x1, y1, boxUToMaskData)) {
+      Pipeline::FillFunc fill_func = command.pipe_dispatch_data()->fill_func;
+      Pipeline::FetchFunc fetch_func = command.pipe_dispatch_data()->fetch_func;
+      const void* fetch_data = command.get_pipe_fetch_data();
 
-      if (fetchFunc == nullptr) {
-        fillFunc(&procData.workData()->ctxData, &fillData, fetchData);
+      if (fetch_func == nullptr) {
+        fill_func(&proc_data.work_data()->ctx_data, &fill_data, fetch_data);
       }
       else {
         // TODO:
@@ -195,76 +195,76 @@ static BL_INLINE CommandStatus fillBoxU(ProcData& procData, const RenderCommand&
     }
   }
 
-  return CommandStatus(command.boxI().y1 <= int(procData.bandFixedY1()));
+  return CommandStatus(command.box_i().y1 <= int(proc_data.bandFixedY1()));
 }
 
-static CommandStatus fillBoxMaskA(ProcData& procData, const RenderCommand& command) noexcept {
-  const RenderCommand::FillBoxMaskA& payload = command._payload.boxMaskA;
-  const BLBoxI& boxI = payload.boxI;
+static CommandStatus fillBoxMaskA(ProcData& proc_data, const RenderCommand& command) noexcept {
+  const RenderCommand::FillBoxMaskA& payload = command._payload.box_mask_a;
+  const BLBoxI& box_i = payload.box_i;
 
-  int y0 = blMax(boxI.y0, int(procData.bandY0()));
-  int y1 = blMin(boxI.y1, int(procData.bandY1()));
+  int y0 = bl_max(box_i.y0, int(proc_data.bandY0()));
+  int y1 = bl_min(box_i.y1, int(proc_data.bandY1()));
 
   if (y0 < y1) {
-    uint32_t maskX = uint32_t(payload.maskOffsetI.x);
-    uint32_t maskY = uint32_t(payload.maskOffsetI.y) + uint32_t(y0 - boxI.y0);
+    uint32_t maskX = uint32_t(payload.mask_offset_i.x);
+    uint32_t maskY = uint32_t(payload.mask_offset_i.y) + uint32_t(y0 - box_i.y0);
 
-    const BLImageImpl* maskI = payload.maskImageI.ptr;
-    const uint8_t* maskData = (static_cast<const uint8_t*>(maskI->pixelData) + intptr_t(maskY) * maskI->stride) + maskX * (maskI->depth / 8u);
+    const BLImageImpl* mask_impl = payload.mask_image_i.ptr;
+    const uint8_t* mask_data = (static_cast<const uint8_t*>(mask_impl->pixel_data) + intptr_t(maskY) * mask_impl->stride) + maskX * (mask_impl->depth / 8u);
 
-    Pipeline::MaskCommand maskCommands[2];
+    Pipeline::MaskCommand mask_commands[2];
     Pipeline::MaskCommandType vMaskCmd = command.alpha() >= 255 ? Pipeline::MaskCommandType::kVMaskA8WithoutGA : Pipeline::MaskCommandType::kVMaskA8WithGA;
 
-    maskCommands[0].initVMask(vMaskCmd, uint32_t(boxI.x0), uint32_t(boxI.x1), maskData, maskI->stride);
-    maskCommands[1].initRepeat();
+    mask_commands[0].init_vmask(vMaskCmd, uint32_t(box_i.x0), uint32_t(box_i.x1), mask_data, mask_impl->stride);
+    mask_commands[1].init_repeat();
 
-    Pipeline::FillData fillData;
-    fillData.initMaskA(command.alpha(), boxI.x0, y0, boxI.x1, y1, maskCommands);
+    Pipeline::FillData fill_data;
+    fill_data.init_mask_a(command.alpha(), box_i.x0, y0, box_i.x1, y1, mask_commands);
 
-    Pipeline::FillFunc fillFunc = command.pipeDispatchData()->fillFunc;
-    Pipeline::FetchFunc fetchFunc = command.pipeDispatchData()->fetchFunc;
-    const void* fetchData = command.getPipeFetchData();
+    Pipeline::FillFunc fill_func = command.pipe_dispatch_data()->fill_func;
+    Pipeline::FetchFunc fetch_func = command.pipe_dispatch_data()->fetch_func;
+    const void* fetch_data = command.get_pipe_fetch_data();
 
-    if (fetchFunc == nullptr) {
-      fillFunc(&procData.workData()->ctxData, &fillData, fetchData);
+    if (fetch_func == nullptr) {
+      fill_func(&proc_data.work_data()->ctx_data, &fill_data, fetch_data);
     }
     else {
       // TODO:
     }
   }
 
-  return CommandStatus(boxI.y1 <= int(procData.bandY1()));
+  return CommandStatus(box_i.y1 <= int(proc_data.bandY1()));
 }
 
-static CommandStatus fillAnalytic(ProcData& procData, const RenderCommand& command, int32_t prevBandFy1, int32_t nextBandFy0) noexcept {
+static CommandStatus fill_analytic(ProcData& proc_data, const RenderCommand& command, int32_t prevBandFy1, int32_t nextBandFy0) noexcept {
   // Rasterizer options to use - do not change unless you are improving the existing rasterizers.
   constexpr uint32_t kRasterizerOptions =
     AnalyticRasterizer::kOptionBandOffset     |
     AnalyticRasterizer::kOptionRecordMinXMaxX ;
 
-  WorkData& workData = *procData.workData();
-  SlotData::Analytic& procState = procData.stateDataAt(command._payload.analytic.stateSlotIndex).analytic;
+  WorkData& work_data = *proc_data.work_data();
+  SlotData::Analytic& proc_state = proc_data.state_data_at(command._payload.analytic.state_slot_index).analytic;
 
-  uint32_t bandFixedY0 = procData.bandFixedY0();
-  uint32_t bandFixedY1 = procData.bandFixedY1();
+  uint32_t bandFixedY0 = proc_data.bandFixedY0();
+  uint32_t bandFixedY1 = proc_data.bandFixedY1();
 
   const EdgeVector<int>* edges;
   AnalyticActiveEdge<int>* active;
 
   // TODO:
-  blUnused(nextBandFy0);
+  bl_unused(nextBandFy0);
 
   {
-    int32_t cmdFy0 = command._payload.analytic.fixedY0;
-    bool isFirstBand = prevBandFy1 < cmdFy0;
+    int32_t cmdFy0 = command._payload.analytic.fixed_y0;
+    bool is_first_band = prevBandFy1 < cmdFy0;
 
-    if (isFirstBand) {
+    if (is_first_band) {
       // If it's the first band we have to initialize the state. This must be done only once per command.
-      edges = command.analyticEdges();
+      edges = command.analytic_edges();
       active = nullptr;
 
-      procState.edges = edges;
-      procState.active = active;
+      proc_state.edges = edges;
+      proc_state.active = active;
 
       // Everything clipped out, or all lines horizontal, etc...
       if (!edges)
@@ -272,8 +272,8 @@ static CommandStatus fillAnalytic(ProcData& procData, const RenderCommand& comma
     }
     else {
       // If the state has been already initialized, we have to take the remaining `edges` and `active` ones from it.
-      edges = procState.edges;
-      active = procState.active;
+      edges = proc_state.edges;
+      active = proc_state.active;
     }
 
     // Don't do anything if we haven't advanced enough.
@@ -282,59 +282,59 @@ static CommandStatus fillAnalytic(ProcData& procData, const RenderCommand& comma
     }
   }
 
-  uint32_t bandY0 = procData.bandY0();
-  uint32_t bandY1 = procData.bandY1();
-  uint32_t bandHeight = workData.bandHeight();
+  uint32_t bandY0 = proc_data.bandY0();
+  uint32_t bandY1 = proc_data.bandY1();
+  uint32_t band_height = work_data.band_height();
 
   // TODO:
   /*
-  if (BL_UNLIKELY(edgeStorage->boundingBox().y0 >= edgeStorage->boundingBox().y1))
+  if (BL_UNLIKELY(edge_storage->bounding_box().y0 >= edge_storage->bounding_box().y1))
     return BL_SUCCESS;
   */
 
-  uint32_t dstWidth = uint32_t(workData.dstSize().w);
-  size_t requiredWidth = IntOps::alignUp(dstWidth + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, BL_PIPE_PIXELS_PER_ONE_BIT);
-  size_t requiredHeight = bandHeight;
-  size_t cellAlignment = 16;
+  uint32_t dst_width = uint32_t(work_data.dst_size().w);
+  size_t required_width = IntOps::align_up(dst_width + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, BL_PIPE_PIXELS_PER_ONE_BIT);
+  size_t required_height = band_height;
+  size_t cell_alignment = 16;
 
-  size_t bitStride = IntOps::wordCountFromBitCount<BLBitWord>(requiredWidth / BL_PIPE_PIXELS_PER_ONE_BIT) * sizeof(BLBitWord);
-  size_t cellStride = requiredWidth * sizeof(uint32_t);
+  size_t bit_stride = IntOps::word_count_from_bit_count<BLBitWord>(required_width / BL_PIPE_PIXELS_PER_ONE_BIT) * sizeof(BLBitWord);
+  size_t cell_stride = required_width * sizeof(uint32_t);
 
-  size_t bitsStart = 0;
-  size_t bitsSize = requiredHeight * bitStride;
+  size_t bits_start = 0;
+  size_t bits_size = required_height * bit_stride;
 
-  size_t cellsStart = IntOps::alignUp(bitsStart + bitsSize, cellAlignment);
-  BL_ASSERT(workData.zeroBuffer.size >= cellsStart + requiredHeight * cellStride);
+  size_t cells_start = IntOps::align_up(bits_start + bits_size, cell_alignment);
+  BL_ASSERT(work_data.zero_buffer.size >= cells_start + required_height * cell_stride);
 
-  AnalyticCellStorage cellStorage;
-  cellStorage.init(
-    reinterpret_cast<BLBitWord*>(workData.zeroBuffer.data + bitsStart), bitStride,
-    IntOps::alignUp(reinterpret_cast<uint32_t*>(workData.zeroBuffer.data + cellsStart), cellAlignment), cellStride);
+  AnalyticCellStorage cell_storage;
+  cell_storage.init(
+    reinterpret_cast<BLBitWord*>(work_data.zero_buffer.data + bits_start), bit_stride,
+    IntOps::align_up(reinterpret_cast<uint32_t*>(work_data.zero_buffer.data + cells_start), cell_alignment), cell_stride);
 
-  AnalyticActiveEdge<int>* pooled = procData._pooledEdges;
+  AnalyticActiveEdge<int>* pooled = proc_data._pooled_edges;
 
-  Pipeline::FillData fillData;
-  fillData.initAnalytic(command.alpha(),
-                        command.analyticFillRule(),
-                        cellStorage.bitPtrTop, cellStorage.bitStride,
-                        cellStorage.cellPtrTop, cellStorage.cellStride);
+  Pipeline::FillData fill_data;
+  fill_data.init_analytic(command.alpha(),
+                        command.analytic_fill_rule(),
+                        cell_storage.bit_ptr_top, cell_storage.bit_stride,
+                        cell_storage.cell_ptr_top, cell_storage.cell_stride);
 
   AnalyticRasterizer ras;
-  ras.init(cellStorage.bitPtrTop, cellStorage.bitStride,
-           cellStorage.cellPtrTop, cellStorage.cellStride,
-           bandY0, bandHeight);
+  ras.init(cell_storage.bit_ptr_top, cell_storage.bit_stride,
+           cell_storage.cell_ptr_top, cell_storage.cell_stride,
+           bandY0, band_height);
 
-  ArenaAllocator* workZone = &workData.workZone;
+  ArenaAllocator* work_zone = &work_data.work_zone;
 
   AnalyticActiveEdge<int>** pPrev = &active;
   AnalyticActiveEdge<int>* current = *pPrev;
 
-  ras.resetBounds();
-  ras._bandEnd = bandY1 - 1;
+  ras.reset_bounds();
+  ras._band_end = bandY1 - 1;
 
   while (current) {
     // Skipped.
-    ras.setSignMaskFromBit(current->signBit);
+    ras.set_sign_mask_from_bit(current->sign_bit);
     if (current->state._ey1 < int(bandY0))
       goto EdgeDone;
     ras.restore(current->state);
@@ -356,7 +356,7 @@ EdgeDone:
             continue;
 
           current->cur = pts;
-          if (uint32_t(ras._ey0) > ras._bandEnd)
+          if (uint32_t(ras._ey0) > ras._band_end)
             goto SaveState;
 
           if (ras._ey0 < int(bandY0))
@@ -386,10 +386,10 @@ SaveState:
 
   if (edges) {
     if (!pooled) {
-      pooled = static_cast<AnalyticActiveEdge<int>*>(workZone->alloc(sizeof(AnalyticActiveEdge<int>)));
+      pooled = static_cast<AnalyticActiveEdge<int>*>(work_zone->alloc(sizeof(AnalyticActiveEdge<int>)));
       if (BL_UNLIKELY(!pooled)) {
         // Failed to allocate memory for the current edge.
-        procData.workData()->accumulateErrorFlag(BL_CONTEXT_ERROR_FLAG_OUT_OF_MEMORY);
+        proc_data.work_data()->accumulate_error_flag(BL_CONTEXT_ERROR_FLAG_OUT_OF_MEMORY);
         return CommandStatus::kDone;
       }
       pooled->next = nullptr;
@@ -402,8 +402,8 @@ SaveState:
       if (pts[-1].y >= int(bandFixedY1))
         break;
 
-      uint32_t signBit = edges->signBit();
-      ras.setSignMaskFromBit(signBit);
+      uint32_t sign_bit = edges->sign_bit();
+      ras.set_sign_mask_from_bit(sign_bit);
 
       edges = edges->next;
       if (end[-1].y <= int(bandFixedY0))
@@ -415,19 +415,19 @@ SaveState:
           continue;
 
         ras.advanceToY(int(bandY0));
-        if (uint32_t(ras._ey1) <= ras._bandEnd) {
+        if (uint32_t(ras._ey1) <= ras._band_end) {
           ras.template rasterize<kRasterizerOptions>();
         }
         else {
           current = pooled;
           pooled = current->next;
 
-          current->signBit = signBit;
+          current->sign_bit = sign_bit;
           current->cur = pts;
           current->end = end;
           current->next = nullptr;
 
-          if (uint32_t(ras._ey0) > ras._bandEnd)
+          if (uint32_t(ras._ey0) > ras._band_end)
             goto SaveState;
 
           if (ras._ey0 < int(bandY0))
@@ -444,22 +444,22 @@ SaveState:
   *pPrev = nullptr;
 
   // Pooled active edges can be reused, we cannot return them to the allocator.
-  procData._pooledEdges = pooled;
-  procState.edges = edges;
-  procState.active = active;
+  proc_data._pooled_edges = pooled;
+  proc_state.edges = edges;
+  proc_state.active = active;
 
-  if (ras.hasBounds()) {
-    Pipeline::FillFunc fillFunc = command.pipeDispatchData()->fillFunc;
-    Pipeline::FetchFunc fetchFunc = command.pipeDispatchData()->fetchFunc;
-    const void* fetchData = command.getPipeFetchData();
+  if (ras.has_bounds()) {
+    Pipeline::FillFunc fill_func = command.pipe_dispatch_data()->fill_func;
+    Pipeline::FetchFunc fetch_func = command.pipe_dispatch_data()->fetch_func;
+    const void* fetch_data = command.get_pipe_fetch_data();
 
-    fillData.analytic.box.x0 = int(ras._cellMinX);
-    fillData.analytic.box.x1 = int(blMin(dstWidth, IntOps::alignUp(ras._cellMaxX + 1, BL_PIPE_PIXELS_PER_ONE_BIT)));
-    fillData.analytic.box.y0 = int(ras._bandOffset);
-    fillData.analytic.box.y1 = int(ras._bandEnd) + 1;
+    fill_data.analytic.box.x0 = int(ras._cellMinX);
+    fill_data.analytic.box.x1 = int(bl_min(dst_width, IntOps::align_up(ras._cellMaxX + 1, BL_PIPE_PIXELS_PER_ONE_BIT)));
+    fill_data.analytic.box.y0 = int(ras._band_offset);
+    fill_data.analytic.box.y1 = int(ras._band_end) + 1;
 
-    if (fetchFunc == nullptr) {
-      fillFunc(&workData.ctxData, &fillData, fetchData);
+    if (fetch_func == nullptr) {
+      fill_func(&work_data.ctx_data, &fill_data, fetch_data);
     }
     else {
       // TODO:
@@ -469,19 +469,19 @@ SaveState:
   return CommandStatus(!edges && !active);
 }
 
-static CommandStatus processCommand(ProcData& procData, const RenderCommand& command, int32_t prevBandFy1, int32_t nextBandFy0) noexcept {
+static CommandStatus process_command(ProcData& proc_data, const RenderCommand& command, int32_t prevBandFy1, int32_t nextBandFy0) noexcept {
   switch (command.type()) {
     case RenderCommandType::kFillBoxA:
-      return fillBoxA(procData, command);
+      return fill_box_a(proc_data, command);
 
     case RenderCommandType::kFillBoxU:
-      return fillBoxU(procData, command);
+      return fill_box_u(proc_data, command);
 
     case RenderCommandType::kFillAnalytic:
-      return fillAnalytic(procData, command, prevBandFy1, nextBandFy0);
+      return fill_analytic(proc_data, command, prevBandFy1, nextBandFy0);
 
     case RenderCommandType::kFillBoxMaskA:
-      return fillBoxMaskA(procData, command);
+      return fillBoxMaskA(proc_data, command);
 
     default:
       return CommandStatus::kDone;

@@ -23,14 +23,14 @@ Wrap<PipeStaticRuntime> PipeStaticRuntime::_global;
 template<CompOpExt kCompOp, FormatExt kDstFomat, FormatExt kSrcFomat, FetchType kFetchType>
 struct CompOpValid {
   static constexpr bool kCompOpChanged =
-    CompOpSimplifyInfoImpl::simplify(kCompOp, kDstFomat, kSrcFomat).compOp() != kCompOp;
+    CompOpSimplifyInfoImpl::simplify(kCompOp, kDstFomat, kSrcFomat).comp_op() != kCompOp;
 
   static constexpr bool kDstFormatChanged =
-    CompOpSimplifyInfoImpl::simplify(kCompOp, kDstFomat, kSrcFomat).dstFormat() != kDstFomat;
+    CompOpSimplifyInfoImpl::simplify(kCompOp, kDstFomat, kSrcFomat).dst_format() != kDstFomat;
 
   static constexpr bool kFetchTypeChanged =
     kFetchType != FetchType::kSolid &&
-    CompOpSimplifyInfoImpl::simplify(kCompOp, kDstFomat, kSrcFomat).solidId() != CompOpSolidId::kNone;
+    CompOpSimplifyInfoImpl::simplify(kCompOp, kDstFomat, kSrcFomat).solid_id() != CompOpSolidId::kNone;
 
   static constexpr bool kValid = !kCompOpChanged && !kFetchTypeChanged;
 };
@@ -65,7 +65,7 @@ static constexpr FillFunc get_fill_solid_func() noexcept {
       typename Reference::FetchSolid<typename CompOp::PixelType>,
       kDstBPP
     >
-  >::Fill::fillFunc;
+  >::Fill::fill_func;
 }
 
 template<FillType kFillType, FormatExt kDstFormat, uint32_t kDstBPP, typename CompOp, FetchType kFetchType, FormatExt kSrcFormat>
@@ -79,7 +79,7 @@ static constexpr FillFunc get_fill_pattern_func() noexcept {
           typename Reference::FetchPatternDispatch<kFetchType, typename CompOp::PixelType, kSrcFormat>::Fetch,
           kDstBPP
         >
-      >::Fill::fillFunc
+      >::Fill::fill_func
     : nullptr;
 }
 
@@ -94,7 +94,7 @@ static constexpr FillFunc get_fill_gradient_func() noexcept {
           typename Reference::FetchGradientDispatch<kFetchType, typename CompOp::PixelType>::Fetch,
           kDstBPP
         >
-      >::Fill::fillFunc
+      >::Fill::fill_func
     : nullptr;
 }
 
@@ -240,68 +240,68 @@ static const constexpr FillGradientFuncTable a8_fill_gradient_funcs[2] = {
   get_fill_gradient_func_table<FormatExt::kA8, 1, Reference::CompOp_SrcCopy_Op<Reference::Pixel::P8_Alpha>>()
 };
 
-static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signature, DispatchData* dispatchData, PipeLookupCache* cache) noexcept {
-  blUnused(self_);
+static BLResult BL_CDECL bl_pipe_gen_runtime_get(PipeRuntime* self_, uint32_t signature, DispatchData* dispatch_data, PipeLookupCache* cache) noexcept {
+  bl_unused(self_);
 
   Signature s{signature};
-  CompOpExt compOp = s.compOp();
-  FetchType fetchType = s.fetchType();
-  uint32_t fillTypeIdx = uint32_t(s.fillType()) - 1u;
+  CompOpExt comp_op = s.comp_op();
+  FetchType fetch_type = s.fetch_type();
+  uint32_t fill_type_idx = uint32_t(s.fill_type()) - 1u;
 
-  FillFunc fillFunc = nullptr;
-  FetchFunc fetchFunc = nullptr;
+  FillFunc fill_func = nullptr;
+  FetchFunc fetch_func = nullptr;
 
-  if (compOp == CompOpExt::kSrcCopy || compOp == CompOpExt::kSrcOver) {
-    uint32_t compOpIndex = uint32_t(compOp);
-    switch (s.dstFormat()) {
+  if (comp_op == CompOpExt::kSrcCopy || comp_op == CompOpExt::kSrcOver) {
+    uint32_t comp_op_index = uint32_t(comp_op);
+    switch (s.dst_format()) {
       case FormatExt::kPRGB32:
       case FormatExt::kXRGB32: {
-        if (fetchType == FetchType::kSolid) {
-          fillFunc = prgb32_fill_solid_funcs[compOpIndex].funcs[fillTypeIdx];
+        if (fetch_type == FetchType::kSolid) {
+          fill_func = prgb32_fill_solid_funcs[comp_op_index].funcs[fill_type_idx];
         }
-        else if (fetchType >= FetchType::kPatternAnyFirst && fetchType <= FetchType::kPatternAnyLast) {
-          uint32_t patternIndex = uint32_t(fetchType) - uint32_t(FetchType::kPatternAnyFirst);
-          switch (s.srcFormat()) {
+        else if (fetch_type >= FetchType::kPatternAnyFirst && fetch_type <= FetchType::kPatternAnyLast) {
+          uint32_t pattern_index = uint32_t(fetch_type) - uint32_t(FetchType::kPatternAnyFirst);
+          switch (s.src_format()) {
             case FormatExt::kPRGB32:
-              fillFunc = prgb32_fill_pattern_prgb32_funcs[compOpIndex].funcs[fillTypeIdx * FillPatternFuncTable::kPatternTypeCount + patternIndex];
+              fill_func = prgb32_fill_pattern_prgb32_funcs[comp_op_index].funcs[fill_type_idx * FillPatternFuncTable::kPatternTypeCount + pattern_index];
               break;
             case FormatExt::kXRGB32:
-              fillFunc = prgb32_fill_pattern_xrgb32_funcs[compOpIndex].funcs[fillTypeIdx * FillPatternFuncTable::kPatternTypeCount + patternIndex];
+              fill_func = prgb32_fill_pattern_xrgb32_funcs[comp_op_index].funcs[fill_type_idx * FillPatternFuncTable::kPatternTypeCount + pattern_index];
               break;
             case FormatExt::kA8:
-              fillFunc = prgb32_fill_pattern_a8_funcs[compOpIndex].funcs[fillTypeIdx * FillPatternFuncTable::kPatternTypeCount + patternIndex];
+              fill_func = prgb32_fill_pattern_a8_funcs[comp_op_index].funcs[fill_type_idx * FillPatternFuncTable::kPatternTypeCount + pattern_index];
               break;
             default:
               break;
           }
         }
-        else if (fetchType >= FetchType::kGradientAnyFirst && fetchType <= FetchType::kGradientAnyLast) {
-          uint32_t gradientIndex = uint32_t(fetchType) - uint32_t(FetchType::kGradientAnyFirst);
-          fillFunc = prgb32_fill_gradient_funcs[compOpIndex].funcs[fillTypeIdx * FillGradientFuncTable::kGradientTypeCount + gradientIndex];
+        else if (fetch_type >= FetchType::kGradientAnyFirst && fetch_type <= FetchType::kGradientAnyLast) {
+          uint32_t gradient_index = uint32_t(fetch_type) - uint32_t(FetchType::kGradientAnyFirst);
+          fill_func = prgb32_fill_gradient_funcs[comp_op_index].funcs[fill_type_idx * FillGradientFuncTable::kGradientTypeCount + gradient_index];
         }
         break;
       }
 
       case FormatExt::kA8: {
-        if (fetchType == FetchType::kSolid) {
-          fillFunc = a8_fill_solid_funcs[compOpIndex].funcs[fillTypeIdx];
+        if (fetch_type == FetchType::kSolid) {
+          fill_func = a8_fill_solid_funcs[comp_op_index].funcs[fill_type_idx];
         }
-        else if (fetchType >= FetchType::kPatternAnyFirst && fetchType <= FetchType::kPatternAnyLast) {
-          uint32_t patternIndex = uint32_t(fetchType) - uint32_t(FetchType::kPatternAnyFirst);
-          switch (s.srcFormat()) {
+        else if (fetch_type >= FetchType::kPatternAnyFirst && fetch_type <= FetchType::kPatternAnyLast) {
+          uint32_t pattern_index = uint32_t(fetch_type) - uint32_t(FetchType::kPatternAnyFirst);
+          switch (s.src_format()) {
             case FormatExt::kPRGB32:
-              fillFunc = a8_fill_pattern_prgb32_funcs[compOpIndex].funcs[fillTypeIdx * FillPatternFuncTable::kPatternTypeCount + patternIndex];
+              fill_func = a8_fill_pattern_prgb32_funcs[comp_op_index].funcs[fill_type_idx * FillPatternFuncTable::kPatternTypeCount + pattern_index];
               break;
             case FormatExt::kA8:
-              fillFunc = a8_fill_pattern_a8_funcs[compOpIndex].funcs[fillTypeIdx * FillPatternFuncTable::kPatternTypeCount + patternIndex];
+              fill_func = a8_fill_pattern_a8_funcs[comp_op_index].funcs[fill_type_idx * FillPatternFuncTable::kPatternTypeCount + pattern_index];
               break;
             default:
               break;
           }
         }
-        else if (fetchType >= FetchType::kGradientAnyFirst && fetchType <= FetchType::kGradientAnyLast) {
-          uint32_t gradientIndex = uint32_t(fetchType) - uint32_t(FetchType::kGradientAnyFirst);
-          fillFunc = a8_fill_gradient_funcs[compOpIndex].funcs[fillTypeIdx * FillGradientFuncTable::kGradientTypeCount + gradientIndex];
+        else if (fetch_type >= FetchType::kGradientAnyFirst && fetch_type <= FetchType::kGradientAnyLast) {
+          uint32_t gradient_index = uint32_t(fetch_type) - uint32_t(FetchType::kGradientAnyFirst);
+          fill_func = a8_fill_gradient_funcs[comp_op_index].funcs[fill_type_idx * FillGradientFuncTable::kGradientTypeCount + gradient_index];
         }
         break;
       }
@@ -311,29 +311,29 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
     }
   }
 
-  if (!fillFunc)
-    return blTraceError(BL_ERROR_NOT_IMPLEMENTED);
+  if (!fill_func)
+    return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
 
-  dispatchData->init(fillFunc, fetchFunc);
+  dispatch_data->init(fill_func, fetch_func);
 
   if (cache)
-    cache->store(signature, dispatchData);
+    cache->store(signature, dispatch_data);
 
   return BL_SUCCESS;
 }
 
 PipeStaticRuntime::PipeStaticRuntime() noexcept {
   // Setup the `PipeRuntime` base.
-  _runtimeType = PipeRuntimeType::kStatic;
-  _runtimeFlags = PipeRuntimeFlags::kNone;
-  _runtimeSize = uint16_t(sizeof(PipeStaticRuntime));
+  _runtime_type = PipeRuntimeType::kStatic;
+  _runtime_flags = PipeRuntimeFlags::kNone;
+  _runtime_size = uint16_t(sizeof(PipeStaticRuntime));
 
   // PipeStaticRuntime destructor - never called.
   _destroy = nullptr;
 
   // PipeStaticRuntime interface - used by the rendering context and `PipeProvider`.
-  _funcs.test = blPipeGenRuntimeGet;
-  _funcs.get = blPipeGenRuntimeGet;
+  _funcs.test = bl_pipe_gen_runtime_get;
+  _funcs.get = bl_pipe_gen_runtime_get;
 }
 
 PipeStaticRuntime::~PipeStaticRuntime() noexcept {}
@@ -343,8 +343,8 @@ PipeStaticRuntime::~PipeStaticRuntime() noexcept {}
 // FixedPipelineRuntime - Runtime Registration
 // ===========================================
 
-void blStaticPipelineRtInit(BLRuntimeContext* rt) noexcept {
-  blUnused(rt);
+void bl_static_pipeline_rt_init(BLRuntimeContext* rt) noexcept {
+  bl_unused(rt);
 
   bl::Pipeline::PipeStaticRuntime::_global.init();
 }

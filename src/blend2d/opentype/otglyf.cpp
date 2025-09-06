@@ -31,75 +31,75 @@ struct FlagToSizeGen {
   }
 };
 
-static constexpr const auto vertexSizeTable_ = makeLookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1), FlagToSizeGen>();
+static constexpr const auto vertex_size_table_ = make_lookup_table<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1), FlagToSizeGen>();
 
-const LookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1)> vertexSizeTable = vertexSizeTable_;
+const LookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1)> vertex_size_table = vertex_size_table_;
 
 // bl::OpenType::GlyfImpl - GetGlyphBounds
 // =======================================
 
-static const uint8_t blBlankGlyphData[sizeof(GlyfTable::GlyphData)] = { 0 };
+static const uint8_t bl_blank_glyph_data[sizeof(GlyfTable::GlyphData)] = { 0 };
 
-static BLResult BL_CDECL getGlyphBounds(
-  const BLFontFaceImpl* faceI_,
-  const uint32_t* glyphData,
-  intptr_t glyphAdvance,
+static BLResult BL_CDECL get_glyph_bounds(
+  const BLFontFaceImpl* face_impl,
+  const uint32_t* glyph_data,
+  intptr_t glyph_advance,
   BLBoxI* boxes,
   size_t count) noexcept {
 
   BLResult result = BL_SUCCESS;
 
-  const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
-  RawTable glyfTable = faceI->glyf.glyfTable;
-  RawTable locaTable = faceI->glyf.locaTable;
-  uint32_t locaOffsetSize = faceI->locaOffsetSize();
+  const OTFaceImpl* ot_face_impl = static_cast<const OTFaceImpl*>(face_impl);
+  RawTable glyf_table = ot_face_impl->glyf.glyf_table;
+  RawTable loca_table = ot_face_impl->glyf.loca_table;
+  uint32_t loca_offset_size = ot_face_impl->loca_offset_size();
 
-  const uint8_t* blankGlyphData = blBlankGlyphData;
+  const uint8_t* blank_glyph_data = bl_blank_glyph_data;
 
   for (size_t i = 0; i < count; i++) {
-    BLGlyphId glyphId = glyphData[0] & 0xFFFFu;
-    glyphData = PtrOps::offset(glyphData, glyphAdvance);
+    BLGlyphId glyph_id = glyph_data[0] & 0xFFFFu;
+    glyph_data = PtrOps::offset(glyph_data, glyph_advance);
 
     size_t offset;
-    size_t endOff;
+    size_t end_off;
 
-    // NOTE: Maximum glyphId is 65535, so we are always safe here regarding multiplying the `glyphId` by 2 or 4
+    // NOTE: Maximum glyph_id is 65535, so we are always safe here regarding multiplying the `glyph_id` by 2 or 4
     // to calculate the correct index.
-    if (locaOffsetSize == 2) {
-      size_t index = size_t(glyphId) * 2u;
-      if (BL_UNLIKELY(index + sizeof(UInt16) * 2 > locaTable.size))
+    if (loca_offset_size == 2) {
+      size_t index = size_t(glyph_id) * 2u;
+      if (BL_UNLIKELY(index + sizeof(UInt16) * 2 > loca_table.size))
         goto InvalidData;
 
-      offset = uint32_t(reinterpret_cast<const UInt16*>(locaTable.data + index + 0)->value()) * 2u;
-      endOff = uint32_t(reinterpret_cast<const UInt16*>(locaTable.data + index + 2)->value()) * 2u;
+      offset = uint32_t(reinterpret_cast<const UInt16*>(loca_table.data + index + 0)->value()) * 2u;
+      end_off = uint32_t(reinterpret_cast<const UInt16*>(loca_table.data + index + 2)->value()) * 2u;
     }
     else {
-      size_t index = size_t(glyphId) * 4u;
-      if (BL_UNLIKELY(index + sizeof(UInt32) * 2 > locaTable.size))
+      size_t index = size_t(glyph_id) * 4u;
+      if (BL_UNLIKELY(index + sizeof(UInt32) * 2 > loca_table.size))
         goto InvalidData;
 
-      offset = reinterpret_cast<const UInt32*>(locaTable.data + index + 0)->value();
-      endOff = reinterpret_cast<const UInt32*>(locaTable.data + index + 4)->value();
+      offset = reinterpret_cast<const UInt32*>(loca_table.data + index + 0)->value();
+      end_off = reinterpret_cast<const UInt32*>(loca_table.data + index + 4)->value();
     }
 
-    if (BL_LIKELY(endOff <= glyfTable.size)) {
-      const uint8_t* gPtr = blankGlyphData;
-      if (offset < endOff) {
-        gPtr = glyfTable.data + offset;
-        size_t remainingSize = endOff - offset;
+    if (BL_LIKELY(end_off <= glyf_table.size)) {
+      const uint8_t* gPtr = blank_glyph_data;
+      if (offset < end_off) {
+        gPtr = glyf_table.data + offset;
+        size_t remaining_size = end_off - offset;
 
-        if (BL_UNLIKELY(remainingSize < sizeof(GlyfTable::GlyphData)))
+        if (BL_UNLIKELY(remaining_size < sizeof(GlyfTable::GlyphData)))
           goto InvalidData;
       }
 
-      int xMin = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMin();
-      int xMax = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMax();
+      int x_min = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->x_min();
+      int x_max = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->x_max();
 
       // Y coordinates in fonts are bottom to top, we convert them to top-to-bottom.
-      int yMin = -reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMax();
-      int yMax = -reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMin();
+      int y_min = -reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->y_max();
+      int y_max = -reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->y_min();
 
-      boxes[i].reset(xMin, yMin, xMax, yMax);
+      boxes[i].reset(x_min, y_min, x_max, y_max);
       continue;
     }
 
@@ -121,48 +121,48 @@ class GlyfVertexDecoder {
 public:
   const uint8_t* _xCoordPtr;
   const uint8_t* _yCoordPtr;
-  const uint8_t* _endPtr;
+  const uint8_t* _end_ptr;
 
   double _m00;
   double _m01;
   double _m10;
   double _m11;
 
-  BL_INLINE GlyfVertexDecoder(const uint8_t* xCoordPtr, const uint8_t* yCoordPtr, const uint8_t* endPtr, const BLMatrix2D& transform) noexcept
+  BL_INLINE GlyfVertexDecoder(const uint8_t* xCoordPtr, const uint8_t* yCoordPtr, const uint8_t* end_ptr, const BLMatrix2D& transform) noexcept
     : _xCoordPtr(xCoordPtr),
       _yCoordPtr(yCoordPtr),
-      _endPtr(endPtr),
+      _end_ptr(end_ptr),
       _m00(transform.m00),
       _m01(transform.m01),
       _m10(transform.m10),
       _m11(transform.m11) {}
 
-  BL_INLINE BLPoint decodeNext(uint32_t flags) noexcept {
+  BL_INLINE BLPoint decode_next(uint32_t flags) noexcept {
     int x16 = 0;
     int y16 = 0;
 
     if (flags & GlyfTable::Simple::kXIsByte) {
-      BL_ASSERT(_xCoordPtr <= _endPtr - 1);
+      BL_ASSERT(_xCoordPtr <= _end_ptr - 1);
       x16 = int(_xCoordPtr[0]);
       if (!(flags & GlyfTable::Simple::kXIsSameOrXByteIsPositive))
         x16 = -x16;
       _xCoordPtr += 1;
     }
     else if (!(flags & GlyfTable::Simple::kXIsSameOrXByteIsPositive)) {
-      BL_ASSERT(_xCoordPtr <= _endPtr - 2);
+      BL_ASSERT(_xCoordPtr <= _end_ptr - 2);
       x16 = MemOps::readI16uBE(_xCoordPtr);
       _xCoordPtr += 2;
     }
 
     if (flags & GlyfTable::Simple::kYIsByte) {
-      BL_ASSERT(_yCoordPtr <= _endPtr - 1);
+      BL_ASSERT(_yCoordPtr <= _end_ptr - 1);
       y16 = int(_yCoordPtr[0]);
       if (!(flags & GlyfTable::Simple::kYIsSameOrYByteIsPositive))
         y16 = -y16;
       _yCoordPtr += 1;
     }
     else if (!(flags & GlyfTable::Simple::kYIsSameOrYByteIsPositive)) {
-      BL_ASSERT(_yCoordPtr <= _endPtr - 2);
+      BL_ASSERT(_yCoordPtr <= _end_ptr - 2);
       y16 = MemOps::readI16uBE(_yCoordPtr);
       _yCoordPtr += 2;
     }
@@ -173,123 +173,123 @@ public:
 
 } // {anonymous}
 
-static BLResult BL_CDECL getGlyphOutlines(
-  const BLFontFaceImpl* faceI_,
-  BLGlyphId glyphId,
+static BLResult BL_CDECL get_glyph_outlines(
+  const BLFontFaceImpl* face_impl,
+  BLGlyphId glyph_id,
   const BLMatrix2D* transform,
   BLPath* out,
-  size_t* contourCountOut,
-  ScopedBuffer* tmpBuffer) noexcept {
+  size_t* contour_count_out,
+  ScopedBuffer* tmp_buffer) noexcept {
 
-  const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
+  const OTFaceImpl* ot_face_impl = static_cast<const OTFaceImpl*>(face_impl);
 
   typedef GlyfTable::Simple Simple;
   typedef GlyfTable::Compound Compound;
 
-  if (BL_UNLIKELY(glyphId >= faceI->faceInfo.glyphCount))
-    return blTraceError(BL_ERROR_INVALID_GLYPH);
+  if (BL_UNLIKELY(glyph_id >= ot_face_impl->face_info.glyph_count))
+    return bl_trace_error(BL_ERROR_INVALID_GLYPH);
 
-  RawTable glyfTable = faceI->glyf.glyfTable;
-  RawTable locaTable = faceI->glyf.locaTable;
-  uint32_t locaOffsetSize = faceI->locaOffsetSize();
+  RawTable glyf_table = ot_face_impl->glyf.glyf_table;
+  RawTable loca_table = ot_face_impl->glyf.loca_table;
+  uint32_t loca_offset_size = ot_face_impl->loca_offset_size();
 
   const uint8_t* gPtr = nullptr;
-  size_t remainingSize = 0;
-  size_t compoundLevel = 0;
+  size_t remaining_size = 0;
+  size_t compound_level = 0;
 
-  // Only matrix and compoundFlags are important in the root entry.
-  CompoundEntry compoundData[CompoundEntry::kMaxLevel];
-  compoundData[0].gPtr = nullptr;
-  compoundData[0].remainingSize = 0;
-  compoundData[0].compoundFlags = Compound::kArgsAreXYValues;
-  compoundData[0].transform = *transform;
+  // Only matrix and compound_flags are important in the root entry.
+  CompoundEntry compound_data[CompoundEntry::kMaxLevel];
+  compound_data[0].gPtr = nullptr;
+  compound_data[0].remaining_size = 0;
+  compound_data[0].compound_flags = Compound::kArgsAreXYValues;
+  compound_data[0].transform = *transform;
 
   PathAppender appender;
-  size_t contourCountTotal = 0;
+  size_t contour_count_total = 0;
 
   for (;;) {
     size_t offset;
-    size_t endOff;
+    size_t end_off;
 
-    // NOTE: Maximum glyphId is 65535, so we are always safe here regarding multiplying the `glyphId` by 2 or 4
+    // NOTE: Maximum glyph_id is 65535, so we are always safe here regarding multiplying the `glyph_id` by 2 or 4
     // to calculate the correct index.
-    if (locaOffsetSize == 2) {
-      size_t index = size_t(glyphId) * 2u;
-      if (BL_UNLIKELY(index + sizeof(UInt16) * 2u > locaTable.size))
+    if (loca_offset_size == 2) {
+      size_t index = size_t(glyph_id) * 2u;
+      if (BL_UNLIKELY(index + sizeof(UInt16) * 2u > loca_table.size))
         goto InvalidData;
-      offset = uint32_t(reinterpret_cast<const UInt16*>(locaTable.data + index + 0)->value()) * 2u;
-      endOff = uint32_t(reinterpret_cast<const UInt16*>(locaTable.data + index + 2)->value()) * 2u;
+      offset = uint32_t(reinterpret_cast<const UInt16*>(loca_table.data + index + 0)->value()) * 2u;
+      end_off = uint32_t(reinterpret_cast<const UInt16*>(loca_table.data + index + 2)->value()) * 2u;
     }
     else {
-      size_t index = size_t(glyphId) * 4u;
-      if (BL_UNLIKELY(index + sizeof(UInt32) * 2u > locaTable.size))
+      size_t index = size_t(glyph_id) * 4u;
+      if (BL_UNLIKELY(index + sizeof(UInt32) * 2u > loca_table.size))
         goto InvalidData;
-      offset = reinterpret_cast<const UInt32*>(locaTable.data + index + 0)->value();
-      endOff = reinterpret_cast<const UInt32*>(locaTable.data + index + 4)->value();
+      offset = reinterpret_cast<const UInt32*>(loca_table.data + index + 0)->value();
+      end_off = reinterpret_cast<const UInt32*>(loca_table.data + index + 4)->value();
     }
 
     // Simple or Empty Glyph
     // ---------------------
 
-    if (BL_UNLIKELY(offset >= endOff || endOff > glyfTable.size)) {
-      // Only ALLOWED when `offset == endOff`.
-      if (BL_UNLIKELY(offset != endOff || endOff > glyfTable.size))
+    if (BL_UNLIKELY(offset >= end_off || end_off > glyf_table.size)) {
+      // Only ALLOWED when `offset == end_off`.
+      if (BL_UNLIKELY(offset != end_off || end_off > glyf_table.size))
         goto InvalidData;
     }
     else {
-      gPtr = glyfTable.data + offset;
-      remainingSize = endOff - offset;
+      gPtr = glyf_table.data + offset;
+      remaining_size = end_off - offset;
 
-      if (BL_UNLIKELY(remainingSize < sizeof(GlyfTable::GlyphData)))
+      if (BL_UNLIKELY(remaining_size < sizeof(GlyfTable::GlyphData)))
         goto InvalidData;
 
-      int contourCountSigned = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->numberOfContours();
-      if (contourCountSigned > 0) {
-        size_t contourCount = size_t(unsigned(contourCountSigned));
+      int contour_count_signed = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->number_of_contours();
+      if (contour_count_signed > 0) {
+        size_t contour_count = size_t(unsigned(contour_count_signed));
         OverflowFlag of{};
 
         // Minimum data size is:
         //   10                     [GlyphData header]
-        //   (numberOfContours * 2) [endPtsOfContours]
-        //   2                      [instructionLength]
+        //   (number_of_contours * 2) [end_pts_of_contours]
+        //   2                      [instruction_length]
         gPtr += sizeof(GlyfTable::GlyphData);
-        remainingSize = IntOps::subOverflow(remainingSize, sizeof(GlyfTable::GlyphData) + contourCount * 2u + 2u, &of);
+        remaining_size = IntOps::sub_overflow(remaining_size, sizeof(GlyfTable::GlyphData) + contour_count * 2u + 2u, &of);
         if (BL_UNLIKELY(of))
           goto InvalidData;
 
-        const UInt16* contourArray = reinterpret_cast<const UInt16*>(gPtr);
-        gPtr += contourCount * 2u;
-        contourCountTotal += contourCount;
+        const UInt16* contour_array = reinterpret_cast<const UInt16*>(gPtr);
+        gPtr += contour_count * 2u;
+        contour_count_total += contour_count;
 
         // We don't use hinting instructions, so skip them.
-        size_t instructionCount = MemOps::readU16uBE(gPtr);
-        remainingSize = IntOps::subOverflow(remainingSize, instructionCount, &of);
+        size_t instruction_count = MemOps::readU16uBE(gPtr);
+        remaining_size = IntOps::sub_overflow(remaining_size, instruction_count, &of);
         if (BL_UNLIKELY(of))
           goto InvalidData;
 
-        gPtr += 2u + instructionCount;
-        const uint8_t* gEnd = gPtr + remainingSize;
+        gPtr += 2u + instruction_count;
+        const uint8_t* gEnd = gPtr + remaining_size;
 
         // Number of vertices in TrueType sense (could be less than a number of points required by BLPath
         // representation, especially if TT outline contains consecutive off-curve points).
-        size_t ttVertexCount = size_t(contourArray[contourCount - 1].value()) + 1u;
+        size_t tt_vertex_count = size_t(contour_array[contour_count - 1].value()) + 1u;
 
         // Only try to decode vertices if there is more than 1.
-        if (ttVertexCount > 1u) {
+        if (tt_vertex_count > 1u) {
           // Read TrueType Flags Data
           // ------------------------
 
-          uint8_t* fDataPtr = static_cast<uint8_t*>(tmpBuffer->alloc(ttVertexCount));
+          uint8_t* fDataPtr = static_cast<uint8_t*>(tmp_buffer->alloc(tt_vertex_count));
           if (BL_UNLIKELY(!fDataPtr))
-            return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+            return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-          // Sizes of xCoordinates[] and yCoordinates[] arrays in TrueType data.
+          // Sizes of x_coordinates[] and y_coordinates[] arrays in TrueType data.
           size_t xCoordinatesSize;
           size_t yCoordinatesSize;
 
           // Number of consecutive off curve vertices making a spline. We need this number to be able to calculate the
           // number of BLPath vertices we will need to convert this glyph into BLPath data.
-          size_t offCurveSplineCount = 0;
+          size_t off_curve_spline_count = 0;
 
           constexpr uint32_t kOffCurveSplineMask = Simple::kOnCurvePoint | (Simple::kOnCurvePoint << 7);
 
@@ -299,7 +299,7 @@ static BLResult BL_CDECL getGlyphOutlines(
             // NOTE: We know that the maximum number of contours of a single glyph is 32767, thus we can store both the
             // number of X and Y vertices in a single unsigned 32-bit integer, as each vertex has 2 bytes maximum, which
             // would be 65534.
-            size_t xyCoordinatesSize = 0;
+            size_t xy_coordinates_size = 0;
 
             // We parse flags one-by-one and calculate the size required by vertices by using our FLAG tables so we don't
             // have to do bounds checking during vertex decoding.
@@ -310,14 +310,14 @@ static BLResult BL_CDECL getGlyphOutlines(
               if (BL_UNLIKELY(gPtr == gEnd))
                 goto InvalidData;
 
-              uint32_t ttFlag = *gPtr++ & Simple::kImportantFlagsMask;
-              uint32_t vertexSize = vertexSizeTable[ttFlag >> 1];
+              uint32_t tt_flag = *gPtr++ & Simple::kImportantFlagsMask;
+              uint32_t vertex_size = vertex_size_table[tt_flag >> 1];
 
-              f = ((f << 7) | ttFlag) & 0xFFu;
+              f = ((f << 7) | tt_flag) & 0xFFu;
               fDataPtr[i++] = uint8_t(f);
 
-              xyCoordinatesSize += vertexSize;
-              offCurveSplineCount += uint32_t((f & kOffCurveSplineMask) == 0);
+              xy_coordinates_size += vertex_size;
+              off_curve_spline_count += uint32_t((f & kOffCurveSplineMask) == 0);
 
               // Most of flags are not repeated. Some contours have no repeated flags at all, so make this likely.
               if (BL_LIKELY(!(f & Simple::kRepeatFlag)))
@@ -329,24 +329,24 @@ static BLResult BL_CDECL getGlyphOutlines(
               // When `kRepeatFlag` is set it means that the next byte contains how many times it should repeat
               // (the specification doesn't mention zero length, so we won't fail and just silently consume the byte).
               size_t n = *gPtr++;
-              if (BL_UNLIKELY(n > ttVertexCount - i))
+              if (BL_UNLIKELY(n > tt_vertex_count - i))
                 goto InvalidData;
 
-              f = ((f << 7) | ttFlag) & 0xFFu;
+              f = ((f << 7) | tt_flag) & 0xFFu;
 
-              xyCoordinatesSize += uint32_t(n) * vertexSize;
-              offCurveSplineCount += n * size_t((f & Simple::kOnCurvePoint) == 0);
+              xy_coordinates_size += uint32_t(n) * vertex_size;
+              off_curve_spline_count += n * size_t((f & Simple::kOnCurvePoint) == 0);
 
-              MemOps::fillSmall(fDataPtr + i, uint8_t(f), n);
+              MemOps::fill_small(fDataPtr + i, uint8_t(f), n);
               i += n;
-            } while (i < ttVertexCount);
+            } while (i < tt_vertex_count);
 
-            xCoordinatesSize = xyCoordinatesSize & 0xFFFFu;
-            yCoordinatesSize = xyCoordinatesSize >> 16;
+            xCoordinatesSize = xy_coordinates_size & 0xFFFFu;
+            yCoordinatesSize = xy_coordinates_size >> 16;
           }
 
-          remainingSize = PtrOps::bytesUntil(gPtr, gEnd);
-          if (BL_UNLIKELY(xCoordinatesSize + yCoordinatesSize > remainingSize))
+          remaining_size = PtrOps::bytes_until(gPtr, gEnd);
+          if (BL_UNLIKELY(xCoordinatesSize + yCoordinatesSize > remaining_size))
             goto InvalidData;
 
           // Read TrueType Vertex Data
@@ -356,95 +356,95 @@ static BLResult BL_CDECL getGlyphOutlines(
           // TrueType data are decomposed into a quad spline, which is one vertex larger (BLPath doesn't offer multiple
           // off-point quads). This means that the number of vertices required by BLPath can be greater than the number
           // of vertices stored in TrueType 'glyf' data. However, we should know exactly how many vertices we have to
-          // add to `ttVertexCount` as we calculated `offCurveSplineCount` during flags decoding.
+          // add to `tt_vertex_count` as we calculated `off_curve_spline_count` during flags decoding.
           //
           // The number of resulting vertices is thus:
-          //   - `ttVertexCount` - base number of vertices stored in TrueType data.
-          //   - `offCurveSplineCount` - the number of additional vertices we will need to add for each off-curve spline
+          //   - `tt_vertex_count` - base number of vertices stored in TrueType data.
+          //   - `off_curve_spline_count` - the number of additional vertices we will need to add for each off-curve spline
           //     used in TrueType data.
-          //   - `contourCount` - Number of contours, we multiply this by 3 as we want to include one 'MoveTo', 'Close',
+          //   - `contour_count` - Number of contours, we multiply this by 3 as we want to include one 'MoveTo', 'Close',
           //     and one additional off-curve spline point per each contour in case it starts - ends with an off-curve
           //     point.
-          size_t maxVertexCount = ttVertexCount + offCurveSplineCount + contourCount * 3;
+          size_t max_vertex_count = tt_vertex_count + off_curve_spline_count + contour_count * 3;
 
-          // Increase maxVertexCount if the path was not allocated yet - this avoids a possible realloc of compound glyphs.
-          if (out->capacity() == 0 && compoundLevel > 0)
-            maxVertexCount += 128;
+          // Increase max_vertex_count if the path was not allocated yet - this avoids a possible realloc of compound glyphs.
+          if (out->capacity() == 0 && compound_level > 0)
+            max_vertex_count += 128;
 
-          BL_PROPAGATE(appender.beginAppend(out, maxVertexCount));
+          BL_PROPAGATE(appender.begin_append(out, max_vertex_count));
 
           // Since we know exactly how many bytes both vertex arrays consume we can decode both X and Y coordinates at
           // the same time. This gives us also the opportunity to start appending to BLPath immediately.
-          GlyfVertexDecoder vertexDecoder(gPtr, gPtr + xCoordinatesSize, gEnd, compoundData[compoundLevel].transform);
+          GlyfVertexDecoder vertex_decoder(gPtr, gPtr + xCoordinatesSize, gEnd, compound_data[compound_level].transform);
 
           // Vertices are stored relative to each other, this is the current point.
-          BLPoint currentPt(compoundData[compoundLevel].transform.m20, compoundData[compoundLevel].transform.m21);
+          BLPoint current_pt(compound_data[compound_level].transform.m20, compound_data[compound_level].transform.m21);
 
-          // Current vertex index in TT sense, advanced until `ttVertexCount`, which must be end index of the last contour.
+          // Current vertex index in TT sense, advanced until `tt_vertex_count`, which must be end index of the last contour.
           size_t i = 0;
 
-          for (size_t contourIndex = 0; contourIndex < contourCount; contourIndex++) {
-            size_t iEnd = size_t(contourArray[contourIndex].value()) + 1;
-            if (BL_UNLIKELY(iEnd <= i || iEnd > ttVertexCount))
+          for (size_t contour_index = 0; contour_index < contour_count; contour_index++) {
+            size_t iEnd = size_t(contour_array[contour_index].value()) + 1;
+            if (BL_UNLIKELY(iEnd <= i || iEnd > tt_vertex_count))
               goto InvalidData;
 
             // We need to be able to handle a case in which the contour data starts off-curve.
-            size_t offCurveStart = SIZE_MAX;
+            size_t off_curve_start = SIZE_MAX;
 
             // We do the first vertex here as we want to emit 'MoveTo' and we want to remember it for a possible
             // off-curve start.
             uint32_t f = fDataPtr[i];
-            currentPt += vertexDecoder.decodeNext(f);
+            current_pt += vertex_decoder.decode_next(f);
 
             if (f & Simple::kOnCurvePoint)
-              appender.moveTo(currentPt);
+              appender.move_to(current_pt);
             else
-              offCurveStart = appender.currentIndex(*out);
+              off_curve_start = appender.current_index(*out);
 
             if (++i >= iEnd)
               continue;
 
             // Initial 'MoveTo' coordinates.
-            BLPoint initialPt = currentPt;
+            BLPoint initial_pt = current_pt;
 
             for (;;) {
               f = fDataPtr[i];
 
-              BLPoint delta = vertexDecoder.decodeNext(f);
-              currentPt += delta;
+              BLPoint delta = vertex_decoder.decode_next(f);
+              current_pt += delta;
 
               if ((f & kOffCurveSplineMask) != 0) {
                 BL_STATIC_ASSERT(BL_PATH_CMD_QUAD - 1 == BL_PATH_CMD_ON);
                 uint8_t cmd = uint8_t(BL_PATH_CMD_QUAD - (f & Simple::kOnCurvePoint));
-                appender.addVertex(cmd, currentPt);
+                appender.add_vertex(cmd, current_pt);
               }
               else {
-                BLPoint onPt = currentPt - delta * 0.5;
-                appender.addVertex(BL_PATH_CMD_ON, onPt);
-                appender.addVertex(BL_PATH_CMD_QUAD, currentPt);
+                BLPoint on_pt = current_pt - delta * 0.5;
+                appender.add_vertex(BL_PATH_CMD_ON, on_pt);
+                appender.add_vertex(BL_PATH_CMD_QUAD, current_pt);
               }
 
               if (++i >= iEnd)
                 break;
             }
 
-            if (offCurveStart != SIZE_MAX) {
-              BLPathImpl* outI = PathInternal::getImpl(out);
-              BLPoint finalPt = outI->vertexData[offCurveStart];
+            if (off_curve_start != SIZE_MAX) {
+              BLPathImpl* out_impl = PathInternal::get_impl(out);
+              BLPoint final_pt = out_impl->vertex_data[off_curve_start];
 
-              outI->commandData[offCurveStart] = BL_PATH_CMD_MOVE;
+              out_impl->command_data[off_curve_start] = BL_PATH_CMD_MOVE;
 
               if (!(f & Simple::kOnCurvePoint)) {
-                BLPoint onPt = (currentPt + initialPt) * 0.5;
-                appender.addVertex(BL_PATH_CMD_ON, onPt);
-                finalPt = (initialPt + finalPt) * 0.5;
+                BLPoint on_pt = (current_pt + initial_pt) * 0.5;
+                appender.add_vertex(BL_PATH_CMD_ON, on_pt);
+                final_pt = (initial_pt + final_pt) * 0.5;
               }
 
-              appender.addVertex(BL_PATH_CMD_QUAD, initialPt);
-              appender.addVertex(BL_PATH_CMD_ON, finalPt);
+              appender.add_vertex(BL_PATH_CMD_QUAD, initial_pt);
+              appender.add_vertex(BL_PATH_CMD_ON, final_pt);
             }
             else if (!(f & Simple::kOnCurvePoint)) {
-              appender.addVertex(BL_PATH_CMD_ON, initialPt);
+              appender.add_vertex(BL_PATH_CMD_ON, initial_pt);
             }
 
             appender.close();
@@ -452,11 +452,11 @@ static BLResult BL_CDECL getGlyphOutlines(
           appender.done(out);
         }
       }
-      else if (contourCountSigned == -1) {
+      else if (contour_count_signed == -1) {
         gPtr += sizeof(GlyfTable::GlyphData);
-        remainingSize -= sizeof(GlyfTable::GlyphData);
+        remaining_size -= sizeof(GlyfTable::GlyphData);
 
-        if (BL_UNLIKELY(++compoundLevel >= CompoundEntry::kMaxLevel))
+        if (BL_UNLIKELY(++compound_level >= CompoundEntry::kMaxLevel))
           goto InvalidData;
 
         goto ContinueCompound;
@@ -464,7 +464,7 @@ static BLResult BL_CDECL getGlyphOutlines(
       else {
         // Cannot be less than -1, only -1 specifies compound glyph, lesser value is invalid according to the
         // specification.
-        if (BL_UNLIKELY(contourCountSigned < -1))
+        if (BL_UNLIKELY(contour_count_signed < -1))
           goto InvalidData;
 
         // Otherwise the glyph has no contours.
@@ -474,20 +474,20 @@ static BLResult BL_CDECL getGlyphOutlines(
     // Compound Glyph
     // --------------
 
-    if (compoundLevel) {
-      while (!(compoundData[compoundLevel].compoundFlags & Compound::kMoreComponents))
-        if (--compoundLevel == 0)
+    if (compound_level) {
+      while (!(compound_data[compound_level].compound_flags & Compound::kMoreComponents))
+        if (--compound_level == 0)
           break;
 
-      if (compoundLevel) {
-        gPtr = compoundData[compoundLevel].gPtr;
-        remainingSize = compoundData[compoundLevel].remainingSize;
+      if (compound_level) {
+        gPtr = compound_data[compound_level].gPtr;
+        remaining_size = compound_data[compound_level].remaining_size;
 
         // The structure that we are going to read is as follows:
         //
         //   [Header]
         //     uint16_t flags;
-        //     uint16_t glyphId;
+        //     uint16_t glyph_id;
         //
         //   [Translation]
         //     a) int8_t arg1/arg2;
@@ -505,13 +505,13 @@ ContinueCompound:
           int arg1, arg2;
           OverflowFlag of{};
 
-          remainingSize = IntOps::subOverflow<size_t>(remainingSize, 6, &of);
+          remaining_size = IntOps::sub_overflow<size_t>(remaining_size, 6, &of);
           if (BL_UNLIKELY(of))
             goto InvalidData;
 
           flags = MemOps::readU16uBE(gPtr);
-          glyphId = MemOps::readU16uBE(gPtr + 2);
-          if (BL_UNLIKELY(glyphId >= faceI->faceInfo.glyphCount))
+          glyph_id = MemOps::readU16uBE(gPtr + 2);
+          if (BL_UNLIKELY(glyph_id >= ot_face_impl->face_info.glyph_count))
             goto InvalidData;
 
           arg1 = MemOps::readI8(gPtr + 4);
@@ -519,7 +519,7 @@ ContinueCompound:
           gPtr += 6;
 
           if (flags & Compound::kArgsAreWords) {
-            remainingSize = IntOps::subOverflow<size_t>(remainingSize, 2, &of);
+            remaining_size = IntOps::sub_overflow<size_t>(remaining_size, 2, &of);
             if (BL_UNLIKELY(of))
               goto InvalidData;
 
@@ -538,7 +538,7 @@ ContinueCompound:
 
           constexpr double kScaleF2x14 = 1.0 / 16384.0;
 
-          BLMatrix2D& cm = compoundData[compoundLevel].transform;
+          BLMatrix2D& cm = compound_data[compound_level].transform;
           cm.reset(1.0, 0.0, 0.0, 1.0, double(arg1), double(arg2));
 
           if (flags & Compound::kAnyCompoundScale) {
@@ -546,7 +546,7 @@ ContinueCompound:
               // Simple scaling:
               //   [Sc, 0]
               //   [0, Sc]
-              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 2, &of);
+              remaining_size = IntOps::sub_overflow<size_t>(remaining_size, 2, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
@@ -559,7 +559,7 @@ ContinueCompound:
               // Simple scaling:
               //   [Sx, 0]
               //   [0, Sy]
-              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 4, &of);
+              remaining_size = IntOps::sub_overflow<size_t>(remaining_size, 4, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
@@ -571,7 +571,7 @@ ContinueCompound:
               // Affine case:
               //   [A, B]
               //   [C, D]
-              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 8, &of);
+              remaining_size = IntOps::sub_overflow<size_t>(remaining_size, 8, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
@@ -595,10 +595,10 @@ ContinueCompound:
             }
           }
 
-          compoundData[compoundLevel].gPtr = gPtr;
-          compoundData[compoundLevel].remainingSize = remainingSize;
-          compoundData[compoundLevel].compoundFlags = flags;
-          TransformInternal::multiply(cm, cm, compoundData[compoundLevel - 1].transform);
+          compound_data[compound_level].gPtr = gPtr;
+          compound_data[compound_level].remaining_size = remaining_size;
+          compound_data[compound_level].compound_flags = flags;
+          TransformInternal::multiply(cm, cm, compound_data[compound_level - 1].transform);
           continue;
         }
       }
@@ -607,54 +607,54 @@ ContinueCompound:
     break;
   }
 
-  *contourCountOut = contourCountTotal;
+  *contour_count_out = contour_count_total;
   return BL_SUCCESS;
 
 InvalidData:
-  *contourCountOut = 0;
-  return blTraceError(BL_ERROR_INVALID_DATA);
+  *contour_count_out = 0;
+  return bl_trace_error(BL_ERROR_INVALID_DATA);
 }
 
 // bl::OpenType::GlyfImpl - Init
 // =============================
 
-BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
-  faceI->faceInfo.outlineType = BL_FONT_OUTLINE_TYPE_TRUETYPE;
-  faceI->glyf.glyfTable = tables.glyf;
-  faceI->glyf.locaTable = tables.loca;
-  faceI->funcs.getGlyphBounds = getGlyphBounds;
+BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept {
+  ot_face_impl->face_info.outline_type = BL_FONT_OUTLINE_TYPE_TRUETYPE;
+  ot_face_impl->glyf.glyf_table = tables.glyf;
+  ot_face_impl->glyf.loca_table = tables.loca;
+  ot_face_impl->funcs.get_glyph_bounds = get_glyph_bounds;
 
   // Don't reference any function that won't be used when certain optimizations are enabled across the whole binary.
 #if defined(BL_TARGET_OPT_AVX2)
-  faceI->funcs.getGlyphOutlines = getGlyphOutlines_AVX2;
+  ot_face_impl->funcs.get_glyph_outlines = get_glyph_outlines_avx2;
 #elif defined(BL_TARGET_OPT_SSE4_2)
-  faceI->funcs.getGlyphOutlines = getGlyphOutlines_SSE4_2;
+  ot_face_impl->funcs.get_glyph_outlines = get_glyph_outlines_sse4_2;
 #elif BL_TARGET_ARCH_ARM >= 64 && defined(BL_TARGET_OPT_ASIMD)
-  faceI->funcs.getGlyphOutlines = getGlyphOutlines_ASIMD;
+  ot_face_impl->funcs.get_glyph_outlines = get_glyph_outlines_asimd;
 #else
 #if defined(BL_BUILD_OPT_AVX2)
-  if (blRuntimeHasAVX2(&blRuntimeContext))
+  if (bl_runtime_has_avx2(&bl_runtime_context))
   {
-    faceI->funcs.getGlyphOutlines = getGlyphOutlines_AVX2;
+    ot_face_impl->funcs.get_glyph_outlines = get_glyph_outlines_avx2;
   }
   else
 #endif
 #if defined(BL_BUILD_OPT_SSE4_2)
-  if (blRuntimeHasSSE4_2(&blRuntimeContext))
+  if (bl_runtime_has_sse4_2(&bl_runtime_context))
   {
-    faceI->funcs.getGlyphOutlines = getGlyphOutlines_SSE4_2;
+    ot_face_impl->funcs.get_glyph_outlines = get_glyph_outlines_sse4_2;
   }
   else
 #endif
 #if BL_TARGET_ARCH_ARM >= 64 && defined(BL_BUILD_OPT_ASIMD)
-  if (blRuntimeHasASIMD(&blRuntimeContext))
+  if (bl_runtime_has_asimd(&bl_runtime_context))
   {
-    faceI->funcs.getGlyphOutlines = getGlyphOutlines_ASIMD;
+    ot_face_impl->funcs.get_glyph_outlines = get_glyph_outlines_asimd;
   }
   else
 #endif
   {
-    faceI->funcs.getGlyphOutlines = getGlyphOutlines;
+    ot_face_impl->funcs.get_glyph_outlines = get_glyph_outlines;
   }
 #endif
 

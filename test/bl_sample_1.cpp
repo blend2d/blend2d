@@ -10,22 +10,22 @@ int main(int argc, char* argv[]) {
   BLContext ctx(img);
 
   // Clearing the image would make it transparent.
-  ctx.clearAll();
+  ctx.clear_all();
 
   // Create a path having cubic curves.
   BLPath path;
-  path.moveTo(26, 31);
-  path.cubicTo(642, 132, 587, -136, 25, 464);
-  path.cubicTo(882, 404, 144, 267, 27, 31);
+  path.move_to(26, 31);
+  path.cubic_to(642, 132, 587, -136, 25, 464);
+  path.cubic_to(882, 404, 144, 267, 27, 31);
 
   // Fill a path with opaque white - 0xAARRGGBB.
-  ctx.fillPath(path, BLRgba32(0xFFFFFFFF));
+  ctx.fill_path(path, BLRgba32(0xFFFFFFFF));
 
   // Detach the rendering context from `img`.
   ctx.end();
 
   // Let's use some built-in codecs provided by Blend2D.
-  img.writeToFile("bl_sample_1.png");
+  img.write_to_file("bl_sample_1.png");
 
   return 0;
 }

@@ -24,10 +24,10 @@ struct NameTable {
   enum : uint32_t { kBaseSize = 6 };
 
   struct NameRecord {
-    UInt16 platformId;
-    UInt16 specificId;
-    UInt16 languageId;
-    UInt16 nameId;
+    UInt16 platform_id;
+    UInt16 specific_id;
+    UInt16 language_id;
+    UInt16 name_id;
     UInt16 length;
     Offset16 offset;
   };
@@ -38,32 +38,32 @@ struct NameTable {
   };
 
   UInt16 format;
-  UInt16 recordCount;
-  Offset16 stringOffset;
+  UInt16 record_count;
+  Offset16 string_offset;
   /*
-  NameRecord nameRecords[count];
-  UInt16 langTagCount;
-  LangTagRecord langTagRecords[langTagCount];
+  NameRecord name_records[count];
+  UInt16 lang_tag_count;
+  LangTagRecord lang_tag_records[lang_tag_count];
   */
 
-  BL_INLINE bool hasLangTags() const noexcept { return format() >= 1; }
+  BL_INLINE bool has_lang_tags() const noexcept { return format() >= 1; }
 
   //! The name records where count is the number of records.
-  BL_INLINE const NameRecord* nameRecords() const noexcept {
+  BL_INLINE const NameRecord* name_records() const noexcept {
     return PtrOps::offset<const NameRecord>(this, 6);
   }
 
-  BL_INLINE uint16_t langTagCount(size_t recordCount_) const noexcept {
-    return PtrOps::offset<const UInt16>(this, 6 + recordCount_ * sizeof(NameRecord))->value();
+  BL_INLINE uint16_t lang_tag_count(size_t record_count_) const noexcept {
+    return PtrOps::offset<const UInt16>(this, 6 + record_count_ * sizeof(NameRecord))->value();
   }
 
-  BL_INLINE const LangTagRecord* langTagRecords(size_t recordCount_) const noexcept {
-    return PtrOps::offset<const LangTagRecord>(this, 6 + recordCount_ * sizeof(NameRecord) + 2);
+  BL_INLINE const LangTagRecord* lang_tag_records(size_t record_count_) const noexcept {
+    return PtrOps::offset<const LangTagRecord>(this, 6 + record_count_ * sizeof(NameRecord) + 2);
   }
 };
 
 namespace NameImpl {
-BL_HIDDEN BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
+BL_HIDDEN BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept;
 } // {NameImpl}
 
 } // {bl::OpenType}

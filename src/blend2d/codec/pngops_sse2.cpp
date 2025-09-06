@@ -10,8 +10,8 @@
 
 namespace bl::Png::Ops {
 
-void initFuncTable_SSE2(FunctionTable& ft) noexcept {
-  initSimdFunctions(ft);
+void init_func_table_sse2(FunctionTable& ft) noexcept {
+  init_simd_functions(ft);
 }
 
 } // {bl::Png::Ops}

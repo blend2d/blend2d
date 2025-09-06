@@ -202,7 +202,7 @@
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
       <Item Name="[width]" ExcludeView="simple">get_impl()-&gt;size.w, d</Item>
       <Item Name="[height]" ExcludeView="simple">get_impl()-&gt;size.h, d</Item>
-      <Item Name="[data]" ExcludeView="simple">(unsigned char*)(get_impl()-&gt;pixelData)</Item>
+      <Item Name="[data]" ExcludeView="simple">(unsigned char*)(get_impl()-&gt;pixel_data)</Item>
       <Item Name="[stride]" ExcludeView="simple">get_impl()-&gt;stride, d</Item>
       <Item Name="[format]" ExcludeView="simple">(BLFormat)get_impl()-&gt;format, d</Item>
       <Item Name="[flags]" ExcludeView="simple">get_impl()-&gt;flags, x</Item>
@@ -228,7 +228,7 @@
     <Expand HideRawView="true">
       <Item Name="[width]">size.w</Item>
       <Item Name="[height]">size.h</Item>
-      <Item Name="[data]">(unsigned char*)(pixelData)</Item>
+      <Item Name="[data]">(unsigned char*)(pixel_data)</Item>
       <Item Name="[stride]">stride</Item>
       <Item Name="[format]">(BLFormat)format</Item>
       <Item Name="[flags]">flags, x</Item>
@@ -260,7 +260,7 @@
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
       <Item Name="[name]" ExcludeView="simple">get_impl()-&gt;name</Item>
       <Item Name="[venor]" ExcludeView="simple">get_impl()-&gt;vendor</Item>
-      <Item Name="[mimeType]" ExcludeView="simple">get_impl()-&gt;mimeType</Item>
+      <Item Name="[mime_type]" ExcludeView="simple">get_impl()-&gt;mime_type</Item>
       <Item Name="[extensions]" ExcludeView="simple">get_impl()-&gt;extensions</Item>
       <Item Name="[features]" ExcludeView="simple">get_impl()-&gt;features, x</Item>
     </Expand>
@@ -281,10 +281,10 @@
       <Item Name="[detail]" ExcludeView="simple">_d</Item>
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
       <Item Name="[codec]" ExcludeView="simple">get_impl()-&gt;codec</Item>
-      <Item Name="[lastResult]" ExcludeView="simple">get_impl()-&gt;lastResult, x</Item>
+      <Item Name="[last_result]" ExcludeView="simple">get_impl()-&gt;last_result, x</Item>
       <Item Name="[handle]" ExcludeView="simple">get_impl()-&gt;handle</Item>
-      <Item Name="[frameIndex]" ExcludeView="simple">get_impl()-&gt;frameIndex, d</Item>
-      <Item Name="[bufferIndex]" ExcludeView="simple">get_impl()-&gt;bufferIndex, d</Item>
+      <Item Name="[frame_index]" ExcludeView="simple">get_impl()-&gt;frame_index, d</Item>
+      <Item Name="[buffer_index]" ExcludeView="simple">get_impl()-&gt;buffer_index, d</Item>
     </Expand>
   </Type>
 
@@ -303,10 +303,10 @@
       <Item Name="[detail]" ExcludeView="simple">_d</Item>
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
       <Item Name="[codec]" ExcludeView="simple">get_impl()-&gt;codec</Item>
-      <Item Name="[lastResult]" ExcludeView="simple">get_impl()-&gt;lastResult, x</Item>
+      <Item Name="[last_result]" ExcludeView="simple">get_impl()-&gt;last_result, x</Item>
       <Item Name="[handle]" ExcludeView="simple">get_impl()-&gt;handle</Item>
-      <Item Name="[frameIndex]" ExcludeView="simple">get_impl()-&gt;frameIndex, d</Item>
-      <Item Name="[bufferIndex]" ExcludeView="simple">get_impl()-&gt;bufferIndex, d</Item>
+      <Item Name="[frame_index]" ExcludeView="simple">get_impl()-&gt;frame_index, d</Item>
+      <Item Name="[buffer_index]" ExcludeView="simple">get_impl()-&gt;buffer_index, d</Item>
     </Expand>
   </Type>
 
@@ -316,19 +316,19 @@
       <Item Name="[size]" ExcludeView="simple">size, d</Item>
       <Item Name="[capacity]" ExcludeView="simple">capacity, d</Item>
       <Item Name="[flags]" ExcludeView="simple">flags, x</Item>
-      <Synthetic Name="[commandData]">
+      <Synthetic Name="[command_data]">
         <Expand>
           <IndexListItems>
             <Size>size</Size>
-            <ValueNode>commandData[$i]</ValueNode>
+            <ValueNode>command_data[$i]</ValueNode>
           </IndexListItems>
         </Expand>
       </Synthetic>
-      <Synthetic Name="[vertexData]">
+      <Synthetic Name="[vertex_data]">
         <Expand>
           <ArrayItems>
             <Size>size</Size>
-            <ValuePointer>vertexData</ValuePointer>
+            <ValuePointer>vertex_data</ValuePointer>
           </ArrayItems>
         </Expand>
       </Synthetic>
@@ -339,8 +339,8 @@
     <AlternativeType Name="BLPath" />
 
     <Intrinsic Name="get_impl" Expression="((BLPathImpl*)(_d.impl))"/>
-    <Intrinsic Name="get_command_data" Expression="get_impl()-&gt;commandData"/>
-    <Intrinsic Name="get_vertex_data" Expression="get_impl()-&gt;vertexData"/>
+    <Intrinsic Name="get_command_data" Expression="get_impl()-&gt;command_data"/>
+    <Intrinsic Name="get_vertex_data" Expression="get_impl()-&gt;vertex_data"/>
     <Intrinsic Name="get_size" Expression="get_impl()-&gt;size"/>
     <Intrinsic Name="get_capacity" Expression="get_impl()-&gt;capacity"/>
 
@@ -350,7 +350,7 @@
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
       <Item Name="[size]" ExcludeView="simple">get_size(), d</Item>
       <Item Name="[capacity]" ExcludeView="simple">get_capacity(), d</Item>
-      <Synthetic Name="commandData">
+      <Synthetic Name="command_data">
         <Expand>
           <IndexListItems>
             <Size>get_size()</Size>
@@ -358,7 +358,7 @@
           </IndexListItems>
         </Expand>
       </Synthetic>
-      <Synthetic Name="vertexData">
+      <Synthetic Name="vertex_data">
         <Expand>
           <ArrayItems>
             <Size>get_size()</Size>
@@ -373,15 +373,15 @@
     <AlternativeType Name="BLStrokeOptions" />
 
     <Expand HideRawView="true">
-      <Item Name="[startCap]">(BLStrokeCap)startCap</Item>
-      <Item Name="[endCap]">(BLStrokeCap)endCap</Item>
+      <Item Name="[start_cap]">(BLStrokeCap)start_cap</Item>
+      <Item Name="[end_cap]">(BLStrokeCap)end_cap</Item>
       <Item Name="[join]">(BLStrokeJoin)join</Item>
-      <Item Name="[transformOrder]">(BLStrokeTransformOrder)transformOrder</Item>
+      <Item Name="[transform_order]">(BLStrokeTransformOrder)transform_order</Item>
       <Item Name="[reserved]">reserved</Item>
       <Item Name="[width]">width</Item>
-      <Item Name="[miterLimit]">miterLimit</Item>
-      <Item Name="[dashOffset]">dashOffset</Item>
-      <Item Name="[dashArray]">dashArray</Item>
+      <Item Name="[miter_limit]">miter_limit</Item>
+      <Item Name="[dash_offset]">dash_offset</Item>
+      <Item Name="[dash_array]">dash_array</Item>
     </Expand>
   </Type>
 
@@ -403,14 +403,14 @@
     <Expand HideRawView="true">
       <Item Name="[detail]" ExcludeView="simple">_d</Item>
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
-      <Item Name="[gradientType]" ExcludeView="simple">(BLGradientType)sso_a_field()</Item>
-      <Item Name="[extendMode]" ExcludeView="simple">(BLExtendMode)sso_b_field()</Item>
-      <Item Name="[transformType]" ExcludeView="simple">(BLTransformType)sso_c_field()</Item>
+      <Item Name="[gradient_type]" ExcludeView="simple">(BLGradientType)sso_a_field()</Item>
+      <Item Name="[extend_mode]" ExcludeView="simple">(BLExtendMode)sso_b_field()</Item>
+      <Item Name="[transform_type]" ExcludeView="simple">(BLTransformType)sso_c_field()</Item>
       <Item Name="[transform]" ExcludeView="simple">get_impl()-&gt;transform</Item>
       <Item Name="[values]" ExcludeView="simple">get_impl()-&gt;values</Item>
-      <Item Name="[linear]" ExcludeView="simple" Condition="get_impl()-&gt;gradientType == BL_GRADIENT_TYPE_LINEAR">get_impl()-&gt;linear</Item>
-      <Item Name="[radial]" ExcludeView="simple" Condition="get_impl()-&gt;gradientType == BL_GRADIENT_TYPE_RADIAL">get_impl()-&gt;radial</Item>
-      <Item Name="[conic]" ExcludeView="simple" Condition="get_impl()-&gt;gradientType == BL_GRADIENT_TYPE_CONIC">get_impl()-&gt;conic</Item>
+      <Item Name="[linear]" ExcludeView="simple" Condition="get_impl()-&gt;gradient_type == BL_GRADIENT_TYPE_LINEAR">get_impl()-&gt;linear</Item>
+      <Item Name="[radial]" ExcludeView="simple" Condition="get_impl()-&gt;gradient_type == BL_GRADIENT_TYPE_RADIAL">get_impl()-&gt;radial</Item>
+      <Item Name="[conic]" ExcludeView="simple" Condition="get_impl()-&gt;gradient_type == BL_GRADIENT_TYPE_CONIC">get_impl()-&gt;conic</Item>
       <Item Name="[size]" ExcludeView="simple">get_impl()-&gt;size, d</Item>
       <Item Name="[capacity]" ExcludeView="simple">get_impl()-&gt;capacity, d</Item>
       <Synthetic Name="[stops]">
@@ -441,8 +441,8 @@
     <Expand HideRawView="true">
       <Item Name="[detail]" ExcludeView="simple">_d</Item>
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
-      <Item Name="[extendMode]" ExcludeView="simple">(BLExtendMode)sso_b_field()</Item>
-      <Item Name="[transformType]" ExcludeView="simple">(BLTransformType)sso_c_field()</Item>
+      <Item Name="[extend_mode]" ExcludeView="simple">(BLExtendMode)sso_b_field()</Item>
+      <Item Name="[transform_type]" ExcludeView="simple">(BLTransformType)sso_c_field()</Item>
       <Item Name="[image]" ExcludeView="simple">get_impl()-&gt;image</Item>
       <Item Name="[area]" ExcludeView="simple">get_impl()-&gt;area</Item>
       <Item Name="[transform]" ExcludeView="simple">get_impl()-&gt;transform</Item>
@@ -458,7 +458,7 @@
 
     <Intrinsic Name="get_impl" Expression="((BLFontFaceImpl*)(_d.impl))"/>
 
-    <DisplayString>BLFontFace {{ fullName={get_impl()-&gt;fullName} }}</DisplayString>
+    <DisplayString>BLFontFace {{ full_name={get_impl()-&gt;full_name} }}</DisplayString>
 
     <Expand HideRawView="true">
       <Item Name="[detail]" ExcludeView="simple">_d</Item>
@@ -492,7 +492,7 @@
 
     <Intrinsic Name="get_impl" Expression="((BLFontImpl*)(_d.impl))"/>
 
-    <DisplayString>BLFont {{ face={((BLFontFaceImpl*)(get_impl()-&gt;face._d.impl))-&gt;fullName} size={get_impl()-&gt;metrics.size} }}</DisplayString>
+    <DisplayString>BLFont {{ face={((BLFontFaceImpl*)(get_impl()-&gt;face._d.impl))-&gt;full_name} size={get_impl()-&gt;metrics.size} }}</DisplayString>
     <Expand HideRawView="true">
       <Item Name="[detail]" ExcludeView="simple">_d</Item>
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
@@ -555,27 +555,27 @@
         </Expand>
       </Synthetic>
 
-      <Synthetic Name="[infoData]" Condition="get_impl()-&gt;infoData != 0">
-        <DisplayString>{get_impl()-&gt;infoData}</DisplayString>
+      <Synthetic Name="[info_data]" Condition="get_impl()-&gt;info_data != 0">
+        <DisplayString>{get_impl()-&gt;info_data}</DisplayString>
         <Expand>
           <ArrayItems>
             <Size>get_impl()-&gt;size</Size>
-            <ValuePointer>get_impl()-&gt;placementData</ValuePointer>
+            <ValuePointer>get_impl()-&gt;placement_data</ValuePointer>
           </ArrayItems>
         </Expand>
       </Synthetic>
 
-      <Synthetic Name="[placementData]" Condition="get_impl()-&gt;placementData != 0">
-        <DisplayString>{get_impl()-&gt;placementData}</DisplayString>
+      <Synthetic Name="[placement_data]" Condition="get_impl()-&gt;placement_data != 0">
+        <DisplayString>{get_impl()-&gt;placement_data}</DisplayString>
         <Expand>
           <ArrayItems>
             <Size>get_impl()-&gt;size</Size>
-            <ValuePointer>get_impl()-&gt;placementData</ValuePointer>
+            <ValuePointer>get_impl()-&gt;placement_data</ValuePointer>
           </ArrayItems>
         </Expand>
       </Synthetic>
 
-      <Item Name="[glyphRun]" ExcludeView="simple">get_impl()-&gt;glyphRun</Item>
+      <Item Name="[glyph_run]" ExcludeView="simple">get_impl()-&gt;glyph_run</Item>
 
     </Expand>
   </Type>
@@ -583,43 +583,43 @@
   <Type Name="BLGlyphRun">
     <DisplayString>BLGlyphRun {{ size={size, d} }}</DisplayString>
     <Expand HideRawView="true">
-      <!-- glyphData is either uint16_t or uint32_t - show just void* when not initialized -->
-      <Synthetic Name="[glyphData]">
-        <DisplayString>{glyphData}</DisplayString>
+      <!-- glyph_data is either uint16_t or uint32_t - show just void* when not initialized -->
+      <Synthetic Name="[glyph_data]">
+        <DisplayString>{glyph_data}</DisplayString>
         <Expand>
           <IndexListItems>
             <Size>size</Size>
-            <ValueNode>*((uint32_t*)( (char*)glyphData + ($i * glyphAdvance) ))</ValueNode>
+            <ValueNode>*((uint32_t*)( (char*)glyph_data + ($i * glyph_advance) ))</ValueNode>
           </IndexListItems>
         </Expand>
       </Synthetic>
-      <Item Name="[placementData]" Condition="placementType == 0">placementData</Item>
-      <Synthetic Name="[placementData]" Condition="placementType != 0">
-        <DisplayString>{placementData}</DisplayString>
+      <Item Name="[placement_data]" Condition="placement_type == 0">placement_data</Item>
+      <Synthetic Name="[placement_data]" Condition="placement_type != 0">
+        <DisplayString>{placement_data}</DisplayString>
         <Expand>
-          <IndexListItems Condition="placementType == 1">
+          <IndexListItems Condition="placement_type == 1">
             <Size>size</Size>
-            <ValueNode>*((BLGlyphPlacement*)( (char*)placementData + ($i * placementAdvance) ))</ValueNode>
+            <ValueNode>*((BLGlyphPlacement*)( (char*)placement_data + ($i * placement_advance) ))</ValueNode>
           </IndexListItems>
-          <IndexListItems Condition="placementType != 1">
+          <IndexListItems Condition="placement_type != 1">
             <Size>size</Size>
-            <ValueNode>*((BLPoint*)( (char*)placementData + ($i * placementAdvance) ))</ValueNode>
+            <ValueNode>*((BLPoint*)( (char*)placement_data + ($i * placement_advance) ))</ValueNode>
           </IndexListItems>
         </Expand>
       </Synthetic>
       <Item Name="[size]" ExcludeView="simple">size, d</Item>
-      <Item Name="[glyphAdvance]" ExcludeView="simple">glyphAdvance, d</Item>
-      <Item Name="[placementType]" ExcludeView="simple">placementType, d</Item>
-      <Item Name="[placementAdvance]" ExcludeView="simple">placementAdvance, d</Item>
+      <Item Name="[glyph_advance]" ExcludeView="simple">glyph_advance, d</Item>
+      <Item Name="[placement_type]" ExcludeView="simple">placement_type, d</Item>
+      <Item Name="[placement_advance]" ExcludeView="simple">placement_advance, d</Item>
       <Item Name="[flags]" ExcludeView="simple">flags, x</Item>
     </Expand>
   </Type>
 
   <Type Name="BLContextHints">
     <Expand HideRawView="true">
-      <Item Name="[renderingQuality]" ExcludeView="simple">(BLRenderingQuality)renderingQuality</Item>
-      <Item Name="[gradientQuality]" ExcludeView="simple">(BLGradientQuality)gradientQuality</Item>
-      <Item Name="[patternQuality]" ExcludeView="simple">(BLPatternQuality)patternQuality</Item>
+      <Item Name="[rendering_quality]" ExcludeView="simple">(BLRenderingQuality)rendering_quality</Item>
+      <Item Name="[gradient_quality]" ExcludeView="simple">(BLGradientQuality)gradient_quality</Item>
+      <Item Name="[pattern_quality]" ExcludeView="simple">(BLPatternQuality)pattern_quality</Item>
       <Item Name="[hints]" ExcludeView="simple">hints</Item>
     </Expand>
   </Type>
@@ -627,25 +627,25 @@
   <Type Name="BLContextState">
     <Expand HideRawView="true">
       <Item Name="[hints]">hints</Item>
-      <Item Name="[compOp]">(BLCompOp)compOp</Item>
-      <Item Name="[globalAlpha]">globalAlpha</Item>
+      <Item Name="[comp_op]">(BLCompOp)comp_op</Item>
+      <Item Name="[global_alpha]">global_alpha</Item>
 
-      <Item Name="[styleType]">styleType</Item>
-      <Item Name="[styleAlpha]">styleAlpha</Item>
+      <Item Name="[style_type]">style_type</Item>
+      <Item Name="[style_alpha]">style_alpha</Item>
 
-      <Item Name="[fillRule]">(BLFillRule)fillRule</Item>
-      <Item Name="[fillType]">(BLObjectType)styleType[0]</Item>
-      <Item Name="[fillAlpha]">styleAlpha[0]</Item>
+      <Item Name="[fill_rule]">(BLFillRule)fill_rule</Item>
+      <Item Name="[fill_type]">(BLObjectType)style_type[0]</Item>
+      <Item Name="[fill_alpha]">style_alpha[0]</Item>
 
-      <Item Name="[strokeType]">(BLObjectType)styleType[1]</Item>
-      <Item Name="[strokeAlpha]">styleAlpha[1]</Item>
-      <Item Name="[strokeOptions]">strokeOptions</Item>
-      <Item Name="[approximationOptions]">approximationOptions</Item>
+      <Item Name="[stroke_type]">(BLObjectType)style_type[1]</Item>
+      <Item Name="[stroke_alpha]">style_alpha[1]</Item>
+      <Item Name="[stroke_options]">stroke_options</Item>
+      <Item Name="[approximation_options]">approximation_options</Item>
 
-      <Item Name="[metaTransform]">metaTransform</Item>
-      <Item Name="[userTransform]">userTransform</Item>
+      <Item Name="[meta_transform]">meta_transform</Item>
+      <Item Name="[user_transform]">user_transform</Item>
 
-      <Item Name="[savedStateCount]">savedStateCount, d</Item>
+      <Item Name="[saved_state_count]">saved_state_count, d</Item>
     </Expand>
   </Type>
 
@@ -658,13 +658,13 @@
 
     <Intrinsic Name="get_impl" Expression="((BLContextImpl*)(_d.impl))"/>
 
-    <DisplayString>BLContext {{ contextType={(BLContextType)get_impl()-&gt;contextType} }} </DisplayString>
+    <DisplayString>BLContext {{ context_type={(BLContextType)get_impl()-&gt;context_type} }} </DisplayString>
 
     <Expand HideRawView="true">
       <Item Name="[detail]" ExcludeView="simple">_d</Item>
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
       <Item Name="[state]" ExcludeView="simple">get_impl()-&gt;state</Item>
-      <Item Name="[contextType]" ExcludeView="simple">(BLContextType)get_impl()-&gt;contextType</Item>
+      <Item Name="[context_type]" ExcludeView="simple">(BLContextType)get_impl()-&gt;context_type</Item>
     </Expand>
   </Type>
 

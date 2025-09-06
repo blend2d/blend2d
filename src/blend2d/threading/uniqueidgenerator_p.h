@@ -21,7 +21,7 @@ enum class Domain : uint32_t {
   kMaxValue = 1
 };
 
-BL_HIDDEN BLUniqueId generateId(Domain domain) noexcept;
+BL_HIDDEN BLUniqueId generate_id(Domain domain) noexcept;
 
 } // {BLUniqueIdGenerator}
 

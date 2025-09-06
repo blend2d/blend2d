@@ -17,14 +17,14 @@
 //
 // Some parts of DEFLATE decoder provided by Blend2D are based on libdeflate design:
 //
-//   - The `buildDecodeTable()` function uses the same algorithm and implementation that libdeflate uses, with minor
+//   - The `build_decode_table()` function uses the same algorithm and implementation that libdeflate uses, with minor
 //     modifications, but no further optimizations yet (I think some bit-scans can be used to remove few trivial
 //     loops, but I'm not sure it would be significant).
 //
-//   - The `buildFastTable()` function is an addition to `buildDecodeTable()`, which adds literal pairs to literal
-//     entries, which can host two literals. Ideally this should be incorporated into `buildDecodeTable()` so it's
+//   - The `build_fast_table()` function is an addition to `build_decode_table()`, which adds literal pairs to literal
+//     entries, which can host two literals. Ideally this should be incorporated into `build_decode_table()` so it's
 //     always available, but I didn't want to slow it down in case literal pairs are not used (for example when fast
-//     loop never enters or `buildFastTable()` is not called due to a small input buffer).
+//     loop never enters or `build_fast_table()` is not called due to a small input buffer).
 //
 //   - The rest of the code uses libdeflate ideas, but it's original - even the decode entry struct uses a completely
 //     different layout. The main reason is that libdeflate decompressor only works with a single contiguous input
@@ -184,32 +184,32 @@ static const DecodeEntry kOffsetDecodeResults[] = {
 
 namespace {
 
-BL_INLINE_NODEBUG DecodeEntry makeTopEntry(DecodeEntry entry, uint32_t length) noexcept {
+BL_INLINE_NODEBUG DecodeEntry make_top_entry(DecodeEntry entry, uint32_t length) noexcept {
   // Base value is an entry without any flags used to build entries.
-  uint32_t baseLength = length << DecodeEntry::kBaseLengthOffset;
-  uint32_t fullLength = length << DecodeEntry::kFullLengthOffset;
+  uint32_t base_length = length << DecodeEntry::kBaseLengthOffset;
+  uint32_t full_length = length << DecodeEntry::kFullLengthOffset;
 
-  if (DecoderUtils::isEndOfBlock(entry)) {
-    baseLength = 0;
+  if (DecoderUtils::is_end_of_block(entry)) {
+    base_length = 0;
   }
 
-  return DecodeEntry{entry.value + (fullLength | baseLength)};
+  return DecodeEntry{entry.value + (full_length | base_length)};
 }
 
-BL_INLINE_NODEBUG DecodeEntry makeSubLink(uint32_t startIndex, uint32_t baseLength, uint32_t fullLength) noexcept {
+BL_INLINE_NODEBUG DecodeEntry make_sub_link(uint32_t start_index, uint32_t base_length, uint32_t full_length) noexcept {
   return DecodeEntry{
-    (baseLength << DecodeEntry::kBaseLengthOffset) |
-    (fullLength << DecodeEntry::kFullLengthOffset) |
-    (startIndex << DecodeEntry::kPayloadOffset   )
+    (base_length << DecodeEntry::kBaseLengthOffset) |
+    (full_length << DecodeEntry::kFullLengthOffset) |
+    (start_index << DecodeEntry::kPayloadOffset   )
   };
 }
 
-BL_INLINE_NODEBUG DecodeEntry makeSubEntry(DecodeEntry entry, uint32_t length) noexcept {
+BL_INLINE_NODEBUG DecodeEntry make_sub_entry(DecodeEntry entry, uint32_t length) noexcept {
   // Base value is an entry without any flags used to build entries.
-  uint32_t baseLength = length << DecodeEntry::kBaseLengthOffset;
-  uint32_t fullLength = length << DecodeEntry::kFullLengthOffset;
+  uint32_t base_length = length << DecodeEntry::kBaseLengthOffset;
+  uint32_t full_length = length << DecodeEntry::kFullLengthOffset;
 
-  return DecodeEntry{(entry.value & 0xFFFFFF3F) + fullLength + baseLength};
+  return DecodeEntry{(entry.value & 0xFFFFFF3F) + full_length + base_length};
 }
 
 //! Decode table type.
@@ -246,7 +246,7 @@ enum class DecodeTableType : uint32_t {
 //! \param sorted_syms A temporary array of length @num_syms.
 //!
 //! Returns `true` if successful; `false` if the codeword lengths do not form a valid Huffman code.
-static BL_NOINLINE DecodeTableInfo buildDecodeTable(
+static BL_NOINLINE DecodeTableInfo build_decode_table(
   DecodeEntry decode_table[],
   const uint8_t lens[],
   uint32_t num_syms,
@@ -273,8 +273,8 @@ static BL_NOINLINE DecodeTableInfo buildDecodeTable(
   literal_mask &= ~uint32_t(1);
 
   // Determine the actual maximum codeword length that was used, and decrease table_bits to it if allowed.
-  max_codeword_len = blMin<uint32_t>(max_codeword_len, 32u - IntOps::clz(len_mask | 1u));
-  uint32_t table_bits = blMax<uint32_t>(blMin(max_table_bits, max_codeword_len), 1u);
+  max_codeword_len = bl_min<uint32_t>(max_codeword_len, 32u - IntOps::clz(len_mask | 1u));
+  uint32_t table_bits = bl_max<uint32_t>(bl_min(max_table_bits, max_codeword_len), 1u);
 
   // Sort the symbols primarily by increasing codeword length and secondarily by increasing symbol value;
   // or equivalently by their codewords in lexicographic order, since a canonical code is assumed.
@@ -331,9 +331,9 @@ static BL_NOINLINE DecodeTableInfo buildDecodeTable(
     // impossible for no symbols to be used from these codes; however, it's technically possible for only one
     // symbol to be used. Zlib allows 1 codeword for the litlen code, but not the pre-code. The RFC also doesn't
     // say whether, when there is 1 codeword, that codeword is '0' or '1'. zlib uses '0'.
-    uint32_t tableSize = 1u << table_bits;
-    DecodeEntry firstEntry;
-    DecodeEntry invalidEntry = makeTopEntry(DecodeEntry{DecodeEntry::kEndOfBlockFlag | DecodeEntry::kEndOfBlockInvalidFlag}, 1u);
+    uint32_t table_size = 1u << table_bits;
+    DecodeEntry first_entry;
+    DecodeEntry invalid_entry = make_top_entry(DecodeEntry{DecodeEntry::kEndOfBlockFlag | DecodeEntry::kEndOfBlockInvalidFlag}, 1u);
 
     if (codespace_used == 0u) {
       // Only allow empty code to be used with offset table, like Zlib does. Precode and LitLen tables must use
@@ -342,7 +342,7 @@ static BL_NOINLINE DecodeTableInfo buildDecodeTable(
         return DecodeTableInfo{};
       }
 
-      firstEntry = invalidEntry;
+      first_entry = invalid_entry;
     }
     else {
       // Allow codes with a single used symbol for litlen and offset tables, but not for the precode table.
@@ -354,12 +354,12 @@ static BL_NOINLINE DecodeTableInfo buildDecodeTable(
         return DecodeTableInfo{};
       }
 
-      firstEntry = makeTopEntry(decode_results[sorted_syms[0]], 1u);
+      first_entry = make_top_entry(decode_results[sorted_syms[0]], 1u);
     }
 
-    for (uint32_t i = 0; i < tableSize; i += 2) {
-      decode_table[i + 0u] = firstEntry;
-      decode_table[i + 1u] = invalidEntry;
+    for (uint32_t i = 0; i < table_size; i += 2) {
+      decode_table[i + 0u] = first_entry;
+      decode_table[i + 1u] = invalid_entry;
     }
   }
   else {
@@ -397,7 +397,7 @@ static BL_NOINLINE DecodeTableInfo buildDecodeTable(
       // Process `count` of codewords with length `len` bits.
       do {
         // Fill the first entry for the current codeword.
-        DecodeEntry entry = makeTopEntry(decode_results[*sorted_syms++], len);
+        DecodeEntry entry = make_top_entry(decode_results[*sorted_syms++], len);
         decode_table[codeword] = entry;
 
         if (codeword == cur_table_end - 1) {
@@ -459,11 +459,11 @@ static BL_NOINLINE DecodeTableInfo buildDecodeTable(
 
         cur_table_end = subtable_start + (1u << subtable_bits);
         // Create the entry that points from the main table to the subtable.
-        decode_table[subtable_prefix] = makeSubLink(subtable_start, table_bits, table_bits + subtable_bits);
+        decode_table[subtable_prefix] = make_sub_link(subtable_start, table_bits, table_bits + subtable_bits);
       }
 
       // Fill the subtable entries for the current codeword.
-      DecodeEntry entry = makeSubEntry(decode_results[*sorted_syms++], len);
+      DecodeEntry entry = make_sub_entry(decode_results[*sorted_syms++], len);
       uint32_t i = subtable_start + (codeword >> table_bits);
       uint32_t stride = 1u << (len - table_bits);
 
@@ -500,56 +500,56 @@ Done:
 }
 
 #if BL_TARGET_ARCH_BITS >= 64
-static BL_NOINLINE uint32_t buildFastTable(DecodeTableInfo tableInfo, DecodeEntry decode_table[]) noexcept {
+static BL_NOINLINE uint32_t build_fast_table(DecodeTableInfo table_info, DecodeEntry decode_table[]) noexcept {
   // Fast table bits represents the final "fast" table size in bits (8 -> 256 entries, 9 -> 512 entries, etc...).
-  uint32_t fastTableBits = tableInfo.tableBits;
+  uint32_t fast_table_bits = table_info.table_bits;
 
   // If the table has no literals, don't build a fast table!
-  if (tableInfo.literalMask == 0) {
-    return fastTableBits;
+  if (table_info.literal_mask == 0) {
+    return fast_table_bits;
   }
 
-  uint32_t minLiteralSize = IntOps::ctz(tableInfo.literalMask | (1u << fastTableBits));
+  uint32_t min_literal_size = IntOps::ctz(table_info.literal_mask | (1u << fast_table_bits));
 
-  if (fastTableBits < kDecoderLitLenTableBits) {
+  if (fast_table_bits < kDecoderLitLenTableBits) {
     // If the current table bits is less than maximum table bits then don't grow it so much as we
     // could spend more time building the fast table than actually decoding the Huffman stream.
-    fastTableBits = blMin<uint32_t>(blMax<uint32_t>(fastTableBits + 1, 6), kDecoderLitLenTableBits);
+    fast_table_bits = bl_min<uint32_t>(bl_max<uint32_t>(fast_table_bits + 1, 6), kDecoderLitLenTableBits);
   }
 
   // This is the table mask of a current table.
-  uint32_t regularTableMask = DecoderUtils::mask32(tableInfo.tableBits);
-  uint32_t maxMergeableSize = fastTableBits - blMin<uint32_t>(minLiteralSize, fastTableBits);
+  uint32_t regular_table_mask = DecoderUtils::mask32(table_info.table_bits);
+  uint32_t max_mergeable_size = fast_table_bits - bl_min<uint32_t>(min_literal_size, fast_table_bits);
 
-  uint32_t fastTableSize = 1 << fastTableBits;
-  uint32_t dstIndex = 0;
+  uint32_t fast_table_size = 1 << fast_table_bits;
+  uint32_t dst_index = 0;
 
   do {
-    uint32_t srcIndex = 0;
+    uint32_t src_index = 0;
 
-    while (srcIndex <= regularTableMask) {
-      DecodeEntry decodeEntry = decode_table[srcIndex++];
-      if (DecoderUtils::isLiteral(decodeEntry)) {
-        uint32_t litLen = DecoderUtils::baseLength(decodeEntry);
-        decodeEntry.value = (decodeEntry.value & 0xFF00FF00u) | (1u << DecodeEntry::kLiteralCountOffset) | litLen;
+    while (src_index <= regular_table_mask) {
+      DecodeEntry decode_entry = decode_table[src_index++];
+      if (DecoderUtils::is_literal(decode_entry)) {
+        uint32_t lit_len = DecoderUtils::base_length(decode_entry);
+        decode_entry.value = (decode_entry.value & 0xFF00FF00u) | (1u << DecodeEntry::kLiteralCountOffset) | lit_len;
 
-        if (litLen < maxMergeableSize) {
-          DecodeEntry consecutiveEntry = decode_table[(dstIndex >> litLen) & regularTableMask];
-          uint32_t consecutiveLength = DecoderUtils::baseLength(consecutiveEntry);
+        if (lit_len < max_mergeable_size) {
+          DecodeEntry consecutive_entry = decode_table[(dst_index >> lit_len) & regular_table_mask];
+          uint32_t consecutive_length = DecoderUtils::base_length(consecutive_entry);
 
-          if (DecoderUtils::isLiteral(consecutiveEntry) && litLen + consecutiveLength <= fastTableBits) {
-            decodeEntry.value += ((consecutiveEntry.value & 0xFF00u) << 8) + (consecutiveLength) + (1u << DecodeEntry::kLiteralCountOffset);
+          if (DecoderUtils::is_literal(consecutive_entry) && lit_len + consecutive_length <= fast_table_bits) {
+            decode_entry.value += ((consecutive_entry.value & 0xFF00u) << 8) + (consecutive_length) + (1u << DecodeEntry::kLiteralCountOffset);
           }
         }
       }
 
-      decode_table[dstIndex++] = decodeEntry;
+      decode_table[dst_index++] = decode_entry;
     }
 
-    regularTableMask = dstIndex - 1;
-  } while (dstIndex < fastTableSize);
+    regular_table_mask = dst_index - 1;
+  } while (dst_index < fast_table_size);
 
-  return fastTableBits;
+  return fast_table_bits;
 }
 #endif
 
@@ -560,23 +560,23 @@ BLResult Decoder::init(FormatType format, DecoderOptions options) noexcept {
   _flags = DecoderFlags::kNone;
   _options = options;
 
-  _bitWord = 0;
-  _bitLength = 0;
-  _copyRemaining = 0;
+  _bit_word = 0;
+  _bit_length = 0;
+  _copy_remaining = 0;
 
-  _litlenSymbolCount = 0;
-  _offsetSymbolCount = 0;
-  _workIndex = 0;
-  _workCount = 0;
-  _processedBytes = 0;
+  _litlen_symbol_count = 0;
+  _offset_symbol_count = 0;
+  _work_index = 0;
+  _work_count = 0;
+  _processed_bytes = 0;
 
   // Fast implementation is only available on 64-bit targets.
 #if BL_TARGET_ARCH_BITS >= 64
-  _fastDecodeFunc = Fast::decode;
+  _fast_decode_func = Fast::decode;
 
 #if defined(BL_BUILD_OPT_AVX2)
-  if (blRuntimeHasAVX2(&blRuntimeContext)) {
-    _fastDecodeFunc = Fast::decode_AVX2;
+  if (bl_runtime_has_avx2(&bl_runtime_context)) {
+    _fast_decode_func = Fast::decode_AVX2;
   }
 #endif // BL_BUILD_OPT_AVX2
 #endif // BL_TARGET_ARCH_BITS >= 64
@@ -585,20 +585,20 @@ BLResult Decoder::init(FormatType format, DecoderOptions options) noexcept {
 }
 
 BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
-  uint8_t* dstStart;
-  BL_PROPAGATE(dst.makeMutable(&dstStart));
+  uint8_t* dst_start;
+  BL_PROPAGATE(dst.make_mutable(&dst_start));
 
-  uint8_t* dstPtr = dstStart + dst.size();
-  uint8_t* dstEnd = dstStart + dst.capacity();
+  uint8_t* dst_ptr = dst_start + dst.size();
+  uint8_t* dst_end = dst_start + dst.capacity();
 
-  const uint8_t* srcData = input.data;
-  const uint8_t* srcPtr = srcData;
-  const uint8_t* srcEnd = srcData + input.size;
+  const uint8_t* src_data = input.data;
+  const uint8_t* src_ptr = src_data;
+  const uint8_t* src_end = src_data + input.size;
 
   DecoderBits bits;
   DecoderState state = _state;
 
-  bits.loadState(this);
+  bits.load_state(this);
 
   // This is a state loop - initially we start with kZlibHeader or kBlockHeader state and then once we consume
   // input bytes the state is changed. The purpose of having states is to have a recoverable position so we can
@@ -610,8 +610,8 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
     // chunks - so the idea is to refill the whole BitWord whenever possible so we don't have to refill
     // within the switch{}, if possible.
     BL_NOUNROLL
-    while (srcPtr != srcEnd && bits.canRefillByte()) {
-      bits.refillByte(*srcPtr++);
+    while (src_ptr != src_end && bits.can_refill_byte()) {
+      bits.refill_byte(*src_ptr++);
     }
 
     switch (state) {
@@ -657,32 +657,32 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
           goto NotEnoughInputBytes;
         }
 
-        uint32_t finalBlock = bits.extract<0>(1); // BFINAL (1 bit) - Final block flag.
-        uint32_t blockType = bits.extract<1>(2);  // BTYPE (2 bits) - Type of the block.
+        uint32_t final_block = bits.extract<0>(1); // BFINAL (1 bit) - Final block flag.
+        uint32_t block_type = bits.extract<1>(2);  // BTYPE (2 bits) - Type of the block.
 
-        static constexpr uint8_t nextState[4] = {
+        static constexpr uint8_t next_state[4] = {
           uint8_t(DecoderState::kUncompressedHeader),   // Uncompressed.
           uint8_t(DecoderState::kStaticHuffmanHeader),  // Static Huffman.
           uint8_t(DecoderState::kDynamicHuffmanHeader), // Dynamic Huffman.
           uint8_t(0)                                    // Invalid.
         };
 
-        // The only combination, which is not allowed (blockType == 3) - this is invalid.
-        if (blockType == 3) {
+        // The only combination, which is not allowed (block_type == 3) - this is invalid.
+        if (block_type == 3) {
           goto ErrorInvalidData;
         }
 
         bits.consumed(3);
-        state = DecoderState(nextState[blockType]);
+        state = DecoderState(next_state[block_type]);
 
-        if (finalBlock) {
+        if (final_block) {
           _flags |= DecoderFlags::kFinalBlock;
         }
 
-        if (blockType == uint32_t(BlockType::kUncompressed)) {
-          // We must discard remaining bits in `bitWord` in case of uncompressed data - we have to do it here, because
+        if (block_type == uint32_t(BlockType::kUncompressed)) {
+          // We must discard remaining bits in `bit_word` in case of uncompressed data - we have to do it here, because
           // on 32-bit targets we need all 32 bits in `kUncompressedHeader` state, which describe how many bytes to copy.
-          bits.makeByteAligned();
+          bits.make_byte_aligned();
         }
 
         continue;
@@ -690,7 +690,7 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
 
       case DecoderState::kUncompressedHeader: {
         // Must be byte aligned as we have already discarded the unnecessary bits.
-        BL_ASSERT(bits.isByteAligned());
+        BL_ASSERT(bits.is_byte_aligned());
 
         // The bit-buffer must be byte-aligned and fully refilled - that ensures there are at least 32 bits available.
         if (BL_UNLIKELY(bits.length() < 32u)) {
@@ -699,15 +699,15 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
 
         // The maximum number of bytes to copy is 65535.
         uint32_t len = bits.extract<0>(16);
-        uint32_t lenCheck = bits.extract<16>(16) ^ 0xFFFFu;
+        uint32_t len_check = bits.extract<16>(16) ^ 0xFFFFu;
 
         // len == nlen ^ 0xFFFF;
-        if (BL_UNLIKELY(len != lenCheck)) {
+        if (BL_UNLIKELY(len != len_check)) {
           goto ErrorInvalidData;
         }
 
         // Store how many bytes to copy in kCopyUncompressedBlock state.
-        _copyRemaining = len;
+        _copy_remaining = len;
 
         // In general we don't need to refill the BitWord at this point as the generic refill is slower than doing
         // a raw memory copy - so, when we can, don't refill and jump directly to the copy case. This is not required
@@ -731,12 +731,12 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
       }
 
       case DecoderState::kStaticHuffmanHeader: {
-        BL_DECODER_UPDATE_STATISTICS(statistics.stream.staticBlockCount++);
+        BL_DECODER_UPDATE_STATISTICS(statistics.stream.static_block_count++);
 
         // Static Huffman block: build the decode tables for the static codes. Skip doing so if the tables are already
         // set up from an earlier static block; this speeds up decompression of degenerate input of many empty or very
         // short static blocks. Afterwards, the remainder is the same as decompressing a dynamic Huffman block.
-        if (blTestFlag(_flags, DecoderFlags::kStaticTableActive)) {
+        if (bl_test_flag(_flags, DecoderFlags::kStaticTableActive)) {
           state = DecoderState::kDecompressHuffmanBlock;
           continue;
         }
@@ -744,8 +744,8 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
         _flags |= DecoderFlags::kStaticTableActive;
         _flags &=~DecoderFlags::kOptimizedTableActive;
 
-        _litlenSymbolCount = kNumLitLenSymbols;
-        _offsetSymbolCount = kNumOffsetSymbols;
+        _litlen_symbol_count = kNumLitLenSymbols;
+        _offset_symbol_count = kNumOffsetSymbols;
 
         // Initialize pre-code lens table that will be used to construct static Huffman tables.
         uint32_t i;
@@ -776,19 +776,19 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
         constexpr uint32_t kHeaderPrecodeLens = sizeof(BLBitWord) < 8u ? 3u : 4u;
         constexpr uint32_t kHeaderMinLength = (5u + 5u + 4u) + (3u * kHeaderPrecodeLens);
 
-        BL_DECODER_UPDATE_STATISTICS(statistics.stream.dynamicBlockCount++);
+        BL_DECODER_UPDATE_STATISTICS(statistics.stream.dynamic_block_count++);
 
         if (BL_UNLIKELY(bits.length() < kHeaderMinLength)) {
           goto NotEnoughInputBytes;
         }
 
         // Read the codeword length counts.
-        _litlenSymbolCount = bits.extract<0>(5) + 257u;
-        _offsetSymbolCount = bits.extract<5>(5) + 1u;
+        _litlen_symbol_count = bits.extract<0>(5) + 257u;
+        _offset_symbol_count = bits.extract<5>(5) + 1u;
 
         _flags &= ~(DecoderFlags::kStaticTableActive | DecoderFlags::kOptimizedTableActive);
-        _workIndex = kHeaderPrecodeLens;
-        _workCount = bits.extract<10>(4) + 4u;
+        _work_index = kHeaderPrecodeLens;
+        _work_count = bits.extract<10>(4) + 4u;
 
         // We know the minimum explicit pre-code lens is 4 - so we can process up to 4 here.
         uint32_t plen0 = bits.extract<14>(3);
@@ -812,8 +812,8 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
       }
 
       case DecoderState::kDynamicHuffmanPreCodeLens: {
-        uint32_t i = _workIndex;
-        uint32_t remaining = _workCount - i;
+        uint32_t i = _work_index;
+        uint32_t remaining = _work_count - i;
 
         constexpr uint32_t kMainLoopSize = 3u;
         constexpr uint32_t kMainLoopBits = 3u * 3u;
@@ -836,20 +836,20 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
             remaining -= kMainLoopSize;
             bits.consumed(kMainLoopBits);
 
-            if (srcPtr != srcEnd) {
-              bits.refillByte(*srcPtr++);
+            if (src_ptr != src_end) {
+              bits.refill_byte(*src_ptr++);
             }
           } while (remaining >= kMainLoopSize && bits.length() >= kMainLoopBits);
         }
 
-        uint32_t requiredBits = remaining * 3u;
-        if (BL_UNLIKELY(bits.length() < requiredBits)) {
+        uint32_t required_bits = remaining * 3u;
+        if (BL_UNLIKELY(bits.length() < required_bits)) {
           // Update the work index as we could have executed the main loop previously.
-          _workIndex = i;
+          _work_index = i;
           goto NotEnoughInputBytes;
         }
 
-        while (i != _workCount) {
+        while (i != _work_count) {
           uint32_t plen = bits.extract<0>(3);
           bits.consumed(3);
 
@@ -860,11 +860,11 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
           i++;
         }
 
-        // Reset the workIndex as we will enter a new state.
-        _workIndex = 0;
+        // Reset the work_index as we will enter a new state.
+        _work_index = 0;
 
         // Build a decode table for the precode.
-        _precodeTableInfo = buildDecodeTable(
+        _precode_table_info = build_decode_table(
           tables.precode_decode_table.entries,
           tables.precode_lens,
           kNumPrecodeSymbols,
@@ -873,7 +873,7 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
           kMaxPreCodeWordLen,
           DecodeTableType::kPrecode);
 
-        if (_precodeTableInfo.tableBits == 0) {
+        if (_precode_table_info.table_bits == 0) {
           goto ErrorInvalidData;
         }
 
@@ -884,30 +884,30 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
       case DecoderState::kDynamicHuffmanLitLenOffsetCodes: {
         // Decode the litlen and offset codeword lengths.
         {
-          uint32_t i = _workIndex;
-          uint32_t count = _litlenSymbolCount + _offsetSymbolCount;
-          uint32_t precodeLookupMask = DecoderUtils::mask32(_precodeTableInfo.tableBits);
+          uint32_t i = _work_index;
+          uint32_t count = _litlen_symbol_count + _offset_symbol_count;
+          uint32_t precode_lookup_mask = DecoderUtils::mask32(_precode_table_info.table_bits);
 
           do {
             // NOTE: We refill 1 byte per iteration - this should be okay considering the maximum
             // precode size is 7 bits and then additional 7 bits can be required for length. In
             // the worst case we would have to repeat some iterations.
-            if (bits.canRefillByte() && BL_LIKELY(srcPtr != srcEnd)) {
-              bits.refillByte(*srcPtr++);
+            if (bits.can_refill_byte() && BL_LIKELY(src_ptr != src_end)) {
+              bits.refill_byte(*src_ptr++);
             }
 
             // The code below assumes that the pre-code decode table doesn't have any subtables.
             BL_STATIC_ASSERT(kDecoderPrecodeTableBits == kMaxPreCodeWordLen);
 
             // Decode the next pre-code symbol.
-            DecodeEntry entry = tables.precode_decode_table[bits & precodeLookupMask];
+            DecodeEntry entry = tables.precode_decode_table[bits & precode_lookup_mask];
 
-            uint32_t presym = DecoderUtils::precodeValue(entry);
-            uint32_t entryLen = DecoderUtils::fullLength(entry);
+            uint32_t presym = DecoderUtils::precode_value(entry);
+            uint32_t entry_len = DecoderUtils::full_length(entry);
 
-            if (BL_UNLIKELY(bits.length() < entryLen)) {
-              if (BL_UNLIKELY(srcPtr == srcEnd)) {
-                _workIndex = i;
+            if (BL_UNLIKELY(bits.length() < entry_len)) {
+              if (BL_UNLIKELY(src_ptr == src_end)) {
+                _work_index = i;
                 goto NotEnoughInputBytes;
               }
               continue;
@@ -916,11 +916,11 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
             // Explicit codeword length.
             if (presym < 16u) {
               tables.lens[i++] = uint8_t(presym);
-              bits.consumed(entryLen);
+              bits.consumed(entry_len);
               continue;
             }
 
-            uint32_t n = (bits.extract(entryLen) >> DecoderUtils::baseLength(entry)) + DecoderUtils::precodeRepeat(entry);
+            uint32_t n = (bits.extract(entry_len) >> DecoderUtils::base_length(entry)) + DecoderUtils::precode_repeat(entry);
 
             // We don't need to immediately verify that the repeat count doesn't overflow the number of elements,
             // since we've sized the lens array to have enough extra space to allow for the worst-case overrun
@@ -935,20 +935,20 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
                 goto ErrorInvalidData;
               }
 
-              bits.consumed(entryLen);
+              bits.consumed(entry_len);
               uint8_t v = tables.lens[i - 1];
               memset(tables.lens + i, v, 6);
               i += n;
             }
             else if (presym == 17) {
               // Repeat zero 3 - 10 times.
-              bits.consumed(entryLen);
+              bits.consumed(entry_len);
               memset(tables.lens + i, 0, 10);
               i += n;
             }
             else {
               // Repeat zero 11 - 138 times.
-              bits.consumed(entryLen);
+              bits.consumed(entry_len);
               memset(tables.lens + i, 0, n);
               i += n;
             }
@@ -964,30 +964,30 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
         }
 
 BuildHuffmanTables:
-        _offsetTableInfo = buildDecodeTable(
+        _offset_table_info = build_decode_table(
           tables.offset_decode_table.entries,
-          tables.lens + _litlenSymbolCount,
-          _offsetSymbolCount,
+          tables.lens + _litlen_symbol_count,
+          _offset_symbol_count,
           kOffsetDecodeResults,
           kDecoderOffsetTableBits,
           kMaxOffsetCodeWordLen,
           DecodeTableType::kOffset);
 
-        if (_offsetTableInfo.tableBits == 0) {
+        if (_offset_table_info.table_bits == 0) {
           goto ErrorInvalidData;
         }
 
-        _litlenTableInfo = buildDecodeTable(
+        _litlen_table_info = build_decode_table(
           tables.litlen_decode_table.entries,
           tables.lens,
-          _litlenSymbolCount,
+          _litlen_symbol_count,
           kLitLenDecodeResults,
           kDecoderLitLenTableBits,
           kMaxLitLenCodeWordLen,
           DecodeTableType::kLitLen);
-        _litlenFastTableBits = _litlenTableInfo.tableBits;
+        _litlen_fast_table_bits = _litlen_table_info.table_bits;
 
-        if (_litlenTableInfo.tableBits == 0) {
+        if (_litlen_table_info.table_bits == 0) {
           goto ErrorInvalidData;
         }
 
@@ -1000,7 +1000,7 @@ BuildHuffmanTables:
 
       case DecoderState::kDecompressHuffmanBlock: {
         // Reset some state variables that could be potentially set.
-        _copyRemaining = 0;
+        _copy_remaining = 0;
 
         // Optimized Loop (Dispatch)
         // -------------------------
@@ -1008,19 +1008,19 @@ BuildHuffmanTables:
         // Fast loop is only implemented on 64-bit targets at the moment.
 #if BL_TARGET_ARCH_BITS >= 64
         // Only call fast decode func if both source and destination buffers have sufficient size.
-        if (PtrOps::bytesUntil(srcPtr, srcEnd) >= Fast::kMinimumFastSrcBuffer &&
-            PtrOps::bytesUntil(dstPtr, dstEnd) >= Fast::kMinimumFastDstBuffer) {
-          if (!blTestFlag(_flags, DecoderFlags::kOptimizedTableActive)) {
-            _litlenFastTableBits = buildFastTable(_litlenTableInfo, tables.litlen_decode_table.entries);
+        if (PtrOps::bytes_until(src_ptr, src_end) >= Fast::kMinimumFastSrcBuffer &&
+            PtrOps::bytes_until(dst_ptr, dst_end) >= Fast::kMinimumFastDstBuffer) {
+          if (!bl_test_flag(_flags, DecoderFlags::kOptimizedTableActive)) {
+            _litlen_fast_table_bits = build_fast_table(_litlen_table_info, tables.litlen_decode_table.entries);
             _flags |= DecoderFlags::kOptimizedTableActive;
           }
 
-          bits.storeState(this);
-          DecoderFastResult result = _fastDecodeFunc(this, dstStart, dstPtr, dstEnd, srcPtr, srcEnd);
+          bits.store_state(this);
+          DecoderFastResult result = _fast_decode_func(this, dst_start, dst_ptr, dst_end, src_ptr, src_end);
 
-          bits.loadState(this);
-          dstPtr = result.dstPtr;
-          srcPtr = result.srcPtr;
+          bits.load_state(this);
+          dst_ptr = result.dst_ptr;
+          src_ptr = result.src_ptr;
 
           if (BL_UNLIKELY(result.status != DecoderFastStatus::kOk)) {
             if (BL_LIKELY(result.status == DecoderFastStatus::kBlockDone)) {
@@ -1034,131 +1034,131 @@ BuildHuffmanTables:
 #endif // BL_TARGET_ARCH_BITS >= 64
 
         // Decompressing a Huffman block (either dynamic or static).
-        DecoderTableMask litlenTableMask(_litlenTableInfo.tableBits);
-        DecoderTableMask offsetTableMask(_offsetTableInfo.tableBits);
+        DecoderTableMask litlen_table_mask(_litlen_table_info.table_bits);
+        DecoderTableMask offset_table_mask(_offset_table_info.table_bits);
 
-        BL_DECODER_UPDATE_STATISTICS(statistics.tail.numRestarts++);
+        BL_DECODER_UPDATE_STATISTICS(statistics.tail.num_restarts++);
 
         // Tail Loop - Optimized
         // ---------------------
 
 #if BL_TARGET_ARCH_BITS >= 64
-        if (PtrOps::bytesUntil(srcPtr, srcEnd) >= sizeof(BLBitWord) && PtrOps::bytesUntil(dstPtr, dstEnd) >= 3) {
-          uint8_t* dstEndMinus2 = dstEnd - 2;
+        if (PtrOps::bytes_until(src_ptr, src_end) >= sizeof(BLBitWord) && PtrOps::bytes_until(dst_ptr, dst_end) >= 3) {
+          uint8_t* dstEndMinus2 = dst_end - 2;
 
-          srcPtr += bits.refillBitWord(MemOps::loadu_le<BLBitWord>(srcPtr));
-          DecodeEntry entry = tables.litlen_decode_table[bits.extract(litlenTableMask)];
+          src_ptr += bits.refill_bit_word(MemOps::loadu_le<BLBitWord>(src_ptr));
+          DecodeEntry entry = tables.litlen_decode_table[bits.extract(litlen_table_mask)];
 
-          while (dstPtr < dstEndMinus2 && PtrOps::bytesUntil(srcPtr, srcEnd) >= 8) {
-            BL_DECODER_UPDATE_STATISTICS(statistics.tail.numIterations++);
+          while (dst_ptr < dstEndMinus2 && PtrOps::bytes_until(src_ptr, src_end) >= 8) {
+            BL_DECODER_UPDATE_STATISTICS(statistics.tail.num_iterations++);
 
-            BLBitWord refillData = MemOps::loadu_le<BLBitWord>(srcPtr);
-            uint32_t length = DecoderUtils::payloadField(entry);
+            BLBitWord refill_data = MemOps::loadu_le<BLBitWord>(src_ptr);
+            uint32_t length = DecoderUtils::payload_field(entry);
 
-            if (DecoderUtils::isLiteral(entry)) {
-              BL_DECODER_UPDATE_STATISTICS(statistics.tail.quickLiteralEntries++);
-              bits.consumed(DecoderUtils::baseLength(entry));
-              entry = tables.litlen_decode_table[bits.extract(litlenTableMask)];
-              *dstPtr++ = uint8_t(length & 0xFFu);
+            if (DecoderUtils::is_literal(entry)) {
+              BL_DECODER_UPDATE_STATISTICS(statistics.tail.quick_literal_entries++);
+              bits.consumed(DecoderUtils::base_length(entry));
+              entry = tables.litlen_decode_table[bits.extract(litlen_table_mask)];
+              *dst_ptr++ = uint8_t(length & 0xFFu);
 
-              if (DecoderUtils::isLiteral(entry)) {
-                BL_DECODER_UPDATE_STATISTICS(statistics.tail.quickLiteralEntries++);
-                bits.consumed(DecoderUtils::baseLength(entry));
-                length = DecoderUtils::payloadField(entry);
+              if (DecoderUtils::is_literal(entry)) {
+                BL_DECODER_UPDATE_STATISTICS(statistics.tail.quick_literal_entries++);
+                bits.consumed(DecoderUtils::base_length(entry));
+                length = DecoderUtils::payload_field(entry);
 
-                entry = tables.litlen_decode_table[bits.extract(litlenTableMask)];
-                *dstPtr++ = uint8_t(length & 0xFFu);
+                entry = tables.litlen_decode_table[bits.extract(litlen_table_mask)];
+                *dst_ptr++ = uint8_t(length & 0xFFu);
 
-                if (DecoderUtils::isLiteral(entry)) {
-                  BL_DECODER_UPDATE_STATISTICS(statistics.tail.quickLiteralEntries++);
-                  bits.consumed(DecoderUtils::baseLength(entry));
-                  length = DecoderUtils::payloadField(entry);
+                if (DecoderUtils::is_literal(entry)) {
+                  BL_DECODER_UPDATE_STATISTICS(statistics.tail.quick_literal_entries++);
+                  bits.consumed(DecoderUtils::base_length(entry));
+                  length = DecoderUtils::payload_field(entry);
 
-                  entry = tables.litlen_decode_table[bits.extract(litlenTableMask)];
-                  *dstPtr++ = uint8_t(length & 0xFFu);
+                  entry = tables.litlen_decode_table[bits.extract(litlen_table_mask)];
+                  *dst_ptr++ = uint8_t(length & 0xFFu);
                 }
               }
 
-              srcPtr += bits.refillBitWord(refillData);
+              src_ptr += bits.refill_bit_word(refill_data);
               continue;
             }
 
-            DecoderBits savedBits = bits;
-            length += bits.extractExtra(entry);
+            DecoderBits saved_bits = bits;
+            length += bits.extract_extra(entry);
 
-            if (BL_UNLIKELY(!DecoderUtils::isOffOrLen(entry))) {
-              BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtableOffsetEntries++);
+            if (BL_UNLIKELY(!DecoderUtils::is_off_or_len(entry))) {
+              BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtable_offset_entries++);
               entry = tables.litlen_decode_table[length];
-              length = DecoderUtils::payloadField(entry);
+              length = DecoderUtils::payload_field(entry);
               bits.consumed(entry);
 
-              if (DecoderUtils::isLiteral(entry)) {
-                BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtableLiteralEntries++);
-                size_t entryIndex = bits.extract(litlenTableMask);
-                *dstPtr++ = uint8_t(length & 0xFFu);
+              if (DecoderUtils::is_literal(entry)) {
+                BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtable_literal_entries++);
+                size_t entry_index = bits.extract(litlen_table_mask);
+                *dst_ptr++ = uint8_t(length & 0xFFu);
 
-                srcPtr += bits.refillBitWord(refillData);
-                entry = tables.litlen_decode_table[entryIndex];
+                src_ptr += bits.refill_bit_word(refill_data);
+                entry = tables.litlen_decode_table[entry_index];
                 continue;
               }
 
-              if (BL_UNLIKELY(DecoderUtils::isEndOfBlock(entry))) {
-                if (BL_LIKELY(!DecoderUtils::isEndOfBlockInvalid(entry)))
+              if (BL_UNLIKELY(DecoderUtils::is_end_of_block(entry))) {
+                if (BL_LIKELY(!DecoderUtils::is_end_of_block_invalid(entry)))
                   goto BlockDone;
                 else
                   goto ErrorInvalidData;
               }
 
-              length += savedBits.extractExtra(entry);
-              BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtableLengthEntries++);
+              length += saved_bits.extract_extra(entry);
+              BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtable_length_entries++);
             }
             else {
               bits.consumed(entry);
             }
 
-            BL_DECODER_UPDATE_STATISTICS(statistics.tail.matchEntries++);
+            BL_DECODER_UPDATE_STATISTICS(statistics.tail.match_entries++);
 
-            if (BL_UNLIKELY(PtrOps::bytesUntil(dstPtr, dstEnd) < length)) {
-              _copyRemaining = length;
-              bits = savedBits;
+            if (BL_UNLIKELY(PtrOps::bytes_until(dst_ptr, dst_end) < length)) {
+              _copy_remaining = length;
+              bits = saved_bits;
               goto NotEnoughOutputBytes;
             }
 
-            DecodeEntry offsetEntry = tables.offset_decode_table[bits.extract(offsetTableMask)];
-            uint32_t offset = DecoderUtils::payloadField(offsetEntry) + bits.extractExtra(offsetEntry);
+            DecodeEntry offset_entry = tables.offset_decode_table[bits.extract(offset_table_mask)];
+            uint32_t offset = DecoderUtils::payload_field(offset_entry) + bits.extract_extra(offset_entry);
 
-            if (BL_UNLIKELY(!DecoderUtils::isOffOrLen(offsetEntry))) {
-              BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtableOffsetEntries++);
-              offsetEntry = tables.offset_decode_table[offset];
-              offset = DecoderUtils::payloadField(offsetEntry) + bits.extractExtra(offsetEntry);
+            if (BL_UNLIKELY(!DecoderUtils::is_off_or_len(offset_entry))) {
+              BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtable_offset_entries++);
+              offset_entry = tables.offset_decode_table[offset];
+              offset = DecoderUtils::payload_field(offset_entry) + bits.extract_extra(offset_entry);
 
-              if (BL_UNLIKELY(DecoderUtils::isEndOfBlock(offsetEntry))) {
+              if (BL_UNLIKELY(DecoderUtils::is_end_of_block(offset_entry))) {
                 goto ErrorInvalidData;
               }
             }
 
-            size_t dstSize = PtrOps::byteOffset(dstStart, dstPtr);
-            if (BL_UNLIKELY(offset > dstSize)) {
+            size_t dst_size = PtrOps::byte_offset(dst_start, dst_ptr);
+            if (BL_UNLIKELY(offset > dst_size)) {
               goto ErrorInvalidData;
             }
 
-            bits.consumed(offsetEntry);
-            srcPtr += bits.refillBitWord(refillData);
+            bits.consumed(offset_entry);
+            src_ptr += bits.refill_bit_word(refill_data);
 
-            const uint8_t* matchPtr = dstPtr - offset;
-            const uint8_t* matchEnd = matchPtr + length;
+            const uint8_t* match_ptr = dst_ptr - offset;
+            const uint8_t* match_end = match_ptr + length;
 
             BL_STATIC_ASSERT(kMinMatchLen == 3);
-            *dstPtr++ = *matchPtr++;
-            *dstPtr++ = *matchPtr++;
-            entry = tables.litlen_decode_table[bits.extract(litlenTableMask)];
+            *dst_ptr++ = *match_ptr++;
+            *dst_ptr++ = *match_ptr++;
+            entry = tables.litlen_decode_table[bits.extract(litlen_table_mask)];
 
             do {
-              *dstPtr++ = *matchPtr++;
-            } while (matchPtr != matchEnd);
+              *dst_ptr++ = *match_ptr++;
+            } while (match_ptr != match_end);
           }
 
-          bits.fixLengthAfterFastLoop();
+          bits.fix_length_after_fast_loop();
         }
 #endif
 
@@ -1166,208 +1166,208 @@ BuildHuffmanTables:
         // ----------------
 
         // This is a generic loop for decoding literals and matches. The purpose of this loop is to be safe when it
-        // comes to both source and destination buffers - this means that it cannot read after `srcEnd` and it cannot
-        // write after `dstEnd`. Typically, this loop executes only at the end of the decompression phase to handle
+        // comes to both source and destination buffers - this means that it cannot read after `src_end` and it cannot
+        // write after `dst_end`. Typically, this loop executes only at the end of the decompression phase to handle
         // the remaining bytes that cannot be processed by the fast loop.
         for (;;) {
-          BL_DECODER_UPDATE_STATISTICS(statistics.tail.numIterations++);
+          BL_DECODER_UPDATE_STATISTICS(statistics.tail.num_iterations++);
 
-          while (bits.canRefillByte() && srcPtr != srcEnd) {
-            bits.refillByte(*srcPtr++);
+          while (bits.can_refill_byte() && src_ptr != src_end) {
+            bits.refill_byte(*src_ptr++);
           }
 
-          DecodeEntry entry = tables.litlen_decode_table[bits.extract(litlenTableMask)];
-          DecoderBits savedBits = bits;
+          DecodeEntry entry = tables.litlen_decode_table[bits.extract(litlen_table_mask)];
+          DecoderBits saved_bits = bits;
 
-          uint32_t baseLen = DecoderUtils::baseLength(entry);
-          uint32_t length = DecoderUtils::payloadField(entry);
+          uint32_t base_len = DecoderUtils::base_length(entry);
+          uint32_t length = DecoderUtils::payload_field(entry);
 
-          if (DecoderUtils::isLiteral(entry)) {
-            if (BL_UNLIKELY(dstPtr == dstEnd)) {
+          if (DecoderUtils::is_literal(entry)) {
+            if (BL_UNLIKELY(dst_ptr == dst_end)) {
               goto NotEnoughOutputBytes;
             }
 
-            if (BL_UNLIKELY(bits.length() < baseLen)) {
+            if (BL_UNLIKELY(bits.length() < base_len)) {
               goto NotEnoughInputBytes;
             }
 
-            BL_DECODER_UPDATE_STATISTICS(statistics.tail.quickLiteralEntries++);
-            bits.consumed(baseLen);
+            BL_DECODER_UPDATE_STATISTICS(statistics.tail.quick_literal_entries++);
+            bits.consumed(base_len);
 
-            *dstPtr++ = uint8_t(length & 0xFFu);
+            *dst_ptr++ = uint8_t(length & 0xFFu);
             continue;
           }
 
-          // NOTE: We can treat end-of-block as a sub-table - it has baseLen equal to fullLen, so we would
+          // NOTE: We can treat end-of-block as a sub-table - it has base_len equal to full_len, so we would
           // just repeat the same lookup. The reason why to do this is to remove branches we don't want slightly
           // penalizing end of block handling, but since it's rare compared to literals/lengths it's just fine.
-          uint32_t fullLen = DecoderUtils::fullLength(entry);
-          length += savedBits.extract(fullLen) >> baseLen;
+          uint32_t full_len = DecoderUtils::full_length(entry);
+          length += saved_bits.extract(full_len) >> base_len;
 
-          if (BL_UNLIKELY(!DecoderUtils::isOffOrLen(entry))) {
-            BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtableLookups++);
+          if (BL_UNLIKELY(!DecoderUtils::is_off_or_len(entry))) {
+            BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtable_lookups++);
 
             entry = tables.litlen_decode_table[length];
-            length = DecoderUtils::payloadField(entry);
-            fullLen = DecoderUtils::fullLength(entry);
+            length = DecoderUtils::payload_field(entry);
+            full_len = DecoderUtils::full_length(entry);
 
-            if (bits.length() < fullLen) {
+            if (bits.length() < full_len) {
               goto NotEnoughInputBytes;
             }
 
-            if (DecoderUtils::isLiteral(entry)) {
-              BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtableLiteralEntries++);
+            if (DecoderUtils::is_literal(entry)) {
+              BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtable_literal_entries++);
 
-              if (BL_UNLIKELY(dstPtr == dstEnd)) {
+              if (BL_UNLIKELY(dst_ptr == dst_end)) {
                 goto NotEnoughOutputBytes;
               }
 
-              BL_ASSERT(bits.length() >= fullLen);
-              bits.consumed(fullLen);
+              BL_ASSERT(bits.length() >= full_len);
+              bits.consumed(full_len);
 
-              *dstPtr++ = uint8_t(length & 0xFFu);
+              *dst_ptr++ = uint8_t(length & 0xFFu);
               continue;
             }
 
-            length += savedBits.extractExtra(entry);
+            length += saved_bits.extract_extra(entry);
 
-            if (BL_UNLIKELY(DecoderUtils::isEndOfBlock(entry))) {
-              BL_ASSERT(bits.length() >= fullLen);
-              bits.consumed(fullLen);
+            if (BL_UNLIKELY(DecoderUtils::is_end_of_block(entry))) {
+              BL_ASSERT(bits.length() >= full_len);
+              bits.consumed(full_len);
 
-              if (BL_LIKELY(!DecoderUtils::isEndOfBlockInvalid(entry)))
+              if (BL_LIKELY(!DecoderUtils::is_end_of_block_invalid(entry)))
                 goto BlockDone;
               else
                 goto ErrorInvalidData;
             }
 
-            BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtableLengthEntries++);
+            BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtable_length_entries++);
           }
 
-          BL_DECODER_UPDATE_STATISTICS(statistics.tail.matchEntries++);
+          BL_DECODER_UPDATE_STATISTICS(statistics.tail.match_entries++);
 
-          bits.consumed(fullLen);
+          bits.consumed(full_len);
           if (BL_UNLIKELY(bits.overflown())) {
-            bits = savedBits;
+            bits = saved_bits;
             goto NotEnoughInputBytes;
           }
 
-          if (BL_UNLIKELY(PtrOps::bytesUntil(dstPtr, dstEnd) < length)) {
-            _copyRemaining = length;
-            bits = savedBits;
+          if (BL_UNLIKELY(PtrOps::bytes_until(dst_ptr, dst_end) < length)) {
+            _copy_remaining = length;
+            bits = saved_bits;
             goto NotEnoughOutputBytes;
           }
 
           if constexpr (sizeof(BLBitWord) < 8) {
-            while (bits.canRefillByte() && srcPtr != srcEnd) {
-              bits.refillByte(*srcPtr++);
+            while (bits.can_refill_byte() && src_ptr != src_end) {
+              bits.refill_byte(*src_ptr++);
             }
 
             // This would make the accumulator always full so we would be able to always read 28 bits from it
             // in 32-bit mode.
-            if (srcPtr != srcEnd && bits.bitLength < 32) {
-              bits.bitWord |= BLBitWord(srcPtr[0]) << bits.bitLength;
+            if (src_ptr != src_end && bits.bit_length < 32) {
+              bits.bit_word |= BLBitWord(src_ptr[0]) << bits.bit_length;
             }
 
-            savedBits = bits;
+            saved_bits = bits;
           }
 
-          entry = tables.offset_decode_table[bits.extract(offsetTableMask)];
-          fullLen = DecoderUtils::fullLength(entry);
-          uint32_t offset = DecoderUtils::payloadField(entry) + bits.extractExtra(entry);
+          entry = tables.offset_decode_table[bits.extract(offset_table_mask)];
+          full_len = DecoderUtils::full_length(entry);
+          uint32_t offset = DecoderUtils::payload_field(entry) + bits.extract_extra(entry);
 
-          if (BL_UNLIKELY(!DecoderUtils::isOffOrLen(entry))) {
-            BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtableOffsetEntries++);
+          if (BL_UNLIKELY(!DecoderUtils::is_off_or_len(entry))) {
+            BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtable_offset_entries++);
             entry = tables.offset_decode_table[offset];
-            fullLen = DecoderUtils::fullLength(entry);
-            offset = DecoderUtils::payloadField(entry) + bits.extractExtra(entry);
+            full_len = DecoderUtils::full_length(entry);
+            offset = DecoderUtils::payload_field(entry) + bits.extract_extra(entry);
 
-            if (BL_UNLIKELY(DecoderUtils::isEndOfBlock(entry))) {
+            if (BL_UNLIKELY(DecoderUtils::is_end_of_block(entry))) {
               goto ErrorInvalidData;
             }
           }
 
-          if (BL_UNLIKELY(bits.length() < fullLen)) {
+          if (BL_UNLIKELY(bits.length() < full_len)) {
             if constexpr (sizeof(BLBitWord) < 8) {
-              if (srcPtr == srcEnd) {
+              if (src_ptr == src_end) {
                 // This is only needed in 32-bit mode as in 64-bit the bit-accumulator is long enough
                 // to hold all 48 bits that can be required to hold both offset+length match data.
                 state = DecoderState::kDecompressHuffmanInterruptedMatch;
 
-                _copyRemaining = length;
+                _copy_remaining = length;
                 goto NotEnoughInputBytes;
               }
               else {
                 bits.consumed(8);
-                bits.refillByte(*srcPtr++);
-                fullLen -= 8;
+                bits.refill_byte(*src_ptr++);
+                full_len -= 8;
               }
             }
             else {
               // In 64-bit mode this always means that there is not enough input bytes and that the input is
               // exhausted.
-              bits = savedBits;
-              _copyRemaining = length;
+              bits = saved_bits;
+              _copy_remaining = length;
               goto NotEnoughInputBytes;
             }
           }
 
-          BL_ASSERT(bits.length() >= fullLen);
-          bits.consumed(fullLen);
+          BL_ASSERT(bits.length() >= full_len);
+          bits.consumed(full_len);
 
-          size_t dstSize = PtrOps::byteOffset(dstStart, dstPtr);
-          if (BL_UNLIKELY(offset > dstSize)) {
+          size_t dst_size = PtrOps::byte_offset(dst_start, dst_ptr);
+          if (BL_UNLIKELY(offset > dst_size)) {
             goto ErrorInvalidData;
           }
 
-          const uint8_t* matchPtr = dstPtr - offset;
-          const uint8_t* matchEnd = matchPtr + length;
+          const uint8_t* match_ptr = dst_ptr - offset;
+          const uint8_t* match_end = match_ptr + length;
 
           BL_STATIC_ASSERT(kMinMatchLen == 3);
-          *dstPtr++ = *matchPtr++;
-          *dstPtr++ = *matchPtr++;
+          *dst_ptr++ = *match_ptr++;
+          *dst_ptr++ = *match_ptr++;
 
           do {
-            *dstPtr++ = *matchPtr++;
-          } while (matchPtr != matchEnd);
+            *dst_ptr++ = *match_ptr++;
+          } while (match_ptr != match_end);
         }
       }
 
       case DecoderState::kDecompressHuffmanInterruptedMatch: {
         // A state only designed to continue processing an interrupted match since it could need more bytes than
         // a word size. When entering this state the litlen code was already processed and the decoded length was
-        // stored to `_copyRemaining` so we only need to process the remaining offset part.
+        // stored to `_copy_remaining` so we only need to process the remaining offset part.
         if constexpr (sizeof(BLBitWord) < 8) {
-          DecoderTableMask offsetTableMask(_offsetTableInfo.tableBits);
-          size_t length = _copyRemaining;
+          DecoderTableMask offset_table_mask(_offset_table_info.table_bits);
+          size_t length = _copy_remaining;
 
           // Since the user feeds data and is responsible for passing the destination buffer each time it feeds a
           // source buffer, we don't know whether the passed buffer has enough window DEFLATE requires. So we must
           // stay safe and we just cannot blindly copy bytes to the destination).
-          if (BL_UNLIKELY(PtrOps::bytesUntil(dstPtr, dstEnd) < length)) {
+          if (BL_UNLIKELY(PtrOps::bytes_until(dst_ptr, dst_end) < length)) {
             goto NotEnoughOutputBytes;
           }
 
-          uint32_t entryIndex = bits.extract(offsetTableMask);
-          DecodeEntry entry = tables.offset_decode_table[entryIndex];
+          uint32_t entry_index = bits.extract(offset_table_mask);
+          DecodeEntry entry = tables.offset_decode_table[entry_index];
 
-          uint32_t fullLen = DecoderUtils::fullLength(entry);
-          uint32_t offset = DecoderUtils::payloadField(entry) + (bits.extract(entry) >> DecoderUtils::baseLength(entry));
+          uint32_t full_len = DecoderUtils::full_length(entry);
+          uint32_t offset = DecoderUtils::payload_field(entry) + (bits.extract(entry) >> DecoderUtils::base_length(entry));
 
-          if (BL_UNLIKELY(bits.length() < fullLen)) {
+          if (BL_UNLIKELY(bits.length() < full_len)) {
             goto NotEnoughInputBytes;
           }
 
-          if (BL_UNLIKELY(!DecoderUtils::isOffOrLen(entry))) {
-            BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtableOffsetEntries++);
+          if (BL_UNLIKELY(!DecoderUtils::is_off_or_len(entry))) {
+            BL_DECODER_UPDATE_STATISTICS(statistics.tail.subtable_offset_entries++);
             entry = tables.offset_decode_table[offset];
-            fullLen = DecoderUtils::fullLength(entry);
-            offset = DecoderUtils::payloadField(entry);
+            full_len = DecoderUtils::full_length(entry);
+            offset = DecoderUtils::payload_field(entry);
 
-            uint32_t baseLen = DecoderUtils::baseLength(entry);
-            uint32_t extra = bits.extract(entry) >> baseLen;
+            uint32_t base_len = DecoderUtils::base_length(entry);
+            uint32_t extra = bits.extract(entry) >> base_len;
 
-            if (BL_UNLIKELY(DecoderUtils::isEndOfBlock(entry))) {
+            if (BL_UNLIKELY(DecoderUtils::is_end_of_block(entry))) {
               goto ErrorInvalidData;
             }
 
@@ -1375,11 +1375,11 @@ BuildHuffmanTables:
             // that the maximum codeword length is 15 bits and the maximum offset extra is 13 bits, which totals 28 bits.
             // This situation is only possible when the offset requires a subtable, otherwise the bit-buffer would always
             // have enough bits.
-            if (BL_UNLIKELY(bits.length() < fullLen)) {
+            if (BL_UNLIKELY(bits.length() < full_len)) {
               // If the bit-buffer length is smaller than 25 bits or the source pointer is at the end it means that there
               // is not enough data and the user has to provide more. There is nothing we can do now. We have all the data
               // we need to decode this entry again from the current bit-buffer content, and we need more data to continue.
-              if (bits.length() < 25u || srcPtr == srcEnd) {
+              if (bits.length() < 25u || src_ptr == src_end) {
                 goto NotEnoughInputBytes;
               }
 
@@ -1387,40 +1387,40 @@ BuildHuffmanTables:
               // To follow how the data is usually extracted from bit-buffer we just insert a partial byte into our bit-buffer
               // (partial because it doesn't fit as a whole), extract the data the usual way and then consume 8 bits so we can
               // add the byte for real.
-              uint32_t pendingByte = *srcPtr++;
-              BL_ASSERT(fullLen >= 8);
+              uint32_t pending_byte = *src_ptr++;
+              BL_ASSERT(full_len >= 8);
 
-              bits.bitWord |= pendingByte << bits.bitLength;
-              extra = bits.extract(entry) >> baseLen;
+              bits.bit_word |= pending_byte << bits.bit_length;
+              extra = bits.extract(entry) >> base_len;
 
               bits.consumed(8);
-              bits.refillByte(uint8_t(pendingByte));
-              fullLen -= 8;
+              bits.refill_byte(uint8_t(pending_byte));
+              full_len -= 8;
             }
 
             offset += extra;
           }
 
-          bits.consumed(fullLen);
+          bits.consumed(full_len);
           BL_ASSERT(!bits.overflown());
 
-          size_t dstSize = PtrOps::byteOffset(dstStart, dstPtr);
-          if (BL_UNLIKELY(offset > dstSize)) {
+          size_t dst_size = PtrOps::byte_offset(dst_start, dst_ptr);
+          if (BL_UNLIKELY(offset > dst_size)) {
             goto ErrorInvalidData;
           }
 
-          const uint8_t* matchPtr = dstPtr - offset;
-          const uint8_t* matchEnd = matchPtr + length;
+          const uint8_t* match_ptr = dst_ptr - offset;
+          const uint8_t* match_end = match_ptr + length;
 
           BL_STATIC_ASSERT(kMinMatchLen == 3);
-          *dstPtr++ = *matchPtr++;
-          *dstPtr++ = *matchPtr++;
+          *dst_ptr++ = *match_ptr++;
+          *dst_ptr++ = *match_ptr++;
 
           do {
-            *dstPtr++ = *matchPtr++;
-          } while (matchPtr != matchEnd);
+            *dst_ptr++ = *match_ptr++;
+          } while (match_ptr != match_end);
 
-          _copyRemaining = 0;
+          _copy_remaining = 0;
           state = DecoderState::kDecompressHuffmanBlock;
           continue;
         }
@@ -1436,52 +1436,52 @@ BuildHuffmanTables:
       case DecoderState::kCopyUncompressedBlock:
 CopyBytesState: {
         // The bit-buffer must be aligned to bytes at this point - the same as in `kUncompressedHeader` state.
-        BL_ASSERT(bits.isByteAligned());
+        BL_ASSERT(bits.is_byte_aligned());
 
         // Cannot be zero as that would mean this is an invalid state.
-        BL_ASSERT(_copyRemaining != 0u);
+        BL_ASSERT(_copy_remaining != 0u);
 
-        size_t srcRemaining = PtrOps::bytesUntil(srcPtr, srcEnd);
-        size_t dstRemaining = PtrOps::bytesUntil(dstPtr, dstEnd);
+        size_t src_remaining = PtrOps::bytes_until(src_ptr, src_end);
+        size_t dst_remaining = PtrOps::bytes_until(dst_ptr, dst_end);
 
-        if (BL_UNLIKELY(dstRemaining < _copyRemaining)) {
+        if (BL_UNLIKELY(dst_remaining < _copy_remaining)) {
           goto NotEnoughOutputBytes;
         }
 
         // Process the remaining part in BitWord first. Ideally this would be at most sizeof(BitWord) - 4 bytes, but
         // in case the input buffer is from multiple chunks, it could have more bytes.
-        if (!bits.empty()) {
+        if (!bits.is_empty()) {
           // Calculate the number of bytes we can copy here.
-          size_t n = blMin<size_t>(_copyRemaining, bits.length() >> 3u);
+          size_t n = bl_min<size_t>(_copy_remaining, bits.length() >> 3u);
 
           if (n) {
-            _copyRemaining -= n;
-            bits.bitLength -= n * 8u;
+            _copy_remaining -= n;
+            bits.bit_length -= n * 8u;
 
             do {
-              *dstPtr++ = uint8_t(bits & 0xFFu);
-              bits.bitWord >>= 8;
+              *dst_ptr++ = uint8_t(bits & 0xFFu);
+              bits.bit_word >>= 8;
             } while (--n);
           }
 
           // If there are no remaining bytes to copy then this block is done.
-          if (_copyRemaining == 0) {
+          if (_copy_remaining == 0) {
             goto BlockDone;
           }
         }
 
-        size_t n = blMin<size_t>(_copyRemaining, srcRemaining);
+        size_t n = bl_min<size_t>(_copy_remaining, src_remaining);
         if (n == 0) {
           goto NotEnoughInputBytes;
         }
         else {
-          memcpy(dstPtr, srcPtr, n);
-          dstPtr += n;
-          srcPtr += n;
+          memcpy(dst_ptr, src_ptr, n);
+          dst_ptr += n;
+          src_ptr += n;
 
           // If there are no remaining bytes to copy then this block is done.
-          _copyRemaining -= n;
-          if (_copyRemaining == 0) {
+          _copy_remaining -= n;
+          if (_copy_remaining == 0) {
             goto BlockDone;
           }
         }
@@ -1493,119 +1493,119 @@ CopyBytesState: {
       // ------------
 
       case DecoderState::kInvalid: {
-        return blTraceError(BL_ERROR_INVALID_DATA);
+        return bl_trace_error(BL_ERROR_INVALID_DATA);
       }
     }
 
     // Hit when the destination is full and thus requires to grow.
 NotEnoughOutputBytes:
-    bits.fixLengthAfterFastLoop();
+    bits.fix_length_after_fast_loop();
 
     {
       // Update the size of the destination array first so we can grow.
-      size_t dstSize = PtrOps::byteOffset(dstStart, dstPtr);
-      ArrayInternal::setSize(&dst, dstSize);
+      size_t dst_size = PtrOps::byte_offset(dst_start, dst_ptr);
+      ArrayInternal::set_size(&dst, dst_size);
 
       // Save the current status in case of failure so the exact state could be recovered if the user recovers the
       // error.
       _state = state;
-      bits.storeState(this);
+      bits.store_state(this);
 
       // Update the number of bytes processed - this is important as we may fail to grow the destination - in that
       // case we would just return and want the member updated.
-      _processedBytes += PtrOps::byteOffset(srcData, srcPtr);
-      srcData = srcPtr;
+      _processed_bytes += PtrOps::byte_offset(src_data, src_ptr);
+      src_data = src_ptr;
 
       // When decoding data where the uncompressed size is known (for example decoding PNG pixel data) it's desired
       // to fail early if the buffer decompresses to more bytes than it should. The implementation has to check the
       // size of the decompressed data anyway, but we don't want to grow above the threshold.
-      if (blTestFlag(_options, DecoderOptions::kNeverReallocOutputBuffer)) {
-        return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+      if (bl_test_flag(_options, DecoderOptions::kNeverReallocOutputBuffer)) {
+        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
       }
 
       // We can calculate the number of bytes required exactly if this is a last block, which is uncompressed.
-      uint64_t sizeEstimate = dstSize;
-      if (state == DecoderState::kCopyUncompressedBlock && blTestFlag(_flags, DecoderFlags::kFinalBlock) && _copyRemaining) {
-        sizeEstimate += _copyRemaining;
+      uint64_t size_estimate = dst_size;
+      if (state == DecoderState::kCopyUncompressedBlock && bl_test_flag(_flags, DecoderFlags::kFinalBlock) && _copy_remaining) {
+        size_estimate += _copy_remaining;
       }
       else {
         // Calculate the current compression ratio and estimated the current input chunk based on that. We don't
         // know whether the current chunk is last or not, but we definitely want to consider it in case that the
         // default estimate would be too small.
-        double estimatedRatio = (double(dstSize) / double(_processedBytes)) + 0.05;
+        double estimated_ratio = (double(dst_size) / double(_processed_bytes)) + 0.05;
 
-        uint64_t genericEstimate = blMax<uint64_t>(dstSize, 4096u);
-        uint64_t chunkEstimate = uint64_t(double(size_t(srcEnd - srcPtr)) * estimatedRatio);
+        uint64_t generic_estimate = bl_max<uint64_t>(dst_size, 4096u);
+        uint64_t chunk_estimate = uint64_t(double(size_t(src_end - src_ptr)) * estimated_ratio);
 
-        sizeEstimate += blMax<uint64_t>(blMax<uint64_t>(genericEstimate, chunkEstimate) + 4096u, _copyRemaining);
+        size_estimate += bl_max<uint64_t>(bl_max<uint64_t>(generic_estimate, chunk_estimate) + 4096u, _copy_remaining);
       }
 
 #if BL_TARGET_ARCH_BITS < 64
-      if (sizeEstimate > uint64_t(SIZE_MAX)) {
-        return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+      if (size_estimate > uint64_t(SIZE_MAX)) {
+        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
       }
 #endif
 
-      BL_PROPAGATE(dst.reserve(size_t(sizeEstimate)));
+      BL_PROPAGATE(dst.reserve(size_t(size_estimate)));
 
       // Destination pointers were invalidated by reallocating `dst`.
-      dstStart = ArrayInternal::getData<uint8_t>(&dst);
-      dstPtr = dstStart + dstSize;
-      dstEnd = dstStart + dst.capacity();
+      dst_start = ArrayInternal::get_data<uint8_t>(&dst);
+      dst_ptr = dst_start + dst_size;
+      dst_end = dst_start + dst.capacity();
 
       continue;
     }
 
 BlockDone:
-    bits.fixLengthAfterFastLoop();
+    bits.fix_length_after_fast_loop();
 
-    if (!blTestFlag(_flags, DecoderFlags::kFinalBlock)) {
+    if (!bl_test_flag(_flags, DecoderFlags::kFinalBlock)) {
       // Expect an additional block if this block was not the last.
       state = DecoderState::kBlockHeader;
       continue;
     }
 
     // The decoding is done - reset all internal states and mark the decoder done.
-    _processedBytes += PtrOps::byteOffset(srcData, srcPtr);
-    _processedBytes -= (_bitLength >> 3u);
+    _processed_bytes += PtrOps::byte_offset(src_data, src_ptr);
+    _processed_bytes -= (_bit_length >> 3u);
 
     _state = DecoderState::kDone;
-    _bitWord = 0;
-    _bitLength = 0;
+    _bit_word = 0;
+    _bit_length = 0;
 
     // Update the size of the destination array as it was most likely overallocated.
-    ArrayInternal::setSize(&dst, PtrOps::byteOffset(dstStart, dstPtr));
+    ArrayInternal::set_size(&dst, PtrOps::byte_offset(dst_start, dst_ptr));
     return BL_SUCCESS;
   }
 
   // A label where we jump in case we need more input bytes - the input chunk must be fully consumed - the only
-  // non-consumed bits can be stored in `bitWord` or in temporary buffers of the decoder (if the current state
+  // non-consumed bits can be stored in `bit_word` or in temporary buffers of the decoder (if the current state
   // is a processing of a Huffman header).
 NotEnoughInputBytes:
   // The entire input buffer must be consumed.
-  BL_ASSERT(srcPtr == srcEnd);
+  BL_ASSERT(src_ptr == src_end);
 
   // Update the size of the destination array.
-  ArrayInternal::setSize(&dst, PtrOps::byteOffset(dstStart, dstPtr));
+  ArrayInternal::set_size(&dst, PtrOps::byte_offset(dst_start, dst_ptr));
 
   // Save all states as we have to continue once another input chunk is available.
-  bits.storeState(this);
+  bits.store_state(this);
   _state = state;
-  _processedBytes += input.size;
+  _processed_bytes += input.size;
   return BL_ERROR_DATA_TRUNCATED;
 
   // Error in a bit-stream or malformed data - the decoding should never continue if this happens.
 ErrorInvalidData:
   // Update the size of the destination array so the user can see the output written so far.
-  ArrayInternal::setSize(&dst, PtrOps::byteOffset(dstStart, dstPtr));
+  ArrayInternal::set_size(&dst, PtrOps::byte_offset(dst_start, dst_ptr));
 
-  bits.fixLengthAfterFastLoop();
-  bits.storeState(this);
+  bits.fix_length_after_fast_loop();
+  bits.store_state(this);
 
   _state = DecoderState::kInvalid;
-  _processedBytes += PtrOps::byteOffset(srcData, srcPtr);
+  _processed_bytes += PtrOps::byte_offset(src_data, src_ptr);
 
-  return blTraceError(BL_ERROR_DECOMPRESSION_FAILED);
+  return bl_trace_error(BL_ERROR_DECOMPRESSION_FAILED);
 }
 
 } // {bl::Compression::Deflate}

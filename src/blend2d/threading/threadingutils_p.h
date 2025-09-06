@@ -19,7 +19,7 @@
 namespace BLThreadingUtils {
 
 #if !defined(_WIN32)
-static void getAbsTimeForWaitCondition(struct timespec& out, uint64_t microseconds) noexcept {
+static void get_abs_time_for_wait_condition(struct timespec& out, uint64_t microseconds) noexcept {
   struct timeval now;
   gettimeofday(&now, nullptr);
 

@@ -41,10 +41,10 @@ struct BrokenGlobal {
   FILE* _file;
 
   // Unit tests.
-  BrokenAPI::Unit* _unitList;
-  BrokenAPI::Unit* _unitRunning;
+  BrokenAPI::Unit* _unit_list;
+  BrokenAPI::Unit* _unit_running;
 
-  bool hasArg(const char* a) const noexcept {
+  bool has_arg(const char* a) const noexcept {
     for (int i = 1; i < _argc; i++)
       if (strcmp(_argv[i], a) == 0)
         return true;
@@ -53,7 +53,7 @@ struct BrokenGlobal {
 
   inline FILE* file() const noexcept { return _file ? _file : stdout; }
 };
-static BrokenGlobal _brokenGlobal;
+static BrokenGlobal _broken_global;
 
 // Broken - API
 // ============
@@ -100,53 +100,53 @@ static bool BrokenAPI_matchesFilter(const char* a, const char* b) noexcept {
 }
 
 static bool BrokenAPI_canRun(BrokenAPI::Unit* unit) noexcept {
-  BrokenGlobal& global = _brokenGlobal;
+  BrokenGlobal& global = _broken_global;
 
   int i, argc = global._argc;
   const char** argv = global._argv;
 
-  const char* unitName = unit->name;
-  bool hasFilter = false;
+  const char* unit_name = unit->name;
+  bool has_filter = false;
 
   for (i = 1; i < argc; i++) {
     const char* arg = argv[i];
 
     if (BrokenAPI_startsWith(arg, "--run-") && strcmp(arg, "--run-all") != 0) {
-      hasFilter = true;
+      has_filter = true;
 
-      if (BrokenAPI_matchesFilter(unitName, arg + 6))
+      if (BrokenAPI_matchesFilter(unit_name, arg + 6))
         return true;
     }
   }
 
   // If no filter has been specified the default is to run.
-  return !hasFilter;
+  return !has_filter;
 }
 
 static void BrokenAPI_runUnit(BrokenAPI::Unit* unit) noexcept {
   BrokenAPI::info("Running %s", unit->name);
 
-  _brokenGlobal._unitRunning = unit;
+  _broken_global._unit_running = unit;
   unit->entry();
-  _brokenGlobal._unitRunning = NULL;
+  _broken_global._unit_running = NULL;
 }
 
 static void BrokenAPI_runAll() noexcept {
-  BrokenAPI::Unit* unit = _brokenGlobal._unitList;
+  BrokenAPI::Unit* unit = _broken_global._unit_list;
 
-  bool hasUnits = unit != NULL;
+  bool has_units = unit != NULL;
   size_t count = 0;
-  int currentPriority = 0;
+  int current_priority = 0;
 
   while (unit != NULL) {
     if (BrokenAPI_canRun(unit)) {
-      if (currentPriority != unit->priority) {
+      if (current_priority != unit->priority) {
         if (count)
           INFO("");
         INFO("[[Priority=%d]]", unit->priority);
       }
 
-      currentPriority = unit->priority;
+      current_priority = unit->priority;
       BrokenAPI_runUnit(unit);
       count++;
     }
@@ -159,12 +159,12 @@ static void BrokenAPI_runAll() noexcept {
   }
   else {
     INFO("\nWarning:");
-    INFO("  No units %s!", hasUnits ? "matched the filter" : "defined");
+    INFO("  No units %s!", has_units ? "matched the filter" : "defined");
   }
 }
 
 static void BrokenAPI_listAll() noexcept {
-  BrokenAPI::Unit* unit = _brokenGlobal._unitList;
+  BrokenAPI::Unit* unit = _broken_global._unit_list;
 
   if (unit != NULL) {
     INFO("Units:");
@@ -179,12 +179,12 @@ static void BrokenAPI_listAll() noexcept {
   }
 }
 
-bool BrokenAPI::hasArg(const char* name) noexcept {
-  return _brokenGlobal.hasArg(name);
+bool BrokenAPI::has_arg(const char* name) noexcept {
+  return _broken_global.has_arg(name);
 }
 
-void BrokenAPI::addUnit(Unit* unit) noexcept {
-  Unit** pPrev = &_brokenGlobal._unitList;
+void BrokenAPI::add_unit(Unit* unit) noexcept {
+  Unit** pPrev = &_broken_global._unit_list;
   Unit* current = *pPrev;
 
   // C++ static initialization doesn't guarantee anything. We sort all units by
@@ -201,19 +201,19 @@ void BrokenAPI::addUnit(Unit* unit) noexcept {
   unit->next = current;
 }
 
-void BrokenAPI::setOutputFile(FILE* file) noexcept {
-  BrokenGlobal& global = _brokenGlobal;
+void BrokenAPI::set_output_file(FILE* file) noexcept {
+  BrokenGlobal& global = _broken_global;
 
   global._file = file;
 }
 
-int BrokenAPI::run(int argc, const char* argv[], Entry onBeforeRun, Entry onAfterRun) {
-  BrokenGlobal& global = _brokenGlobal;
+int BrokenAPI::run(int argc, const char* argv[], Entry on_before_run, Entry on_after_run) {
+  BrokenGlobal& global = _broken_global;
 
   global._argc = argc;
   global._argv = argv;
 
-  if (global.hasArg("--help")) {
+  if (global.has_arg("--help")) {
     INFO("Options:");
     INFO("  --help    - print this usage");
     INFO("  --list    - list all tests");
@@ -222,25 +222,25 @@ int BrokenAPI::run(int argc, const char* argv[], Entry onBeforeRun, Entry onAfte
     return 0;
   }
 
-  if (global.hasArg("--list")) {
+  if (global.has_arg("--list")) {
     BrokenAPI_listAll();
     return 0;
   }
 
-  if (onBeforeRun)
-    onBeforeRun();
+  if (on_before_run)
+    on_before_run();
 
-  // We don't care about filters here, it's implemented by `runAll`.
+  // We don't care about filters here, it's implemented by `run_all`.
   BrokenAPI_runAll();
 
-  if (onAfterRun)
-    onAfterRun();
+  if (on_after_run)
+    on_after_run();
 
   return 0;
 }
 
 static void BrokenAPI_printMessage(const char* prefix, const char* fmt, va_list ap) noexcept {
-  BrokenGlobal& global = _brokenGlobal;
+  BrokenGlobal& global = _broken_global;
   FILE* dst = global.file();
 
   if (!fmt || fmt[0] == '\0') {
@@ -250,31 +250,31 @@ static void BrokenAPI_printMessage(const char* prefix, const char* fmt, va_list 
     // This looks scary, but we really want to use only a single call to vfprintf()
     // in multithreaded code. So we change the format a bit if necessary.
     enum : unsigned { kBufferSize = 512 };
-    char staticBuffer[512];
+    char static_buffer[512];
 
-    size_t fmtSize = strlen(fmt);
-    size_t prefixSize = strlen(prefix);
+    size_t fmt_size = strlen(fmt);
+    size_t prefix_size = strlen(prefix);
 
-    char* fmtBuf = staticBuffer;
-    if (fmtSize > kBufferSize - 2 - prefixSize)
-      fmtBuf = static_cast<char*>(malloc(fmtSize + prefixSize + 2));
+    char* fmt_buf = static_buffer;
+    if (fmt_size > kBufferSize - 2 - prefix_size)
+      fmt_buf = static_cast<char*>(malloc(fmt_size + prefix_size + 2));
 
-    if (!fmtBuf) {
-      fprintf(dst, "%sCannot allocate buffer for vfprintf()\n", prefix);
+    if (!fmt_buf) {
+      fprintf(dst, "%s_cannot allocate buffer for vfprintf()\n", prefix);
     }
     else {
-      memcpy(fmtBuf, prefix, prefixSize);
-      memcpy(fmtBuf + prefixSize, fmt, fmtSize);
+      memcpy(fmt_buf, prefix, prefix_size);
+      memcpy(fmt_buf + prefix_size, fmt, fmt_size);
 
-      fmtSize += prefixSize;
-      if (fmtBuf[fmtSize - 1] != '\n')
-        fmtBuf[fmtSize++] = '\n';
-      fmtBuf[fmtSize] = '\0';
+      fmt_size += prefix_size;
+      if (fmt_buf[fmt_size - 1] != '\n')
+        fmt_buf[fmt_size++] = '\n';
+      fmt_buf[fmt_size] = '\0';
 
-      vfprintf(dst, fmtBuf, ap);
+      vfprintf(dst, fmt_buf, ap);
 
-      if (fmtBuf != staticBuffer)
-        free(fmtBuf);
+      if (fmt_buf != static_buffer)
+        free(fmt_buf);
     }
   }
 
@@ -282,16 +282,16 @@ static void BrokenAPI_printMessage(const char* prefix, const char* fmt, va_list 
 }
 
 void BrokenAPI::info(const char* fmt, ...) noexcept {
-  BrokenGlobal& global = _brokenGlobal;
+  BrokenGlobal& global = _broken_global;
 
   va_list ap;
   va_start(ap, fmt);
-  BrokenAPI_printMessage(global._unitRunning ? "  " : "", fmt, ap);
+  BrokenAPI_printMessage(global._unit_running ? "  " : "", fmt, ap);
   va_end(ap);
 }
 
 void BrokenAPI::fail(const char* file, int line, const char* expression, const char* fmt, ...) noexcept {
-  BrokenGlobal& global = _brokenGlobal;
+  BrokenGlobal& global = _broken_global;
   FILE* dst = global.file();
 
   fprintf(dst, "  FAILED: %s\n", expression);

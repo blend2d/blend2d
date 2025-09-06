@@ -22,12 +22,12 @@ namespace StringInternal {
 //! \name BLString - Internals - Common Functionality (Container)
 //! \{
 
-static BL_INLINE constexpr BLObjectImplSize implSizeFromCapacity(size_t capacity) noexcept {
+static BL_INLINE constexpr BLObjectImplSize impl_size_from_capacity(size_t capacity) noexcept {
   return BLObjectImplSize(sizeof(BLStringImpl) + 1 + capacity);
 }
 
-static BL_INLINE constexpr size_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
-  return implSize.value() - sizeof(BLStringImpl) - 1;
+static BL_INLINE constexpr size_t capacity_from_impl_size(BLObjectImplSize impl_size) noexcept {
+  return impl_size.value() - sizeof(BLStringImpl) - 1;
 }
 
 //! \}
@@ -35,18 +35,18 @@ static BL_INLINE constexpr size_t capacityFromImplSize(BLObjectImplSize implSize
 //! \name BLString - Internals - Common Functionality (Impl)
 //! \{
 
-static BL_INLINE bool isImplMutable(BLStringImpl* impl) noexcept {
-  return ObjectInternal::isImplMutable(impl);
+static BL_INLINE bool is_impl_mutable(BLStringImpl* impl) noexcept {
+  return ObjectInternal::is_impl_mutable(impl);
 }
 
 
-static BL_INLINE BLResult freeImpl(BLStringImpl* impl) noexcept {
-  return ObjectInternal::freeImpl(impl);
+static BL_INLINE BLResult free_impl(BLStringImpl* impl) noexcept {
+  return ObjectInternal::free_impl(impl);
 }
 
 template<RCMode kRCMode>
-static BL_INLINE BLResult releaseImpl(BLStringImpl* impl) noexcept {
-  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+static BL_INLINE BLResult release_impl(BLStringImpl* impl) noexcept {
+  return ObjectInternal::deref_impl_and_test<kRCMode>(impl) ? free_impl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -54,29 +54,29 @@ static BL_INLINE BLResult releaseImpl(BLStringImpl* impl) noexcept {
 //! \name BLString - Internals - Common Functionality (Instance)
 //! \{
 
-static BL_INLINE BLStringImpl* getImpl(const BLStringCore* self) noexcept {
+static BL_INLINE BLStringImpl* get_impl(const BLStringCore* self) noexcept {
   return static_cast<BLStringImpl*>(self->_d.impl);
 }
 
-static BL_INLINE bool isInstanceMutable(const BLStringCore* self) noexcept {
-  return ObjectInternal::isInstanceMutable(self);
+static BL_INLINE bool is_instance_mutable(const BLStringCore* self) noexcept {
+  return ObjectInternal::is_instance_mutable(self);
 }
 
-static BL_INLINE BLResult retainInstance(const BLStringCore* self, size_t n = 1) noexcept {
-  return ObjectInternal::retainInstance(self, n);
+static BL_INLINE BLResult retain_instance(const BLStringCore* self, size_t n = 1) noexcept {
+  return ObjectInternal::retain_instance(self, n);
 }
 
-static BL_INLINE BLResult releaseInstance(BLStringCore* self) noexcept {
-  return self->_d.isRefCountedObject() ? releaseImpl<RCMode::kForce>(getImpl(self)) : BLResult(BL_SUCCESS);
+static BL_INLINE BLResult release_instance(BLStringCore* self) noexcept {
+  return self->_d.is_ref_counted_object() ? release_impl<RCMode::kForce>(get_impl(self)) : BLResult(BL_SUCCESS);
 }
 
-static BL_INLINE BLResult replaceInstance(BLStringCore* self, const BLStringCore* other) noexcept {
+static BL_INLINE BLResult replace_instance(BLStringCore* self, const BLStringCore* other) noexcept {
   // NOTE: UBSAN doesn't like casting the impl in case the String is in SSO mode, so wait with the cast.
   void* impl = static_cast<void*>(self->_d.impl);
   BLObjectInfo info = self->_d.info;
 
   self->_d = other->_d;
-  return info.isRefCountedObject() ? releaseImpl<RCMode::kForce>(static_cast<BLStringImpl*>(impl)) : BLResult(BL_SUCCESS);
+  return info.is_ref_counted_object() ? release_impl<RCMode::kForce>(static_cast<BLStringImpl*>(impl)) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -90,30 +90,30 @@ struct UnpackedData {
   size_t capacity;
 };
 
-static BL_INLINE size_t getSSOSize(const BLStringCore* self) noexcept {
+static BL_INLINE size_t get_sso_size(const BLStringCore* self) noexcept {
   return (self->_d.info.bits ^ BLString::kSSOEmptySignature) >> BL_OBJECT_INFO_A_SHIFT;
 }
 
-static BL_INLINE UnpackedData unpackData(const BLStringCore* self) noexcept {
+static BL_INLINE UnpackedData unpack_data(const BLStringCore* self) noexcept {
   if (self->_d.sso()) {
-    return UnpackedData{const_cast<char*>(self->_d.char_data), getSSOSize(self), BLString::kSSOCapacity};
+    return UnpackedData{const_cast<char*>(self->_d.char_data), get_sso_size(self), BLString::kSSOCapacity};
   }
   else {
-    BLStringImpl* impl = getImpl(self);
+    BLStringImpl* impl = get_impl(self);
     return UnpackedData{impl->data(), impl->size, impl->capacity};
   }
 }
 
-static BL_INLINE char* getData(const BLStringCore* self) noexcept {
-  return self->_d.sso() ? const_cast<char*>(self->_d.char_data) : getImpl(self)->data();
+static BL_INLINE char* get_data(const BLStringCore* self) noexcept {
+  return self->_d.sso() ? const_cast<char*>(self->_d.char_data) : get_impl(self)->data();
 }
 
-static BL_INLINE size_t getSize(const BLStringCore* self) noexcept {
-  return self->_d.sso() ? getSSOSize(self) : getImpl(self)->size;
+static BL_INLINE size_t get_size(const BLStringCore* self) noexcept {
+  return self->_d.sso() ? get_sso_size(self) : get_impl(self)->size;
 }
 
-static BL_INLINE size_t getCapacity(const BLStringCore* self) noexcept {
-  return self->_d.sso() ? size_t(BLString::kSSOCapacity) : getImpl(self)->capacity;
+static BL_INLINE size_t get_capacity(const BLStringCore* self) noexcept {
+  return self->_d.sso() ? size_t(BLString::kSSOCapacity) : get_impl(self)->capacity;
 }
 
 //! \}
@@ -141,8 +141,8 @@ struct StaticStringData {
   };
 
 template<size_t kSize>
-static BL_INLINE void initStatic(BLStringCore* self, const StaticStringData<kSize>& data) noexcept {
-  self->_d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_STRING), (BLObjectImpl*)&data.impl);
+static BL_INLINE void init_static(BLStringCore* self, const StaticStringData<kSize>& data) noexcept {
+  self->_d.init_dynamic(BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_STRING), (BLObjectImpl*)&data.impl);
 }
 
 //! \}

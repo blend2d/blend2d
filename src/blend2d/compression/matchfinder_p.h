@@ -303,8 +303,8 @@ static BL_INLINE lz_match* bt_matchfinder_advance_one_byte(bt_matchfinder* BL_RE
   next_hashes[0] = lz_hash(next_hash_seq & 0xFFFFFFu, BT_MATCHFINDER_HASH3_ORDER);
   next_hashes[1] = lz_hash(next_hash_seq            , BT_MATCHFINDER_HASH4_ORDER);
 
-  blPrefetchW(&mf->hash3_tab[next_hashes[0]]);
-  blPrefetchW(&mf->hash4_tab[next_hashes[1]]);
+  bl_prefetch_w(&mf->hash3_tab[next_hashes[0]]);
+  bl_prefetch_w(&mf->hash4_tab[next_hashes[1]]);
 
   int32_t cur_node = mf->hash3_tab[hash3][0];
   mf->hash3_tab[hash3][0] = mf_pos_t(cur_pos);
@@ -376,14 +376,14 @@ static BL_INLINE lz_match* bt_matchfinder_advance_one_byte(bt_matchfinder* BL_RE
       pending_lt_ptr = bt_right_child(mf, cur_node);
       cur_node = *pending_lt_ptr;
       best_lt_len = len;
-      len = blMin(len, best_gt_len);
+      len = bl_min(len, best_gt_len);
     }
     else {
       *pending_gt_ptr = mf_pos_t(cur_node);
       pending_gt_ptr = bt_left_child(mf, cur_node);
       cur_node = *pending_gt_ptr;
       best_gt_len = len;
-      len = blMin(len, best_lt_len);
+      len = bl_min(len, best_lt_len);
     }
 
     if (cur_node <= cutoff || !--depth_remaining) {
@@ -668,8 +668,8 @@ static BL_INLINE uint32_t hc_matchfinder_longest_match(
     next_hashes[0] = lz_hash(next_hash_seq & 0xFFFFFFu, HC_MATCHFINDER_HASH3_ORDER);
     next_hashes[1] = lz_hash(next_hash_seq            , HC_MATCHFINDER_HASH4_ORDER);
 
-    blPrefetchW(&mf->hash3_tab[next_hashes[0]]);
-    blPrefetchW(&mf->hash4_tab[next_hashes[1]]);
+    bl_prefetch_w(&mf->hash3_tab[next_hashes[0]]);
+    bl_prefetch_w(&mf->hash4_tab[next_hashes[1]]);
 
     if (best_len < 4) {
       // No match of length >= 4 found yet?
@@ -797,7 +797,7 @@ static BL_INLINE const uint8_t* hc_matchfinder_skip_positions(
   const uint32_t count,
   uint32_t* BL_RESTRICT next_hashes
 ) noexcept {
-  if (BL_UNLIKELY(count + 5 > PtrOps::bytesUntil(in_next, in_end))) {
+  if (BL_UNLIKELY(count + 5 > PtrOps::bytes_until(in_next, in_end))) {
     return &in_next[count];
   }
 
@@ -824,8 +824,8 @@ static BL_INLINE const uint8_t* hc_matchfinder_skip_positions(
     cur_pos++;
   } while (--remaining);
 
-  blPrefetchW(&mf->hash3_tab[hash3]);
-  blPrefetchW(&mf->hash4_tab[hash4]);
+  bl_prefetch_w(&mf->hash3_tab[hash3]);
+  bl_prefetch_w(&mf->hash4_tab[hash4]);
 
   next_hashes[0] = hash3;
   next_hashes[1] = hash4;

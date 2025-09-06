@@ -175,7 +175,7 @@ BL_DEFINE_ENUM(BLFileSeekType) {
   BL_FORCE_ENUM_UINT32(BL_FILE_SEEK)
 };
 
-//! File read flags used by \ref BLFileSystem::readFile().
+//! File read flags used by \ref BLFileSystem::read_file().
 BL_DEFINE_ENUM(BLFileReadFlags) {
   //! No flags.
   BL_FILE_READ_NO_FLAGS = 0u,
@@ -227,7 +227,7 @@ struct BLFileInfo {
   //! \{
 
   uint64_t size;
-  int64_t modifiedTime;
+  int64_t modified_time;
   BLFileInfoFlags flags;
   uint32_t uid;
   uint32_t gid;
@@ -241,38 +241,38 @@ struct BLFileInfo {
   //! \{
 
   //! Tests whether the file information has the given `flag` set in `flags`.
-  BL_INLINE_NODEBUG bool hasFlag(BLFileInfoFlags flag) const noexcept { return (flags & flag) != 0; }
+  BL_INLINE_NODEBUG bool has_flag(BLFileInfoFlags flag) const noexcept { return (flags & flag) != 0; }
 
-  BL_INLINE_NODEBUG bool hasOwnerR() const noexcept { return hasFlag(BL_FILE_INFO_OWNER_R); }
-  BL_INLINE_NODEBUG bool hasOwnerW() const noexcept { return hasFlag(BL_FILE_INFO_OWNER_W); }
-  BL_INLINE_NODEBUG bool hasOwnerX() const noexcept { return hasFlag(BL_FILE_INFO_OWNER_X); }
+  BL_INLINE_NODEBUG bool has_owner_r() const noexcept { return has_flag(BL_FILE_INFO_OWNER_R); }
+  BL_INLINE_NODEBUG bool has_owner_w() const noexcept { return has_flag(BL_FILE_INFO_OWNER_W); }
+  BL_INLINE_NODEBUG bool has_owner_x() const noexcept { return has_flag(BL_FILE_INFO_OWNER_X); }
 
-  BL_INLINE_NODEBUG bool hasGroupR() const noexcept { return hasFlag(BL_FILE_INFO_GROUP_R); }
-  BL_INLINE_NODEBUG bool hasGroupW() const noexcept { return hasFlag(BL_FILE_INFO_GROUP_W); }
-  BL_INLINE_NODEBUG bool hasGroupX() const noexcept { return hasFlag(BL_FILE_INFO_GROUP_X); }
+  BL_INLINE_NODEBUG bool has_group_r() const noexcept { return has_flag(BL_FILE_INFO_GROUP_R); }
+  BL_INLINE_NODEBUG bool has_group_w() const noexcept { return has_flag(BL_FILE_INFO_GROUP_W); }
+  BL_INLINE_NODEBUG bool has_group_x() const noexcept { return has_flag(BL_FILE_INFO_GROUP_X); }
 
-  BL_INLINE_NODEBUG bool hasOtherR() const noexcept { return hasFlag(BL_FILE_INFO_OTHER_R); }
-  BL_INLINE_NODEBUG bool hasOtherW() const noexcept { return hasFlag(BL_FILE_INFO_OTHER_W); }
-  BL_INLINE_NODEBUG bool hasOtherX() const noexcept { return hasFlag(BL_FILE_INFO_OTHER_X); }
+  BL_INLINE_NODEBUG bool has_other_r() const noexcept { return has_flag(BL_FILE_INFO_OTHER_R); }
+  BL_INLINE_NODEBUG bool has_other_w() const noexcept { return has_flag(BL_FILE_INFO_OTHER_W); }
+  BL_INLINE_NODEBUG bool has_other_x() const noexcept { return has_flag(BL_FILE_INFO_OTHER_X); }
 
-  BL_INLINE_NODEBUG bool hasSUID() const noexcept { return hasFlag(BL_FILE_INFO_SUID); }
-  BL_INLINE_NODEBUG bool hasSGID() const noexcept { return hasFlag(BL_FILE_INFO_SGID); }
+  BL_INLINE_NODEBUG bool has_suid() const noexcept { return has_flag(BL_FILE_INFO_SUID); }
+  BL_INLINE_NODEBUG bool has_sgid() const noexcept { return has_flag(BL_FILE_INFO_SGID); }
 
-  BL_INLINE_NODEBUG bool isRegular() const noexcept { return hasFlag(BL_FILE_INFO_REGULAR); }
-  BL_INLINE_NODEBUG bool isDirectory() const noexcept { return hasFlag(BL_FILE_INFO_DIRECTORY); }
-  BL_INLINE_NODEBUG bool isSymlink() const noexcept { return hasFlag(BL_FILE_INFO_SYMLINK); }
+  BL_INLINE_NODEBUG bool is_regular() const noexcept { return has_flag(BL_FILE_INFO_REGULAR); }
+  BL_INLINE_NODEBUG bool is_directory() const noexcept { return has_flag(BL_FILE_INFO_DIRECTORY); }
+  BL_INLINE_NODEBUG bool is_symlink() const noexcept { return has_flag(BL_FILE_INFO_SYMLINK); }
 
-  BL_INLINE_NODEBUG bool isCharDevice() const noexcept { return hasFlag(BL_FILE_INFO_CHAR_DEVICE); }
-  BL_INLINE_NODEBUG bool isBlockDevice() const noexcept { return hasFlag(BL_FILE_INFO_BLOCK_DEVICE); }
-  BL_INLINE_NODEBUG bool isFIFO() const noexcept { return hasFlag(BL_FILE_INFO_FIFO); }
-  BL_INLINE_NODEBUG bool isSocket() const noexcept { return hasFlag(BL_FILE_INFO_SOCKET); }
+  BL_INLINE_NODEBUG bool is_char_device() const noexcept { return has_flag(BL_FILE_INFO_CHAR_DEVICE); }
+  BL_INLINE_NODEBUG bool is_block_device() const noexcept { return has_flag(BL_FILE_INFO_BLOCK_DEVICE); }
+  BL_INLINE_NODEBUG bool is_fifo() const noexcept { return has_flag(BL_FILE_INFO_FIFO); }
+  BL_INLINE_NODEBUG bool is_socket() const noexcept { return has_flag(BL_FILE_INFO_SOCKET); }
 
-  BL_INLINE_NODEBUG bool isHidden() const noexcept { return hasFlag(BL_FILE_INFO_HIDDEN); }
-  BL_INLINE_NODEBUG bool isExecutable() const noexcept { return hasFlag(BL_FILE_INFO_EXECUTABLE); }
-  BL_INLINE_NODEBUG bool isArchive() const noexcept { return hasFlag(BL_FILE_INFO_ARCHIVE); }
-  BL_INLINE_NODEBUG bool isSystem() const noexcept { return hasFlag(BL_FILE_INFO_SYSTEM); }
+  BL_INLINE_NODEBUG bool is_hidden() const noexcept { return has_flag(BL_FILE_INFO_HIDDEN); }
+  BL_INLINE_NODEBUG bool is_executable() const noexcept { return has_flag(BL_FILE_INFO_EXECUTABLE); }
+  BL_INLINE_NODEBUG bool is_archive() const noexcept { return has_flag(BL_FILE_INFO_ARCHIVE); }
+  BL_INLINE_NODEBUG bool is_system() const noexcept { return has_flag(BL_FILE_INFO_SYSTEM); }
 
-  BL_INLINE_NODEBUG bool isValid() const noexcept { return hasFlag(BL_FILE_INFO_VALID); }
+  BL_INLINE_NODEBUG bool is_valid() const noexcept { return has_flag(BL_FILE_INFO_VALID); }
 
   //! \}
 
@@ -294,16 +294,16 @@ BL_BEGIN_C_DECLS
 //!
 //! \{
 
-BL_API BLResult BL_CDECL blFileInit(BLFileCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileReset(BLFileCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileOpen(BLFileCore* self, const char* fileName, BLFileOpenFlags openFlags) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileClose(BLFileCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileSeek(BLFileCore* self, int64_t offset, BLFileSeekType seekType, int64_t* positionOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileTruncate(BLFileCore* self, int64_t maxSize) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileGetInfo(BLFileCore* self, BLFileInfo* infoOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_init(BLFileCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_reset(BLFileCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_open(BLFileCore* self, const char* file_name, BLFileOpenFlags open_flags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_close(BLFileCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_seek(BLFileCore* self, int64_t offset, BLFileSeekType seek_type, int64_t* position_out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_read(BLFileCore* self, void* buffer, size_t n, size_t* bytes_read_out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_write(BLFileCore* self, const void* buffer, size_t n, size_t* bytes_written_out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_truncate(BLFileCore* self, int64_t max_size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_get_info(BLFileCore* self, BLFileInfo* info_out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_get_size(BLFileCore* self, uint64_t* file_size_out) BL_NOEXCEPT_C;
 
 //! \}
 
@@ -311,9 +311,9 @@ BL_API BLResult BL_CDECL blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) 
 //!
 //! \{
 
-BL_API BLResult BL_CDECL blFileSystemGetInfo(const char* fileName, BLFileInfo* infoOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileSystemReadFile(const char* fileName, BLArrayCore* dst, size_t maxSize, BLFileReadFlags readFlags) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileSystemWriteFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_system_get_info(const char* file_name, BLFileInfo* info_out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_system_read_file(const char* file_name, BLArrayCore* dst, size_t max_size, BLFileReadFlags read_flags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_file_system_write_file(const char* file_name, const void* data, size_t size, size_t* bytes_written_out) BL_NOEXCEPT_C;
 
 //! \}
 
@@ -371,7 +371,7 @@ public:
   }
 
   //! Destroys this file instance - closes the file descriptor or handle when it's referencing an open file.
-  BL_INLINE_NODEBUG ~BLFile() noexcept { blFileReset(this); }
+  BL_INLINE_NODEBUG ~BLFile() noexcept { bl_file_reset(this); }
 
   //! \}
 
@@ -386,55 +386,55 @@ public:
   //! \{
 
   //! Tests whether the file is open.
-  BL_INLINE_NODEBUG bool isOpen() const noexcept { return handle != -1; }
+  BL_INLINE_NODEBUG bool is_open() const noexcept { return handle != -1; }
 
-  //! Attempts to open a file specified by `fileName` with the given `openFlags`.
-  BL_INLINE_NODEBUG BLResult open(const char* fileName, BLFileOpenFlags openFlags) noexcept {
-    return blFileOpen(this, fileName, openFlags);
+  //! Attempts to open a file specified by `file_name` with the given `open_flags`.
+  BL_INLINE_NODEBUG BLResult open(const char* file_name, BLFileOpenFlags open_flags) noexcept {
+    return bl_file_open(this, file_name, open_flags);
   }
 
   //! Closes the file (if open) and sets the file handle to -1.
   BL_INLINE_NODEBUG BLResult close() noexcept {
-    return blFileClose(this);
+    return bl_file_close(this);
   }
 
-  //! Sets the file position of the file to the given `offset` by using the specified `seekType`.
-  BL_INLINE_NODEBUG BLResult seek(int64_t offset, BLFileSeekType seekType) noexcept {
-    int64_t positionOut;
-    return blFileSeek(this, offset, seekType, &positionOut);
+  //! Sets the file position of the file to the given `offset` by using the specified `seek_type`.
+  BL_INLINE_NODEBUG BLResult seek(int64_t offset, BLFileSeekType seek_type) noexcept {
+    int64_t position_out;
+    return bl_file_seek(this, offset, seek_type, &position_out);
   }
 
-  //! Sets the file position of the file to the given `offset` by using the specified `seekType` and writes the new
-  //! position into `positionOut` output parameter.
-  BL_INLINE_NODEBUG BLResult seek(int64_t offset, BLFileSeekType seekType, int64_t* positionOut) noexcept {
-    return blFileSeek(this, offset, seekType, positionOut);
+  //! Sets the file position of the file to the given `offset` by using the specified `seek_type` and writes the new
+  //! position into `position_out` output parameter.
+  BL_INLINE_NODEBUG BLResult seek(int64_t offset, BLFileSeekType seek_type, int64_t* position_out) noexcept {
+    return bl_file_seek(this, offset, seek_type, position_out);
   }
 
   //! Reads `n` bytes from the file into the given `buffer` and stores the number of bytes actually read into
-  //! the `bytesReadOut` output parameter.
-  BL_INLINE_NODEBUG BLResult read(void* buffer, size_t n, size_t* bytesReadOut) noexcept {
-    return blFileRead(this, buffer, n, bytesReadOut);
+  //! the `bytes_read_out` output parameter.
+  BL_INLINE_NODEBUG BLResult read(void* buffer, size_t n, size_t* bytes_read_out) noexcept {
+    return bl_file_read(this, buffer, n, bytes_read_out);
   }
 
   //! Writes `n` bytes to the file from the given `buffer` and stores the number of bytes actually written into
-  //! the `bytesReadOut` output parameter.
-  BL_INLINE_NODEBUG BLResult write(const void* buffer, size_t n, size_t* bytesWrittenOut) noexcept {
-    return blFileWrite(this, buffer, n, bytesWrittenOut);
+  //! the `bytes_read_out` output parameter.
+  BL_INLINE_NODEBUG BLResult write(const void* buffer, size_t n, size_t* bytes_written_out) noexcept {
+    return bl_file_write(this, buffer, n, bytes_written_out);
   }
 
-  //! Truncates the file to the given maximum size `maxSize`.
-  BL_INLINE_NODEBUG BLResult truncate(int64_t maxSize) noexcept {
-    return blFileTruncate(this, maxSize);
+  //! Truncates the file to the given maximum size `max_size`.
+  BL_INLINE_NODEBUG BLResult truncate(int64_t max_size) noexcept {
+    return bl_file_truncate(this, max_size);
   }
 
-  //! Queries an information of the file and stores it to `infoOut`.
-  BL_INLINE_NODEBUG BLResult getInfo(BLFileInfo* infoOut) noexcept {
-    return blFileGetInfo(this, infoOut);
+  //! Queries an information of the file and stores it to `info_out`.
+  BL_INLINE_NODEBUG BLResult get_info(BLFileInfo* info_out) noexcept {
+    return bl_file_get_info(this, info_out);
   }
 
-  //! Queries a size of the file and stores it to `sizeOut`.
-  BL_INLINE_NODEBUG BLResult getSize(uint64_t* sizeOut) noexcept {
-    return blFileGetSize(this, sizeOut);
+  //! Queries a size of the file and stores it to `size_out`.
+  BL_INLINE_NODEBUG BLResult get_size(uint64_t* size_out) noexcept {
+    return bl_file_get_size(this, size_out);
   }
 
   //! \}
@@ -443,41 +443,41 @@ public:
 //! File-system utilities.
 namespace BLFileSystem {
 
-static BL_INLINE_NODEBUG BLResult fileInfo(const char* fileName, BLFileInfo* infoOut) noexcept {
-  return blFileSystemGetInfo(fileName, infoOut);
+static BL_INLINE_NODEBUG BLResult file_info(const char* file_name, BLFileInfo* info_out) noexcept {
+  return bl_file_system_get_info(file_name, info_out);
 }
 
 //! Reads a file into the `dst` buffer.
 //!
-//! Optionally you can set `maxSize` to non-zero value that would restrict the maximum bytes to read to such value.
-//! In addition, `readFlags` can be used to enable file mapping. See \ref BLFileReadFlags for more details.
-static BL_INLINE_NODEBUG BLResult readFile(const char* fileName, BLArray<uint8_t>& dst, size_t maxSize = 0, BLFileReadFlags readFlags = BL_FILE_READ_NO_FLAGS) noexcept {
-  return blFileSystemReadFile(fileName, &dst, maxSize, readFlags);
+//! Optionally you can set `max_size` to non-zero value that would restrict the maximum bytes to read to such value.
+//! In addition, `read_flags` can be used to enable file mapping. See \ref BLFileReadFlags for more details.
+static BL_INLINE_NODEBUG BLResult read_file(const char* file_name, BLArray<uint8_t>& dst, size_t max_size = 0, BLFileReadFlags read_flags = BL_FILE_READ_NO_FLAGS) noexcept {
+  return bl_file_system_read_file(file_name, &dst, max_size, read_flags);
 }
 
-static BL_INLINE_NODEBUG BLResult writeFile(const char* fileName, const void* data, size_t size) noexcept {
-  size_t bytesWrittenOut;
-  return blFileSystemWriteFile(fileName, data, size, &bytesWrittenOut);
+static BL_INLINE_NODEBUG BLResult write_file(const char* file_name, const void* data, size_t size) noexcept {
+  size_t bytes_written_out;
+  return bl_file_system_write_file(file_name, data, size, &bytes_written_out);
 }
 
-static BL_INLINE_NODEBUG BLResult writeFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) noexcept {
-  return blFileSystemWriteFile(fileName, data, size, bytesWrittenOut);
+static BL_INLINE_NODEBUG BLResult write_file(const char* file_name, const void* data, size_t size, size_t* bytes_written_out) noexcept {
+  return bl_file_system_write_file(file_name, data, size, bytes_written_out);
 }
 
-static BL_INLINE_NODEBUG BLResult writeFile(const char* fileName, const BLArrayView<uint8_t>& view) noexcept {
-  return writeFile(fileName, view.data, view.size);
+static BL_INLINE_NODEBUG BLResult write_file(const char* file_name, const BLArrayView<uint8_t>& view) noexcept {
+  return write_file(file_name, view.data, view.size);
 }
 
-static BL_INLINE_NODEBUG BLResult writeFile(const char* fileName, const BLArrayView<uint8_t>& view, size_t* bytesWrittenOut) noexcept {
-  return writeFile(fileName, view.data, view.size, bytesWrittenOut);
+static BL_INLINE_NODEBUG BLResult write_file(const char* file_name, const BLArrayView<uint8_t>& view, size_t* bytes_written_out) noexcept {
+  return write_file(file_name, view.data, view.size, bytes_written_out);
 }
 
-static BL_INLINE_NODEBUG BLResult writeFile(const char* fileName, const BLArray<uint8_t>& array) noexcept {
-  return writeFile(fileName, array.view());
+static BL_INLINE_NODEBUG BLResult write_file(const char* file_name, const BLArray<uint8_t>& array) noexcept {
+  return write_file(file_name, array.view());
 }
 
-static BL_INLINE_NODEBUG BLResult writeFile(const char* fileName, const BLArray<uint8_t>& array, size_t* bytesWrittenOut) noexcept {
-  return writeFile(fileName, array.view(), bytesWrittenOut);
+static BL_INLINE_NODEBUG BLResult write_file(const char* file_name, const BLArray<uint8_t>& array, size_t* bytes_written_out) noexcept {
+  return write_file(file_name, array.view(), bytes_written_out);
 }
 
 } // {BLFileSystem}

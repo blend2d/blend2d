@@ -15,7 +15,7 @@ namespace bl::RasterEngine {
 // RasterEngine - RenderTargetInfo - Table
 // =======================================
 
-const RenderTargetInfo renderTargetInfoByComponentType[RenderTargetInfo::kPixelComponentCount] = {
+const RenderTargetInfo render_target_info_by_component_type[RenderTargetInfo::kPixelComponentCount] = {
   #define ROW(PixelComponentType, FpBits, FullAlpha) { \
     RenderTargetInfo::PixelComponentType,              \
     0,                                                 \

@@ -24,13 +24,13 @@ namespace VarInternal {
 //! \{
 
 //! Initializes BLVar with \ref BLRgba and protects BLObjectInfo from payload that would conflict with BLObject tag.
-static BL_INLINE BLResult initRgba(BLObjectCore* self, const BLRgba* rgba) noexcept {
-  uint32_t r = blBitCast<uint32_t>(rgba->r);
-  uint32_t g = blBitCast<uint32_t>(rgba->g);
-  uint32_t b = blBitCast<uint32_t>(rgba->b);
-  uint32_t a = blMax<uint32_t>(blBitCast<uint32_t>(rgba->a), 0);
+static BL_INLINE BLResult init_rgba(BLObjectCore* self, const BLRgba* rgba) noexcept {
+  uint32_t r = bl_bit_cast<uint32_t>(rgba->r);
+  uint32_t g = bl_bit_cast<uint32_t>(rgba->g);
+  uint32_t b = bl_bit_cast<uint32_t>(rgba->b);
+  uint32_t a = bl_max<uint32_t>(bl_bit_cast<uint32_t>(rgba->a), 0);
 
-  self->_d.initU32x4(r, g, b, a);
+  self->_d.init_u32x4(r, g, b, a);
   return BL_SUCCESS;
 }
 

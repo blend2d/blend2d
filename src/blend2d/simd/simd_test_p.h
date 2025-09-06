@@ -73,7 +73,7 @@ public:
     : rng(seed),
       step(0) {}
 
-  uint64_t nextUInt64() noexcept {
+  uint64_t next_uint64() noexcept {
     if (++step >= 256)
       step = 0;
 
@@ -105,7 +105,7 @@ public:
       case 143: return 0x7FFFu;
       case 144: return 0u;
       case 145: return 0x7FFFu;
-      default : return rng.nextUInt64();
+      default : return rng.next_uint64();
     }
   }
 };
@@ -115,7 +115,7 @@ public:
 // Note that a constraint doesn't have to be always range based, it could be anything.
 struct ConstraintNone {
   template<uint32_t kW, typename T>
-  static BL_INLINE_NODEBUG void apply(VecOverlay<kW, T>& v) noexcept { blUnused(v); }
+  static BL_INLINE_NODEBUG void apply(VecOverlay<kW, T>& v) noexcept { bl_unused(v); }
 };
 
 template<typename ElementT, typename Derived>
@@ -133,17 +133,17 @@ struct ConstraintBase {
 
 template<uint8_t kMin, uint8_t kMax>
 struct ConstraintRangeU8 : public ConstraintBase<uint16_t, ConstraintRangeU8<kMin, kMax>> {
-  static BL_INLINE_NODEBUG uint8_t apply_one(uint8_t x) noexcept { return blClamp(x, kMin, kMax); }
+  static BL_INLINE_NODEBUG uint8_t apply_one(uint8_t x) noexcept { return bl_clamp(x, kMin, kMax); }
 };
 
 template<uint16_t kMin, uint16_t kMax>
 struct ConstraintRangeU16 : public ConstraintBase<uint16_t, ConstraintRangeU16<kMin, kMax>> {
-  static BL_INLINE_NODEBUG uint16_t apply_one(uint16_t x) noexcept { return blClamp(x, kMin, kMax); }
+  static BL_INLINE_NODEBUG uint16_t apply_one(uint16_t x) noexcept { return bl_clamp(x, kMin, kMax); }
 };
 
 template<uint32_t kMin, uint32_t kMax>
 struct ConstraintRangeU32 : public ConstraintBase<uint32_t, ConstraintRangeU32<kMin, kMax>> {
-  static BL_INLINE_NODEBUG uint32_t apply_one(uint32_t x) noexcept { return blClamp(x, kMin, kMax); }
+  static BL_INLINE_NODEBUG uint32_t apply_one(uint32_t x) noexcept { return bl_clamp(x, kMin, kMax); }
 };
 
 // SIMD - Tests - Generic Operations
@@ -224,15 +224,15 @@ template<typename T> struct iop_add : public op_base_2<T, iop_add<T>> {
 template<typename T> struct iop_adds : public op_base_2<T, iop_adds<T>> {
   static BL_INLINE T apply_one(const T& a, const T& b) noexcept {
     bl::OverflowFlag of{};
-    T result = bl::IntOps::addOverflow(a, b, &of);
+    T result = bl::IntOps::add_overflow(a, b, &of);
 
     if (!of)
       return result;
 
     if (std::is_unsigned_v<T> || b > 0)
-      return bl::Traits::maxValue<T>();
+      return bl::Traits::max_value<T>();
     else
-      return bl::Traits::minValue<T>();
+      return bl::Traits::min_value<T>();
   }
 };
 
@@ -243,15 +243,15 @@ template<typename T> struct iop_sub : public op_base_2<T, iop_sub<T>> {
 template<typename T> struct iop_subs : public op_base_2<T, iop_subs<T>> {
   static BL_INLINE T apply_one(const T& a, const T& b) noexcept {
     bl::OverflowFlag of{};
-    T result = bl::IntOps::subOverflow(a, b, &of);
+    T result = bl::IntOps::sub_overflow(a, b, &of);
 
     if (!of)
       return result;
 
     if (std::is_unsigned_v<T> || b > 0)
-      return bl::Traits::minValue<T>();
+      return bl::Traits::min_value<T>();
     else
-      return bl::Traits::maxValue<T>();
+      return bl::Traits::max_value<T>();
   }
 };
 
@@ -287,27 +287,27 @@ template<typename T, uint32_t kN> struct iop_srai : public op_base_1<T, iop_srai
 };
 
 template<typename T> struct iop_cmp_eq : public op_base_2<T, iop_cmp_eq<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a == b ? bl::IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a == b ? bl::IntOps::all_ones<T>() : T(0); }
 };
 
 template<typename T> struct iop_cmp_ne : public op_base_2<T, iop_cmp_ne<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a != b ? bl::IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a != b ? bl::IntOps::all_ones<T>() : T(0); }
 };
 
 template<typename T> struct iop_cmp_gt : public op_base_2<T, iop_cmp_gt<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >  b ? bl::IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >  b ? bl::IntOps::all_ones<T>() : T(0); }
 };
 
 template<typename T> struct iop_cmp_ge : public op_base_2<T, iop_cmp_ge<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >= b ? bl::IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >= b ? bl::IntOps::all_ones<T>() : T(0); }
 };
 
 template<typename T> struct iop_cmp_lt : public op_base_2<T, iop_cmp_lt<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <  b ? bl::IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <  b ? bl::IntOps::all_ones<T>() : T(0); }
 };
 
 template<typename T> struct iop_cmp_le : public op_base_2<T, iop_cmp_le<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <= b ? bl::IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <= b ? bl::IntOps::all_ones<T>() : T(0); }
 };
 
 template<typename T, uint32_t kN> struct iop_sllb_u128 {
@@ -619,7 +619,7 @@ static BL_NOINLINE BLString format_items(const T* items, uint32_t count) noexcep
   BLString s;
   s.append('{');
   for (uint32_t i = 0; i < count; i++)
-    s.appendFormat("%s%llu", i == 0 ? "" : ", ", (unsigned long long)items[i] & bl::IntOps::allOnes<std::make_unsigned_t<T>>());
+    s.append_format("%s%llu", i == 0 ? "" : ", ", (unsigned long long)items[i] & bl::IntOps::all_ones<std::make_unsigned_t<T>>());
   s.append('}');
   return s;
 }
@@ -710,7 +710,7 @@ static BL_NOINLINE void test_iop3_failed(const T* input1, const T* input2, const
 template<uint32_t kW, typename T>
 static void fill_random(DataGenInt& dg, VecOverlay<kW, T>& dst) noexcept {
   for (uint32_t i = 0; i < kW / 8u; i++)
-    dst.data_u64[i] = dg.nextUInt64();
+    dst.data_u64[i] = dg.next_uint64();
 }
 
 template<typename T>
@@ -727,7 +727,7 @@ static void fill_val(T* arr, T v, uint32_t count, uint32_t repeat = 1) noexcept 
 // ====================================================
 
 template<typename V, typename GenericOp, typename Constraint, typename VecOp>
-static BL_NOINLINE void test_iop1_constraint(VecOp&& vecOp) noexcept {
+static BL_NOINLINE void test_iop1_constraint(VecOp&& vec_op) noexcept {
   typedef typename V::ElementType T;
   constexpr uint32_t kItemCount = uint32_t(V::kW / sizeof(T));
 
@@ -741,7 +741,7 @@ static BL_NOINLINE void test_iop1_constraint(VecOp&& vecOp) noexcept {
     Constraint::apply(a);
 
     V va = SIMD::loadu<V>(a.data_u8);
-    V vr = vecOp(va);
+    V vr = vec_op(va);
 
     SIMD::storeu(observed.data_u8, vr);
     expected = GenericOp::apply(a);
@@ -752,15 +752,15 @@ static BL_NOINLINE void test_iop1_constraint(VecOp&& vecOp) noexcept {
 }
 
 template<typename V, typename GenericOp, typename VecOp>
-static void test_iop1(VecOp&& vecOp) noexcept {
-  return test_iop1_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vecOp));
+static void test_iop1(VecOp&& vec_op) noexcept {
+  return test_iop1_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vec_op));
 }
 
 // SIMD - Tests - Integer Operations - 2 Source Operands
 // =====================================================
 
 template<typename V, typename GenericOp, typename Constraint, typename VecOp>
-static BL_NOINLINE void test_iop2_constraint(VecOp&& vecOp) noexcept {
+static BL_NOINLINE void test_iop2_constraint(VecOp&& vec_op) noexcept {
   typedef typename V::ElementType T;
   constexpr uint32_t kItemCount = uint32_t(V::kW / sizeof(T));
 
@@ -778,7 +778,7 @@ static BL_NOINLINE void test_iop2_constraint(VecOp&& vecOp) noexcept {
 
     V va = SIMD::loadu<V>(a.data_u8);
     V vb = SIMD::loadu<V>(b.data_u8);
-    V vr = vecOp(va, vb);
+    V vr = vec_op(va, vb);
 
     SIMD::storeu(observed.data_u8, vr);
     expected = GenericOp::apply(a, b);
@@ -789,15 +789,15 @@ static BL_NOINLINE void test_iop2_constraint(VecOp&& vecOp) noexcept {
 }
 
 template<typename V, typename GenericOp, typename VecOp>
-static void test_iop2(VecOp&& vecOp) noexcept {
-  return test_iop2_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vecOp));
+static void test_iop2(VecOp&& vec_op) noexcept {
+  return test_iop2_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vec_op));
 }
 
 // SIMD - Tests - Integer Operations - 3 Source Operands
 // =====================================================
 
 template<typename V, typename GenericOp, typename Constraint, typename VecOp>
-static BL_NOINLINE void test_iop3_constraint(VecOp&& vecOp) noexcept {
+static BL_NOINLINE void test_iop3_constraint(VecOp&& vec_op) noexcept {
   typedef typename V::ElementType T;
   constexpr uint32_t kItemCount = uint32_t(V::kW / sizeof(T));
 
@@ -819,7 +819,7 @@ static BL_NOINLINE void test_iop3_constraint(VecOp&& vecOp) noexcept {
     V va = SIMD::loadu<V>(a.data_u8);
     V vb = SIMD::loadu<V>(b.data_u8);
     V vc = SIMD::loadu<V>(c.data_u8);
-    V vr = vecOp(va, vb, vc);
+    V vr = vec_op(va, vb, vc);
 
     SIMD::storeu(observed.data_u8, vr);
     expected = GenericOp::apply(a, b, c);
@@ -830,8 +830,8 @@ static BL_NOINLINE void test_iop3_constraint(VecOp&& vecOp) noexcept {
 }
 
 template<typename V, typename GenericOp, typename VecOp>
-static void test_iop3(VecOp&& vecOp) noexcept {
-  return test_iop3_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vecOp));
+static void test_iop3(VecOp&& vec_op) noexcept {
+  return test_iop3_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vec_op));
 }
 
 // SIMD - Tests - Integer Operations - Dispatcher

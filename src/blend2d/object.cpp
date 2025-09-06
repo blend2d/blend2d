@@ -24,106 +24,106 @@
 // bl::Object - Globals
 // ====================
 
-BLObjectCore blObjectDefaults[BL_OBJECT_TYPE_MAX_VALUE + 1];
-const BLObjectImplHeader blObjectHeaderWithRefCountEq0 = { 0, 0 };
-const BLObjectImplHeader blObjectHeaderWithRefCountEq1 = { 1, 0 };
+BLObjectCore bl_object_defaults[BL_OBJECT_TYPE_MAX_VALUE + 1];
+const BLObjectImplHeader bl_object_header_with_ref_count_eq_0 = { 0, 0 };
+const BLObjectImplHeader bl_object_header_with_ref_count_eq_1 = { 1, 0 };
 
-void blObjectDestroyExternalDataDummy(void* impl, void* externalData, void* userData) noexcept {
-  blUnused(impl, externalData, userData);
+void bl_object_destroy_external_data_dummy(void* impl, void* external_data, void* user_data) noexcept {
+  bl_unused(impl, external_data, user_data);
 }
 
 // bl::Object - API - Alloc & Free Impl
 // ====================================
 
-static BL_INLINE BLResult blObjectAllocImplInternal(BLObjectCore* self, uint32_t objectInfo, size_t implSize, size_t implFlags, size_t implAlignment, bool isExternal = false) noexcept {
-  if (BL_UNLIKELY(implSize > BL_OBJECT_IMPL_MAX_SIZE))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+static BL_INLINE BLResult bl_object_alloc_impl_internal(BLObjectCore* self, uint32_t object_info, size_t impl_size, size_t impl_flags, size_t impl_alignment, bool is_external = false) noexcept {
+  if (BL_UNLIKELY(impl_size > BL_OBJECT_IMPL_MAX_SIZE))
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-  implSize = bl::IntOps::alignUp(implSize, implAlignment);
+  impl_size = bl::IntOps::align_up(impl_size, impl_alignment);
 
-  size_t headerSize = sizeof(BLObjectImplHeader) + (isExternal ? sizeof(BLObjectExternalInfo) : size_t(0));
-  size_t allocationSize = implSize + headerSize + implAlignment;
+  size_t header_size = sizeof(BLObjectImplHeader) + (is_external ? sizeof(BLObjectExternalInfo) : size_t(0));
+  size_t allocation_size = impl_size + header_size + impl_alignment;
 
-  void* ptr = malloc(allocationSize);
+  void* ptr = malloc(allocation_size);
   if (BL_UNLIKELY(!ptr))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
   BLObjectImpl* impl = static_cast<BLObjectImpl*>(
-    bl::IntOps::alignUp(bl::PtrOps::offset(ptr, headerSize), implAlignment));
-  BLObjectImplHeader* implHeader = bl::ObjectInternal::getImplHeader(impl);
+    bl::IntOps::align_up(bl::PtrOps::offset(ptr, header_size), impl_alignment));
+  BLObjectImplHeader* impl_header = bl::ObjectInternal::get_impl_header(impl);
 
-  size_t alignmentOffset = size_t(uintptr_t(impl) - uintptr_t(ptr)) - headerSize;
-  BL_ASSERT((alignmentOffset & ~BLObjectImplHeader::kAlignmentOffsetMask) == 0);
+  size_t alignment_offset = size_t(uintptr_t(impl) - uintptr_t(ptr)) - header_size;
+  BL_ASSERT((alignment_offset & ~BLObjectImplHeader::kAlignmentOffsetMask) == 0);
 
-  implHeader->refCount = implFlags & BLObjectImplHeader::kRefCountedAndImmutableFlags;
-  implHeader->flags = implFlags | alignmentOffset;
+  impl_header->ref_count = impl_flags & BLObjectImplHeader::kRefCountedAndImmutableFlags;
+  impl_header->flags = impl_flags | alignment_offset;
 
-  self->_d.clearStaticData();
+  self->_d.clear_static_data();
   self->_d.impl = impl;
-  self->_d.info.bits = objectInfo | BL_OBJECT_INFO_D_FLAG | BL_OBJECT_INFO_M_FLAG | BL_OBJECT_INFO_R_FLAG;
+  self->_d.info.bits = object_info | BL_OBJECT_INFO_D_FLAG | BL_OBJECT_INFO_M_FLAG | BL_OBJECT_INFO_R_FLAG;
 
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blObjectAllocImpl(BLObjectCore* self, uint32_t objectInfo, size_t implSize) noexcept {
+BL_API_IMPL BLResult bl_object_alloc_impl(BLObjectCore* self, uint32_t object_info, size_t impl_size) noexcept {
   size_t flags = BLObjectImplHeader::kRefCountedFlag;
-  return blObjectAllocImplInternal(self, objectInfo, implSize, flags, BL_OBJECT_IMPL_ALIGNMENT);
+  return bl_object_alloc_impl_internal(self, object_info, impl_size, flags, BL_OBJECT_IMPL_ALIGNMENT);
 }
 
-BL_API_IMPL BLResult blObjectAllocImplAligned(BLObjectCore* self, uint32_t objectInfo, size_t implSize, size_t implAlignment) noexcept {
-  if (!bl::IntOps::isPowerOf2(implAlignment))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+BL_API_IMPL BLResult bl_object_alloc_impl_aligned(BLObjectCore* self, uint32_t object_info, size_t impl_size, size_t impl_alignment) noexcept {
+  if (!bl::IntOps::is_power_of_2(impl_alignment))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
   size_t flags = BLObjectImplHeader::kRefCountedFlag;
-  implAlignment = blClamp<size_t>(implAlignment, 16, 128);
-  return blObjectAllocImplInternal(self, objectInfo, implSize, flags, implAlignment);
+  impl_alignment = bl_clamp<size_t>(impl_alignment, 16, 128);
+  return bl_object_alloc_impl_internal(self, object_info, impl_size, flags, impl_alignment);
 }
 
-BL_API_IMPL BLResult blObjectAllocImplExternal(BLObjectCore* self, uint32_t objectInfo, size_t implSize, bool immutable, BLDestroyExternalDataFunc destroyFunc, void* userData) noexcept {
+BL_API_IMPL BLResult bl_object_alloc_impl_external(BLObjectCore* self, uint32_t object_info, size_t impl_size, bool immutable, BLDestroyExternalDataFunc destroy_func, void* user_data) noexcept {
   size_t flags = (BLObjectImplHeader::kRefCountedFlag) |
                  (BLObjectImplHeader::kExternalFlag) |
                  (size_t(immutable) << BLObjectImplHeader::kImmutableFlagShift);
 
-  BL_PROPAGATE(blObjectAllocImplInternal(self, objectInfo, implSize, flags, BL_OBJECT_IMPL_ALIGNMENT, true));
-  bl::ObjectInternal::initExternalDestroyFunc(self->_d.impl, destroyFunc, userData);
+  BL_PROPAGATE(bl_object_alloc_impl_internal(self, object_info, impl_size, flags, BL_OBJECT_IMPL_ALIGNMENT, true));
+  bl::ObjectInternal::init_external_destroy_func(self->_d.impl, destroy_func, user_data);
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blObjectFreeImpl(BLObjectImpl* impl) noexcept {
-  return bl::ObjectInternal::freeImpl(impl);
+BL_API_IMPL BLResult bl_object_free_impl(BLObjectImpl* impl) noexcept {
+  return bl::ObjectInternal::free_impl(impl);
 }
 
-BLResult blObjectDestroyUnknownImpl(BLObjectImpl* impl, BLObjectInfo info) noexcept {
-  BL_ASSERT(info.isDynamicObject());
+BLResult bl_object_destroy_unknown_impl(BLObjectImpl* impl, BLObjectInfo info) noexcept {
+  BL_ASSERT(info.is_dynamic_object());
 
-  if (info.isVirtualObject())
-    return bl::ObjectInternal::freeVirtualImpl(impl);
+  if (info.is_virtual_object())
+    return bl::ObjectInternal::free_virtual_impl(impl);
 
-  BLObjectType type = info.rawType();
+  BLObjectType type = info.raw_type();
   switch (type) {
     case BL_OBJECT_TYPE_GRADIENT:
-      return bl::GradientInternal::freeImpl(static_cast<BLGradientPrivateImpl*>(impl));
+      return bl::GradientInternal::free_impl(static_cast<BLGradientPrivateImpl*>(impl));
 
     case BL_OBJECT_TYPE_PATTERN:
-      return bl::PatternInternal::freeImpl(static_cast<BLPatternPrivateImpl*>(impl));
+      return bl::PatternInternal::free_impl(static_cast<BLPatternPrivateImpl*>(impl));
 
     case BL_OBJECT_TYPE_STRING:
-      return bl::StringInternal::freeImpl(static_cast<BLStringImpl*>(impl));
+      return bl::StringInternal::free_impl(static_cast<BLStringImpl*>(impl));
 
     case BL_OBJECT_TYPE_PATH:
-      return bl::PathInternal::freeImpl(static_cast<BLPathPrivateImpl*>(impl));
+      return bl::PathInternal::free_impl(static_cast<BLPathPrivateImpl*>(impl));
 
     case BL_OBJECT_TYPE_IMAGE:
-      return bl::ImageInternal::freeImpl(static_cast<BLImagePrivateImpl*>(impl));
+      return bl::ImageInternal::free_impl(static_cast<BLImagePrivateImpl*>(impl));
 
     case BL_OBJECT_TYPE_FONT:
-      return bl::FontInternal::freeImpl(static_cast<BLFontPrivateImpl*>(impl));
+      return bl::FontInternal::free_impl(static_cast<BLFontPrivateImpl*>(impl));
 
     case BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS:
-      return bl::FontFeatureSettingsInternal::freeImpl(static_cast<BLFontFeatureSettingsImpl*>(impl));
+      return bl::FontFeatureSettingsInternal::free_impl(static_cast<BLFontFeatureSettingsImpl*>(impl));
 
     case BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS:
-      return bl::FontVariationSettingsInternal::freeImpl(static_cast<BLFontVariationSettingsImpl*>(impl));
+      return bl::FontVariationSettingsInternal::free_impl(static_cast<BLFontVariationSettingsImpl*>(impl));
 
     case BL_OBJECT_TYPE_ARRAY_OBJECT:
     case BL_OBJECT_TYPE_ARRAY_INT8:
@@ -148,41 +148,41 @@ BLResult blObjectDestroyUnknownImpl(BLObjectImpl* impl, BLObjectInfo info) noexc
     case BL_OBJECT_TYPE_ARRAY_STRUCT_20:
     case BL_OBJECT_TYPE_ARRAY_STRUCT_24:
     case BL_OBJECT_TYPE_ARRAY_STRUCT_32:
-      return bl::ArrayInternal::freeImpl(static_cast<BLArrayImpl*>(impl));
+      return bl::ArrayInternal::free_impl(static_cast<BLArrayImpl*>(impl));
 
     case BL_OBJECT_TYPE_BIT_SET:
       // NOTE: It's guaranteed that this BitSet is dynamic, so we don't have to correct the type.
-      return bl::BitSetInternal::freeImpl(static_cast<BLBitSetImpl*>(impl));
+      return bl::BitSetInternal::free_impl(static_cast<BLBitSetImpl*>(impl));
 
     default:
       // TODO: This shouldn't happen.
-      return bl::ObjectInternal::freeImpl(impl);
+      return bl::ObjectInternal::free_impl(impl);
   }
 }
 
 // bl::Object - API - Construction & Destruction
 // =============================================
 
-BL_API_IMPL BLResult blObjectInitMove(BLUnknown* self, BLUnknown* other) noexcept {
+BL_API_IMPL BLResult bl_object_init_move(BLUnknown* self, BLUnknown* other) noexcept {
   BL_ASSERT(self != other);
 
-  return blObjectPrivateInitMoveUnknown(blAsObject(self), blAsObject(other));
+  return bl_object_private_init_move_unknown(bl_as_object(self), bl_as_object(other));
 }
 
-BL_API_IMPL BLResult blObjectInitWeak(BLUnknown* self, const BLUnknown* other) noexcept {
+BL_API_IMPL BLResult bl_object_init_weak(BLUnknown* self, const BLUnknown* other) noexcept {
   BL_ASSERT(self != other);
 
-  return blObjectPrivateInitWeakUnknown(blAsObject(self), blAsObject(other));
+  return bl_object_private_init_weak_unknown(bl_as_object(self), bl_as_object(other));
 }
 
 // bl::Object - API - Reset
 // ========================
 
-BL_API_IMPL BLResult blObjectReset(BLUnknown* self) noexcept {
-  BLObjectType type = blAsObject(self)->_d.getType();
+BL_API_IMPL BLResult bl_object_reset(BLUnknown* self) noexcept {
+  BLObjectType type = bl_as_object(self)->_d.get_type();
 
-  bl::ObjectInternal::releaseUnknownInstance(blAsObject(self));
-  blAsObject(self)->_d = blObjectDefaults[type]._d;
+  bl::ObjectInternal::release_unknown_instance(bl_as_object(self));
+  bl_as_object(self)->_d = bl_object_defaults[type]._d;
 
   return BL_SUCCESS;
 }
@@ -190,166 +190,166 @@ BL_API_IMPL BLResult blObjectReset(BLUnknown* self) noexcept {
 // bl::Object - API - Assign
 // =========================
 
-BL_API_IMPL BLResult blObjectAssignMove(BLUnknown* self, BLUnknown* other) noexcept {
-  BLObjectType type = blAsObject(other)->_d.getType();
-  BLObjectCore tmp = *blAsObject(other);
+BL_API_IMPL BLResult bl_object_assign_move(BLUnknown* self, BLUnknown* other) noexcept {
+  BLObjectType type = bl_as_object(other)->_d.get_type();
+  BLObjectCore tmp = *bl_as_object(other);
 
-  blAsObject(other)->_d = blObjectDefaults[type]._d;
-  bl::ObjectInternal::releaseUnknownInstance(blAsObject(self));
+  bl_as_object(other)->_d = bl_object_defaults[type]._d;
+  bl::ObjectInternal::release_unknown_instance(bl_as_object(self));
 
-  blAsObject(self)->_d = tmp._d;
+  bl_as_object(self)->_d = tmp._d;
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blObjectAssignWeak(BLUnknown* self, const BLUnknown* other) noexcept {
-  return blObjectPrivateAssignWeakUnknown(blAsObject(self), blAsObject(other));
+BL_API_IMPL BLResult bl_object_assign_weak(BLUnknown* self, const BLUnknown* other) noexcept {
+  return bl_object_private_assign_weak_unknown(bl_as_object(self), bl_as_object(other));
 }
 
 // bl::Object - API - Properties
 // =============================
 
-BL_API_IMPL BLResult blObjectGetProperty(const BLUnknown* self, const char* name, size_t nameSize, BLVarCore* valueOut) noexcept {
-  if (nameSize == SIZE_MAX)
-    nameSize = strlen(name);
+BL_API_IMPL BLResult bl_object_get_property(const BLUnknown* self, const char* name, size_t name_size, BLVarCore* value_out) noexcept {
+  if (name_size == SIZE_MAX)
+    name_size = strlen(name);
 
-  if (!blAsObject(self)->_d.isVirtualObject())
-    return blTraceError(BL_ERROR_INVALID_KEY);
+  if (!bl_as_object(self)->_d.is_virtual_object())
+    return bl_trace_error(BL_ERROR_INVALID_KEY);
 
-  const BLObjectVirtImpl* impl = static_cast<const BLObjectVirtImpl*>(blAsObject(self)->_d.impl);
-  return impl->virt->base.getProperty(impl, name, nameSize, valueOut);
+  const BLObjectVirtImpl* impl = static_cast<const BLObjectVirtImpl*>(bl_as_object(self)->_d.impl);
+  return impl->virt->base.get_property(impl, name, name_size, value_out);
 }
 
-BL_API_IMPL BLResult blObjectGetPropertyBool(const BLUnknown* self, const char* name, size_t nameSize, bool* valueOut) noexcept {
+BL_API_IMPL BLResult bl_object_get_property_bool(const BLUnknown* self, const char* name, size_t name_size, bool* value_out) noexcept {
   BLVarCore v;
-  v._d.initNull();
+  v._d.init_null();
 
-  *valueOut = false;
-  BL_PROPAGATE(blObjectGetProperty(self, name, nameSize, &v));
+  *value_out = false;
+  BL_PROPAGATE(bl_object_get_property(self, name, name_size, &v));
 
-  BLResult result = blVarToBool(&v, valueOut);
-  blVarDestroy(&v);
+  BLResult result = bl_var_to_bool(&v, value_out);
+  bl_var_destroy(&v);
   return result;
 }
 
-BL_API_IMPL BLResult blObjectGetPropertyInt32(const BLUnknown* self, const char* name, size_t nameSize, int32_t* valueOut) noexcept {
+BL_API_IMPL BLResult bl_object_get_property_int32(const BLUnknown* self, const char* name, size_t name_size, int32_t* value_out) noexcept {
   BLVarCore v;
-  v._d.initNull();
+  v._d.init_null();
 
-  *valueOut = 0;
-  BL_PROPAGATE(blObjectGetProperty(self, name, nameSize, &v));
+  *value_out = 0;
+  BL_PROPAGATE(bl_object_get_property(self, name, name_size, &v));
 
-  BLResult result = blVarToInt32(&v, valueOut);
-  blVarDestroy(&v);
+  BLResult result = bl_var_to_int32(&v, value_out);
+  bl_var_destroy(&v);
   return result;
 }
 
-BL_API_IMPL BLResult blObjectGetPropertyInt64(const BLUnknown* self, const char* name, size_t nameSize, int64_t* valueOut) noexcept {
+BL_API_IMPL BLResult bl_object_get_property_int64(const BLUnknown* self, const char* name, size_t name_size, int64_t* value_out) noexcept {
   BLVarCore v;
-  v._d.initNull();
+  v._d.init_null();
 
-  *valueOut = 0;
-  BL_PROPAGATE(blObjectGetProperty(self, name, nameSize, &v));
+  *value_out = 0;
+  BL_PROPAGATE(bl_object_get_property(self, name, name_size, &v));
 
-  BLResult result = blVarToInt64(&v, valueOut);
-  blVarDestroy(&v);
+  BLResult result = bl_var_to_int64(&v, value_out);
+  bl_var_destroy(&v);
   return result;
 }
 
-BL_API_IMPL BLResult blObjectGetPropertyUInt32(const BLUnknown* self, const char* name, size_t nameSize, uint32_t* valueOut) noexcept {
+BL_API_IMPL BLResult bl_object_get_property_uint32(const BLUnknown* self, const char* name, size_t name_size, uint32_t* value_out) noexcept {
   BLVarCore v;
-  v._d.initNull();
+  v._d.init_null();
 
-  *valueOut = 0;
-  BL_PROPAGATE(blObjectGetProperty(self, name, nameSize, &v));
+  *value_out = 0;
+  BL_PROPAGATE(bl_object_get_property(self, name, name_size, &v));
 
-  BLResult result = blVarToUInt32(&v, valueOut);
-  blVarDestroy(&v);
+  BLResult result = bl_var_to_uint32(&v, value_out);
+  bl_var_destroy(&v);
   return result;
 }
 
-BL_API_IMPL BLResult blObjectGetPropertyUInt64(const BLUnknown* self, const char* name, size_t nameSize, uint64_t* valueOut) noexcept {
+BL_API_IMPL BLResult bl_object_get_property_uint64(const BLUnknown* self, const char* name, size_t name_size, uint64_t* value_out) noexcept {
   BLVarCore v;
-  v._d.initNull();
+  v._d.init_null();
 
-  *valueOut = 0;
-  BL_PROPAGATE(blObjectGetProperty(self, name, nameSize, &v));
+  *value_out = 0;
+  BL_PROPAGATE(bl_object_get_property(self, name, name_size, &v));
 
-  BLResult result = blVarToUInt64(&v, valueOut);
-  blVarDestroy(&v);
+  BLResult result = bl_var_to_uint64(&v, value_out);
+  bl_var_destroy(&v);
   return result;
 }
 
-BL_API_IMPL BLResult blObjectGetPropertyDouble(const BLUnknown* self, const char* name, size_t nameSize, double* valueOut) noexcept {
+BL_API_IMPL BLResult bl_object_get_property_double(const BLUnknown* self, const char* name, size_t name_size, double* value_out) noexcept {
   BLVarCore v;
-  v._d.initNull();
+  v._d.init_null();
 
-  *valueOut = 0.0;
-  BL_PROPAGATE(blObjectGetProperty(self, name, nameSize, &v));
+  *value_out = 0.0;
+  BL_PROPAGATE(bl_object_get_property(self, name, name_size, &v));
 
-  BLResult result = blVarToDouble(&v, valueOut);
-  blVarDestroy(&v);
+  BLResult result = bl_var_to_double(&v, value_out);
+  bl_var_destroy(&v);
   return result;
 }
 
-BL_API_IMPL BLResult blObjectSetProperty(BLUnknown* self, const char* name, size_t nameSize, const BLUnknown* value) noexcept {
-  if (nameSize == SIZE_MAX)
-    nameSize = strlen(name);
+BL_API_IMPL BLResult bl_object_set_property(BLUnknown* self, const char* name, size_t name_size, const BLUnknown* value) noexcept {
+  if (name_size == SIZE_MAX)
+    name_size = strlen(name);
 
-  if (!blAsObject(self)->_d.isVirtualObject())
-    return blTraceError(BL_ERROR_INVALID_KEY);
+  if (!bl_as_object(self)->_d.is_virtual_object())
+    return bl_trace_error(BL_ERROR_INVALID_KEY);
 
-  BLObjectVirtImpl* impl = static_cast<BLObjectVirtImpl*>(blAsObject(self)->_d.impl);
-  return impl->virt->base.setProperty(impl, name, nameSize, static_cast<const BLVarCore*>(value));
+  BLObjectVirtImpl* impl = static_cast<BLObjectVirtImpl*>(bl_as_object(self)->_d.impl);
+  return impl->virt->base.set_property(impl, name, name_size, static_cast<const BLVarCore*>(value));
 }
 
-BL_API_IMPL BLResult blObjectSetPropertyBool(BLUnknown* self, const char* name, size_t nameSize, bool value) noexcept {
+BL_API_IMPL BLResult bl_object_set_property_bool(BLUnknown* self, const char* name, size_t name_size, bool value) noexcept {
   // NOTE: Bool value is always in SSO mode, no need to call BLVarCore destructor.
   BLVarCore v;
-  v._d.initBool(value);
-  return blObjectSetProperty(self, name, nameSize, &v);
+  v._d.init_bool(value);
+  return bl_object_set_property(self, name, name_size, &v);
 }
 
-BL_API_IMPL BLResult blObjectSetPropertyInt32(BLUnknown* self, const char* name, size_t nameSize, int32_t value) noexcept {
+BL_API_IMPL BLResult bl_object_set_property_int32(BLUnknown* self, const char* name, size_t name_size, int32_t value) noexcept {
   // NOTE: Integer value is always in SSO mode, no need to call BLVarCore destructor.
   BLVarCore v;
-  v._d.initInt64(value);
-  return blObjectSetProperty(self, name, nameSize, &v);
+  v._d.init_int64(value);
+  return bl_object_set_property(self, name, name_size, &v);
 }
 
-BL_API_IMPL BLResult blObjectSetPropertyInt64(BLUnknown* self, const char* name, size_t nameSize, int64_t value) noexcept {
+BL_API_IMPL BLResult bl_object_set_property_int64(BLUnknown* self, const char* name, size_t name_size, int64_t value) noexcept {
   // NOTE: Integer value is always in SSO mode, no need to call BLVarCore destructor.
   BLVarCore v;
-  v._d.initInt64(value);
-  return blObjectSetProperty(self, name, nameSize, &v);
+  v._d.init_int64(value);
+  return bl_object_set_property(self, name, name_size, &v);
 }
 
-BL_API_IMPL BLResult blObjectSetPropertyUInt32(BLUnknown* self, const char* name, size_t nameSize, uint32_t value) noexcept {
+BL_API_IMPL BLResult bl_object_set_property_uint32(BLUnknown* self, const char* name, size_t name_size, uint32_t value) noexcept {
   // NOTE: Integer value is always in SSO mode, no need to call BLVarCore destructor.
   BLVarCore v;
-  v._d.initUInt64(value);
-  return blObjectSetProperty(self, name, nameSize, &v);
+  v._d.init_uint64(value);
+  return bl_object_set_property(self, name, name_size, &v);
 }
 
-BL_API_IMPL BLResult blObjectSetPropertyUInt64(BLUnknown* self, const char* name, size_t nameSize, uint64_t value) noexcept {
+BL_API_IMPL BLResult bl_object_set_property_uint64(BLUnknown* self, const char* name, size_t name_size, uint64_t value) noexcept {
   // NOTE: Integer value is always in SSO mode, no need to call BLVarCore destructor.
   BLVarCore v;
-  v._d.initUInt64(value);
-  return blObjectSetProperty(self, name, nameSize, &v);
+  v._d.init_uint64(value);
+  return bl_object_set_property(self, name, name_size, &v);
 }
 
-BL_API_IMPL BLResult blObjectSetPropertyDouble(BLUnknown* self, const char* name, size_t nameSize, double value) noexcept {
+BL_API_IMPL BLResult bl_object_set_property_double(BLUnknown* self, const char* name, size_t name_size, double value) noexcept {
   // NOTE: Double value is always in SSO mode, no need to call BLVarCore destructor.
   BLVarCore v;
-  v._d.initDouble(value);
-  return blObjectSetProperty(self, name, nameSize, &v);
+  v._d.init_double(value);
+  return bl_object_set_property(self, name, name_size, &v);
 }
 
-BLResult blObjectImplGetProperty(const BLObjectImpl* impl, const char* name, size_t nameSize, BLVarCore* valueOut) noexcept {
-  blUnused(impl, name, nameSize, valueOut);
-  return blTraceError(BL_ERROR_INVALID_KEY);
+BLResult bl_object_impl_get_property(const BLObjectImpl* impl, const char* name, size_t name_size, BLVarCore* value_out) noexcept {
+  bl_unused(impl, name, name_size, value_out);
+  return bl_trace_error(BL_ERROR_INVALID_KEY);
 }
 
-BLResult blObjectImplSetProperty(BLObjectImpl* impl, const char* name, size_t nameSize, const BLVarCore* value) noexcept {
-  blUnused(impl, name, nameSize, value);
-  return blTraceError(BL_ERROR_INVALID_KEY);
+BLResult bl_object_impl_set_property(BLObjectImpl* impl, const char* name, size_t name_size, const BLVarCore* value) noexcept {
+  bl_unused(impl, name, name_size, value);
+  return bl_trace_error(BL_ERROR_INVALID_KEY);
 }

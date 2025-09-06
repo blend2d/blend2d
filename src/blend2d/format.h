@@ -65,7 +65,7 @@ BL_DEFINE_ENUM(BLFormatFlags) {
   //! Pixel format doesn't use native byte-order (I/O only).
   BL_FORMAT_FLAG_BYTE_SWAP = 0x00000200u,
 
-  // The following flags are only informative. They are part of `blFormatInfo[]`, but don't have to be passed to
+  // The following flags are only informative. They are part of `bl_format_info[]`, but don't have to be passed to
   // `BLPixelConverter` as they will always be calculated automatically.
 
   //! Pixel components are byte aligned (all 8bpp).
@@ -106,8 +106,8 @@ BL_DEFINE_ENUM(BLFormatFlags) {
 
 BL_BEGIN_C_DECLS
 
-BL_API BLResult BL_CDECL blFormatInfoQuery(BLFormatInfo* self, BLFormat format) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFormatInfoSanitize(BLFormatInfo* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_format_info_query(BLFormatInfo* self, BLFormat format) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_format_info_sanitize(BLFormatInfo* self) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
@@ -120,7 +120,7 @@ BL_END_C_DECLS
 //! \name BLFormat - Structs
 //! \{
 
-//! Provides a detailed information about a pixel format. Use \ref blFormatInfo array to get an information of Blend2D
+//! Provides a detailed information about a pixel format. Use \ref bl_format_info array to get an information of Blend2D
 //! native pixel formats.
 struct BLFormatInfo {
   uint32_t depth;
@@ -133,15 +133,15 @@ struct BLFormatInfo {
     };
 
     struct {
-      uint8_t rSize;
-      uint8_t gSize;
-      uint8_t bSize;
-      uint8_t aSize;
+      uint8_t r_size;
+      uint8_t g_size;
+      uint8_t b_size;
+      uint8_t a_size;
 
-      uint8_t rShift;
-      uint8_t gShift;
-      uint8_t bShift;
-      uint8_t aShift;
+      uint8_t r_shift;
+      uint8_t g_shift;
+      uint8_t b_shift;
+      uint8_t a_shift;
     };
 
     BLRgba32* palette;
@@ -159,43 +159,43 @@ struct BLFormatInfo {
   BL_INLINE void init(uint32_t depth_, BLFormatFlags flags_, const uint8_t sizes_[4], const uint8_t shifts_[4]) noexcept {
     depth = depth_;
     flags = flags_;
-    setSizes(sizes_[0], sizes_[1], sizes_[2], sizes_[3]);
-    setShifts(shifts_[0], shifts_[1], shifts_[2], shifts_[3]);
+    set_sizes(sizes_[0], sizes_[1], sizes_[2], sizes_[3]);
+    set_shifts(shifts_[0], shifts_[1], shifts_[2], shifts_[3]);
   }
 
-  BL_INLINE void setSizes(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 0) noexcept {
-    rSize = r;
-    gSize = g;
-    bSize = b;
-    aSize = a;
+  BL_INLINE void set_sizes(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 0) noexcept {
+    r_size = r;
+    g_size = g;
+    b_size = b;
+    a_size = a;
   }
 
-  BL_INLINE void setShifts(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 0) noexcept {
-    rShift = r;
-    gShift = g;
-    bShift = b;
-    aShift = a;
+  BL_INLINE void set_shifts(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 0) noexcept {
+    r_shift = r;
+    g_shift = g;
+    b_shift = b;
+    a_shift = a;
   }
 
-  BL_INLINE_NODEBUG bool hasFlag(BLFormatFlags f) const noexcept { return (flags & f) != 0; }
-  BL_INLINE_NODEBUG void addFlags(BLFormatFlags f) noexcept { flags = BLFormatFlags(flags | f); }
-  BL_INLINE_NODEBUG void clearFlags(BLFormatFlags f) noexcept { flags = BLFormatFlags(flags & ~f); }
+  BL_INLINE_NODEBUG bool has_flag(BLFormatFlags f) const noexcept { return (flags & f) != 0; }
+  BL_INLINE_NODEBUG void add_flags(BLFormatFlags f) noexcept { flags = BLFormatFlags(flags | f); }
+  BL_INLINE_NODEBUG void clear_flags(BLFormatFlags f) noexcept { flags = BLFormatFlags(flags & ~f); }
 
   //! Query Blend2D `format` and copy it to this format info, see \ref BLFormat.
   //!
-  //! Copies data from \ref blFormatInfo() to this \ref BLFormatInfo struct and returns \ref BL_SUCCESS if the
+  //! Copies data from \ref bl_format_info() to this \ref BLFormatInfo struct and returns \ref BL_SUCCESS if the
   //! `format` was valid, otherwise the \ref BLFormatInfo is reset and \ref BL_ERROR_INVALID_VALUE is returned.
   //!
   //! \note The \ref BL_FORMAT_NONE is considered invalid format, thus if it's passed to `query()` the return
   //! value would be \ref BL_ERROR_INVALID_VALUE.
-  BL_INLINE_NODEBUG BLResult query(BLFormat format) noexcept { return blFormatInfoQuery(this, format); }
+  BL_INLINE_NODEBUG BLResult query(BLFormat format) noexcept { return bl_format_info_query(this, format); }
 
   //! Sanitize this \ref BLFormatInfo.
   //!
   //! Sanitizer verifies whether the format is valid and updates the format information about flags to values that
   //! Blend2D expects. For example format flags are properly examined and simplified if possible, byte-swap is
   //! implicitly performed for formats where a single component matches one byte, etc...
-  BL_INLINE_NODEBUG BLResult sanitize() noexcept { return blFormatInfoSanitize(this); }
+  BL_INLINE_NODEBUG BLResult sanitize() noexcept { return bl_format_info_sanitize(this); }
 #endif
 };
 
@@ -207,7 +207,7 @@ struct BLFormatInfo {
 BL_BEGIN_C_DECLS
 
 //! Pixel format information of Blend2D native pixel formats, see \ref BLFormat.
-extern BL_API const BLFormatInfo blFormatInfo[];
+extern BL_API const BLFormatInfo bl_format_info[];
 
 BL_END_C_DECLS
 

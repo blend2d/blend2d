@@ -27,7 +27,7 @@ BL_DEFINE_ENUM(BLGeometryDirection) {
 //!
 //! Geometry describes a shape or path that can be either rendered or added to a BLPath container. Both \ref BLPath
 //! and \ref BLContext provide functionality to work with all geometry types. Please note that each type provided
-//! here requires to pass a matching struct or class to the function that consumes a `geometryType` and `geometryData`
+//! here requires to pass a matching struct or class to the function that consumes a `geometry_type` and `geometry_data`
 //! arguments.
 //!
 //! \cond INTERNAL
@@ -146,15 +146,15 @@ struct BLPointI {
 
   BL_INLINE_NODEBUG void reset() noexcept { reset(0, 0); }
   BL_INLINE_NODEBUG void reset(const BLPointI& other) noexcept { reset(other.x, other.y); }
-  BL_INLINE_NODEBUG void reset(int xValue, int yValue) noexcept {
-    x = xValue;
-    y = yValue;
+  BL_INLINE_NODEBUG void reset(int x_value, int y_value) noexcept {
+    x = x_value;
+    y = y_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLPointI& other) const noexcept {
-    return BLInternal::bool_and(blEquals(x, other.x),
-                                blEquals(y, other.y));
+    return BLInternal::bool_and(bl_equals(x, other.x),
+                                bl_equals(y, other.y));
   }
 #endif
 };
@@ -182,15 +182,15 @@ struct BLSizeI {
 
   BL_INLINE_NODEBUG void reset() noexcept { reset(0, 0); }
   BL_INLINE_NODEBUG void reset(const BLSizeI& other) noexcept { reset(other.w, other.h); }
-  BL_INLINE_NODEBUG void reset(int wValue, int hValue) noexcept {
-    w = wValue;
-    h = hValue;
+  BL_INLINE_NODEBUG void reset(int w_value, int h_value) noexcept {
+    w = w_value;
+    h = h_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLSizeI& other) const noexcept {
-    return BLInternal::bool_and(blEquals(w, other.w),
-                                blEquals(h, other.h));
+    return BLInternal::bool_and(bl_equals(w, other.w),
+                                bl_equals(h, other.h));
   }
 #endif
 };
@@ -222,19 +222,19 @@ struct BLBoxI {
 
   BL_INLINE_NODEBUG void reset() noexcept { reset(0, 0, 0, 0); }
   BL_INLINE_NODEBUG void reset(const BLBoxI& other) noexcept { reset(other.x0, other.y0, other.x1, other.y1); }
-  BL_INLINE_NODEBUG void reset(int x0Value, int y0Value, int x1Value, int y1Value) noexcept {
-    x0 = x0Value;
-    y0 = y0Value;
-    x1 = x1Value;
-    y1 = y1Value;
+  BL_INLINE_NODEBUG void reset(int x0_value, int y0_value, int x1_value, int y1_value) noexcept {
+    x0 = x0_value;
+    y0 = y0_value;
+    x1 = x1_value;
+    y1 = y1_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLBoxI& other) const noexcept {
-    return BLInternal::bool_and(blEquals(x0, other.x0),
-                                blEquals(y0, other.y0),
-                                blEquals(x1, other.x1),
-                                blEquals(y1, other.y1));
+    return BLInternal::bool_and(bl_equals(x0, other.x0),
+                                bl_equals(y0, other.y0),
+                                bl_equals(x1, other.x1),
+                                bl_equals(y1, other.y1));
   }
 
   [[nodiscard]]
@@ -274,19 +274,19 @@ struct BLRectI {
 
   BL_INLINE_NODEBUG void reset() noexcept { reset(0, 0, 0, 0); }
   BL_INLINE_NODEBUG void reset(const BLRectI& other) noexcept { reset(other.x, other.y, other.w, other.h); }
-  BL_INLINE_NODEBUG void reset(int xValue, int yValue, int wValue, int hValue) noexcept {
-    x = xValue;
-    y = yValue;
-    w = wValue;
-    h = hValue;
+  BL_INLINE_NODEBUG void reset(int x_value, int y_value, int w_value, int h_value) noexcept {
+    x = x_value;
+    y = y_value;
+    w = w_value;
+    h = h_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRectI& other) const noexcept {
-    return BLInternal::bool_and(blEquals(x, other.x),
-                                blEquals(y, other.y),
-                                blEquals(w, other.w),
-                                blEquals(h, other.h));
+    return BLInternal::bool_and(bl_equals(x, other.x),
+                                bl_equals(y, other.y),
+                                bl_equals(w, other.w),
+                                bl_equals(h, other.h));
   }
 #endif
 };
@@ -318,14 +318,14 @@ struct BLPoint {
 
   BL_INLINE_NODEBUG void reset() noexcept { reset(0, 0); }
   BL_INLINE_NODEBUG void reset(const BLPoint& other) noexcept { reset(other.x, other.y); }
-  BL_INLINE_NODEBUG void reset(double xValue, double yValue) noexcept {
-    x = xValue;
-    y = yValue;
+  BL_INLINE_NODEBUG void reset(double x_value, double y_value) noexcept {
+    x = x_value;
+    y = y_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLPoint& other) const noexcept {
-    return BLInternal::bool_and(blEquals(x, other.x), blEquals(y, other.y));
+    return BLInternal::bool_and(bl_equals(x, other.x), bl_equals(y, other.y));
   }
 #endif
 };
@@ -357,14 +357,14 @@ struct BLSize {
 
   BL_INLINE_NODEBUG void reset() noexcept { reset(0, 0); }
   BL_INLINE_NODEBUG void reset(const BLSize& other) noexcept { reset(other.w, other.h); }
-  BL_INLINE_NODEBUG void reset(double wValue, double hValue) noexcept {
-    w = wValue;
-    h = hValue;
+  BL_INLINE_NODEBUG void reset(double w_value, double h_value) noexcept {
+    w = w_value;
+    h = h_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLSize& other) const noexcept {
-    return BLInternal::bool_and(blEquals(w, other.w), blEquals(h, other.h));
+    return BLInternal::bool_and(bl_equals(w, other.w), bl_equals(h, other.h));
   }
 #endif
 };
@@ -402,19 +402,19 @@ struct BLBox {
 
   BL_INLINE_NODEBUG void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0); }
   BL_INLINE_NODEBUG void reset(const BLBox& other) noexcept { reset(other.x0, other.y0, other.x1, other.y1); }
-  BL_INLINE_NODEBUG void reset(double x0Value, double y0Value, double x1Value, double y1Value) noexcept {
-    x0 = x0Value;
-    y0 = y0Value;
-    x1 = x1Value;
-    y1 = y1Value;
+  BL_INLINE_NODEBUG void reset(double x0_value, double y0_value, double x1_value, double y1_value) noexcept {
+    x0 = x0_value;
+    y0 = y0_value;
+    x1 = x1_value;
+    y1 = y1_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLBox& other) const noexcept {
-    return BLInternal::bool_and(blEquals(x0, other.x0),
-                                blEquals(y0, other.y0),
-                                blEquals(x1, other.x1),
-                                blEquals(y1, other.y1));
+    return BLInternal::bool_and(bl_equals(x0, other.x0),
+                                bl_equals(y0, other.y0),
+                                bl_equals(x1, other.x1),
+                                bl_equals(y1, other.y1));
   }
 
   [[nodiscard]]
@@ -457,19 +457,19 @@ struct BLRect {
 
   BL_INLINE_NODEBUG void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0); }
   BL_INLINE_NODEBUG void reset(const BLRect& other) noexcept { reset(other.x, other.y, other.w, other.h); }
-  BL_INLINE_NODEBUG void reset(double xValue, double yValue, double wValue, double hValue) noexcept {
-    x = xValue;
-    y = yValue;
-    w = wValue;
-    h = hValue;
+  BL_INLINE_NODEBUG void reset(double x_value, double y_value, double w_value, double h_value) noexcept {
+    x = x_value;
+    y = y_value;
+    w = w_value;
+    h = h_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRect& other) const noexcept {
-    return BLInternal::bool_and(blEquals(x, other.x),
-                                blEquals(y, other.y),
-                                blEquals(w, other.w),
-                                blEquals(h, other.h));
+    return BLInternal::bool_and(bl_equals(x, other.x),
+                                bl_equals(y, other.y),
+                                bl_equals(w, other.w),
+                                bl_equals(h, other.h));
   }
 #endif
 };
@@ -496,17 +496,17 @@ struct BLLine {
 
   BL_INLINE_NODEBUG void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0); }
   BL_INLINE_NODEBUG void reset(const BLLine& other) noexcept { reset(other.x0, other.y0, other.x1, other.y1); }
-  BL_INLINE_NODEBUG void reset(double x0Value, double y0Value, double x1Value, double y1Value) noexcept {
-    x0 = x0Value;
-    y0 = y0Value;
-    x1 = x1Value;
-    y1 = y1Value;
+  BL_INLINE_NODEBUG void reset(double x0_value, double y0_value, double x1_value, double y1_value) noexcept {
+    x0 = x0_value;
+    y0 = y0_value;
+    x1 = x1_value;
+    y1 = y1_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLLine& other) const noexcept {
-    return BLInternal::bool_and(blEquals(x0, other.x0), blEquals(y0, other.y0),
-                                blEquals(x1, other.x1), blEquals(y1, other.y1));
+    return BLInternal::bool_and(bl_equals(x0, other.x0), bl_equals(y0, other.y0),
+                                bl_equals(x1, other.x1), bl_equals(y1, other.y1));
   }
 #endif
 };
@@ -534,20 +534,20 @@ struct BLTriangle {
 
   BL_INLINE_NODEBUG void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0, 0.0, 0.0); }
   BL_INLINE_NODEBUG void reset(const BLTriangle& other) noexcept { reset(other.x0, other.y0, other.x1, other.y1, other.x2, other.y2); }
-  BL_INLINE_NODEBUG void reset(double x0Value, double y0Value, double x1Value, double y1Value, double x2Value, double y2Value) noexcept {
-    x0 = x0Value;
-    y0 = y0Value;
-    x1 = x1Value;
-    y1 = y1Value;
-    x2 = x2Value;
-    y2 = y2Value;
+  BL_INLINE_NODEBUG void reset(double x0_value, double y0_value, double x1_value, double y1_value, double x2_value, double y2_value) noexcept {
+    x0 = x0_value;
+    y0 = y0_value;
+    x1 = x1_value;
+    y1 = y1_value;
+    x2 = x2_value;
+    y2 = y2_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLTriangle& other) const noexcept {
-    return BLInternal::bool_and(blEquals(x0, other.x0), blEquals(y0, other.y0),
-                                blEquals(x1, other.x1), blEquals(y1, other.y1),
-                                blEquals(x2, other.x2), blEquals(y2, other.y2));
+    return BLInternal::bool_and(bl_equals(x0, other.x0), bl_equals(y0, other.y0),
+                                bl_equals(x1, other.x1), bl_equals(y1, other.y1),
+                                bl_equals(x2, other.x2), bl_equals(y2, other.y2));
   }
 #endif
 };
@@ -587,24 +587,24 @@ struct BLRoundRect {
     reset(other.x, other.y, other.w, other.h, other.rx, other.ry);
   }
 
-  BL_INLINE_NODEBUG void reset(double xValue, double yValue, double wValue, double hValue, double rValue) noexcept {
-    reset(xValue, yValue, wValue, hValue, rValue, rValue);
+  BL_INLINE_NODEBUG void reset(double x_value, double y_value, double w_value, double h_value, double r_value) noexcept {
+    reset(x_value, y_value, w_value, h_value, r_value, r_value);
   }
 
-  BL_INLINE_NODEBUG void reset(double xValue, double yValue, double wValue, double hValue, double rxValue, double ryValue) noexcept {
-    x = xValue;
-    y = yValue;
-    w = wValue;
-    h = hValue;
-    rx = rxValue;
-    ry = ryValue;
+  BL_INLINE_NODEBUG void reset(double x_value, double y_value, double w_value, double h_value, double rx_value, double ry_value) noexcept {
+    x = x_value;
+    y = y_value;
+    w = w_value;
+    h = h_value;
+    rx = rx_value;
+    ry = ry_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRoundRect& other) const noexcept {
-    return BLInternal::bool_and(blEquals(x , other.x ), blEquals(y , other.y ),
-                                blEquals(w , other.w ), blEquals(h , other.h ),
-                                blEquals(rx, other.rx), blEquals(rx, other.ry));
+    return BLInternal::bool_and(bl_equals(x , other.x ), bl_equals(y , other.y ),
+                                bl_equals(w , other.w ), bl_equals(h , other.h ),
+                                bl_equals(rx, other.rx), bl_equals(rx, other.ry));
   }
 #endif
 };
@@ -631,17 +631,17 @@ struct BLCircle {
 
   BL_INLINE_NODEBUG void reset() noexcept { reset(0.0, 0.0, 0.0); }
   BL_INLINE_NODEBUG void reset(const BLCircle& other) noexcept { reset(other.cx, other.cy, other.r); }
-  BL_INLINE_NODEBUG void reset(double cxValue, double cyValue, double rValue) noexcept {
-    cx = cxValue;
-    cy = cyValue;
-    r = rValue;
+  BL_INLINE_NODEBUG void reset(double cx_value, double cy_value, double r_value) noexcept {
+    cx = cx_value;
+    cy = cy_value;
+    r = r_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLCircle& other) const noexcept {
-    return BLInternal::bool_and(blEquals(cx, other.cx),
-                                blEquals(cy, other.cy),
-                                blEquals(r , other.r));
+    return BLInternal::bool_and(bl_equals(cx, other.cx),
+                                bl_equals(cy, other.cy),
+                                bl_equals(r , other.r));
   }
 #endif
 };
@@ -673,17 +673,17 @@ struct BLEllipse {
   BL_INLINE_NODEBUG void reset(const BLEllipse& other) noexcept { reset(other.cx, other.cy, other.rx, other.ry); }
   BL_INLINE_NODEBUG void reset(double cx, double cy, double r) noexcept { reset(cx, cy, r, r); }
 
-  BL_INLINE_NODEBUG void reset(double cxValue, double cyValue, double rxValue, double ryValue) noexcept {
-    cx = cxValue;
-    cy = cyValue;
-    rx = rxValue;
-    ry = ryValue;
+  BL_INLINE_NODEBUG void reset(double cx_value, double cy_value, double rx_value, double ry_value) noexcept {
+    cx = cx_value;
+    cy = cy_value;
+    rx = rx_value;
+    ry = ry_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLEllipse& other) const noexcept {
-    return BLInternal::bool_and(blEquals(cx, other.cx), blEquals(cy, other.cy),
-                                blEquals(rx, other.rx), blEquals(ry, other.ry));
+    return BLInternal::bool_and(bl_equals(cx, other.cx), bl_equals(cy, other.cy),
+                                bl_equals(rx, other.rx), bl_equals(ry, other.ry));
   }
 #endif
 };
@@ -717,23 +717,23 @@ struct BLArc {
     reset(other.cx, other.cy, other.rx, other.ry, other.start, other.sweep);
   }
 
-  BL_INLINE_NODEBUG void reset(double cxValue, double cyValue, double rxValue, double ryValue, double startValue, double sweepValue) noexcept {
-    cx = cxValue;
-    cy = cyValue;
-    rx = rxValue;
-    ry = ryValue;
-    start = startValue;
-    sweep = sweepValue;
+  BL_INLINE_NODEBUG void reset(double cx_value, double cy_value, double rx_value, double ry_value, double start_value, double sweep_value) noexcept {
+    cx = cx_value;
+    cy = cy_value;
+    rx = rx_value;
+    ry = ry_value;
+    start = start_value;
+    sweep = sweep_value;
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLArc& other) const noexcept {
-    return BLInternal::bool_and(blEquals(cx   , other.cx   ),
-                                blEquals(cy   , other.cy   ),
-                                blEquals(rx   , other.rx   ),
-                                blEquals(ry   , other.ry   ),
-                                blEquals(start, other.start),
-                                blEquals(sweep, other.sweep));
+    return BLInternal::bool_and(bl_equals(cx   , other.cx   ),
+                                bl_equals(cy   , other.cy   ),
+                                bl_equals(rx   , other.rx   ),
+                                bl_equals(ry   , other.ry   ),
+                                bl_equals(start, other.start),
+                                bl_equals(sweep, other.sweep));
   }
 #endif
 };
@@ -747,21 +747,21 @@ struct BLArc {
 //! \name Global Specializations
 //! \{
 
-template<> BL_INLINE_CONSTEXPR BLPoint blAbs(const BLPoint& a) noexcept { return BLPoint(blAbs(a.x), blAbs(a.y)); }
-template<> BL_INLINE_CONSTEXPR BLPoint blMin(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(blMin(a.x, b.x), blMin(a.y, b.y)); }
-template<> BL_INLINE_CONSTEXPR BLPoint blMax(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(blMax(a.x, b.x), blMax(a.y, b.y)); }
+template<> BL_INLINE_CONSTEXPR BLPoint bl_abs(const BLPoint& a) noexcept { return BLPoint(bl_abs(a.x), bl_abs(a.y)); }
+template<> BL_INLINE_CONSTEXPR BLPoint bl_min(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(bl_min(a.x, b.x), bl_min(a.y, b.y)); }
+template<> BL_INLINE_CONSTEXPR BLPoint bl_max(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(bl_max(a.x, b.x), bl_max(a.y, b.y)); }
 
-template<> BL_INLINE_CONSTEXPR BLSize blAbs(const BLSize& a) noexcept { return BLSize(blAbs(a.w), blAbs(a.h)); }
-template<> BL_INLINE_CONSTEXPR BLSize blMin(const BLSize& a, const BLSize& b) noexcept { return BLSize(blMin(a.w, b.w), blMin(a.h, b.h)); }
-template<> BL_INLINE_CONSTEXPR BLSize blMax(const BLSize& a, const BLSize& b) noexcept { return BLSize(blMax(a.w, b.w), blMax(a.h, b.h)); }
+template<> BL_INLINE_CONSTEXPR BLSize bl_abs(const BLSize& a) noexcept { return BLSize(bl_abs(a.w), bl_abs(a.h)); }
+template<> BL_INLINE_CONSTEXPR BLSize bl_min(const BLSize& a, const BLSize& b) noexcept { return BLSize(bl_min(a.w, b.w), bl_min(a.h, b.h)); }
+template<> BL_INLINE_CONSTEXPR BLSize bl_max(const BLSize& a, const BLSize& b) noexcept { return BLSize(bl_max(a.w, b.w), bl_max(a.h, b.h)); }
 
-static BL_INLINE_CONSTEXPR BLPoint blMin(const BLPoint& a, double b) noexcept { return BLPoint(blMin(a.x, b), blMin(a.y, b)); }
-static BL_INLINE_CONSTEXPR BLPoint blMin(double a, const BLPoint& b) noexcept { return BLPoint(blMin(a, b.x), blMin(a, b.y)); }
+static BL_INLINE_CONSTEXPR BLPoint bl_min(const BLPoint& a, double b) noexcept { return BLPoint(bl_min(a.x, b), bl_min(a.y, b)); }
+static BL_INLINE_CONSTEXPR BLPoint bl_min(double a, const BLPoint& b) noexcept { return BLPoint(bl_min(a, b.x), bl_min(a, b.y)); }
 
-static BL_INLINE_CONSTEXPR BLPoint blMax(const BLPoint& a, double b) noexcept { return BLPoint(blMax(a.x, b), blMax(a.y, b)); }
-static BL_INLINE_CONSTEXPR BLPoint blMax(double a, const BLPoint& b) noexcept { return BLPoint(blMax(a, b.x), blMax(a, b.y)); }
+static BL_INLINE_CONSTEXPR BLPoint bl_max(const BLPoint& a, double b) noexcept { return BLPoint(bl_max(a.x, b), bl_max(a.y, b)); }
+static BL_INLINE_CONSTEXPR BLPoint bl_max(double a, const BLPoint& b) noexcept { return BLPoint(bl_max(a, b.x), bl_max(a, b.y)); }
 
-static BL_INLINE_CONSTEXPR BLPoint blClamp(const BLPoint& a, double b, double c) noexcept { return blMin(c, blMax(b, a)); }
+static BL_INLINE_CONSTEXPR BLPoint bl_clamp(const BLPoint& a, double b, double c) noexcept { return bl_min(c, bl_max(b, a)); }
 
 //! \}
 

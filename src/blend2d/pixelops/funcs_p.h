@@ -16,8 +16,8 @@ namespace bl {
 namespace PixelOps {
 
 struct Funcs {
-  void (BL_CDECL* interpolate_prgb32)(uint32_t* dst, uint32_t dstSize, const BLGradientStop* stops, size_t stopCount) noexcept;
-  void (BL_CDECL* interpolate_prgb64)(uint64_t* dst, uint32_t dstSize, const BLGradientStop* stops, size_t stopCount) noexcept;
+  void (BL_CDECL* interpolate_prgb32)(uint32_t* dst, uint32_t dst_size, const BLGradientStop* stops, size_t stop_count) noexcept;
+  void (BL_CDECL* interpolate_prgb64)(uint64_t* dst, uint32_t dst_size, const BLGradientStop* stops, size_t stop_count) noexcept;
 };
 
 extern Funcs funcs;

@@ -12,59 +12,59 @@ namespace bl::RasterEngine {
 // bl::RasterEngine::WorkData - Construction & Destruction
 // =======================================================
 
-WorkData::WorkData(BLRasterContextImpl* ctxI, WorkerSynchronization* synchronization, uint32_t workerId) noexcept
-  : ctxI(ctxI),
+WorkData::WorkData(BLRasterContextImpl* ctx_impl, WorkerSynchronization* synchronization, uint32_t worker_id) noexcept
+  : ctx_impl(ctx_impl),
     synchronization(synchronization),
     _batch(nullptr),
-    ctxData(),
-    clipMode(BL_CLIP_MODE_ALIGNED_RECT),
+    ctx_data(),
+    clip_mode(BL_CLIP_MODE_ALIGNED_RECT),
     _commandQuantizationShiftAA(0),
-    _commandQuantizationShiftFp(0),
+    _command_quantization_shift_fp(0),
     reserved{},
-    _workerId(workerId),
-    _bandHeight(0),
-    _accumulatedErrorFlags(0),
-    workZone(65536, 8),
-    workState{},
-    zeroBuffer(),
-    edgeStorage(),
-    edgeBuilder(&workZone, &edgeStorage) {}
+    _worker_id(worker_id),
+    _band_height(0),
+    _accumulated_error_flags(0),
+    work_zone(65536, 8),
+    work_state{},
+    zero_buffer(),
+    edge_storage(),
+    edge_builder(&work_zone, &edge_storage) {}
 
 WorkData::~WorkData() noexcept {
-  if (edgeStorage.bandEdges())
-    blZeroAllocatorRelease(edgeStorage.bandEdges(), edgeStorage.bandCapacity() * kEdgeListSize);
+  if (edge_storage.band_edges())
+    bl_zero_allocator_release(edge_storage.band_edges(), edge_storage.band_capacity() * kEdgeListSize);
 }
 
 // bl::RasterEngine::WorkData - Initialization
 // ===========================================
 
-BLResult WorkData::initBandData(uint32_t bandHeight, uint32_t bandCount, uint32_t commandQuantizationShift) noexcept {
+BLResult WorkData::init_band_data(uint32_t band_height, uint32_t band_count, uint32_t command_quantization_shift) noexcept {
   // Can only happen if the storage was already allocated.
-  if (bandCount <= edgeStorage.bandCapacity()) {
-    _bandHeight = bandHeight;
-    edgeStorage.initData(edgeStorage.bandEdges(), bandCount, edgeStorage.bandCapacity(), bandHeight);
+  if (band_count <= edge_storage.band_capacity()) {
+    _band_height = band_height;
+    edge_storage.init_data(edge_storage.band_edges(), band_count, edge_storage.band_capacity(), band_height);
   }
   else {
-    size_t allocatedSize = 0;
+    size_t allocated_size = 0;
     EdgeList<int>* edges = static_cast<EdgeList<int>*>(
-      blZeroAllocatorResize(
-        edgeStorage.bandEdges(),
-        edgeStorage.bandCapacity() * kEdgeListSize,
-        bandCount * kEdgeListSize,
-        &allocatedSize));
+      bl_zero_allocator_resize(
+        edge_storage.band_edges(),
+        edge_storage.band_capacity() * kEdgeListSize,
+        band_count * kEdgeListSize,
+        &allocated_size));
 
     if (BL_UNLIKELY(!edges)) {
-      edgeStorage.reset();
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+      edge_storage.reset();
+      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
     }
 
-    uint32_t bandCapacity = uint32_t(allocatedSize / kEdgeListSize);
-    _bandHeight = bandHeight;
-    edgeStorage.initData(edges, bandCount, bandCapacity, bandHeight);
+    uint32_t band_capacity = uint32_t(allocated_size / kEdgeListSize);
+    _band_height = band_height;
+    edge_storage.init_data(edges, band_count, band_capacity, band_height);
   }
 
-  _commandQuantizationShiftAA = uint8_t(commandQuantizationShift);
-  _commandQuantizationShiftFp = uint8_t(commandQuantizationShift + 8);
+  _commandQuantizationShiftAA = uint8_t(command_quantization_shift);
+  _command_quantization_shift_fp = uint8_t(command_quantization_shift + 8);
 
   return BL_SUCCESS;
 }
@@ -72,18 +72,18 @@ BLResult WorkData::initBandData(uint32_t bandHeight, uint32_t bandCount, uint32_
 // bl::RasterEngine::WorkData - Error Accumulation
 // ===============================================
 
-BLResult WorkData::accumulateError(BLResult error) noexcept {
+BLResult WorkData::accumulate_error(BLResult error) noexcept {
   switch (error) {
     // Should not happen.
     case BL_SUCCESS: break;
 
-    case BL_ERROR_INVALID_VALUE        : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_INVALID_VALUE        ; break;
-    case BL_ERROR_INVALID_GEOMETRY     : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_INVALID_GEOMETRY     ; break;
-    case BL_ERROR_INVALID_GLYPH        : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_INVALID_GLYPH        ; break;
-    case BL_ERROR_FONT_NOT_INITIALIZED : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_INVALID_FONT         ; break;
-    case BL_ERROR_THREAD_POOL_EXHAUSTED: _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_THREAD_POOL_EXHAUSTED; break;
-    case BL_ERROR_OUT_OF_MEMORY        : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_OUT_OF_MEMORY        ; break;
-    default                            : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_UNKNOWN_ERROR        ; break;
+    case BL_ERROR_INVALID_VALUE        : _accumulated_error_flags |= BL_CONTEXT_ERROR_FLAG_INVALID_VALUE        ; break;
+    case BL_ERROR_INVALID_GEOMETRY     : _accumulated_error_flags |= BL_CONTEXT_ERROR_FLAG_INVALID_GEOMETRY     ; break;
+    case BL_ERROR_INVALID_GLYPH        : _accumulated_error_flags |= BL_CONTEXT_ERROR_FLAG_INVALID_GLYPH        ; break;
+    case BL_ERROR_FONT_NOT_INITIALIZED : _accumulated_error_flags |= BL_CONTEXT_ERROR_FLAG_INVALID_FONT         ; break;
+    case BL_ERROR_THREAD_POOL_EXHAUSTED: _accumulated_error_flags |= BL_CONTEXT_ERROR_FLAG_THREAD_POOL_EXHAUSTED; break;
+    case BL_ERROR_OUT_OF_MEMORY        : _accumulated_error_flags |= BL_CONTEXT_ERROR_FLAG_OUT_OF_MEMORY        ; break;
+    default                            : _accumulated_error_flags |= BL_CONTEXT_ERROR_FLAG_UNKNOWN_ERROR        ; break;
   }
   return error;
 }

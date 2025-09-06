@@ -21,13 +21,13 @@ UNIT(matrix, BL_TEST_GROUP_GEOMETRY_UTILITIES) {
   {
     BLMatrix2D m;
 
-    m = BLMatrix2D::makeIdentity();
+    m = BLMatrix2D::make_identity();
     EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_IDENTITY);
 
-    m = BLMatrix2D::makeTranslation(1.0, 2.0);
+    m = BLMatrix2D::make_translation(1.0, 2.0);
     EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_TRANSLATE);
 
-    m = BLMatrix2D::makeScaling(2.0, 2.0);
+    m = BLMatrix2D::make_scaling(2.0, 2.0);
     EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_SCALE);
 
     m.m10 = 3.0;
@@ -51,12 +51,12 @@ UNIT(matrix, BL_TEST_GROUP_GEOMETRY_UTILITIES) {
       BL_TEST_MATRIX_COUNT
     };
 
-    static const BLPoint ptOffset(128.0, 64.0);
-    static const BLPoint ptScale(1.5, 2.0);
-    static const BLPoint ptSkew(1.5, 2.0);
+    static const BLPoint pt_offset(128.0, 64.0);
+    static const BLPoint pt_scale(1.5, 2.0);
+    static const BLPoint pt_skew(1.5, 2.0);
     static const double angle = 0.9;
 
-    auto testMatrixName = [](uint32_t type) noexcept -> const char* {
+    auto test_matrix_name = [](uint32_t type) noexcept -> const char* {
       switch (type) {
         case BL_TEST_MATRIX_IDENTITY : return "Identity";
         case BL_TEST_MATRIX_TRANSLATE: return "Translate";
@@ -67,38 +67,38 @@ UNIT(matrix, BL_TEST_GROUP_GEOMETRY_UTILITIES) {
       }
     };
 
-    auto createTestMatrix = [](uint32_t type) noexcept -> BLMatrix2D {
+    auto create_test_matrix = [](uint32_t type) noexcept -> BLMatrix2D {
       switch (type) {
-        case BL_TEST_MATRIX_TRANSLATE: return BLMatrix2D::makeTranslation(ptOffset);
-        case BL_TEST_MATRIX_SCALE    : return BLMatrix2D::makeScaling(ptScale);
-        case BL_TEST_MATRIX_SKEW     : return BLMatrix2D::makeSkewing(ptSkew);
-        case BL_TEST_MATRIX_ROTATE   : return BLMatrix2D::makeRotation(angle);
+        case BL_TEST_MATRIX_TRANSLATE: return BLMatrix2D::make_translation(pt_offset);
+        case BL_TEST_MATRIX_SCALE    : return BLMatrix2D::make_scaling(pt_scale);
+        case BL_TEST_MATRIX_SKEW     : return BLMatrix2D::make_skewing(pt_skew);
+        case BL_TEST_MATRIX_ROTATE   : return BLMatrix2D::make_rotation(angle);
 
         default:
-          return BLMatrix2D::makeIdentity();
+          return BLMatrix2D::make_identity();
       }
     };
 
     auto compare = [](const BLMatrix2D& a, const BLMatrix2D& b) noexcept -> bool {
-      double diff = blMax(blAbs(a.m00 - b.m00),
-                          blAbs(a.m01 - b.m01),
-                          blAbs(a.m10 - b.m10),
-                          blAbs(a.m11 - b.m11),
-                          blAbs(a.m20 - b.m20),
-                          blAbs(a.m21 - b.m21));
+      double diff = bl_max(bl_abs(a.m00 - b.m00),
+                           bl_abs(a.m01 - b.m01),
+                           bl_abs(a.m10 - b.m10),
+                           bl_abs(a.m11 - b.m11),
+                           bl_abs(a.m20 - b.m20),
+                           bl_abs(a.m21 - b.m21));
       // If Blend2D is compiled with FMA enabled there could be a difference
       // greater than our Math::epsilon<double>, so use a more relaxed value here.
       return diff < 1e-8;
     };
 
     BLMatrix2D m, n;
-    BLMatrix2D a = BLMatrix2D::makeIdentity();
+    BLMatrix2D a = BLMatrix2D::make_identity();
     BLMatrix2D b;
 
-    for (uint32_t aType = 0; aType < BL_TEST_MATRIX_COUNT; aType++) {
-      for (uint32_t bType = 0; bType < BL_TEST_MATRIX_COUNT; bType++) {
-        a = createTestMatrix(aType);
-        b = createTestMatrix(bType);
+    for (uint32_t a_type = 0; a_type < BL_TEST_MATRIX_COUNT; a_type++) {
+      for (uint32_t b_type = 0; b_type < BL_TEST_MATRIX_COUNT; b_type++) {
+        a = create_test_matrix(a_type);
+        b = create_test_matrix(b_type);
 
         m = a;
         n = a;
@@ -107,43 +107,43 @@ UNIT(matrix, BL_TEST_GROUP_GEOMETRY_UTILITIES) {
           if (!post)
             m.transform(b);
           else
-            m.postTransform(b);
+            m.post_transform(b);
 
-          switch (bType) {
+          switch (b_type) {
             case BL_TEST_MATRIX_IDENTITY:
               break;
 
             case BL_TEST_MATRIX_TRANSLATE:
               if (!post)
-                n.translate(ptOffset);
+                n.translate(pt_offset);
               else
-                n.postTranslate(ptOffset);
+                n.post_translate(pt_offset);
               break;
 
             case BL_TEST_MATRIX_SCALE:
               if (!post)
-                n.scale(ptScale);
+                n.scale(pt_scale);
               else
-                n.postScale(ptScale);
+                n.post_scale(pt_scale);
               break;
 
             case BL_TEST_MATRIX_SKEW:
               if (!post)
-                n.skew(ptSkew);
+                n.skew(pt_skew);
               else
-                n.postSkew(ptSkew);
+                n.post_skew(pt_skew);
               break;
 
             case BL_TEST_MATRIX_ROTATE:
               if (!post)
                 n.rotate(angle);
               else
-                n.postRotate(angle);
+                n.post_rotate(angle);
               break;
           }
 
           if (!compare(m, n)) {
-            INFO("Matrices don't match [%s x %s]\n", testMatrixName(aType), testMatrixName(bType));
+            INFO("Matrices don't match [%s x %s]\n", test_matrix_name(a_type), test_matrix_name(b_type));
             INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", a.m00, a.m01, b.m00, b.m01);
             INFO("  A [% 3.14f | % 3.14f]    B [% 3.14f | % 3.14f]\n", a.m10, a.m11, b.m10, b.m11);
             INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", a.m20, a.m21, b.m20, b.m21);

@@ -54,43 +54,43 @@ static BL_INLINE_NODEBUG bool isNaN(const T& first, Args&&... args) noexcept {
   return BLInternal::bool_or(isNaN(first), (isNaN(forward<Args>(args)))...);
 }
 
-static BL_INLINE_NODEBUG bool isInf(float x) noexcept { return std::isinf(x); }
-static BL_INLINE_NODEBUG bool isInf(double x) noexcept { return std::isinf(x); }
+static BL_INLINE_NODEBUG bool is_inf(float x) noexcept { return std::isinf(x); }
+static BL_INLINE_NODEBUG bool is_inf(double x) noexcept { return std::isinf(x); }
 
 template<typename T, typename... Args>
-static BL_INLINE_NODEBUG bool isInf(const T& first, Args&&... args) noexcept {
-  return BLInternal::bool_or(isInf(first), (isInf(forward<Args>(args)))...);
+static BL_INLINE_NODEBUG bool is_inf(const T& first, Args&&... args) noexcept {
+  return BLInternal::bool_or(is_inf(first), (is_inf(forward<Args>(args)))...);
 }
 
-static BL_INLINE_NODEBUG bool isFinite(const float& x) noexcept { return std::isfinite(x); }
-static BL_INLINE_NODEBUG bool isFinite(const double& x) noexcept { return std::isfinite(x); }
+static BL_INLINE_NODEBUG bool is_finite(const float& x) noexcept { return std::isfinite(x); }
+static BL_INLINE_NODEBUG bool is_finite(const double& x) noexcept { return std::isfinite(x); }
 
-static BL_INLINE_NODEBUG bool isFinite(const BLPoint& p) noexcept;
-static BL_INLINE_NODEBUG bool isFinite(const BLBox& b) noexcept;
-static BL_INLINE_NODEBUG bool isFinite(const BLRect& r) noexcept;
+static BL_INLINE_NODEBUG bool is_finite(const BLPoint& p) noexcept;
+static BL_INLINE_NODEBUG bool is_finite(const BLBox& b) noexcept;
+static BL_INLINE_NODEBUG bool is_finite(const BLRect& r) noexcept;
 
 template<typename T, typename... Args>
-static BL_INLINE_NODEBUG bool isFinite(T first, Args&&... args) noexcept {
-  return BLInternal::bool_and(isFinite(first), (isFinite(BLInternal::forward<Args>(args)))...);
+static BL_INLINE_NODEBUG bool is_finite(T first, Args&&... args) noexcept {
+  return BLInternal::bool_and(is_finite(first), (is_finite(BLInternal::forward<Args>(args)))...);
 }
 
-static BL_INLINE_NODEBUG bool isFinite(const BLPoint& p) noexcept { return isFinite(p.x, p.y); }
-static BL_INLINE_NODEBUG bool isFinite(const BLBox& b) noexcept { return isFinite(b.x0, b.y0, b.x1, b.y1); }
-static BL_INLINE_NODEBUG bool isFinite(const BLRect& r) noexcept { return isFinite(r.x, r.y, r.w, r.h); }
+static BL_INLINE_NODEBUG bool is_finite(const BLPoint& p) noexcept { return is_finite(p.x, p.y); }
+static BL_INLINE_NODEBUG bool is_finite(const BLBox& b) noexcept { return is_finite(b.x0, b.y0, b.x1, b.y1); }
+static BL_INLINE_NODEBUG bool is_finite(const BLRect& r) noexcept { return is_finite(r.x, r.y, r.w, r.h); }
 
 static BL_INLINE_NODEBUG bool isNaN(const BLPoint& p) noexcept { return isNaN(p.x, p.y); }
 
 template<typename T>
-static BL_INLINE_CONSTEXPR bool isNear(T x, T y, T eps = epsilon<T>()) noexcept { return blAbs(x - y) <= eps; }
+static BL_INLINE_CONSTEXPR bool is_near(T x, T y, T eps = epsilon<T>()) noexcept { return bl_abs(x - y) <= eps; }
 
 template<typename T>
-static BL_INLINE_CONSTEXPR bool isNearZero(T x, T eps = epsilon<T>()) noexcept { return blAbs(x) <= eps; }
+static BL_INLINE_CONSTEXPR bool is_near_zero(T x, T eps = epsilon<T>()) noexcept { return bl_abs(x) <= eps; }
 
 template<typename T>
-static BL_INLINE_CONSTEXPR bool isNearZeroPositive(T x, T eps = epsilon<T>()) noexcept { return x >= T(0) && x <= eps; }
+static BL_INLINE_CONSTEXPR bool is_near_zero_positive(T x, T eps = epsilon<T>()) noexcept { return x >= T(0) && x <= eps; }
 
 template<typename T>
-static BL_INLINE_CONSTEXPR bool isNearOne(T x, T eps = epsilon<T>()) noexcept { return isNear(x, T(1), eps); }
+static BL_INLINE_CONSTEXPR bool is_near_one(T x, T eps = epsilon<T>()) noexcept { return is_near(x, T(1), eps); }
 
 //! Check if `x` is within [0, 1] range (inclusive).
 template<typename T>
@@ -112,18 +112,18 @@ static BL_INLINE_CONSTEXPR T sum(const T& first, Args&&... args) { return first 
 //! \name Miscellaneous Functions
 //! \{
 
-static BL_INLINE_NODEBUG float copySign(float x, float y) noexcept { return std::copysign(x, y); }
-static BL_INLINE_NODEBUG double copySign(double x, double y) noexcept { return std::copysign(x, y); }
-static BL_INLINE_NODEBUG BLPoint copySign(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(copySign(a.x, b.x), copySign(a.y, b.y)); }
+static BL_INLINE_NODEBUG float copy_sign(float x, float y) noexcept { return std::copysign(x, y); }
+static BL_INLINE_NODEBUG double copy_sign(double x, double y) noexcept { return std::copysign(x, y); }
+static BL_INLINE_NODEBUG BLPoint copy_sign(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(copy_sign(a.x, b.x), copy_sign(a.y, b.y)); }
 
-static BL_INLINE_NODEBUG float cutOff(float x, uint32_t bits) noexcept {
+static BL_INLINE_NODEBUG float cut_off(float x, uint32_t bits) noexcept {
   uint32_t msk = (uint32_t(1) << bits) - 1u;
-  return blBitCast<float>(blBitCast<uint32_t>(x) & ~msk);
+  return bl_bit_cast<float>(bl_bit_cast<uint32_t>(x) & ~msk);
 }
 
-static BL_INLINE_NODEBUG double cutOff(double x, uint32_t bits) noexcept {
+static BL_INLINE_NODEBUG double cut_off(double x, uint32_t bits) noexcept {
   uint64_t msk = (uint64_t(1) << bits) - 1u;
-  return blBitCast<double>(blBitCast<uint64_t>(x) & ~msk);
+  return bl_bit_cast<double>(bl_bit_cast<uint64_t>(x) & ~msk);
 }
 
 //! \}
@@ -199,8 +199,8 @@ static BL_INLINE float nearby(float x) noexcept {
 
   Vec4xF32 src = cast_from_f32(x);
   Vec4xF32 cvt = Vec4xF32{_mm_cvt_si2ss(src.v, _mm_cvt_ss2si(src.v))};
-  Vec4xF32 src_abs = src & commonTable.f32_abs.as<Vec4xF32>();
-  Vec4xF32 mask = cmp_lt_1xf32(src_abs, commonTable.f32_round_max.as<Vec4xF32>());
+  Vec4xF32 src_abs = src & common_table.f32_abs.as<Vec4xF32>();
+  Vec4xF32 mask = cmp_lt_1xf32(src_abs, common_table.f32_round_max.as<Vec4xF32>());
   Vec4xF32 result = blendv_bits(src, cvt, mask);
 
   return cast_to_f32(result);
@@ -211,8 +211,8 @@ static BL_INLINE float trunc(float x) noexcept {
 
   Vec4xF32 src = cast_from_f32(x);
   Vec4xF32 cvt = Vec4xF32{_mm_cvt_si2ss(src.v, _mm_cvtt_ss2si(src.v))};
-  Vec4xF32 src_abs = src & commonTable.f32_abs.as<Vec4xF32>();
-  Vec4xF32 mask = cmp_lt_1xf32(src_abs, commonTable.f32_round_max.as<Vec4xF32>());
+  Vec4xF32 src_abs = src & common_table.f32_abs.as<Vec4xF32>();
+  Vec4xF32 mask = cmp_lt_1xf32(src_abs, common_table.f32_round_max.as<Vec4xF32>());
   Vec4xF32 result = blendv_bits(src, cvt, mask);
 
   return cast_to_f32(result);
@@ -222,11 +222,11 @@ static BL_INLINE float floor(float x) noexcept {
   using namespace SIMD;
 
   Vec4xF32 src = cast_from_f32(x);
-  Vec4xF32 magic = slli_u32<32 - 9>(srli_u32<31>(src)) | commonTable.f32_round_max.as<Vec4xF32>();
+  Vec4xF32 magic = slli_u32<32 - 9>(srli_u32<31>(src)) | common_table.f32_round_max.as<Vec4xF32>();
 
   Vec4xF32 mask = cmp_ge_1xf32(src, magic);
   Vec4xF32 rounded = sub_1xf32(add_1xf32(src, magic), magic);
-  Vec4xF32 maybeone = cmp_lt_1xf32(src, rounded) & commonTable.f32_1.as<Vec4xF32>();
+  Vec4xF32 maybeone = cmp_lt_1xf32(src, rounded) & common_table.f32_1.as<Vec4xF32>();
 
   return cast_to_f32(blendv_bits(sub_1xf32(rounded, maybeone), src, mask));
 }
@@ -235,11 +235,11 @@ static BL_INLINE float ceil(float x) noexcept {
   using namespace SIMD;
 
   Vec4xF32 src = cast_from_f32(x);
-  Vec4xF32 magic = slli_u32<32 - 9>(srli_u32<31>(src)) | commonTable.f32_round_max.as<Vec4xF32>();
+  Vec4xF32 magic = slli_u32<32 - 9>(srli_u32<31>(src)) | common_table.f32_round_max.as<Vec4xF32>();
 
   Vec4xF32 mask = cmp_ge_1xf32(src, magic);
   Vec4xF32 rounded = sub_1xf32(add_1xf32(src, magic), magic);
-  Vec4xF32 maybeone = cmp_gt_1xf32(src, rounded) & commonTable.f32_1.as<Vec4xF32>();
+  Vec4xF32 maybeone = cmp_gt_1xf32(src, rounded) & common_table.f32_1.as<Vec4xF32>();
 
   return cast_to_f32(blendv_bits(add_1xf32(rounded, maybeone), src, mask));
 }
@@ -248,8 +248,8 @@ static BL_INLINE double nearby(double x) noexcept {
   using namespace SIMD;
 
   Vec2xF64 src = cast_from_f64(x);
-  Vec2xF64 mask = cmp_lt_1xf64(src, commonTable.f64_round_max.as<Vec2xF64>());
-  Vec2xF64 magic = mask & (commonTable.f64_round_max.as<Vec2xF64>() | slli_u64<64 - 13>(srli_u64<63>(src)));
+  Vec2xF64 mask = cmp_lt_1xf64(src, common_table.f64_round_max.as<Vec2xF64>());
+  Vec2xF64 magic = mask & (common_table.f64_round_max.as<Vec2xF64>() | slli_u64<64 - 13>(srli_u64<63>(src)));
   Vec2xF64 rounded = sub_1xf64(add_1xf64(src, magic), magic);
 
   return cast_to_f64(rounded);
@@ -259,15 +259,15 @@ static BL_INLINE double trunc(double x) noexcept {
   using namespace SIMD;
 
   Vec2xF64 src = cast_from_f64(x);
-  Vec2xF64 msk_abs = commonTable.f64_abs.as<Vec2xF64>();
+  Vec2xF64 msk_abs = common_table.f64_abs.as<Vec2xF64>();
   Vec2xF64 src_abs = src & msk_abs;
 
   Vec2xF64 sign = andnot(msk_abs, src);
-  Vec2xF64 magic = commonTable.f64_round_max.as<Vec2xF64>();
+  Vec2xF64 magic = common_table.f64_round_max.as<Vec2xF64>();
 
   Vec2xF64 mask = cmp_ge_1xf64(src_abs, magic) | sign;
   Vec2xF64 rounded = sub_1xf64(add_1xf64(src_abs, magic), magic);
-  Vec2xF64 maybeone = cmp_lt_1xf64(src_abs, rounded) & commonTable.f64_1.as<Vec2xF64>();
+  Vec2xF64 maybeone = cmp_lt_1xf64(src_abs, rounded) & common_table.f64_1.as<Vec2xF64>();
 
   return cast_to_f64(blendv_bits(sub_1xf64(rounded, maybeone), src, mask));
 }
@@ -276,11 +276,11 @@ static BL_INLINE double floor(double x) noexcept {
   using namespace SIMD;
 
   Vec2xF64 src = cast_from_f64(x);
-  Vec2xF64 magic = slli_u64<64 - 13>(srli_u64<63>(src)) | commonTable.f64_round_max.as<Vec2xF64>();
+  Vec2xF64 magic = slli_u64<64 - 13>(srli_u64<63>(src)) | common_table.f64_round_max.as<Vec2xF64>();
 
   Vec2xF64 mask = cmp_ge_1xf64(src, magic);
   Vec2xF64 rounded = sub_1xf64(add_1xf64(src, magic), magic);
-  Vec2xF64 maybeone = cmp_lt_1xf64(src, rounded) & commonTable.f64_1.as<Vec2xF64>();
+  Vec2xF64 maybeone = cmp_lt_1xf64(src, rounded) & common_table.f64_1.as<Vec2xF64>();
 
   return cast_to_f64(blendv_bits(sub_1xf64(rounded, maybeone), src, mask));
 }
@@ -289,11 +289,11 @@ static BL_INLINE double ceil(double x) noexcept {
   using namespace SIMD;
 
   Vec2xF64 src = cast_from_f64(x);
-  Vec2xF64 magic = slli_u64<64 - 13>(srli_u64<63>(src)) | commonTable.f64_round_max.as<Vec2xF64>();
+  Vec2xF64 magic = slli_u64<64 - 13>(srli_u64<63>(src)) | common_table.f64_round_max.as<Vec2xF64>();
 
   Vec2xF64 mask = cmp_ge_1xf64(src, magic);
   Vec2xF64 rounded = sub_1xf64(add_1xf64(src, magic), magic);
-  Vec2xF64 maybeone = cmp_gt_1xf64(src, rounded) & commonTable.f64_1.as<Vec2xF64>();
+  Vec2xF64 maybeone = cmp_gt_1xf64(src, rounded) & common_table.f64_1.as<Vec2xF64>();
 
   return cast_to_f64(blendv_bits(add_1xf64(rounded, maybeone), src, mask));
 }
@@ -323,7 +323,7 @@ static BL_INLINE double round(double x) noexcept { double y = floor(x); return y
 //! \name Rounding to Integer
 //! \{
 
-static BL_INLINE int nearbyToInt(float x) noexcept {
+static BL_INLINE int nearby_to_int(float x) noexcept {
 #if defined(BL_TARGET_OPT_SSE)
   return SIMD::cvt_f32_to_scalar_i32(SIMD::cast_from_f32(x));
 #else
@@ -331,7 +331,7 @@ static BL_INLINE int nearbyToInt(float x) noexcept {
 #endif
 }
 
-static BL_INLINE int nearbyToInt(double x) noexcept {
+static BL_INLINE int nearby_to_int(double x) noexcept {
 #if defined(BL_TARGET_OPT_SSE2)
   return SIMD::cvt_f64_to_scalar_i32(SIMD::cast_from_f64(x));
 #else
@@ -339,32 +339,32 @@ static BL_INLINE int nearbyToInt(double x) noexcept {
 #endif
 }
 
-static BL_INLINE int truncToInt(float x) noexcept { return int(x); }
-static BL_INLINE int truncToInt(double x) noexcept { return int(x); }
+static BL_INLINE int trunc_to_int(float x) noexcept { return int(x); }
+static BL_INLINE int trunc_to_int(double x) noexcept { return int(x); }
 
-static BL_INLINE BLBoxI truncToInt(const BLBox& box) noexcept {
-  return BLBoxI(truncToInt(box.x0),
-                truncToInt(box.y0),
-                truncToInt(box.x1),
-                truncToInt(box.y1));
+static BL_INLINE BLBoxI trunc_to_int(const BLBox& box) noexcept {
+  return BLBoxI(trunc_to_int(box.x0),
+                trunc_to_int(box.y0),
+                trunc_to_int(box.x1),
+                trunc_to_int(box.y1));
 }
 
 #if defined(BL_TARGET_OPT_SSE4_1)
-static BL_INLINE int floorToInt(float x) noexcept { return _mm_cvttss_si32(bl_roundf_sse4_1<_MM_FROUND_TO_NEG_INF>(x)); }
-static BL_INLINE int floorToInt(double x) noexcept { return _mm_cvttsd_si32(bl_roundd_sse4_1<_MM_FROUND_TO_NEG_INF>(x)); }
+static BL_INLINE int floor_to_int(float x) noexcept { return _mm_cvttss_si32(bl_roundf_sse4_1<_MM_FROUND_TO_NEG_INF>(x)); }
+static BL_INLINE int floor_to_int(double x) noexcept { return _mm_cvttsd_si32(bl_roundd_sse4_1<_MM_FROUND_TO_NEG_INF>(x)); }
 
-static BL_INLINE int ceilToInt(float x) noexcept { return _mm_cvttss_si32(bl_roundf_sse4_1<_MM_FROUND_TO_POS_INF>(x)); }
-static BL_INLINE int ceilToInt(double x) noexcept { return _mm_cvttsd_si32(bl_roundd_sse4_1<_MM_FROUND_TO_POS_INF>(x)); }
+static BL_INLINE int ceil_to_int(float x) noexcept { return _mm_cvttss_si32(bl_roundf_sse4_1<_MM_FROUND_TO_POS_INF>(x)); }
+static BL_INLINE int ceil_to_int(double x) noexcept { return _mm_cvttsd_si32(bl_roundd_sse4_1<_MM_FROUND_TO_POS_INF>(x)); }
 #else
-static BL_INLINE int floorToInt(float x) noexcept { int y = nearbyToInt(x); return y - (float(y) > x); }
-static BL_INLINE int floorToInt(double x) noexcept { int y = nearbyToInt(x); return y - (double(y) > x); }
+static BL_INLINE int floor_to_int(float x) noexcept { int y = nearby_to_int(x); return y - (float(y) > x); }
+static BL_INLINE int floor_to_int(double x) noexcept { int y = nearby_to_int(x); return y - (double(y) > x); }
 
-static BL_INLINE int ceilToInt(float x) noexcept { int y = nearbyToInt(x); return y + (float(y) < x); }
-static BL_INLINE int ceilToInt(double x) noexcept { int y = nearbyToInt(x); return y + (double(y) < x); }
+static BL_INLINE int ceil_to_int(float x) noexcept { int y = nearby_to_int(x); return y + (float(y) < x); }
+static BL_INLINE int ceil_to_int(double x) noexcept { int y = nearby_to_int(x); return y + (double(y) < x); }
 #endif
 
-static BL_INLINE int roundToInt(float x) noexcept { int y = nearbyToInt(x); return y + (float(y) - x == -0.5f); }
-static BL_INLINE int roundToInt(double x) noexcept { int y = nearbyToInt(x); return y + (double(y) - x == -0.5);  }
+static BL_INLINE int round_to_int(float x) noexcept { int y = nearby_to_int(x); return y + (float(y) - x == -0.5f); }
+static BL_INLINE int round_to_int(double x) noexcept { int y = nearby_to_int(x); return y + (double(y) - x == -0.5);  }
 
 static BL_INLINE int64_t nearbyToInt64(float x) noexcept {
 #if BL_TARGET_ARCH_X86 == 64
@@ -520,13 +520,13 @@ static BL_INLINE_NODEBUG T lerp(const T& a, const T& b) noexcept {
 //! inputs. It should only be used in places in which it's known that such inputs
 //! cannot happen.
 template<typename V, typename T = double>
-static BL_INLINE_NODEBUG V fastLerp(const V& a, const V& b, const T& t) noexcept {
+static BL_INLINE_NODEBUG V fast_lerp(const V& a, const V& b, const T& t) noexcept {
   return a + t * (b - a);
 }
 
 //! Alternative LERP implementation at `t=0.5`.
 template<typename T>
-static BL_INLINE_NODEBUG T fastLerp(const T& a, const T& b) noexcept {
+static BL_INLINE_NODEBUG T fast_lerp(const T& a, const T& b) noexcept {
   return 0.5 * (a + b);
 }
 
@@ -568,16 +568,16 @@ static BL_INLINE_NODEBUG T fastLerp(const T& a, const T& b) noexcept {
 //!   ```
 //!
 //! \note This is a branchless version designed to be easily inlinable.
-static BL_INLINE size_t quadRoots(double dst[2], double a, double b, double c, double tMin, double tMax) noexcept {
-  double d = blMax(b * b - 4.0 * a * c, 0.0);
+static BL_INLINE size_t quad_roots(double dst[2], double a, double b, double c, double tMin, double tMax) noexcept {
+  double d = bl_max(b * b - 4.0 * a * c, 0.0);
   double s = sqrt(d);
-  double q = -0.5 * (b + copySign(s, b));
+  double q = -0.5 * (b + copy_sign(s, b));
 
   double t0 = q / a;
   double t1 = c / q;
 
-  double x0 = blMin(t0, t1);
-  double x1 = blMax(t1, t0);
+  double x0 = bl_min(t0, t1);
+  double x1 = bl_max(t1, t0);
 
   dst[0] = x0;
   size_t n = size_t((x0 >= tMin) & (x0 <= tMax));
@@ -589,25 +589,25 @@ static BL_INLINE size_t quadRoots(double dst[2], double a, double b, double c, d
 }
 
 //! \overload
-static BL_INLINE size_t quadRoots(double dst[2], const double poly[3], double tMin, double tMax) noexcept {
-  return quadRoots(dst, poly[0], poly[1], poly[2], tMin, tMax);
+static BL_INLINE size_t quad_roots(double dst[2], const double poly[3], double tMin, double tMax) noexcept {
+  return quad_roots(dst, poly[0], poly[1], poly[2], tMin, tMax);
 }
 
-//! Like `quadRoots()`, but always returns two roots and doesn't sort them.
-static BL_INLINE size_t simplifiedQuadRoots(double dst[2], double a, double b, double c) noexcept {
-  double d = blMax(b * b - 4.0 * a * c, 0.0);
+//! Like `quad_roots()`, but always returns two roots and doesn't sort them.
+static BL_INLINE size_t simplified_quad_roots(double dst[2], double a, double b, double c) noexcept {
+  double d = bl_max(b * b - 4.0 * a * c, 0.0);
   double s = sqrt(d);
-  double q = -0.5 * (b + copySign(s, b));
+  double q = -0.5 * (b + copy_sign(s, b));
 
   dst[0] = q / a;
   dst[1] = c / q;
   return 2;
 }
 
-static BL_INLINE size_t simplifiedQuadRoots(BLPoint dst[2], const BLPoint& a, const BLPoint& b, const BLPoint& c) noexcept {
-  BLPoint d = blMax(b * b - 4.0 * a * c, 0.0);
+static BL_INLINE size_t simplified_quad_roots(BLPoint dst[2], const BLPoint& a, const BLPoint& b, const BLPoint& c) noexcept {
+  BLPoint d = bl_max(b * b - 4.0 * a * c, 0.0);
   BLPoint s = sqrt(d);
-  BLPoint q = -0.5 * (b + copySign(s, b));
+  BLPoint q = -0.5 * (b + copy_sign(s, b));
 
   dst[0] = q / a;
   dst[1] = c / q;
@@ -625,11 +625,11 @@ static BL_INLINE size_t simplifiedQuadRoots(BLPoint dst[2], const BLPoint& a, co
 //! Solve a cubic polynomial and store the result in `dst`.
 //!
 //! Returns the number of roots found within [tMin, tMax] - `0` to `3`.
-BL_HIDDEN size_t cubicRoots(double* dst, const double* poly, double tMin, double tMax) noexcept;
+BL_HIDDEN size_t cubic_roots(double* dst, const double* poly, double tMin, double tMax) noexcept;
 
-static BL_INLINE size_t cubicRoots(double dst[3], double a, double b, double c, double d, double tMin, double tMax) noexcept {
+static BL_INLINE size_t cubic_roots(double dst[3], double a, double b, double c, double d, double tMin, double tMax) noexcept {
   double poly[4] = { a, b, c, d };
-  return cubicRoots(dst, poly, tMin, tMax);
+  return cubic_roots(dst, poly, tMin, tMax);
 }
 
 //! \}

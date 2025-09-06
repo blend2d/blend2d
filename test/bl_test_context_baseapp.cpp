@@ -13,91 +13,91 @@
 namespace ContextTests {
 
 BaseTestApp::BaseTestApp()
-  : defaultOptions{makeDefaultOptions()} {}
+  : default_options{make_default_options()} {}
 
 BaseTestApp::~BaseTestApp() {}
 
-TestOptions BaseTestApp::makeDefaultOptions() {
+TestOptions BaseTestApp::make_default_options() {
   TestOptions opt {};
   opt.width = 513;
   opt.height = 513;
   opt.format = BL_FORMAT_PRGB32;
   opt.count = 1000;
-  opt.threadCount = 0;
+  opt.thread_count = 0;
   opt.seed = 1;
-  opt.styleId = StyleId::kRandom;
-  opt.compOp = CompOp::kRandom;
-  opt.opacityOp = OpacityOp::kRandom;
+  opt.style_id = StyleId::kRandom;
+  opt.comp_op = CompOp::kRandom;
+  opt.opacity_op = OpacityOp::kRandom;
   opt.command = CommandId::kAll;
   opt.font = "built-in";
-  opt.fontSize = 20;
-  opt.faceIndex = 0;
+  opt.font_size = 20;
+  opt.face_index = 0;
   opt.quiet = false;
-  opt.flushSync = false;
-  opt.storeImages = false;
+  opt.flush_sync = false;
+  opt.store_images = false;
   return opt;
 }
 
-bool BaseTestApp::parseCommonOptions(const CmdLine& cmdLine) {
+bool BaseTestApp::parse_common_options(const CmdLine& cmd_line) {
   using namespace StringUtils;
 
-  options.width = cmdLine.valueAsUInt("--width", defaultOptions.width);
-  options.height = cmdLine.valueAsUInt("--height", defaultOptions.height);
-  options.count = cmdLine.valueAsUInt("--count", defaultOptions.count);
-  options.seed = cmdLine.valueAsUInt("--seed", defaultOptions.seed);
-  options.styleId = parseStyleId(cmdLine.valueOf("--style", styleIdToString(defaultOptions.styleId)));
-  options.styleOp = parseStyleOp(cmdLine.valueOf("--style-op", styleOpToString(defaultOptions.styleOp)));
-  options.compOp = parseCompOp(cmdLine.valueOf("--comp-op", compOpToString(defaultOptions.compOp)));
-  options.opacityOp = parseOpacityOp(cmdLine.valueOf("--opacity-op", opacityOpToString(defaultOptions.opacityOp)));
-  options.command = parseCommandId(cmdLine.valueOf("--command", commandIdToString(defaultOptions.command)));
-  options.font = cmdLine.valueOf("--font", "built-in");
-  options.fontSize = cmdLine.valueAsUInt("--font-size", defaultOptions.fontSize);
-  options.faceIndex = cmdLine.valueAsUInt("--face-index", defaultOptions.faceIndex);
-  options.quiet = cmdLine.hasArg("--quiet") || defaultOptions.quiet;
-  options.storeImages = cmdLine.hasArg("--store") || defaultOptions.storeImages;
+  options.width = cmd_line.value_as_uint("--width", default_options.width);
+  options.height = cmd_line.value_as_uint("--height", default_options.height);
+  options.count = cmd_line.value_as_uint("--count", default_options.count);
+  options.seed = cmd_line.value_as_uint("--seed", default_options.seed);
+  options.style_id = parse_style_id(cmd_line.value_of("--style", style_id_to_string(default_options.style_id)));
+  options.style_op = parse_style_op(cmd_line.value_of("--style-op", style_op_to_string(default_options.style_op)));
+  options.comp_op = parse_comp_op(cmd_line.value_of("--comp-op", comp_op_to_string(default_options.comp_op)));
+  options.opacity_op = parse_opacity_op(cmd_line.value_of("--opacity-op", opacity_op_to_string(default_options.opacity_op)));
+  options.command = parse_command_id(cmd_line.value_of("--command", command_id_to_string(default_options.command)));
+  options.font = cmd_line.value_of("--font", "built-in");
+  options.font_size = cmd_line.value_as_uint("--font-size", default_options.font_size);
+  options.face_index = cmd_line.value_as_uint("--face-index", default_options.face_index);
+  options.quiet = cmd_line.has_arg("--quiet") || default_options.quiet;
+  options.store_images = cmd_line.has_arg("--store") || default_options.store_images;
 
-  const char* formatString = cmdLine.valueOf("--format", "all");
-  options.format = parseFormat(formatString);
+  const char* format_string = cmd_line.value_of("--format", "all");
+  options.format = parse_format(format_string);
 
-  bool formatValid = options.format != BL_FORMAT_NONE;
-  bool formatAll = false;
+  bool format_valid = options.format != BL_FORMAT_NONE;
+  bool format_all = false;
 
-  if (!formatValid && StringUtils::strieq(formatString, "all")) {
-    formatAll = true;
-    formatValid = true;
+  if (!format_valid && StringUtils::strieq(format_string, "all")) {
+    format_all = true;
+    format_valid = true;
   }
 
-  if (!formatValid ||
+  if (!format_valid ||
       options.command == CommandId::kUnknown ||
-      options.styleId == StyleId::kUnknown ||
-      options.compOp == CompOp::kUnknown ||
-      options.opacityOp == OpacityOp::kUnknown
+      options.style_id == StyleId::kUnknown ||
+      options.comp_op == CompOp::kUnknown ||
+      options.opacity_op == OpacityOp::kUnknown
   ) {
     printf("Failed to process command line arguments:\n");
 
-    if (!formatValid)
-      printf("  Unknown format '%s' - please use --help to list all available pixel formats\n", cmdLine.valueOf("--format", ""));
+    if (!format_valid)
+      printf("  Unknown format '%s' - please use --help to list all available pixel formats\n", cmd_line.value_of("--format", ""));
 
-    if (options.compOp == CompOp::kUnknown)
-      printf("  Unknown compOp '%s' - please use --help to list all available operators\n", cmdLine.valueOf("--comp-op", ""));
+    if (options.comp_op == CompOp::kUnknown)
+      printf("  Unknown comp_op '%s' - please use --help to list all available operators\n", cmd_line.value_of("--comp-op", ""));
 
-    if (options.opacityOp == OpacityOp::kUnknown)
-      printf("  Unknown opacityOp '%s' - please use --help to list all available options\n", cmdLine.valueOf("--opacity-op", ""));
+    if (options.opacity_op == OpacityOp::kUnknown)
+      printf("  Unknown opacity_op '%s' - please use --help to list all available options\n", cmd_line.value_of("--opacity-op", ""));
 
-    if (options.styleId == StyleId::kUnknown)
-      printf("  Unknown style '%s' - please use --help to list all available styles\n", cmdLine.valueOf("--style", ""));
+    if (options.style_id == StyleId::kUnknown)
+      printf("  Unknown style '%s' - please use --help to list all available styles\n", cmd_line.value_of("--style", ""));
 
-    if (options.styleOp == StyleOp::kUnknown)
-      printf("  Unknown style-op '%s' - please use --help to list all available style options\n", cmdLine.valueOf("--style-op", ""));
+    if (options.style_op == StyleOp::kUnknown)
+      printf("  Unknown style-op '%s' - please use --help to list all available style options\n", cmd_line.value_of("--style-op", ""));
 
     if (options.command == CommandId::kUnknown)
-      printf("  Unknown command '%s' - please use --help to list all available commands\n", cmdLine.valueOf("--command", ""));
+      printf("  Unknown command '%s' - please use --help to list all available commands\n", cmd_line.value_of("--command", ""));
 
     return false;
   }
 
   if (strieq(options.font, "built-in")) {
-    BLResult result = fontData.createFromData(
+    BLResult result = font_data.create_from_data(
       resource_abeezee_regular_ttf,
       sizeof(resource_abeezee_regular_ttf));
 
@@ -107,7 +107,7 @@ bool BaseTestApp::parseCommonOptions(const CmdLine& cmdLine) {
     }
   }
   else {
-    BLResult result = fontData.createFromFile(options.font);
+    BLResult result = font_data.create_from_file(options.font);
     if (result != BL_SUCCESS) {
       printf("Failed to load font %s (result=0x%08X)\n", options.font, result);
       return false;
@@ -116,231 +116,231 @@ bool BaseTestApp::parseCommonOptions(const CmdLine& cmdLine) {
 
   // Add all choices into the lists that are iterated during testing.
   if (options.format == BL_FORMAT_NONE) {
-    testCases.formatIds.push_back(BL_FORMAT_PRGB32);
-    testCases.formatIds.push_back(BL_FORMAT_A8);
+    test_cases.format_ids.push_back(BL_FORMAT_PRGB32);
+    test_cases.format_ids.push_back(BL_FORMAT_A8);
   }
   else {
-    testCases.formatIds.push_back(options.format);
+    test_cases.format_ids.push_back(options.format);
   }
 
   if (options.command == CommandId::kAll) {
     for (uint32_t i = 0; i < uint32_t(CommandId::kAll); i++) {
-      testCases.commandIds.push_back(CommandId(i));
+      test_cases.command_ids.push_back(CommandId(i));
     }
   }
   else {
-    testCases.commandIds.push_back(options.command);
+    test_cases.command_ids.push_back(options.command);
   }
 
-  if (options.styleId >= StyleId::kRandom) {
-    if (options.styleId == StyleId::kRandomStable || options.styleId == StyleId::kAllStable) {
-      testCases.styleIds.push_back(StyleId::kSolid);
-      testCases.styleIds.push_back(StyleId::kSolidOpaque);
-      testCases.styleIds.push_back(StyleId::kGradientLinear);
-      testCases.styleIds.push_back(StyleId::kGradientLinearDither);
-      testCases.styleIds.push_back(StyleId::kPatternAligned);
-      testCases.styleIds.push_back(StyleId::kPatternFx);
-      testCases.styleIds.push_back(StyleId::kPatternFy);
-      testCases.styleIds.push_back(StyleId::kPatternFxFy);
-      testCases.styleIds.push_back(StyleId::kPatternAffineNearest);
-      testCases.styleIds.push_back(StyleId::kPatternAffineBilinear);
+  if (options.style_id >= StyleId::kRandom) {
+    if (options.style_id == StyleId::kRandomStable || options.style_id == StyleId::kAllStable) {
+      test_cases.style_ids.push_back(StyleId::kSolid);
+      test_cases.style_ids.push_back(StyleId::kSolidOpaque);
+      test_cases.style_ids.push_back(StyleId::kGradientLinear);
+      test_cases.style_ids.push_back(StyleId::kGradientLinearDither);
+      test_cases.style_ids.push_back(StyleId::kPatternAligned);
+      test_cases.style_ids.push_back(StyleId::kPatternFx);
+      test_cases.style_ids.push_back(StyleId::kPatternFy);
+      test_cases.style_ids.push_back(StyleId::kPatternFxFy);
+      test_cases.style_ids.push_back(StyleId::kPatternAffineNearest);
+      test_cases.style_ids.push_back(StyleId::kPatternAffineBilinear);
     }
-    else if (options.styleId == StyleId::kRandomUnstable || options.styleId == StyleId::kAllUnstable) {
-      testCases.styleIds.push_back(StyleId::kGradientRadial);
-      testCases.styleIds.push_back(StyleId::kGradientRadialDither);
-      testCases.styleIds.push_back(StyleId::kGradientConic);
-      testCases.styleIds.push_back(StyleId::kGradientConicDither);
+    else if (options.style_id == StyleId::kRandomUnstable || options.style_id == StyleId::kAllUnstable) {
+      test_cases.style_ids.push_back(StyleId::kGradientRadial);
+      test_cases.style_ids.push_back(StyleId::kGradientRadialDither);
+      test_cases.style_ids.push_back(StyleId::kGradientConic);
+      test_cases.style_ids.push_back(StyleId::kGradientConicDither);
     }
     else {
       for (uint32_t i = 0; i < uint32_t(StyleId::kRandom); i++) {
-        testCases.styleIds.push_back(StyleId(i));
+        test_cases.style_ids.push_back(StyleId(i));
       }
     }
   }
   else {
-    testCases.styleIds.push_back(options.styleId);
+    test_cases.style_ids.push_back(options.style_id);
   }
 
-  if (options.styleOp >= StyleOp::kRandom) {
+  if (options.style_op >= StyleOp::kRandom) {
     for (uint32_t i = 0; i < uint32_t(StyleOp::kRandom); i++) {
-      testCases.styleOps.push_back(StyleOp(i));
+      test_cases.style_ops.push_back(StyleOp(i));
     }
   }
   else {
-    testCases.styleOps.push_back(options.styleOp);
+    test_cases.style_ops.push_back(options.style_op);
   }
 
-  if (options.compOp >= CompOp::kRandom) {
+  if (options.comp_op >= CompOp::kRandom) {
     for (uint32_t i = 0; i < uint32_t(CompOp::kRandom); i++) {
-      testCases.compOps.push_back(CompOp(i));
+      test_cases.comp_ops.push_back(CompOp(i));
     }
   }
   else {
-    testCases.compOps.push_back(options.compOp);
+    test_cases.comp_ops.push_back(options.comp_op);
   }
 
-  if (options.opacityOp >= OpacityOp::kRandom) {
+  if (options.opacity_op >= OpacityOp::kRandom) {
     for (uint32_t i = 0; i < uint32_t(OpacityOp::kRandom); i++) {
-      testCases.opacityOps.push_back(OpacityOp(i));
+      test_cases.opacity_ops.push_back(OpacityOp(i));
     }
   }
   else {
-    testCases.opacityOps.push_back(options.opacityOp);
+    test_cases.opacity_ops.push_back(options.opacity_op);
   }
 
   return true;
 }
 
-void BaseTestApp::printAppInfo(const char* title, bool quiet) const {
+void BaseTestApp::print_app_info(const char* title, bool quiet) const {
   printf("%s [use --help for command line options]\n", title);
 
   if (!quiet) {
-    BLRuntimeBuildInfo buildInfo;
-    BLRuntime::queryBuildInfo(&buildInfo);
+    BLRuntimeBuildInfo build_info;
+    BLRuntime::query_build_info(&build_info);
     printf("  Version    : %u.%u.%u\n"
            "  Build Type : %s\n"
            "  Compiled By: %s\n\n",
-           buildInfo.majorVersion,
-           buildInfo.minorVersion,
-           buildInfo.patchVersion,
-           buildInfo.buildType == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
-           buildInfo.compilerInfo);
+           build_info.major_version,
+           build_info.minor_version,
+           build_info.patch_version,
+           build_info.build_type == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
+           build_info.compiler_info);
   }
 
   fflush(stdout);
 }
 
-void BaseTestApp::printCommonOptions(const TestOptions& defaultOptions) const {
+void BaseTestApp::print_common_options(const TestOptions& default_options) const {
   using namespace StringUtils;
 
   printf("Common test options:\n");
-  printf("  --width=<uint>          - Image width                       [default=%u]\n", defaultOptions.width);
-  printf("  --height=<uint>         - Image height                      [default=%u]\n", defaultOptions.height);
-  printf("  --format=<string>       - Image pixel format                [default=%s]\n", formatToString(defaultOptions.format));
-  printf("  --count=<uint>          - Count of render commands          [default=%u]\n", defaultOptions.count);
-  printf("  --seed=<uint>           - Random number generator seed      [default=%u]\n", defaultOptions.seed);
-  printf("  --style=<string>        - Style to render commands with     [default=%s]\n", styleIdToString(defaultOptions.styleId));
-  printf("  --style-op=<string>     - Configure how to use styles       [default=%s]\n", styleOpToString(defaultOptions.styleOp));
-  printf("  --comp-op=<string>      - Composition operator              [default=%s]\n", compOpToString(defaultOptions.compOp));
-  printf("  --opacity-op=<string>   - Opacity option                    [default=%s]\n", opacityOpToString(defaultOptions.opacityOp));
-  printf("  --command=<string>      - Specify which command to run      [default=%s]\n", commandIdToString(defaultOptions.command));
-  printf("  --font=<string>         - Specify which font to use         [default=%s]\n", defaultOptions.font);
-  printf("  --font-size=<uint>      - Font size                         [default=%u]\n", defaultOptions.fontSize);
-  printf("  --face-index=<uint>     - Face index of a font collection   [default=%u]\n", defaultOptions.faceIndex);
-  printf("  --store                 - Write resulting images to files   [default=%s]\n", boolToString(defaultOptions.storeImages));
-  printf("  --quiet                 - Don't write log unless necessary  [default=%s]\n", boolToString(defaultOptions.quiet));
+  printf("  --width=<uint>          - Image width                       [default=%u]\n", default_options.width);
+  printf("  --height=<uint>         - Image height                      [default=%u]\n", default_options.height);
+  printf("  --format=<string>       - Image pixel format                [default=%s]\n", format_to_string(default_options.format));
+  printf("  --count=<uint>          - Count of render commands          [default=%u]\n", default_options.count);
+  printf("  --seed=<uint>           - Random number generator seed      [default=%u]\n", default_options.seed);
+  printf("  --style=<string>        - Style to render commands with     [default=%s]\n", style_id_to_string(default_options.style_id));
+  printf("  --style-op=<string>     - Configure how to use styles       [default=%s]\n", style_op_to_string(default_options.style_op));
+  printf("  --comp-op=<string>      - Composition operator              [default=%s]\n", comp_op_to_string(default_options.comp_op));
+  printf("  --opacity-op=<string>   - Opacity option                    [default=%s]\n", opacity_op_to_string(default_options.opacity_op));
+  printf("  --command=<string>      - Specify which command to run      [default=%s]\n", command_id_to_string(default_options.command));
+  printf("  --font=<string>         - Specify which font to use         [default=%s]\n", default_options.font);
+  printf("  --font-size=<uint>      - Font size                         [default=%u]\n", default_options.font_size);
+  printf("  --face-index=<uint>     - Face index of a font collection   [default=%u]\n", default_options.face_index);
+  printf("  --store                 - Write resulting images to files   [default=%s]\n", bool_to_string(default_options.store_images));
+  printf("  --quiet                 - Don't write log unless necessary  [default=%s]\n", bool_to_string(default_options.quiet));
   printf("\n");
 }
 
-void BaseTestApp::printFormats() const {
+void BaseTestApp::print_formats() const {
   using namespace StringUtils;
 
   printf("List of pixel formats:\n");
-  printf("  %-23s - Premultiplied 32-bit ARGB\n", formatToString(BL_FORMAT_PRGB32));
-  printf("  %-23s - 32-bit RGB (1 byte unused)\n", formatToString(BL_FORMAT_XRGB32));
-  printf("  %-23s - 8-bit alpha-only format\n", formatToString(BL_FORMAT_A8));
+  printf("  %-23s - Premultiplied 32-bit ARGB\n", format_to_string(BL_FORMAT_PRGB32));
+  printf("  %-23s - 32-bit RGB (1 byte unused)\n", format_to_string(BL_FORMAT_XRGB32));
+  printf("  %-23s - 8-bit alpha-only format\n", format_to_string(BL_FORMAT_A8));
   printf("\n");
 }
 
-void BaseTestApp::printCompOps() const {
+void BaseTestApp::print_comp_ops() const {
   using namespace StringUtils;
 
   printf("List of composition operators:\n");
-  printf("  %-23s - Source over\n", compOpToString(CompOp::kSrcOver));
-  printf("  %-23s - Source copy\n", compOpToString(CompOp::kSrcCopy));
-  printf("  %-23s - Random operator for every call\n", compOpToString(CompOp::kRandom));
-  printf("  %-23s - Tests all separately\n", compOpToString(CompOp::kAll));
+  printf("  %-23s - Source over\n", comp_op_to_string(CompOp::kSrcOver));
+  printf("  %-23s - Source copy\n", comp_op_to_string(CompOp::kSrcCopy));
+  printf("  %-23s - Random operator for every call\n", comp_op_to_string(CompOp::kRandom));
+  printf("  %-23s - Tests all separately\n", comp_op_to_string(CompOp::kAll));
   printf("\n");
 }
 
-void BaseTestApp::printOpacityOps() const {
+void BaseTestApp::print_opacity_ops() const {
   using namespace StringUtils;
 
   printf("List of opacity options:\n");
-  printf("  %-23s - Opacity is set to fully opaque (1)\n", opacityOpToString(OpacityOp::kOpaque));
-  printf("  %-23s - Opacity is semi-transparent (0..1)\n", opacityOpToString(OpacityOp::kSemi));
-  printf("  %-23s - Opacity is always zero (fully transparent)\n", opacityOpToString(OpacityOp::kTransparent));
-  printf("  %-23s - Random opacity for every call\n", opacityOpToString(OpacityOp::kRandom));
-  printf("  %-23s - Tests all opacity options separately\n", opacityOpToString(OpacityOp::kAll));
+  printf("  %-23s - Opacity is set to fully opaque (1)\n", opacity_op_to_string(OpacityOp::kOpaque));
+  printf("  %-23s - Opacity is semi-transparent (0..1)\n", opacity_op_to_string(OpacityOp::kSemi));
+  printf("  %-23s - Opacity is always zero (fully transparent)\n", opacity_op_to_string(OpacityOp::kTransparent));
+  printf("  %-23s - Random opacity for every call\n", opacity_op_to_string(OpacityOp::kRandom));
+  printf("  %-23s - Tests all opacity options separately\n", opacity_op_to_string(OpacityOp::kAll));
   printf("\n");
 }
 
-void BaseTestApp::printStyleIds() const {
+void BaseTestApp::print_style_ids() const {
   using namespace StringUtils;
 
   printf("List of styles:\n");
-  printf("  %-23s - Solid color\n", styleIdToString(StyleId::kSolid));
-  printf("  %-23s - Linear gradient\n", styleIdToString(StyleId::kGradientLinear));
-  printf("  %-23s - Radial gradient\n", styleIdToString(StyleId::kGradientRadial));
-  printf("  %-23s - Conic gradient\n", styleIdToString(StyleId::kGradientConic));
-  printf("  %-23s - Pattern with aligned translation (no scaling)\n", styleIdToString(StyleId::kPatternAligned));
-  printf("  %-23s - Pattern with fractional x translation\n", styleIdToString(StyleId::kPatternFx));
-  printf("  %-23s - Pattern with fractional y translation\n", styleIdToString(StyleId::kPatternFy));
-  printf("  %-23s - Pattern with fractional x and y translation\n", styleIdToString(StyleId::kPatternFxFy));
-  printf("  %-23s - Pattern with affine transformation (nearest)\n", styleIdToString(StyleId::kPatternAffineNearest));
-  printf("  %-23s - Pattern with affine transformation (bilinear)\n", styleIdToString(StyleId::kPatternAffineBilinear));
-  printf("  %-23s - Random style for every render call\n", styleIdToString(StyleId::kRandom));
-  printf("  %-23s - Like 'random', but only styles that never require --max-diff\n", styleIdToString(StyleId::kRandomStable));
-  printf("  %-23s - Like 'random', but only styles that could require --max-diff\n", styleIdToString(StyleId::kRandomUnstable));
-  printf("  %-23s - Test all styles separately\n", styleIdToString(StyleId::kAll));
-  printf("  %-23s - Like 'all', but only styles that never require --max-diff\n", styleIdToString(StyleId::kAllStable));
-  printf("  %-23s - Like 'all', but only styles that could require --max-diff\n", styleIdToString(StyleId::kAllUnstable));
+  printf("  %-23s - Solid color\n", style_id_to_string(StyleId::kSolid));
+  printf("  %-23s - Linear gradient\n", style_id_to_string(StyleId::kGradientLinear));
+  printf("  %-23s - Radial gradient\n", style_id_to_string(StyleId::kGradientRadial));
+  printf("  %-23s - Conic gradient\n", style_id_to_string(StyleId::kGradientConic));
+  printf("  %-23s - Pattern with aligned translation (no scaling)\n", style_id_to_string(StyleId::kPatternAligned));
+  printf("  %-23s - Pattern with fractional x translation\n", style_id_to_string(StyleId::kPatternFx));
+  printf("  %-23s - Pattern with fractional y translation\n", style_id_to_string(StyleId::kPatternFy));
+  printf("  %-23s - Pattern with fractional x and y translation\n", style_id_to_string(StyleId::kPatternFxFy));
+  printf("  %-23s - Pattern with affine transformation (nearest)\n", style_id_to_string(StyleId::kPatternAffineNearest));
+  printf("  %-23s - Pattern with affine transformation (bilinear)\n", style_id_to_string(StyleId::kPatternAffineBilinear));
+  printf("  %-23s - Random style for every render call\n", style_id_to_string(StyleId::kRandom));
+  printf("  %-23s - Like 'random', but only styles that never require --max-diff\n", style_id_to_string(StyleId::kRandomStable));
+  printf("  %-23s - Like 'random', but only styles that could require --max-diff\n", style_id_to_string(StyleId::kRandomUnstable));
+  printf("  %-23s - Test all styles separately\n", style_id_to_string(StyleId::kAll));
+  printf("  %-23s - Like 'all', but only styles that never require --max-diff\n", style_id_to_string(StyleId::kAllStable));
+  printf("  %-23s - Like 'all', but only styles that could require --max-diff\n", style_id_to_string(StyleId::kAllUnstable));
   printf("\n");
 }
 
-void BaseTestApp::printStyleOps() const {
+void BaseTestApp::print_style_ops() const {
   using namespace StringUtils;
 
   printf("List of style options:\n");
-  printf("  %-23s - Pass styles directly to render calls\n", styleOpToString(StyleOp::kExplicit));
-  printf("  %-23s - Use setFillStyle() and setStrokeStyle()\n", styleOpToString(StyleOp::kImplicit));
-  printf("  %-23s - Random style option for every render call\n", styleOpToString(StyleOp::kRandom));
-  printf("  %-23s - Test all style options separately\n", styleOpToString(StyleOp::kAll));
+  printf("  %-23s - Pass styles directly to render calls\n", style_op_to_string(StyleOp::kExplicit));
+  printf("  %-23s - Use set_fill_style() and set_stroke_style()\n", style_op_to_string(StyleOp::kImplicit));
+  printf("  %-23s - Random style option for every render call\n", style_op_to_string(StyleOp::kRandom));
+  printf("  %-23s - Test all style options separately\n", style_op_to_string(StyleOp::kAll));
   printf("\n");
 }
 
-void BaseTestApp::printCommands() const {
+void BaseTestApp::print_commands() const {
   using namespace StringUtils;
 
   printf("List of commands:\n");
-  printf("  %-23s - Fills aligned rectangles (int coordinates)\n", commandIdToString(CommandId::kFillRectI));
-  printf("  %-23s - Fills unaligned rectangles (float coordinates)\n", commandIdToString(CommandId::kFillRectD));
-  printf("  %-23s - Fills multiple rectangles (float coordinates)\n", commandIdToString(CommandId::kFillMultipleRects));
-  printf("  %-23s - Fills rounded rectangles\n", commandIdToString(CommandId::kFillRound));
-  printf("  %-23s - Fills triangles\n", commandIdToString(CommandId::kFillTriangle));
-  printf("  %-23s - Fills a path having quadratic curves\n", commandIdToString(CommandId::kFillPathQuad));
-  printf("  %-23s - Fills a path having cubic curves\n", commandIdToString(CommandId::kFillPathCubic));
-  printf("  %-23s - Fills text runs\n", commandIdToString(CommandId::kFillText));
-  printf("  %-23s - Strokes aligned rectangles (int coordinates)\n", commandIdToString(CommandId::kStrokeRectI));
-  printf("  %-23s - Strokes unaligned rectangles (float coordinates)\n", commandIdToString(CommandId::kStrokeRectD));
-  printf("  %-23s - Strokes multiple rectangles (float coordinates)\n", commandIdToString(CommandId::kStrokeMultipleRects));
-  printf("  %-23s - Strokes rounded rectangles\n", commandIdToString(CommandId::kStrokeRound));
-  printf("  %-23s - Strokes triangles\n", commandIdToString(CommandId::kStrokeTriangle));
-  printf("  %-23s - Strokes a path having quadratic curves\n", commandIdToString(CommandId::kStrokePathQuad));
-  printf("  %-23s - Strokes a path having cubic curves\n", commandIdToString(CommandId::kStrokePathCubic));
-  printf("  %-23s - Strokes text runs\n", commandIdToString(CommandId::kStrokeText));
-  printf("  %-23s - Test all commands separately\n", commandIdToString(CommandId::kAll));
+  printf("  %-23s - Fills aligned rectangles (int coordinates)\n", command_id_to_string(CommandId::kFillRectI));
+  printf("  %-23s - Fills unaligned rectangles (float coordinates)\n", command_id_to_string(CommandId::kFillRectD));
+  printf("  %-23s - Fills multiple rectangles (float coordinates)\n", command_id_to_string(CommandId::kFillMultipleRects));
+  printf("  %-23s - Fills rounded rectangles\n", command_id_to_string(CommandId::kFillRound));
+  printf("  %-23s - Fills triangles\n", command_id_to_string(CommandId::kFillTriangle));
+  printf("  %-23s - Fills a path having quadratic curves\n", command_id_to_string(CommandId::kFillPathQuad));
+  printf("  %-23s - Fills a path having cubic curves\n", command_id_to_string(CommandId::kFillPathCubic));
+  printf("  %-23s - Fills text runs\n", command_id_to_string(CommandId::kFillText));
+  printf("  %-23s - Strokes aligned rectangles (int coordinates)\n", command_id_to_string(CommandId::kStrokeRectI));
+  printf("  %-23s - Strokes unaligned rectangles (float coordinates)\n", command_id_to_string(CommandId::kStrokeRectD));
+  printf("  %-23s - Strokes multiple rectangles (float coordinates)\n", command_id_to_string(CommandId::kStrokeMultipleRects));
+  printf("  %-23s - Strokes rounded rectangles\n", command_id_to_string(CommandId::kStrokeRound));
+  printf("  %-23s - Strokes triangles\n", command_id_to_string(CommandId::kStrokeTriangle));
+  printf("  %-23s - Strokes a path having quadratic curves\n", command_id_to_string(CommandId::kStrokePathQuad));
+  printf("  %-23s - Strokes a path having cubic curves\n", command_id_to_string(CommandId::kStrokePathCubic));
+  printf("  %-23s - Strokes text runs\n", command_id_to_string(CommandId::kStrokeText));
+  printf("  %-23s - Test all commands separately\n", command_id_to_string(CommandId::kAll));
   printf("\n");
 }
 
-bool BaseTestApp::runMultiple(CommandId commandId, const TestInfo& info, ContextTester& aTester, ContextTester& bTester, uint32_t maxDiff) {
-  aTester.clear();
-  aTester.seed(options.seed);
-  aTester.render(commandId, options.count, options);
+bool BaseTestApp::run_multiple(CommandId command_id, const TestInfo& info, ContextTester& a_tester, ContextTester& b_tester, uint32_t max_diff) {
+  a_tester.clear();
+  a_tester.seed(options.seed);
+  a_tester.render(command_id, options.count, options);
 
-  bTester.clear();
-  bTester.seed(options.seed);
-  bTester.render(commandId, options.count, options);
+  b_tester.clear();
+  b_tester.seed(options.seed);
+  b_tester.render(command_id, options.count, options);
 
-  if (!checkOutput(info.id.data(), aTester, bTester, maxDiff)) {
-    findProblem(commandId, info, aTester, bTester, maxDiff);
+  if (!check_output(info.id.data(), a_tester, b_tester, max_diff)) {
+    find_problem(command_id, info, a_tester, b_tester, max_diff);
     return false;
   }
 
   return true;
 }
 
-void BaseTestApp::findProblem(CommandId commandId, const TestInfo& info, ContextTester& aTester, ContextTester& bTester, uint32_t maxDiff) {
+void BaseTestApp::find_problem(CommandId command_id, const TestInfo& info, ContextTester& a_tester, ContextTester& b_tester, uint32_t max_diff) {
   // Do a binary search to find exactly the failing command.
   size_t base = 0;
   size_t size = options.count;
@@ -359,75 +359,75 @@ void BaseTestApp::findProblem(CommandId commandId, const TestInfo& info, Context
 
     printf("  Verifying range [%zu %zu)\n", base, base + size);
 
-    aTester.clear();
-    bTester.clear();
+    a_tester.clear();
+    b_tester.clear();
 
-    aTester.seed(options.seed);
-    bTester.seed(options.seed);
+    a_tester.seed(options.seed);
+    b_tester.seed(options.seed);
 
-    aTester.render(commandId, base + size, options);
-    bTester.render(commandId, base + size, options);
+    a_tester.render(command_id, base + size, options);
+    b_tester.render(command_id, base + size, options);
 
-    checkOutput(info.id.data(), aTester, bTester, maxDiff);
+    check_output(info.id.data(), a_tester, b_tester, max_diff);
 
-    if (ImageUtils::diffInfo(aTester.image(), bTester.image()).maxDiff <= maxDiff)
+    if (ImageUtils::diff_info(a_tester.image(), b_tester.image()).max_diff <= max_diff)
       base = middle;
   }
 
   printf("  Mismatch command index: %zu\n", base);
 
-  aTester.clear();
-  bTester.clear();
+  a_tester.clear();
+  b_tester.clear();
 
-  aTester.seed(options.seed);
-  bTester.seed(options.seed);
+  a_tester.seed(options.seed);
+  b_tester.seed(options.seed);
 
   if (base) {
-    aTester.render(commandId, base - 1, options);
-    bTester.render(commandId, base - 1, options);
+    a_tester.render(command_id, base - 1, options);
+    b_tester.render(command_id, base - 1, options);
   }
 
-  aTester.render(commandId, 1, options);
-  bTester.render(commandId, 1, options);
+  a_tester.render(command_id, 1, options);
+  b_tester.render(command_id, 1, options);
 
-  checkOutput(info.id.data(), aTester, bTester, maxDiff);
+  check_output(info.id.data(), a_tester, b_tester, max_diff);
 }
 
-bool BaseTestApp::checkOutput(const char* testId, const ContextTester& aTester, const ContextTester& bTester, uint32_t maxDiff) {
-  const BLImage& aImage = aTester.image();
-  const BLImage& bImage = bTester.image();
+bool BaseTestApp::check_output(const char* test_id, const ContextTester& a_tester, const ContextTester& b_tester, uint32_t max_diff) {
+  const BLImage& a_image = a_tester.image();
+  const BLImage& b_image = b_tester.image();
 
-  ImageUtils::DiffInfo diffInfo = ImageUtils::diffInfo(aImage, bImage);
-  if (diffInfo.maxDiff <= maxDiff)
+  ImageUtils::DiffInfo diff_info = ImageUtils::diff_info(a_image, b_image);
+  if (diff_info.max_diff <= max_diff)
     return true;
 
-  mismatchCount++;
+  mismatch_count++;
 
-  BLString imageName;
-  imageName.assignFormat("%s-bug-%05llu", testId, (unsigned long long)mismatchCount);
-  printf("  Mismatch: %s (maxDiff=%u cumulative=%llu)\n", imageName.data(), diffInfo.maxDiff, (unsigned long long)diffInfo.cumulativeDiff);
+  BLString image_name;
+  image_name.assign_format("%s-bug-%05llu", test_id, (unsigned long long)mismatch_count);
+  printf("  Mismatch: %s (max_diff=%u cumulative=%llu)\n", image_name.data(), diff_info.max_diff, (unsigned long long)diff_info.cumulative_diff);
 
-  if (options.storeImages) {
-    BLImage d = ImageUtils::diffImage(aImage, bImage);
-    storeImage(d, imageName.data(), "diff");
-    storeImage(aImage, imageName.data(), aTester.prefix());
-    storeImage(bImage, imageName.data(), bTester.prefix());
+  if (options.store_images) {
+    BLImage d = ImageUtils::diff_image(a_image, b_image);
+    store_image(d, image_name.data(), "diff");
+    store_image(a_image, image_name.data(), a_tester.prefix());
+    store_image(b_image, image_name.data(), b_tester.prefix());
   }
 
   return false;
 }
 
-void BaseTestApp::storeImage(const BLImage& image, const char* name, const char* suffix) const {
+void BaseTestApp::store_image(const BLImage& image, const char* name, const char* suffix) const {
   BLString s;
   if (suffix)
-    s.assignFormat("%s-%s.png", name, suffix);
+    s.assign_format("%s-%s.png", name, suffix);
   else
-    s.assignFormat("%s.png", name);
+    s.assign_format("%s.png", name);
 
   if (!options.quiet)
     printf("  Storing %s\n", s.data());
 
-  image.writeToFile(s.data());
+  image.write_to_file(s.data());
 }
 
 } // {ContextTests}

@@ -69,15 +69,15 @@ enum class GPosLookupAndFormat : uint8_t {
 
 struct DebugSink {
   BLDebugMessageSinkFunc _sink;
-  void* _userData;
+  void* _user_data;
 
-  BL_INLINE void init(BLDebugMessageSinkFunc sink, void* userData) noexcept {
+  BL_INLINE void init(BLDebugMessageSinkFunc sink, void* user_data) noexcept {
     _sink = sink;
-    _userData = userData;
+    _user_data = user_data;
   }
 
   BL_INLINE bool enabled() const noexcept { return _sink != nullptr; }
-  BL_INLINE void message(const BLString& s) const noexcept { _sink(s.data(), s.size(), _userData); }
+  BL_INLINE void message(const BLString& s) const noexcept { _sink(s.data(), s.size(), _user_data); }
 };
 
 struct GSubGPosLookupInfo {
@@ -89,27 +89,27 @@ struct GSubGPosLookupInfo {
   //! Structure that describes a lookup of a specific LookupType of any format.
   struct TypeInfo {
     //! Number of formats.
-    uint8_t formatCount;
+    uint8_t format_count;
     //! First lookup of format 1, see \ref GSubLookupAndFormat and \ref GPosLookupAndFormat.
-    uint8_t typeAndFormat;
+    uint8_t type_and_format;
   };
 
   //! Structure that describes a lookup, see \ref GSubLookupAndFormat and \ref GPosLookupAndFormat.
   struct TypeFormatInfo {
     uint8_t type : 4;
     uint8_t format : 4;
-    uint8_t headerSize;
+    uint8_t header_size;
   };
 
   //! Maximum value of LookupType (inclusive).
-  uint8_t lookupMaxValue;
+  uint8_t lookup_max_value;
   //! "Extension" lookup type.
-  uint8_t extensionType;
+  uint8_t extension_type;
 
   //! Lookup type to LookupTypeAndFormat mapping.
-  TypeInfo typeInfo[kTypeCount];
+  TypeInfo type_info[kTypeCount];
   //! Information of the lookup type & format, see \ref GSubLookupAndFormat and \ref GPosLookupAndFormat.
-  TypeFormatInfo lookupInfo[kFormatAndIdCount];
+  TypeFormatInfo lookup_info[kFormatAndIdCount];
 };
 
 //! Data stored in `OTFaceImpl` related to OpenType advanced layout features.
@@ -129,7 +129,7 @@ public:
       return LookupStatusBits{{analyzed, valid}};
     }
 
-    static BL_INLINE LookupStatusBits makeComposed(uint64_t composed) noexcept {
+    static BL_INLINE LookupStatusBits make_composed(uint64_t composed) noexcept {
       LookupStatusBits out;
       out.composed = composed;
       return out;
@@ -154,23 +154,23 @@ public:
   };
 
   struct GDef {
-    TableRef glyphClassDef;
-    TableRef markAttachClassDef;
+    TableRef glyph_class_def;
+    TableRef mark_attach_class_def;
 
-    uint16_t attachListOffset;
-    uint16_t ligCaretListOffset;
-    uint16_t markGlyphSetsDefOffset;
-    uint32_t itemVarStoreOffset;
+    uint16_t attach_list_offset;
+    uint16_t lig_caret_list_offset;
+    uint16_t mark_glyph_sets_def_offset;
+    uint32_t item_var_store_offset;
   };
 
   struct GSubGPos {
-    uint16_t scriptListOffset;
-    uint16_t featureListOffset;
-    uint16_t lookupListOffset;
-    uint16_t featureCount;
-    uint16_t lookupCount;
-    uint16_t lookupStatusDataSize;
-    uint16_t lookupStatusDataOffset;
+    uint16_t script_list_offset;
+    uint16_t feature_list_offset;
+    uint16_t lookup_list_offset;
+    uint16_t feature_count;
+    uint16_t lookup_count;
+    uint16_t lookup_status_data_size;
+    uint16_t lookup_status_data_offset;
   };
 
   //! \}
@@ -181,7 +181,7 @@ public:
   RawTable tables[3];
   GDef gdef;
   GSubGPos kinds[2];
-  LookupStatusBits* _lookupStatusBits;
+  LookupStatusBits* _lookup_status_bits;
 
   //! \}
 
@@ -192,11 +192,11 @@ public:
     : tables{},
       gdef{},
       kinds{},
-      _lookupStatusBits(nullptr) {}
+      _lookup_status_bits(nullptr) {}
 
   BL_INLINE ~LayoutData() noexcept {
-    if (_lookupStatusBits)
-      free(_lookupStatusBits);
+    if (_lookup_status_bits)
+      free(_lookup_status_bits);
   }
 
   //! \}
@@ -204,14 +204,14 @@ public:
   //! \name Accessors
   //! \{
 
-  BL_INLINE GSubGPos& byKind(LookupKind lookupKind) noexcept { return kinds[size_t(lookupKind)]; }
-  BL_INLINE const GSubGPos& byKind(LookupKind lookupKind) const noexcept { return kinds[size_t(lookupKind)]; }
+  BL_INLINE GSubGPos& by_kind(LookupKind lookup_kind) noexcept { return kinds[size_t(lookup_kind)]; }
+  BL_INLINE const GSubGPos& by_kind(LookupKind lookup_kind) const noexcept { return kinds[size_t(lookup_kind)]; }
 
-  BL_INLINE GSubGPos& gsub() noexcept { return byKind(LookupKind::kGSUB); }
-  BL_INLINE GSubGPos& gpos() noexcept { return byKind(LookupKind::kGPOS); }
+  BL_INLINE GSubGPos& gsub() noexcept { return by_kind(LookupKind::kGSUB); }
+  BL_INLINE GSubGPos& gpos() noexcept { return by_kind(LookupKind::kGPOS); }
 
-  BL_INLINE const GSubGPos& gsub() const noexcept { return byKind(LookupKind::kGSUB); }
-  BL_INLINE const GSubGPos& gpos() const noexcept { return byKind(LookupKind::kGPOS); }
+  BL_INLINE const GSubGPos& gsub() const noexcept { return by_kind(LookupKind::kGSUB); }
+  BL_INLINE const GSubGPos& gpos() const noexcept { return by_kind(LookupKind::kGPOS); }
 
   //! \}
 
@@ -219,68 +219,68 @@ public:
   //! \{
 
   //! Allocates 4 lookup bit arrays for both GSUB/GPOS lookups each having analyzed/valid bit per lookup.
-  BL_INLINE BLResult allocateLookupStatusBits() noexcept {
-    uint32_t gsubLookupCount = gsub().lookupCount;
-    uint32_t gposLookupCount = gpos().lookupCount;
+  BL_INLINE BLResult allocate_lookup_status_bits() noexcept {
+    uint32_t gsub_lookup_count = gsub().lookup_count;
+    uint32_t gpos_lookup_count = gpos().lookup_count;
 
-    uint32_t gsubLookupStatusDataSize = (gsubLookupCount + 31) / 32u;
-    uint32_t gposLookupStatusDataSize = (gposLookupCount + 31) / 32u;
-    uint32_t totalLookupStatusDataSize = gsubLookupStatusDataSize + gposLookupStatusDataSize;
+    uint32_t gsub_lookup_status_data_size = (gsub_lookup_count + 31) / 32u;
+    uint32_t gpos_lookup_status_data_size = (gpos_lookup_count + 31) / 32u;
+    uint32_t total_lookup_status_data_size = gsub_lookup_status_data_size + gpos_lookup_status_data_size;
 
-    if (!totalLookupStatusDataSize)
+    if (!total_lookup_status_data_size)
       return BL_SUCCESS;
 
-    LookupStatusBits* lookupStatusBits = static_cast<LookupStatusBits*>(calloc(totalLookupStatusDataSize, sizeof(LookupStatusBits)));
-    if (BL_UNLIKELY(!lookupStatusBits))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    LookupStatusBits* lookup_status_bits = static_cast<LookupStatusBits*>(calloc(total_lookup_status_data_size, sizeof(LookupStatusBits)));
+    if (BL_UNLIKELY(!lookup_status_bits))
+      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-    _lookupStatusBits = lookupStatusBits;
-    gsub().lookupStatusDataSize = uint16_t(gsubLookupStatusDataSize);
-    gsub().lookupStatusDataOffset = uint16_t(0);
-    gpos().lookupStatusDataSize = uint16_t(gposLookupStatusDataSize);
-    gpos().lookupStatusDataOffset = uint16_t(gsubLookupStatusDataSize);
+    _lookup_status_bits = lookup_status_bits;
+    gsub().lookup_status_data_size = uint16_t(gsub_lookup_status_data_size);
+    gsub().lookup_status_data_offset = uint16_t(0);
+    gpos().lookup_status_data_size = uint16_t(gpos_lookup_status_data_size);
+    gpos().lookup_status_data_offset = uint16_t(gsub_lookup_status_data_size);
     return BL_SUCCESS;
   }
 
   //! Returns a bit array representing analyzed lookup bits of either GSUB or GPOS lookup.
-  BL_INLINE LookupStatusBits* _lookupStatusBitsOf(LookupKind lookupKind) const noexcept {
-    return _lookupStatusBits + kinds[size_t(lookupKind)].lookupStatusDataOffset;
+  BL_INLINE LookupStatusBits* _lookup_status_bits_of(LookupKind lookup_kind) const noexcept {
+    return _lookup_status_bits + kinds[size_t(lookup_kind)].lookup_status_data_offset;
   }
 
-  BL_INLINE LookupStatusBits getLookupStatusBits(LookupKind lookupKind, uint32_t index) const noexcept {
-    BL_ASSERT(index < kinds[size_t(lookupKind)].lookupStatusDataSize);
-    const LookupStatusBits& bits = _lookupStatusBitsOf(lookupKind)[index];
+  BL_INLINE LookupStatusBits get_lookup_status_bits(LookupKind lookup_kind, uint32_t index) const noexcept {
+    BL_ASSERT(index < kinds[size_t(lookup_kind)].lookup_status_data_size);
+    const LookupStatusBits& bits = _lookup_status_bits_of(lookup_kind)[index];
 
 #if BL_TARGET_ARCH_BITS >= 64
-    uint64_t composed = blAtomicFetchRelaxed(&bits.composed);
-    return LookupStatusBits::makeComposed(composed);
+    uint64_t composed = bl_atomic_fetch_relaxed(&bits.composed);
+    return LookupStatusBits::make_composed(composed);
 #else
-    uint32_t analyzed = blAtomicFetchRelaxed(&bits.analyzed);
-    uint32_t valid = blAtomicFetchRelaxed(&bits.valid);
+    uint32_t analyzed = bl_atomic_fetch_relaxed(&bits.analyzed);
+    uint32_t valid = bl_atomic_fetch_relaxed(&bits.valid);
     return LookupStatusBits::make(analyzed, valid);
 #endif
   }
 
-  //! Commit means combining the given `statusBits` with status bits already present.
+  //! Commit means combining the given `status_bits` with status bits already present.
   //!
   //! As validation goes on, it keeps committing the validated lookups.
-  BL_INLINE LookupStatusBits commitLookupStatusBits(LookupKind lookupKind, uint32_t index, LookupStatusBits statusBits) const noexcept {
-    BL_ASSERT(index < kinds[size_t(lookupKind)].lookupStatusDataSize);
-    LookupStatusBits* statusData = _lookupStatusBitsOf(lookupKind);
+  BL_INLINE LookupStatusBits commit_lookup_status_bits(LookupKind lookup_kind, uint32_t index, LookupStatusBits status_bits) const noexcept {
+    BL_ASSERT(index < kinds[size_t(lookup_kind)].lookup_status_data_size);
+    LookupStatusBits* status_data = _lookup_status_bits_of(lookup_kind);
 
 #if BL_TARGET_ARCH_BITS >= 64
     // This is designed to make it much easier on 64-bit targets as we just issue a single write for both
     // 32-bit words.
-    uint64_t existingComposed = blAtomicFetchOrStrong(&statusData[index].composed, statusBits.composed);
-    return LookupStatusBits::makeComposed(statusBits.composed | existingComposed);
+    uint64_t existing_composed = bl_atomic_fetch_or_strong(&status_data[index].composed, status_bits.composed);
+    return LookupStatusBits::make_composed(status_bits.composed | existing_composed);
 #else
     // Valid bits must be committed first, then analyzed bits. The reason is that these are two separate
     // atomic operations and the code always checks for analyzed bits first - once an analyzed lookup bit
     // is set, its validated lookup bit must be valid. This means that another thread can validate the
     // same lookup concurrently, but that's ok as they would reach the same result.
-    uint32_t existingValid = blAtomicFetchOrStrong(&statusData[index].valid, statusBits.valid);
-    uint32_t existingAnalyzed = blAtomicFetchOrStrong(&statusData[index].analyzed, statusBits.analyzed);
-    return LookupStatusBits::make(statusBits.analyzed | existingAnalyzed, statusBits.valid | existingValid);
+    uint32_t existing_valid = bl_atomic_fetch_or_strong(&status_data[index].valid, status_bits.valid);
+    uint32_t existing_analyzed = bl_atomic_fetch_or_strong(&status_data[index].analyzed, status_bits.analyzed);
+    return LookupStatusBits::make(status_bits.analyzed | existing_analyzed, status_bits.valid | existing_valid);
 #endif
   }
 
@@ -289,9 +289,9 @@ public:
 
 namespace LayoutImpl {
 
-BLResult calculateGSubPlan(const OTFaceImpl* faceI, const BLFontFeatureSettings& settings, BLBitArrayCore* plan) noexcept;
-BLResult calculateGPosPlan(const OTFaceImpl* faceI, const BLFontFeatureSettings& settings, BLBitArrayCore* plan) noexcept;
-BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
+BLResult calculate_gsub_plan(const OTFaceImpl* ot_face_impl, const BLFontFeatureSettings& settings, BLBitArrayCore* plan) noexcept;
+BLResult calculate_gpos_plan(const OTFaceImpl* ot_face_impl, const BLFontFeatureSettings& settings, BLBitArrayCore* plan) noexcept;
+BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept;
 
 } // {LayoutImpl}
 

@@ -13,33 +13,33 @@ namespace bl {
 namespace Tests {
 
 template<typename T>
-static void checkArrays(const T* a, const T* b, size_t size) noexcept {
+static void check_arrays(const T* a, const T* b, size_t size) noexcept {
   for (size_t i = 0; i < size; i++) {
     EXPECT_EQ(a[i], b[i]).message("Mismatch at %u", unsigned(i));
   }
 }
 
 UNIT(support_algorithm, BL_TEST_GROUP_SUPPORT_UTILITIES) {
-  INFO("bl::lowerBound()");
+  INFO("bl::lower_bound()");
   {
     static const int arr[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12 };
 
-    EXPECT_EQ(lowerBound(arr, 0, 0), 0u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), -11000), 0u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), 0), 0u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), 1), 1u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), 2), 2u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), 3), 3u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), 4), 4u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), 5), 5u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), 6), 6u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), 10), 10u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), 11), 11u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), 12), 11u);
-    EXPECT_EQ(lowerBound(arr, BL_ARRAY_SIZE(arr), 11000), BL_ARRAY_SIZE(arr));
+    EXPECT_EQ(lower_bound(arr, 0, 0), 0u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), -11000), 0u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), 0), 0u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), 1), 1u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), 2), 2u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), 3), 3u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), 4), 4u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), 5), 5u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), 6), 6u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), 10), 10u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), 11), 11u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), 12), 11u);
+    EXPECT_EQ(lower_bound(arr, BL_ARRAY_SIZE(arr), 11000), BL_ARRAY_SIZE(arr));
   }
 
-  INFO("bl::quickSort() - Testing quickSort and insertionSort of predefined arrays");
+  INFO("bl::quick_sort() - Testing quick_sort and insertion_sort of predefined arrays");
   {
     constexpr size_t kArraySize = 11;
 
@@ -49,13 +49,13 @@ UNIT(support_algorithm, BL_TEST_GROUP_SUPPORT_UTILITIES) {
 
     memcpy(arr2, arr1, kArraySize * sizeof(int));
 
-    insertionSort(arr1, kArraySize);
-    quickSort(arr2, kArraySize);
-    checkArrays(arr1, ref_, kArraySize);
-    checkArrays(arr2, ref_, kArraySize);
+    insertion_sort(arr1, kArraySize);
+    quick_sort(arr2, kArraySize);
+    check_arrays(arr1, ref_, kArraySize);
+    check_arrays(arr2, ref_, kArraySize);
   }
 
-  INFO("bl::quickSort() - Testing quickSort and insertionSort of artificial arrays");
+  INFO("bl::quick_sort() - Testing quick_sort and insertion_sort of artificial arrays");
   {
     constexpr size_t kArraySize = 200;
 
@@ -70,14 +70,14 @@ UNIT(support_algorithm, BL_TEST_GROUP_SUPPORT_UTILITIES) {
         ref_[i] = int(i);
       }
 
-      insertionSort(arr1, size);
-      quickSort(arr2, size);
-      checkArrays(arr1, ref_, size);
-      checkArrays(arr2, ref_, size);
+      insertion_sort(arr1, size);
+      quick_sort(arr2, size);
+      check_arrays(arr1, ref_, size);
+      check_arrays(arr2, ref_, size);
     }
   }
 
-  INFO("bl::quickSort() - Testing quickSort and insertingSort with unstable compare function");
+  INFO("bl::quick_sort() - Testing quick_sort and inserting_sort with unstable compare function");
   {
     constexpr size_t kArraySize = 5;
 
@@ -87,20 +87,20 @@ UNIT(support_algorithm, BL_TEST_GROUP_SUPPORT_UTILITIES) {
     memcpy(arr2, arr1, kArraySize * sizeof(float));
 
     // We don't test as it's undefined where the NaN would be.
-    insertionSort(arr1, kArraySize);
-    quickSort(arr2, kArraySize);
+    insertion_sort(arr1, kArraySize);
+    quick_sort(arr2, kArraySize);
   }
 
-  INFO("bl::binarySearch() - Testing binary search");
+  INFO("bl::binary_search() - Testing binary search");
   {
     static const int arr[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
     for (size_t size = BL_ARRAY_SIZE(arr); size > 0; size--) {
       for (size_t i = 0; i < size; i++) {
         int value = arr[i];
-        EXPECT_EQ(binarySearch(arr, size, value), i);
-        EXPECT_EQ(binarySearchClosestFirst(arr, size, value), i);
-        EXPECT_EQ(binarySearchClosestLast(arr, size, value), i);
+        EXPECT_EQ(binary_search(arr, size, value), i);
+        EXPECT_EQ(binary_search_closest_first(arr, size, value), i);
+        EXPECT_EQ(binary_search_closest_last(arr, size, value), i);
       }
     }
   }

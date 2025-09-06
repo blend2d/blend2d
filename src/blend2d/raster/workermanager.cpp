@@ -14,124 +14,124 @@ namespace bl::RasterEngine {
 // bl::RasterEngine::WorkerManager - Init
 // ======================================
 
-BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInfo* createInfo) noexcept {
-  uint32_t initFlags = createInfo->flags;
-  uint32_t threadCount = createInfo->threadCount;
-  uint32_t commandQueueLimit = IntOps::alignUp(createInfo->commandQueueLimit, kRenderQueueCapacity);
+BLResult WorkerManager::init(BLRasterContextImpl* ctx_impl, const BLContextCreateInfo* create_info) noexcept {
+  uint32_t init_flags = create_info->flags;
+  uint32_t thread_count = create_info->thread_count;
+  uint32_t command_queue_limit = IntOps::align_up(create_info->command_queue_limit, kRenderQueueCapacity);
 
-  BL_ASSERT(!isActive());
-  BL_ASSERT(threadCount > 0);
+  BL_ASSERT(!is_active());
+  BL_ASSERT(thread_count > 0);
 
-  ArenaAllocator& zone = ctxI->baseZone;
-  ArenaAllocator::StatePtr zoneState = zone.saveState();
+  ArenaAllocator& zone = ctx_impl->base_zone;
+  ArenaAllocator::StatePtr zone_state = zone.save_state();
 
   // We must enforce some hard limit here...
-  if (threadCount > BL_RUNTIME_MAX_THREAD_COUNT)
-    threadCount = BL_RUNTIME_MAX_THREAD_COUNT;
+  if (thread_count > BL_RUNTIME_MAX_THREAD_COUNT)
+    thread_count = BL_RUNTIME_MAX_THREAD_COUNT;
 
   // If the command queue limit is not specified, use the default.
-  if (commandQueueLimit == 0)
-    commandQueueLimit = BL_RASTER_CONTEXT_DEFAULT_COMMAND_QUEUE_LIMIT;
+  if (command_queue_limit == 0)
+    command_queue_limit = BL_RASTER_CONTEXT_DEFAULT_COMMAND_QUEUE_LIMIT;
 
-  // We count the user thread as a worker thread as well. In this case this one doesn't need a separate workData
-  // as it can use the 'syncWorkData' owned by the rendering context.
-  uint32_t workerCount = threadCount - 1;
+  // We count the user thread as a worker thread as well. In this case this one doesn't need a separate work_data
+  // as it can use the 'sync_work_data' owned by the rendering context.
+  uint32_t worker_count = thread_count - 1;
 
   // Fallback to synchronous rendering immediately if this combination was selected.
-  if (!workerCount && (initFlags & BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC))
+  if (!worker_count && (init_flags & BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC))
     return BL_SUCCESS;
 
   // Forces the zone-allocator to preallocate the first block of memory, if not allocated yet.
-  size_t batchContextSize = sizeof(RenderBatch) +
-                            RenderJobQueue::sizeOf() +
-                            RenderCommandQueue::sizeOf();
-  BL_PROPAGATE(_allocator.ensure(batchContextSize));
+  size_t batch_context_size = sizeof(RenderBatch) +
+                            RenderJobQueue::size_of() +
+                            RenderCommandQueue::size_of();
+  BL_PROPAGATE(_allocator.ensure(batch_context_size));
 
   // Allocate space for worker threads data.
-  if (workerCount) {
-    BLThread** workerThreads = zone.allocT<BLThread*>(IntOps::alignUp(workerCount * sizeof(void*), 8));
-    WorkData** workDataStorage = zone.allocT<WorkData*>(IntOps::alignUp(workerCount * sizeof(void*), 8));
+  if (worker_count) {
+    BLThread** worker_threads = zone.allocT<BLThread*>(IntOps::align_up(worker_count * sizeof(void*), 8));
+    WorkData** work_data_storage = zone.allocT<WorkData*>(IntOps::align_up(worker_count * sizeof(void*), 8));
 
-    if (!workerThreads || !workDataStorage) {
-      zone.restoreState(zoneState);
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    if (!worker_threads || !work_data_storage) {
+      zone.restore_state(zone_state);
+      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
     }
 
     // Get global thread-pool or create an isolated one.
-    BLThreadPool* threadPool = nullptr;
-    if (initFlags & BL_CONTEXT_CREATE_FLAG_ISOLATED_THREAD_POOL) {
-      threadPool = blThreadPoolCreate();
-      if (!threadPool)
-        return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    BLThreadPool* thread_pool = nullptr;
+    if (init_flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_THREAD_POOL) {
+      thread_pool = bl_thread_pool_create();
+      if (!thread_pool)
+        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
     }
     else {
-      threadPool = blThreadPoolGlobal()->addRef();
+      thread_pool = bl_thread_pool_global()->add_ref();
     }
 
     // Acquire threads passed to thread-pool.
     BLResult reason = BL_SUCCESS;
-    uint32_t acquireThreadFlags = 0;
-    uint32_t n = threadPool->acquireThreads(workerThreads, workerCount, acquireThreadFlags, &reason);
+    uint32_t acquire_thread_flags = 0;
+    uint32_t n = thread_pool->acquire_threads(worker_threads, worker_count, acquire_thread_flags, &reason);
 
     if (reason != BL_SUCCESS)
-      ctxI->syncWorkData.accumulateError(reason);
+      ctx_impl->sync_work_data.accumulate_error(reason);
 
     for (uint32_t i = 0; i < n; i++) {
       // NOTE: We really want work data to be aligned to the cache line as each instance will be used from a different
       // thread. This means that they should not interfere with each other as that could slow down things significantly.
-      WorkData* workData = zone.allocT<WorkData>(IntOps::alignUp(sizeof(WorkData), BL_CACHE_LINE_SIZE), BL_CACHE_LINE_SIZE);
-      workDataStorage[i] = workData;
+      WorkData* work_data = zone.allocT<WorkData>(IntOps::align_up(sizeof(WorkData), BL_CACHE_LINE_SIZE), BL_CACHE_LINE_SIZE);
+      work_data_storage[i] = work_data;
 
-      if (!workData) {
-        ctxI->syncWorkData.accumulateError(blTraceError(BL_ERROR_OUT_OF_MEMORY));
-        threadPool->releaseThreads(workerThreads, n);
+      if (!work_data) {
+        ctx_impl->sync_work_data.accumulate_error(bl_trace_error(BL_ERROR_OUT_OF_MEMORY));
+        thread_pool->release_threads(worker_threads, n);
         n = 0;
         break;
       }
     }
 
     if (!n) {
-      threadPool->release();
-      threadPool = nullptr;
-      workerThreads = nullptr;
-      workDataStorage = nullptr;
-      zone.restoreState(zoneState);
+      thread_pool->release();
+      thread_pool = nullptr;
+      worker_threads = nullptr;
+      work_data_storage = nullptr;
+      zone.restore_state(zone_state);
 
       // Fallback to synchronous rendering - nothing else to clean up as we haven't initialized anything.
-      if (initFlags & BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC)
+      if (init_flags & BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC)
         return BL_SUCCESS;
     }
     else {
       // Initialize worker contexts.
       WorkerSynchronization* synchronization = &_synchronization;
       for (uint32_t i = 0; i < n; i++) {
-        blCallCtor(*workDataStorage[i], ctxI, synchronization, i + 1);
-        workDataStorage[i]->initBandData(ctxI->bandHeight(), ctxI->bandCount(), ctxI->commandQuantizationShiftAA());
+        bl_call_ctor(*work_data_storage[i], ctx_impl, synchronization, i + 1);
+        work_data_storage[i]->init_band_data(ctx_impl->band_height(), ctx_impl->band_count(), ctx_impl->command_quantization_shift_aa());
       }
     }
 
-    _threadPool = threadPool;
-    _workerThreads = workerThreads;
-    _workDataStorage = workDataStorage;
-    _threadCount = n;
+    _thread_pool = thread_pool;
+    _worker_threads = worker_threads;
+    _work_data_storage = work_data_storage;
+    _thread_count = n;
   }
   else {
     // In this case we use the worker manager, but we don't really manage any threads...
-    _threadCount = 0;
+    _thread_count = 0;
   }
 
-  _isActive = true;
-  _bandCount = ctxI->bandCount();
-  _commandQueueLimit = commandQueueLimit;
+  _is_active = true;
+  _band_count = ctx_impl->band_count();
+  _command_queue_limit = command_queue_limit;
 
-  initFirstBatch();
+  init_first_batch();
   return BL_SUCCESS;
 }
 
-BLResult WorkerManager::initWorkMemory(size_t zeroedMemorySize) noexcept {
-  uint32_t n = threadCount();
+BLResult WorkerManager::init_work_memory(size_t zeroed_memory_size) noexcept {
+  uint32_t n = thread_count();
   for (uint32_t i = 0; i < n; i++) {
-    BL_PROPAGATE(_workDataStorage[i]->zeroBuffer.ensure(zeroedMemorySize));
+    BL_PROPAGATE(_work_data_storage[i]->zero_buffer.ensure(zeroed_memory_size));
   }
   return BL_SUCCESS;
 }
@@ -140,27 +140,27 @@ BLResult WorkerManager::initWorkMemory(size_t zeroedMemorySize) noexcept {
 // =======================================
 
 void WorkerManager::reset() noexcept {
-  if (!isActive())
+  if (!is_active())
     return;
 
-  _isActive = false;
+  _is_active = false;
 
-  if (_threadPool) {
-    for (uint32_t i = 0; i < _threadCount; i++)
-      blCallDtor(*_workDataStorage[i]);
+  if (_thread_pool) {
+    for (uint32_t i = 0; i < _thread_count; i++)
+      bl_call_dtor(*_work_data_storage[i]);
 
-    _threadPool->releaseThreads(_workerThreads, _threadCount);
-    _threadPool->release();
+    _thread_pool->release_threads(_worker_threads, _thread_count);
+    _thread_pool->release();
 
-    _threadPool = nullptr;
-    _workerThreads = nullptr;
-    _workDataStorage = nullptr;
-    _threadCount = 0;
+    _thread_pool = nullptr;
+    _worker_threads = nullptr;
+    _work_data_storage = nullptr;
+    _thread_count = 0;
   }
 
-  _commandQueueCount = 0;
-  _commandQueueLimit = 0;
-  _stateSlotCount = 0;
+  _command_queue_count = 0;
+  _command_queue_limit = 0;
+  _state_slot_count = 0;
 }
 
 } // {bl::RasterEngine}

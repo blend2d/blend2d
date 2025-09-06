@@ -46,19 +46,19 @@ using namespace SIMD;
 struct RepeatFlagMask {
   uint32_t pred;
 
-  BL_INLINE_NODEBUG bool hasRepeats() const noexcept { return pred != 0u; }
-  BL_INLINE_NODEBUG bool hasRepeatsInLo8Flags() const noexcept { return (pred & 0xFFu) != 0u; }
+  BL_INLINE_NODEBUG bool has_repeats() const noexcept { return pred != 0u; }
+  BL_INLINE_NODEBUG bool has_repeats_in_lo8_flags() const noexcept { return (pred & 0xFFu) != 0u; }
 };
 
-static BL_INLINE RepeatFlagMask calcRepeatFlagMask(const Vec16xU8& vf) noexcept {
+static BL_INLINE RepeatFlagMask calc_repeat_flag_mask(const Vec16xU8& vf) noexcept {
   return RepeatFlagMask{extract_sign_bits_i8(vf)};
 }
 
 struct OffCurveSplineAcc {
   uint32_t count = 0;
 
-  BL_INLINE_NODEBUG void accumulateAllFlags(const Vec16xU8& vf) noexcept { count += IntOps::popCount(extract_sign_bits_i8(vf)); }
-  BL_INLINE_NODEBUG void accumulateLo8Flags(const Vec16xU8& vf) noexcept { count += IntOps::popCount(extract_sign_bits_i8(vf) & 0xFFu); }
+  BL_INLINE_NODEBUG void accumulate_all_flags(const Vec16xU8& vf) noexcept { count += IntOps::pop_count(extract_sign_bits_i8(vf)); }
+  BL_INLINE_NODEBUG void accumulateLo8Flags(const Vec16xU8& vf) noexcept { count += IntOps::pop_count(extract_sign_bits_i8(vf) & 0xFFu); }
 
   BL_INLINE_NODEBUG size_t get() const noexcept { return count; }
 };
@@ -72,11 +72,11 @@ struct OffCurveSplineAcc {
 struct RepeatFlagMask {
   uint64_t pred;
 
-  BL_INLINE_NODEBUG bool hasRepeats() const noexcept { return pred != 0u; }
-  BL_INLINE_NODEBUG bool hasRepeatsInLo8Flags() const noexcept { return (pred & 0xFFFFFFFF) != 0u; }
+  BL_INLINE_NODEBUG bool has_repeats() const noexcept { return pred != 0u; }
+  BL_INLINE_NODEBUG bool has_repeats_in_lo8_flags() const noexcept { return (pred & 0xFFFFFFFF) != 0u; }
 };
 
-static BL_INLINE RepeatFlagMask calcRepeatFlagMask(const Vec16xU8& vf) noexcept {
+static BL_INLINE RepeatFlagMask calc_repeat_flag_mask(const Vec16xU8& vf) noexcept {
   uint64x1_t bits = simd_u64(vshrn_n_u16(simd_u16(srai_i8<7>(vf).v), 4));
   return RepeatFlagMask{vget_lane_u64(bits, 0)};
 }
@@ -84,11 +84,11 @@ static BL_INLINE RepeatFlagMask calcRepeatFlagMask(const Vec16xU8& vf) noexcept 
 struct RepeatFlagMask {
   uint32_t pred_lo, pred_hi;
 
-  BL_INLINE_NODEBUG bool hasRepeats() const noexcept { return (pred_lo | pred_hi) != 0u; }
-  BL_INLINE_NODEBUG bool hasRepeatsInLo8Flags() const noexcept { return pred_lo != 0u; }
+  BL_INLINE_NODEBUG bool has_repeats() const noexcept { return (pred_lo | pred_hi) != 0u; }
+  BL_INLINE_NODEBUG bool has_repeats_in_lo8_flags() const noexcept { return pred_lo != 0u; }
 };
 
-static BL_INLINE RepeatFlagMask calcRepeatFlagMask(const Vec16xU8& vf) noexcept {
+static BL_INLINE RepeatFlagMask calc_repeat_flag_mask(const Vec16xU8& vf) noexcept {
   uint32x2_t bits = simd_u32(vshrn_n_u16(simd_u16(srai_i8<7>(vf).v), 4));
   return RepeatFlagMask{vget_lane_u32(bits, 0), vget_lane_u32(bits, 1)};
 }
@@ -97,7 +97,7 @@ static BL_INLINE RepeatFlagMask calcRepeatFlagMask(const Vec16xU8& vf) noexcept 
 struct OffCurveSplineAcc {
   Vec8xU16 acc;
 
-  BL_INLINE_NODEBUG void accumulateAllFlags(const Vec16xU8& vf) noexcept {
+  BL_INLINE_NODEBUG void accumulate_all_flags(const Vec16xU8& vf) noexcept {
     Vec16xU8 bits = srli_u8<7>(vf);
     acc = addw_lo_u8_to_u16(acc, bits);
     acc = addw_hi_u8_to_u16(acc, bits);
@@ -131,25 +131,25 @@ struct OffCurveSplineAcc {
 // To an internal representation used by SIMD code:
 //
 //   [Repeat|!OnCurve|OnCurve|0|!YSame|!XSame|YByte|XByte]
-static BL_INLINE Vec16xU8 convertFlags(const Vec16xU8& vf, const Vec16xU8& vConvertFlagsPredicate, const Vec16xU8& v0x3030) noexcept {
+static BL_INLINE Vec16xU8 convert_flags(const Vec16xU8& vf, const Vec16xU8& vConvertFlagsPredicate, const Vec16xU8& v0x3030) noexcept {
   Vec16xU8 a = swizzlev_u8(vConvertFlagsPredicate, vf);
   Vec16xU8 b = srli_u16<2>((vf & v0x3030));
   return a ^ b;
 }
 
-static BL_INLINE VecPair<Vec16xU8> aggregateVertexSizes(const Vec16xU8& vf, const Vec16xU8& vSizesPerXYPredicate, const Vec16xU8& v0x0F0F) noexcept {
-  Vec16xU8 yxSizes = swizzlev_u8(vSizesPerXYPredicate, vf); // [H   G   F   E   D   C   B   A]
+static BL_INLINE VecPair<Vec16xU8> aggregate_vertex_sizes(const Vec16xU8& vf, const Vec16xU8& vSizesPerXYPredicate, const Vec16xU8& v0x0F0F) noexcept {
+  Vec16xU8 yx_sizes = swizzlev_u8(vSizesPerXYPredicate, vf); // [H   G   F   E   D   C   B   A]
 
-  yxSizes = yxSizes + slli_i64<8>(yxSizes);                 // [H:G G:F F:E E:D D:C C:B B:A A]
-  yxSizes = yxSizes + slli_i64<16>(yxSizes);                // [H:E G:D F:C E:B D:A C:A B:A A]
+  yx_sizes = yx_sizes + slli_i64<8>(yx_sizes);                 // [H:G G:F F:E E:D D:C C:B B:A A]
+  yx_sizes = yx_sizes + slli_i64<16>(yx_sizes);                // [H:E G:D F:C E:B D:A C:A B:A A]
 
-  Vec16xU8 ySizes = srli_u64<4>(yxSizes) & v0x0F0F;         // Y sizes separated from YX sizes.
-  Vec16xU8 xSizes = yxSizes & v0x0F0F;                      // X sizes separated from YX sizes.
+  Vec16xU8 y_sizes = srli_u64<4>(yx_sizes) & v0x0F0F;         // Y sizes separated from YX sizes.
+  Vec16xU8 x_sizes = yx_sizes & v0x0F0F;                      // X sizes separated from YX sizes.
 
-  ySizes = ySizes + slli_i64<32>(ySizes);                   // [H:A G:A F:A E:A D:A C:A B:A A]
-  xSizes = xSizes + slli_i64<32>(xSizes);                   // [H:A G:A F:A E:A D:A C:A B:A A]
+  y_sizes = y_sizes + slli_i64<32>(y_sizes);                   // [H:A G:A F:A E:A D:A C:A B:A A]
+  x_sizes = x_sizes + slli_i64<32>(x_sizes);                   // [H:A G:A F:A E:A D:A C:A B:A A]
 
-  return VecPair<Vec16xU8>{xSizes, ySizes};
+  return VecPair<Vec16xU8>{x_sizes, y_sizes};
 }
 
 static BL_INLINE Vec4xU32 sumsFromAggregatedSizesOf8Bytes(const VecPair<Vec16xU8>& sizes) noexcept {
@@ -165,8 +165,8 @@ struct DecodedVertex {
   int16_t y;
 };
 
-static BL_INLINE Vec2xF64 transformDecodedVertex(const DecodedVertex* decodedVertex, const Vec2xF64& m00_m11, const Vec2xF64& m10_m01) noexcept {
-  Vec4xI32 xy_i32 = vec_i32(unpack_lo64_i16_i32(loada_32<Vec8xI16>(decodedVertex)));
+static BL_INLINE Vec2xF64 transform_decoded_vertex(const DecodedVertex* decoded_vertex, const Vec2xF64& m00_m11, const Vec2xF64& m10_m01) noexcept {
+  Vec4xI32 xy_i32 = vec_i32(unpack_lo64_i16_i32(loada_32<Vec8xI16>(decoded_vertex)));
 
   Vec2xF64 xy_f64 = cvt_2xi32_f64(xy_i32);
   Vec2xF64 yx_f64 = swap_f64(xy_f64);
@@ -174,13 +174,13 @@ static BL_INLINE Vec2xF64 transformDecodedVertex(const DecodedVertex* decodedVer
   return xy_f64 * m00_m11 + yx_f64 * m10_m01;
 }
 
-static BL_INLINE void storeVertex(PathAppender& appender, uint8_t cmd, const Vec2xF64& vtx) noexcept {
+static BL_INLINE void store_vertex(PathAppender& appender, uint8_t cmd, const Vec2xF64& vtx) noexcept {
   appender.cmd[0].value = cmd;
   storeu(appender.vtx, vtx);
 }
 
-static BL_INLINE void appendVertex(PathAppender& appender, uint8_t cmd, const Vec2xF64& vtx) noexcept {
-  storeVertex(appender, cmd, vtx);
+static BL_INLINE void append_vertex(PathAppender& appender, uint8_t cmd, const Vec2xF64& vtx) noexcept {
+  store_vertex(appender, cmd, vtx);
   appender._advance(1);
 }
 
@@ -192,114 +192,114 @@ static BL_INLINE void appendVertex2x(PathAppender& appender, uint8_t cmd0, const
   appender._advance(2);
 }
 
-static BL_INLINE BLResult getGlyphOutlinesSimdImpl(
-  const BLFontFaceImpl* faceI_,
-  BLGlyphId glyphId,
+static BL_INLINE BLResult get_glyph_outlines_simd_impl(
+  const BLFontFaceImpl* face_impl,
+  BLGlyphId glyph_id,
   const BLMatrix2D* transform,
   BLPath* out,
-  size_t* contourCountOut,
-  ScopedBuffer* tmpBuffer) noexcept {
+  size_t* contour_count_out,
+  ScopedBuffer* tmp_buffer) noexcept {
 
   using namespace SIMD;
 
-  const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
+  const OTFaceImpl* ot_face_impl = static_cast<const OTFaceImpl*>(face_impl);
 
   typedef GlyfTable::Simple Simple;
   typedef GlyfTable::Compound Compound;
 
-  if (BL_UNLIKELY(glyphId >= faceI->faceInfo.glyphCount))
-    return blTraceError(BL_ERROR_INVALID_GLYPH);
+  if (BL_UNLIKELY(glyph_id >= ot_face_impl->face_info.glyph_count))
+    return bl_trace_error(BL_ERROR_INVALID_GLYPH);
 
-  RawTable glyfTable = faceI->glyf.glyfTable;
-  RawTable locaTable = faceI->glyf.locaTable;
-  uint32_t locaOffsetSize = faceI->locaOffsetSize();
+  RawTable glyf_table = ot_face_impl->glyf.glyf_table;
+  RawTable loca_table = ot_face_impl->glyf.loca_table;
+  uint32_t loca_offset_size = ot_face_impl->loca_offset_size();
 
   const uint8_t* gPtr = nullptr;
-  size_t remainingSize = 0;
-  size_t compoundLevel = 0;
+  size_t remaining_size = 0;
+  size_t compound_level = 0;
 
-  // Only matrix and compoundFlags are important in the root entry.
-  CompoundEntry compoundData[CompoundEntry::kMaxLevel];
-  compoundData[0].gPtr = nullptr;
-  compoundData[0].remainingSize = 0;
-  compoundData[0].compoundFlags = Compound::kArgsAreXYValues;
-  compoundData[0].transform = *transform;
+  // Only matrix and compound_flags are important in the root entry.
+  CompoundEntry compound_data[CompoundEntry::kMaxLevel];
+  compound_data[0].gPtr = nullptr;
+  compound_data[0].remaining_size = 0;
+  compound_data[0].compound_flags = Compound::kArgsAreXYValues;
+  compound_data[0].transform = *transform;
 
   PathAppender appender;
-  size_t contourCountTotal = 0;
+  size_t contour_count_total = 0;
 
   for (;;) {
     size_t offset;
-    size_t endOff;
-    size_t remainingSizeAfterGlyphData;
+    size_t end_off;
+    size_t remaining_size_after_glyph_data;
 
-    // NOTE: Maximum glyphId is 65535, so we are always safe here regarding multiplying the `glyphId` by 2 or 4
+    // NOTE: Maximum glyph_id is 65535, so we are always safe here regarding multiplying the `glyph_id` by 2 or 4
     // to calculate the correct index.
-    if (locaOffsetSize == 2) {
-      size_t index = size_t(glyphId) * 2u;
-      if (BL_UNLIKELY(index + sizeof(UInt16) * 2u > locaTable.size))
+    if (loca_offset_size == 2) {
+      size_t index = size_t(glyph_id) * 2u;
+      if (BL_UNLIKELY(index + sizeof(UInt16) * 2u > loca_table.size))
         goto InvalidData;
-      offset = uint32_t(reinterpret_cast<const UInt16*>(locaTable.data + index + 0)->value()) * 2u;
-      endOff = uint32_t(reinterpret_cast<const UInt16*>(locaTable.data + index + 2)->value()) * 2u;
+      offset = uint32_t(reinterpret_cast<const UInt16*>(loca_table.data + index + 0)->value()) * 2u;
+      end_off = uint32_t(reinterpret_cast<const UInt16*>(loca_table.data + index + 2)->value()) * 2u;
     }
     else {
-      size_t index = size_t(glyphId) * 4u;
-      if (BL_UNLIKELY(index + sizeof(UInt32) * 2u > locaTable.size))
+      size_t index = size_t(glyph_id) * 4u;
+      if (BL_UNLIKELY(index + sizeof(UInt32) * 2u > loca_table.size))
         goto InvalidData;
-      offset = reinterpret_cast<const UInt32*>(locaTable.data + index + 0)->value();
-      endOff = reinterpret_cast<const UInt32*>(locaTable.data + index + 4)->value();
+      offset = reinterpret_cast<const UInt32*>(loca_table.data + index + 0)->value();
+      end_off = reinterpret_cast<const UInt32*>(loca_table.data + index + 4)->value();
     }
 
-    remainingSizeAfterGlyphData = glyfTable.size - endOff;
+    remaining_size_after_glyph_data = glyf_table.size - end_off;
 
     // Simple or Empty Glyph
     // ---------------------
 
-    if (BL_UNLIKELY(offset >= endOff || endOff > glyfTable.size)) {
-      // Only ALLOWED when `offset == endOff`.
-      if (BL_UNLIKELY(offset != endOff || endOff > glyfTable.size))
+    if (BL_UNLIKELY(offset >= end_off || end_off > glyf_table.size)) {
+      // Only ALLOWED when `offset == end_off`.
+      if (BL_UNLIKELY(offset != end_off || end_off > glyf_table.size))
         goto InvalidData;
     }
     else {
-      gPtr = glyfTable.data + offset;
-      remainingSize = endOff - offset;
+      gPtr = glyf_table.data + offset;
+      remaining_size = end_off - offset;
 
-      if (BL_UNLIKELY(remainingSize < sizeof(GlyfTable::GlyphData)))
+      if (BL_UNLIKELY(remaining_size < sizeof(GlyfTable::GlyphData)))
         goto InvalidData;
 
-      int contourCountSigned = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->numberOfContours();
-      if (contourCountSigned > 0) {
-        size_t contourCount = size_t(unsigned(contourCountSigned));
+      int contour_count_signed = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->number_of_contours();
+      if (contour_count_signed > 0) {
+        size_t contour_count = size_t(unsigned(contour_count_signed));
         bl::OverflowFlag of{};
 
         // Minimum data size is:
         //   10                     [GlyphData header]
-        //   (numberOfContours * 2) [endPtsOfContours]
-        //   2                      [instructionLength]
+        //   (number_of_contours * 2) [end_pts_of_contours]
+        //   2                      [instruction_length]
         gPtr += sizeof(GlyfTable::GlyphData);
-        remainingSize = IntOps::subOverflow(remainingSize, sizeof(GlyfTable::GlyphData) + contourCount * 2u + 2u, &of);
+        remaining_size = IntOps::sub_overflow(remaining_size, sizeof(GlyfTable::GlyphData) + contour_count * 2u + 2u, &of);
         if (BL_UNLIKELY(of))
           goto InvalidData;
 
-        const UInt16* contourArray = reinterpret_cast<const UInt16*>(gPtr);
-        gPtr += contourCount * 2u;
-        contourCountTotal += contourCount;
+        const UInt16* contour_array = reinterpret_cast<const UInt16*>(gPtr);
+        gPtr += contour_count * 2u;
+        contour_count_total += contour_count;
 
         // We don't use hinting instructions, so skip them.
-        size_t instructionCount = MemOps::readU16uBE(gPtr);
-        remainingSize = IntOps::subOverflow(remainingSize, instructionCount, &of);
+        size_t instruction_count = MemOps::readU16uBE(gPtr);
+        remaining_size = IntOps::sub_overflow(remaining_size, instruction_count, &of);
         if (BL_UNLIKELY(of))
           goto InvalidData;
 
-        gPtr += 2u + instructionCount;
-        const uint8_t* gEnd = gPtr + remainingSize;
+        gPtr += 2u + instruction_count;
+        const uint8_t* gEnd = gPtr + remaining_size;
 
         // Number of vertices in TrueType sense (could be less than a number of points required by BLPath
         // representation, especially if TT outline contains consecutive off-curve points).
-        size_t ttVertexCount = size_t(contourArray[contourCount - 1].value()) + 1u;
+        size_t tt_vertex_count = size_t(contour_array[contour_count - 1].value()) + 1u;
 
         // Only try to decode vertices if there is more than 1.
-        if (ttVertexCount > 1u) {
+        if (tt_vertex_count > 1u) {
           // Read TrueType Flags Data
           // ------------------------
 
@@ -324,27 +324,27 @@ static BL_INLINE BLResult getGlyphOutlinesSimdImpl(
           static constexpr uint32_t kDataAlignment = 16;
 #endif
 
-          uint8_t* fDataPtr = static_cast<uint8_t*>(tmpBuffer->alloc(ttVertexCount * 3 + kDataAlignment * 6));
+          uint8_t* fDataPtr = static_cast<uint8_t*>(tmp_buffer->alloc(tt_vertex_count * 3 + kDataAlignment * 6));
           if (BL_UNLIKELY(!fDataPtr))
-            return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+            return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-          fDataPtr = IntOps::alignUp(fDataPtr, kDataAlignment);
-          uint8_t* xPredPtr = fDataPtr + IntOps::alignUp(ttVertexCount, kDataAlignment) + kDataAlignment;
-          uint8_t* yPredPtr = xPredPtr + IntOps::alignUp(ttVertexCount, kDataAlignment) + kDataAlignment;
+          fDataPtr = IntOps::align_up(fDataPtr, kDataAlignment);
+          uint8_t* xPredPtr = fDataPtr + IntOps::align_up(tt_vertex_count, kDataAlignment) + kDataAlignment;
+          uint8_t* yPredPtr = xPredPtr + IntOps::align_up(tt_vertex_count, kDataAlignment) + kDataAlignment;
 
-          // Sizes of xCoordinates[] and yCoordinates[] arrays in TrueType data.
+          // Sizes of x_coordinates[] and y_coordinates[] arrays in TrueType data.
           size_t xCoordinatesSize;
           size_t yCoordinatesSize;
 
-          OffCurveSplineAcc offCurveSplineAcc;
-          size_t offCurveSplineCount;
+          OffCurveSplineAcc off_curve_spline_acc;
+          size_t off_curve_spline_count;
 
           {
-            Vec16xU8 v0x3030 = commonTable.i_3030303030303030.as<Vec16xU8>();
-            Vec16xU8 v0x0F0F = commonTable.i_0F0F0F0F0F0F0F0F.as<Vec16xU8>();
-            Vec16xU8 v0x8080 = commonTable.i_8080808080808080.as<Vec16xU8>();
+            Vec16xU8 v0x3030 = common_table.i_3030303030303030.as<Vec16xU8>();
+            Vec16xU8 v0x0F0F = common_table.i_0F0F0F0F0F0F0F0F.as<Vec16xU8>();
+            Vec16xU8 v0x8080 = common_table.i_8080808080808080.as<Vec16xU8>();
             Vec16xU8 vSizesPerXYPredicate = loada<Vec16xU8>(sizesPerXYPredicate);
-            Vec16xU8 vConvertFlagsPredicate = loada<Vec16xU8>(convertFlagsPredicate);
+            Vec16xU8 vConvertFlagsPredicate = loada<Vec16xU8>(convert_flags_predicate);
 
             Vec4xU32 vSumXY = make_zero<Vec4xU32>();
             Vec16xU8 vPrevFlags = make_zero<Vec16xU8>();
@@ -356,56 +356,56 @@ static BL_INLINE BLResult getGlyphOutlinesSimdImpl(
             // Instead of doing such checks in a loop, we check it here and go to the slow loop if we are at the end of
             // glyph table and 16-byte loads would read beyond. It's very unlikely, but we have to make sure it won't
             // happen.
-            size_t slowFlagsDecodeFinishedCheck = IntOps::allOnes<size_t>();
-            if (remainingSize + remainingSizeAfterGlyphData < ttVertexCount + 15)
+            size_t slow_flags_decode_finished_check = IntOps::all_ones<size_t>();
+            if (remaining_size + remaining_size_after_glyph_data < tt_vertex_count + 15)
               goto SlowFlagsDecode;
 
             // There is some space ahead, so try to leave slow flags decode loop after an 8-flag chunk has been decoded.
-            slowFlagsDecodeFinishedCheck = 0;
+            slow_flags_decode_finished_check = 0;
 
             do {
               {
-                size_t n = blMin<size_t>(ttVertexCount - i, 16u);
+                size_t n = bl_min<size_t>(tt_vertex_count - i, 16u);
 
-                Vec16xU8 vp = loadu<Vec16xU8>(overflowFlagsPredicate + 16u - n);
-                Vec16xU8 vf = swizzlev_u8(convertFlags(loadu<Vec16xU8>(gPtr - 16 + n), vConvertFlagsPredicate, v0x3030), vp);
+                Vec16xU8 vp = loadu<Vec16xU8>(overflow_flags_predicate + 16u - n);
+                Vec16xU8 vf = swizzlev_u8(convert_flags(loadu<Vec16xU8>(gPtr - 16 + n), vConvertFlagsPredicate, v0x3030), vp);
 
-                RepeatFlagMask repeatFlagMask = calcRepeatFlagMask(vf);
-                Vec16xU8 quadSplines = (alignr_u128<15>(vf, vPrevFlags) + vf) & v0x8080;
-                VecPair<Vec16xU8> vertexSizes = aggregateVertexSizes(vf, vSizesPerXYPredicate, v0x0F0F);
+                RepeatFlagMask repeat_flag_mask = calc_repeat_flag_mask(vf);
+                Vec16xU8 quad_splines = (alignr_u128<15>(vf, vPrevFlags) + vf) & v0x8080;
+                VecPair<Vec16xU8> vertex_sizes = aggregate_vertex_sizes(vf, vSizesPerXYPredicate, v0x0F0F);
 
                 // Lucky if there are no repeats in 16 flags.
-                if (!repeatFlagMask.hasRepeats()) {
-                  offCurveSplineAcc.accumulateAllFlags(quadSplines);
+                if (!repeat_flag_mask.has_repeats()) {
+                  off_curve_spline_acc.accumulate_all_flags(quad_splines);
                   vPrevFlags = vf;
-                  vf |= srli_u16<3>(quadSplines);
+                  vf |= srli_u16<3>(quad_splines);
 
                   storeu(fDataPtr + i, vf);
-                  storeu(xPredPtr + i, vertexSizes[0]);
-                  storeu(yPredPtr + i, vertexSizes[1]);
+                  storeu(xPredPtr + i, vertex_sizes[0]);
+                  storeu(yPredPtr + i, vertex_sizes[1]);
 
                   i += n;
                   gPtr += n;
-                  vSumXY += sumsFromAggregatedSizesOf16Bytes(vertexSizes);
+                  vSumXY += sumsFromAggregatedSizesOf16Bytes(vertex_sizes);
                   continue;
                 }
 
                 // Still a bit lucky if there are no repeats in the first 8 flags.
-                if (!repeatFlagMask.hasRepeatsInLo8Flags()) {
+                if (!repeat_flag_mask.has_repeats_in_lo8_flags()) {
                   // NOTE: Must be greater than 8 as all flags that overflow the flag count are non repeating.
                   BL_ASSERT(n >= 8);
 
-                  offCurveSplineAcc.accumulateLo8Flags(quadSplines);
+                  off_curve_spline_acc.accumulateLo8Flags(quad_splines);
                   vPrevFlags = sllb_u128<8>(vf);
-                  vf |= srli_u16<3>(quadSplines);
+                  vf |= srli_u16<3>(quad_splines);
 
                   storeu_64(fDataPtr + i, vf);
-                  storeu_64(xPredPtr + i, vertexSizes[0]);
-                  storeu_64(yPredPtr + i, vertexSizes[1]);
+                  storeu_64(xPredPtr + i, vertex_sizes[0]);
+                  storeu_64(yPredPtr + i, vertex_sizes[1]);
 
                   i += 8;
                   gPtr += 8;
-                  vSumXY += sumsFromAggregatedSizesOf8Bytes(vertexSizes);
+                  vSumXY += sumsFromAggregatedSizesOf8Bytes(vertex_sizes);
                 }
               }
 
@@ -414,7 +414,7 @@ static BL_INLINE BLResult getGlyphOutlinesSimdImpl(
               // have no repeating flags at all, and some have less than 2. It's very unlikely to hit this loop often.
 SlowFlagsDecode:
               {
-                size_t slowIndex = i;
+                size_t slow_index = i;
 
                 // First expand all repeated flags to fDataPtr[] array - X/Y data will be calculated once we have flags expanded.
                 do {
@@ -422,7 +422,7 @@ SlowFlagsDecode:
                     goto InvalidData;
 
                   // Repeated flag?
-                  uint32_t f = convertFlagsPredicate[*gPtr++ & Simple::kImportantFlagsMask];
+                  uint32_t f = convert_flags_predicate[*gPtr++ & Simple::kImportantFlagsMask];
 
                   if (f & kVecFlagRepeat) {
                     if (BL_UNLIKELY(gPtr == gEnd))
@@ -431,15 +431,15 @@ SlowFlagsDecode:
                     size_t n = *gPtr++;
                     f ^= kVecFlagRepeat;
 
-                    if (BL_UNLIKELY(n >= ttVertexCount - i))
+                    if (BL_UNLIKELY(n >= tt_vertex_count - i))
                       goto InvalidData;
 
-                    MemOps::fillSmall(fDataPtr + i, uint8_t(f), n);
+                    MemOps::fill_small(fDataPtr + i, uint8_t(f), n);
                     i += n;
                   }
 
                   fDataPtr[i++] = uint8_t(f);
-                } while ((i & 0x7u) != slowFlagsDecodeFinishedCheck && i != ttVertexCount);
+                } while ((i & 0x7u) != slow_flags_decode_finished_check && i != tt_vertex_count);
 
                 // We want to process 16 flags at a time in the next loop, however, we cannot have garbage in fDataPtr[]
                 // as each byte contributes to vertex sizes we calculate out of flags. So explicitly zero the next 16
@@ -448,41 +448,41 @@ SlowFlagsDecode:
 
                 // Calculate vertex sizes and off-curve spline bits of all expanded flags.
                 do {
-                  Vec16xU8 vf = loadu<Vec16xU8>(fDataPtr + slowIndex);
-                  Vec16xU8 quadSplines = (alignr_u128<15>(vf, vPrevFlags) + vf) & v0x8080;
-                  offCurveSplineAcc.accumulateAllFlags(quadSplines);
+                  Vec16xU8 vf = loadu<Vec16xU8>(fDataPtr + slow_index);
+                  Vec16xU8 quad_splines = (alignr_u128<15>(vf, vPrevFlags) + vf) & v0x8080;
+                  off_curve_spline_acc.accumulate_all_flags(quad_splines);
 
                   vPrevFlags = vf;
-                  vf |= srli_u16<3>(quadSplines);
+                  vf |= srli_u16<3>(quad_splines);
 
-                  VecPair<Vec16xU8> vertexSizes = aggregateVertexSizes(vf, vSizesPerXYPredicate, v0x0F0F);
-                  storeu(fDataPtr + slowIndex, vf);
-                  storeu(xPredPtr + slowIndex, vertexSizes[0]);
-                  storeu(yPredPtr + slowIndex, vertexSizes[1]);
+                  VecPair<Vec16xU8> vertex_sizes = aggregate_vertex_sizes(vf, vSizesPerXYPredicate, v0x0F0F);
+                  storeu(fDataPtr + slow_index, vf);
+                  storeu(xPredPtr + slow_index, vertex_sizes[0]);
+                  storeu(yPredPtr + slow_index, vertex_sizes[1]);
 
-                  slowIndex += 16;
-                  vSumXY += sumsFromAggregatedSizesOf16Bytes(vertexSizes);
-                } while (slowIndex < i);
+                  slow_index += 16;
+                  vSumXY += sumsFromAggregatedSizesOf16Bytes(vertex_sizes);
+                } while (slow_index < i);
 
                 // Processed more flags than necessary? Correct vPrevFlags to make off-curve calculations correct.
-                if (slowIndex > i)
+                if (slow_index > i)
                   vPrevFlags = sllb_u128<8>(vPrevFlags);
               }
-            } while (i < ttVertexCount);
+            } while (i < tt_vertex_count);
 
-            // Finally, calculate the size of xCoordinates[] and yCoordinates[] arrays.
+            // Finally, calculate the size of x_coordinates[] and y_coordinates[] arrays.
             vSumXY += srli_u64<32>(vSumXY);
             xCoordinatesSize = extract_u16<0>(vSumXY);
             yCoordinatesSize = extract_u16<4>(vSumXY);
           }
 
-          offCurveSplineCount = offCurveSplineAcc.get();
-          remainingSize = IntOps::subOverflow(PtrOps::bytesUntil(gPtr, gEnd), xCoordinatesSize + yCoordinatesSize, &of);
+          off_curve_spline_count = off_curve_spline_acc.get();
+          remaining_size = IntOps::sub_overflow(PtrOps::bytes_until(gPtr, gEnd), xCoordinatesSize + yCoordinatesSize, &of);
 
-          // This makes the static analysis happy about not using `remainingSize` afterwards. We don't want to discard
+          // This makes the static analysis happy about not using `remaining_size` afterwards. We don't want to discard
           // the result of the subtraction as that could possibly introduce an issue in the future if code depending
-          // on `remainingSize` is added below.
-          blUnused(remainingSize);
+          // on `remaining_size` is added below.
+          bl_unused(remaining_size);
 
           if (BL_UNLIKELY(of))
             goto InvalidData;
@@ -494,84 +494,84 @@ SlowFlagsDecode:
           // TrueType data are decomposed into a quad spline, which is one vertex larger (BLPath doesn't offer multiple
           // off-point quads). This means that the number of vertices required by BLPath can be greater than the number
           // of vertices stored in TrueType 'glyf' data. However, we should know exactly how many vertices we have to
-          // add to `ttVertexCount` as we calculated `offCurveSplineCount` during flags decoding.
+          // add to `tt_vertex_count` as we calculated `off_curve_spline_count` during flags decoding.
           //
           // The number of resulting vertices is thus:
-          //   - `ttVertexCount` - base number of vertices stored in TrueType data.
-          //   - `offCurveSplineCount` - the number of additional vertices we will need to add for each off-curve spline
+          //   - `tt_vertex_count` - base number of vertices stored in TrueType data.
+          //   - `off_curve_spline_count` - the number of additional vertices we will need to add for each off-curve spline
           //     used in TrueType data.
-          //   - `contourCount` - Number of contours, we multiply this by 3 as we want to include one 'MoveTo', 'Close',
+          //   - `contour_count` - Number of contours, we multiply this by 3 as we want to include one 'MoveTo', 'Close',
           //     and one additional off-curve spline point per each contour in case it starts - ends with an off-curve
           //     point.
-          //   - 16 extra vertices for SIMD stores and to prevent `decodedVertexArray` overlapping BLPath data.
-          size_t maxVertexCount = ttVertexCount + offCurveSplineCount + contourCount * 3 + 16;
+          //   - 16 extra vertices for SIMD stores and to prevent `decoded_vertex_array` overlapping BLPath data.
+          size_t max_vertex_count = tt_vertex_count + off_curve_spline_count + contour_count * 3 + 16;
 
-          // Increase maxVertexCount if the path was not allocated yet - this avoids a possible realloc of compound glyphs.
-          if (out->capacity() == 0 && compoundLevel > 0)
-            maxVertexCount += 128;
+          // Increase max_vertex_count if the path was not allocated yet - this avoids a possible realloc of compound glyphs.
+          if (out->capacity() == 0 && compound_level > 0)
+            max_vertex_count += 128;
 
-          BL_PROPAGATE(appender.beginAppend(out, maxVertexCount));
+          BL_PROPAGATE(appender.begin_append(out, max_vertex_count));
 
           // Temporary data where 16-bit coordinates (per X and Y) are stored before they are converted to double precision.
-          DecodedVertex* decodedVertexArray = IntOps::alignUp(
-            reinterpret_cast<DecodedVertex*>(appender.vtx + maxVertexCount) - IntOps::alignUp(ttVertexCount, 16) - 4, 16);
+          DecodedVertex* decoded_vertex_array = IntOps::align_up(
+            reinterpret_cast<DecodedVertex*>(appender.vtx + max_vertex_count) - IntOps::align_up(tt_vertex_count, 16) - 4, 16);
 
           {
             // Since we know exactly how many bytes both vertex arrays consume we can decode both X and Y coordinates at
             // the same time. This gives us also the opportunity to start appending to BLPath immediately.
-            const uint8_t* yPtr = gPtr + xCoordinatesSize;
+            const uint8_t* y_ptr = gPtr + xCoordinatesSize;
 
             // LO+HI predicate is added to interleaved predicates.
             Vec16xU8 vLoHiPredInc = make128_u16<Vec16xU8>(uint16_t(0x0041u));
 
-            // These are predicates we need to combine with xPred and yPred to get the final predicate for VPSHUFB/TBL.
+            // These are predicates we need to combine with x_pred and y_pred to get the final predicate for VPSHUFB/TBL.
             Vec16xU8 vDecodeOpXImm = loada<Vec16xU8>(decodeOpXTable);
             Vec16xU8 vDecodeOpYImm = loada<Vec16xU8>(decodeOpYTable);
 
             // NOTE: It's super unlikely that there won't be 16 bytes available after the end of x/y coordinates. Basically
             // only last glyph could be affected. However, we still need to check whether the bytes are there as we cannot just
             // read outside of the glyph table.
-            if (BL_LIKELY(remainingSizeAfterGlyphData >= 16)) {
+            if (BL_LIKELY(remaining_size_after_glyph_data >= 16)) {
               // Common case - uses at most 16-byte reads ahead, processes 16 vertices at a time.
 #ifdef BL_TARGET_OPT_AVX2
               Vec32xU8 vLoHiPredInc256 = broadcast_i128<Vec32xU8>(vLoHiPredInc);
               size_t i = 0;
 
               // Process 32 vertices at a time.
-              if (ttVertexCount > 16) {
+              if (tt_vertex_count > 16) {
                 Vec32xU8 vDecodeOpXImm256 = broadcast_i128<Vec32xU8>(vDecodeOpXImm);
                 Vec32xU8 vDecodeOpYImm256 = broadcast_i128<Vec32xU8>(vDecodeOpYImm);
 
                 do {
                   Vec16xU8 xVerticesInitial0 = loadu<Vec16xU8>(gPtr);
-                  Vec16xU8 yVerticesInitial0 = loadu<Vec16xU8>(yPtr);
+                  Vec16xU8 yVerticesInitial0 = loadu<Vec16xU8>(y_ptr);
 
                   gPtr += xPredPtr[i + 7];
-                  yPtr += yPredPtr[i + 7];
+                  y_ptr += yPredPtr[i + 7];
 
                   Vec32xU8 fData = loada<Vec32xU8>(fDataPtr + i);
-                  Vec32xU8 xPred = slli_i64<8>(loada<Vec32xU8>(xPredPtr + i));
-                  Vec32xU8 yPred = slli_i64<8>(loada<Vec32xU8>(yPredPtr + i));
+                  Vec32xU8 x_pred = slli_i64<8>(loada<Vec32xU8>(xPredPtr + i));
+                  Vec32xU8 y_pred = slli_i64<8>(loada<Vec32xU8>(yPredPtr + i));
 
-                  xPred += swizzlev_u8(vDecodeOpXImm256, fData);
-                  yPred += swizzlev_u8(vDecodeOpYImm256, fData);
+                  x_pred += swizzlev_u8(vDecodeOpXImm256, fData);
+                  y_pred += swizzlev_u8(vDecodeOpYImm256, fData);
 
                   Vec16xU8 xVerticesInitial1 = loadu<Vec16xU8>(gPtr);
-                  Vec16xU8 yVerticesInitial1 = loadu<Vec16xU8>(yPtr);
+                  Vec16xU8 yVerticesInitial1 = loadu<Vec16xU8>(y_ptr);
 
                   gPtr += xPredPtr[i + 15];
-                  yPtr += yPredPtr[i + 15];
+                  y_ptr += yPredPtr[i + 15];
 
-                  Vec32xU8 xPred0 = interleave_lo_u8(xPred, xPred);
-                  Vec32xU8 xPred1 = interleave_hi_u8(xPred, xPred);
-                  Vec32xU8 yPred0 = interleave_lo_u8(yPred, yPred);
-                  Vec32xU8 yPred1 = interleave_hi_u8(yPred, yPred);
+                  Vec32xU8 xPred0 = interleave_lo_u8(x_pred, x_pred);
+                  Vec32xU8 xPred1 = interleave_hi_u8(x_pred, x_pred);
+                  Vec32xU8 yPred0 = interleave_lo_u8(y_pred, y_pred);
+                  Vec32xU8 yPred1 = interleave_hi_u8(y_pred, y_pred);
 
                   Vec16xI16 xVertices0 = make256_128<Vec16xI16>(loadu<Vec16xU8>(gPtr), xVerticesInitial0);
-                  Vec16xI16 yVertices0 = make256_128<Vec16xI16>(loadu<Vec16xU8>(yPtr), yVerticesInitial0);
+                  Vec16xI16 yVertices0 = make256_128<Vec16xI16>(loadu<Vec16xU8>(y_ptr), yVerticesInitial0);
 
                   gPtr += xPredPtr[i + 23];
-                  yPtr += yPredPtr[i + 23];
+                  y_ptr += yPredPtr[i + 23];
 
                   xPred0 += vLoHiPredInc256;
                   xPred1 += vLoHiPredInc256;
@@ -579,10 +579,10 @@ SlowFlagsDecode:
                   yPred1 += vLoHiPredInc256;
 
                   Vec16xI16 xVertices1 = make256_128<Vec16xI16>(loadu<Vec16xU8>(gPtr), xVerticesInitial1);
-                  Vec16xI16 yVertices1 = make256_128<Vec16xI16>(loadu<Vec16xU8>(yPtr), yVerticesInitial1);
+                  Vec16xI16 yVertices1 = make256_128<Vec16xI16>(loadu<Vec16xU8>(y_ptr), yVerticesInitial1);
 
                   gPtr += xPredPtr[i + 31];
-                  yPtr += yPredPtr[i + 31];
+                  y_ptr += yPredPtr[i + 31];
 
                   xVertices0 = swizzlev_u8(xVertices0, xPred0);
                   yVertices0 = swizzlev_u8(yVertices0, yPred0);
@@ -604,80 +604,80 @@ SlowFlagsDecode:
                   Vec16xI16 xyInterleavedLo1 = interleave_lo_u16(xVertices1, yVertices1);
                   Vec16xI16 xyInterleavedHi1 = interleave_hi_u16(xVertices1, yVertices1);
 
-                  storea_128(decodedVertexArray + i +  0, xyInterleavedLo0);
-                  storea_128(decodedVertexArray + i +  4, xyInterleavedHi0);
-                  storea_128(decodedVertexArray + i +  8, xyInterleavedLo1);
-                  storea_128(decodedVertexArray + i + 12, xyInterleavedHi1);
-                  storea_128(decodedVertexArray + i + 16, extract_i128<1>(xyInterleavedLo0));
-                  storea_128(decodedVertexArray + i + 20, extract_i128<1>(xyInterleavedHi0));
-                  storea_128(decodedVertexArray + i + 24, extract_i128<1>(xyInterleavedLo1));
-                  storea_128(decodedVertexArray + i + 28, extract_i128<1>(xyInterleavedHi1));
+                  storea_128(decoded_vertex_array + i +  0, xyInterleavedLo0);
+                  storea_128(decoded_vertex_array + i +  4, xyInterleavedHi0);
+                  storea_128(decoded_vertex_array + i +  8, xyInterleavedLo1);
+                  storea_128(decoded_vertex_array + i + 12, xyInterleavedHi1);
+                  storea_128(decoded_vertex_array + i + 16, extract_i128<1>(xyInterleavedLo0));
+                  storea_128(decoded_vertex_array + i + 20, extract_i128<1>(xyInterleavedHi0));
+                  storea_128(decoded_vertex_array + i + 24, extract_i128<1>(xyInterleavedLo1));
+                  storea_128(decoded_vertex_array + i + 28, extract_i128<1>(xyInterleavedHi1));
 
                   i += 32;
-                } while (i < ttVertexCount - 16);
+                } while (i < tt_vertex_count - 16);
               }
 
               // Process remaining 16 vertices.
-              if (i < ttVertexCount) {
+              if (i < tt_vertex_count) {
                 Vec16xU8 fData = loada<Vec16xU8>(fDataPtr + i);
-                Vec16xU8 xPred = slli_i64<8>(loada<Vec16xU8>(xPredPtr + i));
-                Vec16xU8 yPred = slli_i64<8>(loada<Vec16xU8>(yPredPtr + i));
+                Vec16xU8 x_pred = slli_i64<8>(loada<Vec16xU8>(xPredPtr + i));
+                Vec16xU8 y_pred = slli_i64<8>(loada<Vec16xU8>(yPredPtr + i));
 
-                xPred += swizzlev_u8(vDecodeOpXImm, fData);
-                yPred += swizzlev_u8(vDecodeOpYImm, fData);
+                x_pred += swizzlev_u8(vDecodeOpXImm, fData);
+                y_pred += swizzlev_u8(vDecodeOpYImm, fData);
 
-                Vec32xU8 xPred256 = permute_i64<1, 1, 0, 0>(vec_cast<Vec32xU8>(xPred));
-                Vec32xU8 yPred256 = permute_i64<1, 1, 0, 0>(vec_cast<Vec32xU8>(yPred));
+                Vec32xU8 xPred256 = permute_i64<1, 1, 0, 0>(vec_cast<Vec32xU8>(x_pred));
+                Vec32xU8 yPred256 = permute_i64<1, 1, 0, 0>(vec_cast<Vec32xU8>(y_pred));
 
                 xPred256 = interleave_lo_u8(xPred256, xPred256);
                 yPred256 = interleave_lo_u8(yPred256, yPred256);
 
                 Vec16xU8 xVerticesInitial = loadu<Vec16xU8>(gPtr);
-                Vec16xU8 yVerticesInitial = loadu<Vec16xU8>(yPtr);
+                Vec16xU8 yVerticesInitial = loadu<Vec16xU8>(y_ptr);
 
                 gPtr += xPredPtr[i + 7];
-                yPtr += yPredPtr[i + 7];
+                y_ptr += yPredPtr[i + 7];
 
                 xPred256 += vLoHiPredInc256;
                 yPred256 += vLoHiPredInc256;
 
-                Vec16xI16 xVertices = make256_128<Vec16xI16>(loadu<Vec16xU8>(gPtr), xVerticesInitial);
-                Vec16xI16 yVertices = make256_128<Vec16xI16>(loadu<Vec16xU8>(yPtr), yVerticesInitial);
+                Vec16xI16 x_vertices = make256_128<Vec16xI16>(loadu<Vec16xU8>(gPtr), xVerticesInitial);
+                Vec16xI16 y_vertices = make256_128<Vec16xI16>(loadu<Vec16xU8>(y_ptr), yVerticesInitial);
 
-                // gPtr/yPtr is no longer needed, so the following code is not needed as well:
+                // gPtr/y_ptr is no longer needed, so the following code is not needed as well:
                 //   gPtr += xPredPtr[i + 15];
-                //   yPtr += yPredPtr[i + 15];
+                //   y_ptr += yPredPtr[i + 15];
 
-                xVertices = swizzlev_u8(xVertices, xPred256);
-                yVertices = swizzlev_u8(yVertices, yPred256);
+                x_vertices = swizzlev_u8(x_vertices, xPred256);
+                y_vertices = swizzlev_u8(y_vertices, yPred256);
 
                 xPred256 = srai_i16<15>(slli_i16<2>(xPred256));
                 yPred256 = srai_i16<15>(slli_i16<2>(yPred256));
 
-                xVertices = (xVertices ^ vec_i16(xPred256)) - vec_i16(xPred256);
-                yVertices = (yVertices ^ vec_i16(yPred256)) - vec_i16(yPred256);
+                x_vertices = (x_vertices ^ vec_i16(xPred256)) - vec_i16(xPred256);
+                y_vertices = (y_vertices ^ vec_i16(yPred256)) - vec_i16(yPred256);
 
-                Vec16xI16 xyInterleavedLo = interleave_lo_u16(xVertices, yVertices);
-                Vec16xI16 xyInterleavedHi = interleave_hi_u16(xVertices, yVertices);
+                Vec16xI16 xy_interleaved_lo = interleave_lo_u16(x_vertices, y_vertices);
+                Vec16xI16 xy_interleaved_hi = interleave_hi_u16(x_vertices, y_vertices);
 
-                storea_128(decodedVertexArray + i +  0, xyInterleavedLo);
-                storea_128(decodedVertexArray + i +  4, xyInterleavedHi);
-                storea_128(decodedVertexArray + i +  8, extract_i128<1>(xyInterleavedLo));
-                storea_128(decodedVertexArray + i + 12, extract_i128<1>(xyInterleavedHi));
+                storea_128(decoded_vertex_array + i +  0, xy_interleaved_lo);
+                storea_128(decoded_vertex_array + i +  4, xy_interleaved_hi);
+                storea_128(decoded_vertex_array + i +  8, extract_i128<1>(xy_interleaved_lo));
+                storea_128(decoded_vertex_array + i + 12, extract_i128<1>(xy_interleaved_hi));
               }
 #else
-              for (size_t i = 0; i < ttVertexCount; i += 16) {
+              for (size_t i = 0; i < tt_vertex_count; i += 16) {
                 Vec16xU8 fData = loada<Vec16xU8>(fDataPtr + i);
-                Vec16xU8 xPred = slli_i64<8>(loada<Vec16xU8>(xPredPtr + i));
-                Vec16xU8 yPred = slli_i64<8>(loada<Vec16xU8>(yPredPtr + i));
+                Vec16xU8 x_pred = slli_i64<8>(loada<Vec16xU8>(xPredPtr + i));
+                Vec16xU8 y_pred = slli_i64<8>(loada<Vec16xU8>(yPredPtr + i));
 
-                xPred += swizzlev_u8(vDecodeOpXImm, fData);
-                yPred += swizzlev_u8(vDecodeOpYImm, fData);
+                x_pred += swizzlev_u8(vDecodeOpXImm, fData);
+                y_pred += swizzlev_u8(vDecodeOpYImm, fData);
 
-                Vec16xU8 xPred0 = interleave_lo_u8(xPred, xPred);
-                Vec16xU8 xPred1 = interleave_hi_u8(xPred, xPred);
-                Vec16xU8 yPred0 = interleave_lo_u8(yPred, yPred);
-                Vec16xU8 yPred1 = interleave_hi_u8(yPred, yPred);
+                Vec16xU8 xPred0 = interleave_lo_u8(x_pred, x_pred);
+                Vec16xU8 xPred1 = interleave_hi_u8(x_pred, x_pred);
+                Vec16xU8 yPred0 = interleave_lo_u8(y_pred, y_pred);
+                Vec16xU8 yPred1 = interleave_hi_u8(y_pred, y_pred);
 
                 xPred0 += vLoHiPredInc;
                 xPred1 += vLoHiPredInc;
@@ -686,10 +686,10 @@ SlowFlagsDecode:
 
                 // Process low 8 vertices.
                 Vec8xI16 xVertices0 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(gPtr), xPred0));
-                Vec8xI16 yVertices0 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(yPtr), yPred0));
+                Vec8xI16 yVertices0 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(y_ptr), yPred0));
 
                 gPtr += xPredPtr[i + 7];
-                yPtr += yPredPtr[i + 7];
+                y_ptr += yPredPtr[i + 7];
 
                 xPred0 = srai_i16<15>(slli_i16<2>(xPred0));
                 yPred0 = srai_i16<15>(slli_i16<2>(yPred0));
@@ -697,15 +697,15 @@ SlowFlagsDecode:
                 xVertices0 = (xVertices0 ^ vec_i16(xPred0)) - vec_i16(xPred0);
                 yVertices0 = (yVertices0 ^ vec_i16(yPred0)) - vec_i16(yPred0);
 
-                storea(decodedVertexArray + i + 0, interleave_lo_u16(xVertices0, yVertices0));
-                storea(decodedVertexArray + i + 4, interleave_hi_u16(xVertices0, yVertices0));
+                storea(decoded_vertex_array + i + 0, interleave_lo_u16(xVertices0, yVertices0));
+                storea(decoded_vertex_array + i + 4, interleave_hi_u16(xVertices0, yVertices0));
 
                 // Process high 8 vertices.
                 Vec8xI16 xVertices1 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(gPtr), xPred1));
-                Vec8xI16 yVertices1 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(yPtr), yPred1));
+                Vec8xI16 yVertices1 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(y_ptr), yPred1));
 
                 gPtr += xPredPtr[i + 15];
-                yPtr += yPredPtr[i + 15];
+                y_ptr += yPredPtr[i + 15];
 
                 xPred1 = srai_i16<15>(slli_i16<2>(xPred1));
                 yPred1 = srai_i16<15>(slli_i16<2>(yPred1));
@@ -713,8 +713,8 @@ SlowFlagsDecode:
                 xVertices1 = (xVertices1 ^ vec_i16(xPred1)) - vec_i16(xPred1);
                 yVertices1 = (yVertices1 ^ vec_i16(yPred1)) - vec_i16(yPred1);
 
-                storea(decodedVertexArray + i +  8, interleave_lo_u16(xVertices1, yVertices1));
-                storea(decodedVertexArray + i + 12, interleave_hi_u16(xVertices1, yVertices1));
+                storea(decoded_vertex_array + i +  8, interleave_lo_u16(xVertices1, yVertices1));
+                storea(decoded_vertex_array + i + 12, interleave_hi_u16(xVertices1, yVertices1));
               }
 #endif
             }
@@ -724,40 +724,40 @@ SlowFlagsDecode:
               //   - NumberOfContours   [ 2 bytes]
               //   - InstructionLength  [ 2 bytes]
               //   - At least two flags [ 2 bytes] (one flag glyphs are refused as is not enough for a contour)
-              for (size_t i = 0; i < ttVertexCount; i += 8) {
+              for (size_t i = 0; i < tt_vertex_count; i += 8) {
                 Vec16xU8 fData = loadu_64<Vec16xU8>(fDataPtr + i);
-                Vec16xU8 xPred = slli_i64<8>(loadu_64<Vec16xU8>(xPredPtr + i));
-                Vec16xU8 yPred = slli_i64<8>(loadu_64<Vec16xU8>(yPredPtr + i));
+                Vec16xU8 x_pred = slli_i64<8>(loadu_64<Vec16xU8>(xPredPtr + i));
+                Vec16xU8 y_pred = slli_i64<8>(loadu_64<Vec16xU8>(yPredPtr + i));
 
                 size_t xBytesUsed = xPredPtr[i + 7];
                 size_t yBytesUsed = yPredPtr[i + 7];
 
                 gPtr += xBytesUsed;
-                yPtr += yBytesUsed;
+                y_ptr += yBytesUsed;
 
-                xPred += swizzlev_u8(vDecodeOpXImm, fData);
-                yPred += swizzlev_u8(vDecodeOpYImm, fData);
+                x_pred += swizzlev_u8(vDecodeOpXImm, fData);
+                y_pred += swizzlev_u8(vDecodeOpYImm, fData);
 
-                xPred += make128_u8<Vec16xU8>(uint8_t(16u - uint32_t(xBytesUsed)));
-                yPred += make128_u8<Vec16xU8>(uint8_t(16u - uint32_t(yBytesUsed)));
+                x_pred += make128_u8<Vec16xU8>(uint8_t(16u - uint32_t(xBytesUsed)));
+                y_pred += make128_u8<Vec16xU8>(uint8_t(16u - uint32_t(yBytesUsed)));
 
-                xPred = interleave_lo_u8(xPred, xPred);
-                yPred = interleave_lo_u8(yPred, yPred);
+                x_pred = interleave_lo_u8(x_pred, x_pred);
+                y_pred = interleave_lo_u8(y_pred, y_pred);
 
-                xPred += vLoHiPredInc;
-                yPred += vLoHiPredInc;
+                x_pred += vLoHiPredInc;
+                y_pred += vLoHiPredInc;
 
-                Vec8xI16 xVertices0 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(gPtr - 16), xPred));
-                Vec8xI16 yVertices0 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(yPtr - 16), yPred));
+                Vec8xI16 xVertices0 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(gPtr - 16), x_pred));
+                Vec8xI16 yVertices0 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(y_ptr - 16), y_pred));
 
-                xPred = srai_i16<15>(slli_i16<2>(xPred));
-                yPred = srai_i16<15>(slli_i16<2>(yPred));
+                x_pred = srai_i16<15>(slli_i16<2>(x_pred));
+                y_pred = srai_i16<15>(slli_i16<2>(y_pred));
 
-                xVertices0 = (xVertices0 ^ vec_i16(xPred)) - vec_i16(xPred);
-                yVertices0 = (yVertices0 ^ vec_i16(yPred)) - vec_i16(yPred);
+                xVertices0 = (xVertices0 ^ vec_i16(x_pred)) - vec_i16(x_pred);
+                yVertices0 = (yVertices0 ^ vec_i16(y_pred)) - vec_i16(y_pred);
 
-                storea(decodedVertexArray + i + 0, interleave_lo_u16(xVertices0, yVertices0));
-                storea(decodedVertexArray + i + 4, interleave_hi_u16(xVertices0, yVertices0));
+                storea(decoded_vertex_array + i + 0, interleave_lo_u16(xVertices0, yVertices0));
+                storea(decoded_vertex_array + i + 4, interleave_hi_u16(xVertices0, yVertices0));
               }
             }
           }
@@ -765,43 +765,43 @@ SlowFlagsDecode:
           // Affine transform applied to each vertex.
           //
           // NOTE: Compilers are not able to vectorize the computations efficiently, so we do it instead.
-          Vec2xF64 m00_m11 = make128_f64(compoundData[compoundLevel].transform.m11, compoundData[compoundLevel].transform.m00);
-          Vec2xF64 m10_m01 = make128_f64(compoundData[compoundLevel].transform.m01, compoundData[compoundLevel].transform.m10);
+          Vec2xF64 m00_m11 = make128_f64(compound_data[compound_level].transform.m11, compound_data[compound_level].transform.m00);
+          Vec2xF64 m10_m01 = make128_f64(compound_data[compound_level].transform.m01, compound_data[compound_level].transform.m10);
 
           // Vertices are stored relative to each other, this is the current point.
-          Vec2xF64 currentPt = make128_f64(compoundData[compoundLevel].transform.m21, compoundData[compoundLevel].transform.m20);
+          Vec2xF64 current_pt = make128_f64(compound_data[compound_level].transform.m21, compound_data[compound_level].transform.m20);
 
           // SIMD constants.
           Vec2xF64 half = make128_f64(0.5);
 
-          // Current vertex index in TT sense, advanced until `ttVertexCount`, which must be end index of the last contour.
+          // Current vertex index in TT sense, advanced until `tt_vertex_count`, which must be end index of the last contour.
           size_t i = 0;
 
-          for (size_t contourIndex = 0; contourIndex < contourCount; contourIndex++) {
-            size_t iEnd = size_t(contourArray[contourIndex].value()) + 1;
-            if (BL_UNLIKELY(iEnd <= i || iEnd > ttVertexCount))
+          for (size_t contour_index = 0; contour_index < contour_count; contour_index++) {
+            size_t iEnd = size_t(contour_array[contour_index].value()) + 1;
+            if (BL_UNLIKELY(iEnd <= i || iEnd > tt_vertex_count))
               goto InvalidData;
 
             // We do the first vertex here as we want to emit 'MoveTo' and we want to remember it for a possible off-curve
             // start. Currently this means there is some code duplicated for move-to and for other commands, unfortunately.
             uint32_t f = fDataPtr[i];
-            currentPt += transformDecodedVertex(decodedVertexArray + i, m00_m11, m10_m01);
+            current_pt += transform_decoded_vertex(decoded_vertex_array + i, m00_m11, m10_m01);
 
             if (++i >= iEnd)
               continue;
 
             // Initial 'MoveTo' coordinates.
-            Vec2xF64 initialPt = currentPt;
+            Vec2xF64 initial_pt = current_pt;
 
             // We need to be able to handle a case in which the contour data starts off-curve.
-            size_t startsOnCurve = size_t((f >> kVecFlagOnCurveShift) & 0x1u);
-            size_t initialVertexIndex = appender.currentIndex(*out);
+            size_t starts_on_curve = size_t((f >> kVecFlagOnCurveShift) & 0x1u);
+            size_t initial_vertex_index = appender.current_index(*out);
 
             // Only emit MoveTo here if we don't start off curve, which requires a special care.
-            storeVertex(appender, BL_PATH_CMD_MOVE, initialPt);
-            appender._advance(startsOnCurve);
+            store_vertex(appender, BL_PATH_CMD_MOVE, initial_pt);
+            appender._advance(starts_on_curve);
 
-            size_t iEndMinus3 = IntOps::usubSaturate<size_t>(iEnd, 3);
+            size_t iEndMinus3 = IntOps::usub_saturate<size_t>(iEnd, 3);
 
             static constexpr uint32_t kPathCmdFromFlagsShift0 = kVecFlagOnCurveShift;
             static constexpr uint32_t kPathCmdFromFlagsShift1 = kVecFlagOnCurveShift + 8;
@@ -820,134 +820,134 @@ SlowFlagsDecode:
             while (i < iEndMinus3) {
               f = MemOps::readU32u(fDataPtr + i);
 
-              Vec2xF64 d0 = transformDecodedVertex(decodedVertexArray + i + 0, m00_m11, m10_m01);
-              Vec2xF64 d1 = transformDecodedVertex(decodedVertexArray + i + 1, m00_m11, m10_m01);
-              Vec2xF64 d2 = transformDecodedVertex(decodedVertexArray + i + 2, m00_m11, m10_m01);
-              Vec2xF64 d3 = transformDecodedVertex(decodedVertexArray + i + 3, m00_m11, m10_m01);
-              Vec2xF64 onPt;
+              Vec2xF64 d0 = transform_decoded_vertex(decoded_vertex_array + i + 0, m00_m11, m10_m01);
+              Vec2xF64 d1 = transform_decoded_vertex(decoded_vertex_array + i + 1, m00_m11, m10_m01);
+              Vec2xF64 d2 = transform_decoded_vertex(decoded_vertex_array + i + 2, m00_m11, m10_m01);
+              Vec2xF64 d3 = transform_decoded_vertex(decoded_vertex_array + i + 3, m00_m11, m10_m01);
+              Vec2xF64 on_pt;
 
               i += 4;
-              currentPt += d0;
+              current_pt += d0;
 
-              uint32_t pathCmds = (f >> kPathCmdFromFlagsShift0) & 0x03030303u;
-              MemOps::writeU32u(appender.cmd, pathCmds);
+              uint32_t path_cmds = (f >> kPathCmdFromFlagsShift0) & 0x03030303u;
+              MemOps::writeU32u(appender.cmd, path_cmds);
 
               if (f & kVecFlagOffSpline0)
                 goto EmitSpline0Advance;
 
-              storeu(appender.vtx + 0, currentPt);
-              currentPt += d1;
+              storeu(appender.vtx + 0, current_pt);
+              current_pt += d1;
               if (f & kVecFlagOffSpline1)
                 goto EmitSpline1Advance;
 
-              storeu(appender.vtx + 1, currentPt);
-              currentPt += d2;
+              storeu(appender.vtx + 1, current_pt);
+              current_pt += d2;
               if (f & kVecFlagOffSpline2)
                 goto EmitSpline2Advance;
 
-              storeu(appender.vtx + 2, currentPt);
-              currentPt += d3;
+              storeu(appender.vtx + 2, current_pt);
+              current_pt += d3;
               if (f & kVecFlagOffSpline3)
                 goto EmitSpline3Advance;
 
-              storeu(appender.vtx + 3, currentPt);
+              storeu(appender.vtx + 3, current_pt);
               appender._advance(4);
               continue;
 
 EmitSpline0Advance:
-              onPt = currentPt - d0 * half;
-              appendVertex2x(appender, BL_PATH_CMD_ON, onPt, BL_PATH_CMD_QUAD, currentPt);
-              currentPt += d1;
+              on_pt = current_pt - d0 * half;
+              appendVertex2x(appender, BL_PATH_CMD_ON, on_pt, BL_PATH_CMD_QUAD, current_pt);
+              current_pt += d1;
               if (f & kVecFlagOffSpline1)
                 goto EmitSpline1Continue;
 
-              appendVertex(appender, uint8_t((f >> kPathCmdFromFlagsShift1) & 0x3u), currentPt);
-              currentPt += d2;
+              append_vertex(appender, uint8_t((f >> kPathCmdFromFlagsShift1) & 0x3u), current_pt);
+              current_pt += d2;
               if (f & kVecFlagOffSpline2)
                 goto EmitSpline2Continue;
 
-              appendVertex(appender, uint8_t((f >> kPathCmdFromFlagsShift2) & 0x3u), currentPt);
-              currentPt += d3;
+              append_vertex(appender, uint8_t((f >> kPathCmdFromFlagsShift2) & 0x3u), current_pt);
+              current_pt += d3;
               if (f & kVecFlagOffSpline3)
                 goto EmitSpline3Continue;
 
-              appendVertex(appender, uint8_t((f >> kPathCmdFromFlagsShift3) & 0x3u), currentPt);
+              append_vertex(appender, uint8_t((f >> kPathCmdFromFlagsShift3) & 0x3u), current_pt);
               continue;
 
 EmitSpline1Advance:
               appender._advance(1);
 
 EmitSpline1Continue:
-              onPt = currentPt - d1 * half;
-              appendVertex2x(appender, BL_PATH_CMD_ON, onPt, BL_PATH_CMD_QUAD, currentPt);
-              currentPt += d2;
+              on_pt = current_pt - d1 * half;
+              appendVertex2x(appender, BL_PATH_CMD_ON, on_pt, BL_PATH_CMD_QUAD, current_pt);
+              current_pt += d2;
 
               if (f & kVecFlagOffSpline2)
                 goto EmitSpline2Continue;
 
-              appendVertex(appender, uint8_t((f >> kPathCmdFromFlagsShift2) & 0x3u), currentPt);
-              currentPt += d3;
+              append_vertex(appender, uint8_t((f >> kPathCmdFromFlagsShift2) & 0x3u), current_pt);
+              current_pt += d3;
 
               if (f & kVecFlagOffSpline3)
                 goto EmitSpline3Continue;
 
-              appendVertex(appender, uint8_t((f >> kPathCmdFromFlagsShift3) & 0x3u), currentPt);
+              append_vertex(appender, uint8_t((f >> kPathCmdFromFlagsShift3) & 0x3u), current_pt);
               continue;
 
 EmitSpline2Advance:
               appender._advance(2);
 
 EmitSpline2Continue:
-              onPt = currentPt - d2 * half;
-              appendVertex2x(appender, BL_PATH_CMD_ON, onPt, BL_PATH_CMD_QUAD, currentPt);
-              currentPt += d3;
+              on_pt = current_pt - d2 * half;
+              appendVertex2x(appender, BL_PATH_CMD_ON, on_pt, BL_PATH_CMD_QUAD, current_pt);
+              current_pt += d3;
 
               if (f & kVecFlagOffSpline3)
                 goto EmitSpline3Continue;
 
-              appendVertex(appender, uint8_t((f >> kPathCmdFromFlagsShift3) & 0x3u), currentPt);
+              append_vertex(appender, uint8_t((f >> kPathCmdFromFlagsShift3) & 0x3u), current_pt);
               continue;
 
 EmitSpline3Advance:
               appender._advance(3);
 
 EmitSpline3Continue:
-              onPt = currentPt - d3 * half;
-              appendVertex2x(appender, BL_PATH_CMD_ON, onPt, BL_PATH_CMD_QUAD, currentPt);
+              on_pt = current_pt - d3 * half;
+              appendVertex2x(appender, BL_PATH_CMD_ON, on_pt, BL_PATH_CMD_QUAD, current_pt);
             }
 
             while (i < iEnd) {
               f = fDataPtr[i];
-              Vec2xF64 delta = transformDecodedVertex(decodedVertexArray + i, m00_m11, m10_m01);
-              currentPt += delta;
+              Vec2xF64 delta = transform_decoded_vertex(decoded_vertex_array + i, m00_m11, m10_m01);
+              current_pt += delta;
               i++;
 
               if ((f & kVecFlagOffSpline) == 0) {
-                appendVertex(appender, uint8_t(f >> 5), currentPt);
+                append_vertex(appender, uint8_t(f >> 5), current_pt);
               }
               else {
-                Vec2xF64 onPt = currentPt - delta * half;
-                appendVertex2x(appender, BL_PATH_CMD_ON, onPt, BL_PATH_CMD_QUAD, currentPt);
+                Vec2xF64 on_pt = current_pt - delta * half;
+                appendVertex2x(appender, BL_PATH_CMD_ON, on_pt, BL_PATH_CMD_QUAD, current_pt);
               }
             }
 
             f = fDataPtr[i - 1];
-            if (!startsOnCurve) {
-              BLPathImpl* outI = PathInternal::getImpl(out);
-              Vec2xF64 finalPt = loadu<Vec2xF64>(outI->vertexData + initialVertexIndex);
+            if (!starts_on_curve) {
+              BLPathImpl* out_impl = PathInternal::get_impl(out);
+              Vec2xF64 final_pt = loadu<Vec2xF64>(out_impl->vertex_data + initial_vertex_index);
 
-              outI->commandData[initialVertexIndex] = BL_PATH_CMD_MOVE;
+              out_impl->command_data[initial_vertex_index] = BL_PATH_CMD_MOVE;
 
               if (f & kVecFlagOffCurve) {
-                Vec2xF64 onPt = (currentPt + initialPt) * half;
-                appendVertex(appender, BL_PATH_CMD_ON, onPt);
-                finalPt = (initialPt + finalPt) * half;
+                Vec2xF64 on_pt = (current_pt + initial_pt) * half;
+                append_vertex(appender, BL_PATH_CMD_ON, on_pt);
+                final_pt = (initial_pt + final_pt) * half;
               }
 
-              appendVertex2x(appender, BL_PATH_CMD_QUAD, initialPt, BL_PATH_CMD_ON, finalPt);
+              appendVertex2x(appender, BL_PATH_CMD_QUAD, initial_pt, BL_PATH_CMD_ON, final_pt);
             }
             else if (f & kVecFlagOffCurve) {
-              appendVertex(appender, BL_PATH_CMD_ON, initialPt);
+              append_vertex(appender, BL_PATH_CMD_ON, initial_pt);
             }
 
             appender.close();
@@ -955,11 +955,11 @@ EmitSpline3Continue:
           appender.done(out);
         }
       }
-      else if (contourCountSigned == -1) {
+      else if (contour_count_signed == -1) {
         gPtr += sizeof(GlyfTable::GlyphData);
-        remainingSize -= sizeof(GlyfTable::GlyphData);
+        remaining_size -= sizeof(GlyfTable::GlyphData);
 
-        if (BL_UNLIKELY(++compoundLevel >= CompoundEntry::kMaxLevel))
+        if (BL_UNLIKELY(++compound_level >= CompoundEntry::kMaxLevel))
           goto InvalidData;
 
         goto ContinueCompound;
@@ -967,7 +967,7 @@ EmitSpline3Continue:
       else {
         // Cannot be less than -1, only -1 specifies compound glyph, lesser value is invalid according to the
         // specification.
-        if (BL_UNLIKELY(contourCountSigned < -1))
+        if (BL_UNLIKELY(contour_count_signed < -1))
           goto InvalidData;
 
         // Otherwise the glyph has no contours.
@@ -977,20 +977,20 @@ EmitSpline3Continue:
     // Compound Glyph
     // --------------
 
-    if (compoundLevel) {
-      while (!(compoundData[compoundLevel].compoundFlags & Compound::kMoreComponents))
-        if (--compoundLevel == 0)
+    if (compound_level) {
+      while (!(compound_data[compound_level].compound_flags & Compound::kMoreComponents))
+        if (--compound_level == 0)
           break;
 
-      if (compoundLevel) {
-        gPtr = compoundData[compoundLevel].gPtr;
-        remainingSize = compoundData[compoundLevel].remainingSize;
+      if (compound_level) {
+        gPtr = compound_data[compound_level].gPtr;
+        remaining_size = compound_data[compound_level].remaining_size;
 
         // The structure that we are going to read is as follows:
         //
         //   [Header]
         //     uint16_t flags;
-        //     uint16_t glyphId;
+        //     uint16_t glyph_id;
         //
         //   [Translation]
         //     a) int8_t arg1/arg2;
@@ -1008,13 +1008,13 @@ ContinueCompound:
           int arg1, arg2;
           OverflowFlag of{};
 
-          remainingSize = IntOps::subOverflow<size_t>(remainingSize, 6, &of);
+          remaining_size = IntOps::sub_overflow<size_t>(remaining_size, 6, &of);
           if (BL_UNLIKELY(of))
             goto InvalidData;
 
           flags = MemOps::readU16uBE(gPtr);
-          glyphId = MemOps::readU16uBE(gPtr + 2);
-          if (BL_UNLIKELY(glyphId >= faceI->faceInfo.glyphCount))
+          glyph_id = MemOps::readU16uBE(gPtr + 2);
+          if (BL_UNLIKELY(glyph_id >= ot_face_impl->face_info.glyph_count))
             goto InvalidData;
 
           arg1 = MemOps::readI8(gPtr + 4);
@@ -1022,7 +1022,7 @@ ContinueCompound:
           gPtr += 6;
 
           if (flags & Compound::kArgsAreWords) {
-            remainingSize = IntOps::subOverflow<size_t>(remainingSize, 2, &of);
+            remaining_size = IntOps::sub_overflow<size_t>(remaining_size, 2, &of);
             if (BL_UNLIKELY(of))
               goto InvalidData;
 
@@ -1041,7 +1041,7 @@ ContinueCompound:
 
           constexpr double kScaleF2x14 = 1.0 / 16384.0;
 
-          BLMatrix2D& cm = compoundData[compoundLevel].transform;
+          BLMatrix2D& cm = compound_data[compound_level].transform;
           cm.reset(1.0, 0.0, 0.0, 1.0, double(arg1), double(arg2));
 
           if (flags & Compound::kAnyCompoundScale) {
@@ -1049,7 +1049,7 @@ ContinueCompound:
               // Simple scaling:
               //   [Sc, 0]
               //   [0, Sc]
-              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 2, &of);
+              remaining_size = IntOps::sub_overflow<size_t>(remaining_size, 2, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
@@ -1062,7 +1062,7 @@ ContinueCompound:
               // Simple scaling:
               //   [Sx, 0]
               //   [0, Sy]
-              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 4, &of);
+              remaining_size = IntOps::sub_overflow<size_t>(remaining_size, 4, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
@@ -1074,7 +1074,7 @@ ContinueCompound:
               // Affine case:
               //   [A, B]
               //   [C, D]
-              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 8, &of);
+              remaining_size = IntOps::sub_overflow<size_t>(remaining_size, 8, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
@@ -1098,10 +1098,10 @@ ContinueCompound:
             }
           }
 
-          compoundData[compoundLevel].gPtr = gPtr;
-          compoundData[compoundLevel].remainingSize = remainingSize;
-          compoundData[compoundLevel].compoundFlags = flags;
-          TransformInternal::multiply(cm, cm, compoundData[compoundLevel - 1].transform);
+          compound_data[compound_level].gPtr = gPtr;
+          compound_data[compound_level].remaining_size = remaining_size;
+          compound_data[compound_level].compound_flags = flags;
+          TransformInternal::multiply(cm, cm, compound_data[compound_level - 1].transform);
           continue;
         }
       }
@@ -1110,12 +1110,12 @@ ContinueCompound:
     break;
   }
 
-  *contourCountOut = contourCountTotal;
+  *contour_count_out = contour_count_total;
   return BL_SUCCESS;
 
 InvalidData:
-  *contourCountOut = 0;
-  return blTraceError(BL_ERROR_INVALID_DATA);
+  *contour_count_out = 0;
+  return bl_trace_error(BL_ERROR_INVALID_DATA);
 }
 
 } // {anonymous}

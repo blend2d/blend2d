@@ -55,45 +55,45 @@ struct BLFontImpl BL_CLASS_INHERITS(BLObjectImpl) {
   BLFontMatrix matrix;
 
   //! Assigned font features (key/value pairs).
-  BLFontFeatureSettingsCore featureSettings;
+  BLFontFeatureSettingsCore feature_settings;
   //! Assigned font variations (key/value pairs).
-  BLFontVariationSettingsCore variationSettings;
+  BLFontVariationSettingsCore variation_settings;
 };
 //! \endcond
 
-BL_API BLResult BL_CDECL blFontInit(BLFontCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontInitMove(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontInitWeak(BLFontCore* self, const BLFontCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontDestroy(BLFontCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontReset(BLFontCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontAssignMove(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontAssignWeak(BLFontCore* self, const BLFontCore* other) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontEquals(const BLFontCore* a, const BLFontCore* b) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontCreateFromFace(BLFontCore* self, const BLFontFaceCore* face, float size) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontCreateFromFaceWithSettings(BLFontCore* self, const BLFontFaceCore* face, float size, const BLFontFeatureSettingsCore* featureSettings, const BLFontVariationSettingsCore* variationSettings) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetFace(const BLFontCore* self, BLFontFaceCore* out) BL_NOEXCEPT_C;
-BL_API float BL_CDECL blFontGetSize(const BLFontCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontSetSize(BLFontCore* self, float size) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetMetrics(const BLFontCore* self, BLFontMetrics* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetMatrix(const BLFontCore* self, BLFontMatrix* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetDesignMetrics(const BLFontCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetFeatureSettings(const BLFontCore* self, BLFontFeatureSettingsCore* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontSetFeatureSettings(BLFontCore* self, const BLFontFeatureSettingsCore* featureSettings) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontResetFeatureSettings(BLFontCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetVariationSettings(const BLFontCore* self, BLFontVariationSettingsCore* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontSetVariationSettings(BLFontCore* self, const BLFontVariationSettingsCore* variationSettings) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontResetVariationSettings(BLFontCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontShape(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BLGlyphMappingState* stateOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* gb, const BLBitArrayCore* lookups) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* gb, const BLBitArrayCore* lookups) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLTextMetrics* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphBounds(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLBoxI* out, size_t count) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphAdvances(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLGlyphPlacement* out, size_t count) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphOutlines(const BLFontCore* self, BLGlyphId glyphId, const BLMatrix2D* userTransform, BLPathCore* out, BLPathSinkFunc sink, void* userData) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* glyphRun, const BLMatrix2D* userTransform, BLPathCore* out, BLPathSinkFunc sink, void* userData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_init(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_init_move(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_init_weak(BLFontCore* self, const BLFontCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_destroy(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_reset(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_assign_move(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_assign_weak(BLFontCore* self, const BLFontCore* other) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_font_equals(const BLFontCore* a, const BLFontCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_create_from_face(BLFontCore* self, const BLFontFaceCore* face, float size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_create_from_face_with_settings(BLFontCore* self, const BLFontFaceCore* face, float size, const BLFontFeatureSettingsCore* feature_settings, const BLFontVariationSettingsCore* variation_settings) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_get_face(const BLFontCore* self, BLFontFaceCore* out) BL_NOEXCEPT_C;
+BL_API float BL_CDECL bl_font_get_size(const BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_set_size(BLFontCore* self, float size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_get_metrics(const BLFontCore* self, BLFontMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_get_matrix(const BLFontCore* self, BLFontMatrix* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_get_design_metrics(const BLFontCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_get_feature_settings(const BLFontCore* self, BLFontFeatureSettingsCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_set_feature_settings(BLFontCore* self, const BLFontFeatureSettingsCore* feature_settings) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_reset_feature_settings(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_get_variation_settings(const BLFontCore* self, BLFontVariationSettingsCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_set_variation_settings(BLFontCore* self, const BLFontVariationSettingsCore* variation_settings) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_reset_variation_settings(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_shape(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_map_text_to_glyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BLGlyphMappingState* state_out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_position_glyphs(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_apply_kerning(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_apply_gsub(const BLFontCore* self, BLGlyphBufferCore* gb, const BLBitArrayCore* lookups) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_apply_gpos(const BLFontCore* self, BLGlyphBufferCore* gb, const BLBitArrayCore* lookups) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_get_text_metrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLTextMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_get_glyph_bounds(const BLFontCore* self, const uint32_t* glyph_data, intptr_t glyph_advance, BLBoxI* out, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_get_glyph_advances(const BLFontCore* self, const uint32_t* glyph_data, intptr_t glyph_advance, BLGlyphPlacement* out, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_get_glyph_outlines(const BLFontCore* self, BLGlyphId glyph_id, const BLMatrix2D* user_transform, BLPathCore* out, BLPathSinkFunc sink, void* user_data) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_get_glyph_run_outlines(const BLFontCore* self, const BLGlyphRun* glyph_run, const BLMatrix2D* user_transform, BLPathCore* out, BLPathSinkFunc sink, void* user_data) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
@@ -117,7 +117,7 @@ public:
 
   //! Object info values of a default constructed BLFont.
   static inline constexpr uint32_t kDefaultSignature =
-    BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_FONT) | BL_OBJECT_INFO_D_FLAG;
+    BLObjectInfo::pack_type_with_marker(BL_OBJECT_TYPE_FONT) | BL_OBJECT_INFO_D_FLAG;
 
   [[nodiscard]]
   BL_INLINE_NODEBUG BLFontImpl* _impl() const noexcept { return static_cast<BLFontImpl*>(_d.impl); }
@@ -133,7 +133,7 @@ public:
   //! A default initialized font is not a valid font that could be used for rendering. It can be considered an empty
   //! or null font, which has no family, no glyphs, no tables, it's essentially empty.
   BL_INLINE_NODEBUG BLFont() noexcept {
-    blFontInit(this);
+    bl_font_init(this);
 
     // Assume a default constructed BLFont.
     BL_ASSUME(_d.info.bits == kDefaultSignature);
@@ -142,7 +142,7 @@ public:
   //! Move constructor moves the underlying representation of the `other` font into this newly created instance and
   //! resets the `other` font to a default constructed state.
   BL_INLINE_NODEBUG BLFont(BLFont&& other) noexcept {
-    blFontInitMove(this, &other);
+    bl_font_init_move(this, &other);
 
     // Assume a default initialized `other`.
     BL_ASSUME(other._d.info.bits == kDefaultSignature);
@@ -150,13 +150,13 @@ public:
 
   //! Copy constructor makes a weak copy of the underlying representation of the `other` font.
   BL_INLINE_NODEBUG BLFont(const BLFont& other) noexcept {
-    blFontInitWeak(this, &other);
+    bl_font_init_weak(this, &other);
   }
 
   //! Destroys the font.
   BL_INLINE_NODEBUG ~BLFont() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
-      blFontDestroy(this);
+    if (BLInternal::object_needs_cleanup(_d.info.bits)) {
+      bl_font_destroy(this);
     }
   }
 
@@ -166,10 +166,10 @@ public:
   //! \{
 
   //! Returns whether the font is valid, which means that it was constructed from a valid \ref BLFontFace.
-  BL_INLINE_NODEBUG explicit operator bool() const noexcept { return isValid(); }
+  BL_INLINE_NODEBUG explicit operator bool() const noexcept { return is_valid(); }
 
-  BL_INLINE_NODEBUG BLFont& operator=(const BLFont& other) noexcept { blFontAssignWeak(this, &other); return *this; }
-  BL_INLINE_NODEBUG BLFont& operator=(BLFont&& other) noexcept { blFontAssignMove(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLFont& operator=(const BLFont& other) noexcept { bl_font_assign_weak(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLFont& operator=(BLFont&& other) noexcept { bl_font_assign_move(this, &other); return *this; }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool operator==(const BLFont& other) const noexcept { return  equals(other); }
@@ -186,7 +186,7 @@ public:
   //!
   //! \note This operation always succeeds and returns \ref BL_SUCCESS.
   BL_INLINE_NODEBUG BLResult reset() noexcept {
-    BLResult result = blFontReset(this);
+    BLResult result = bl_font_reset(this);
 
     // Reset operation always succeeds.
     BL_ASSUME(result == BL_SUCCESS);
@@ -201,23 +201,23 @@ public:
 
   //! Copy assignment creates a weak copy of the underlying representation of the `other` font and stores it in this
   //! font.
-  BL_INLINE_NODEBUG BLResult assign(const BLFont& other) noexcept { return blFontAssignWeak(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(const BLFont& other) noexcept { return bl_font_assign_weak(this, &other); }
 
   //! Move assignment moves the underlying representation of the `other` font into this font and then resets the
   //! `other` font to a default constructed state.
-  BL_INLINE_NODEBUG BLResult assign(BLFont&& other) noexcept { return blFontAssignMove(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(BLFont&& other) noexcept { return bl_font_assign_move(this, &other); }
 
   //! Tests whether the font is a valid instance.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isValid() const noexcept { return _impl()->face.dcast().isValid(); }
+  BL_INLINE_NODEBUG bool is_valid() const noexcept { return _impl()->face.dcast().is_valid(); }
 
-  //! Tests whether the font is empty, which is the same as `!isValid()`.
+  //! Tests whether the font is empty, which is the same as `!is_valid()`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool empty() const noexcept { return !isValid(); }
+  BL_INLINE_NODEBUG bool is_empty() const noexcept { return !is_valid(); }
 
   //! Tests whether this and `other` fonts are equal.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool equals(const BLFontCore& other) const noexcept { return blFontEquals(this, &other); }
+  BL_INLINE_NODEBUG bool equals(const BLFontCore& other) const noexcept { return bl_font_equals(this, &other); }
 
   //! \}
 
@@ -225,23 +225,23 @@ public:
   //! \{
 
   //! Creates a new font from the existing font `face` scaled to the given `size`.
-  BL_INLINE_NODEBUG BLResult createFromFace(const BLFontFaceCore& face, float size) noexcept {
-    return blFontCreateFromFace(this, &face, size);
+  BL_INLINE_NODEBUG BLResult create_from_face(const BLFontFaceCore& face, float size) noexcept {
+    return bl_font_create_from_face(this, &face, size);
   }
 
   //! Creates a new font from the existing font `face` scaled to the given `size`.
   //!
-  //! This is an overloaded function that takes additional argument `featureSettings.
-  BL_INLINE_NODEBUG BLResult createFromFace(const BLFontFaceCore& face, float size, const BLFontFeatureSettingsCore& featureSettings) noexcept {
-    return blFontCreateFromFaceWithSettings(this, &face, size, &featureSettings, nullptr);
+  //! This is an overloaded function that takes additional argument `feature_settings.
+  BL_INLINE_NODEBUG BLResult create_from_face(const BLFontFaceCore& face, float size, const BLFontFeatureSettingsCore& feature_settings) noexcept {
+    return bl_font_create_from_face_with_settings(this, &face, size, &feature_settings, nullptr);
   }
 
   //! Creates a new font from the existing font `face` scaled to the given `size`.
   //!
-  //! This is an overloaded function that takes additional arguments, which are used to override font `featureSettings`
-  //! and font `variationSettings`.
-  BL_INLINE_NODEBUG BLResult createFromFace(const BLFontFaceCore& face, float size, const BLFontFeatureSettingsCore& featureSettings, const BLFontVariationSettingsCore& variationSettings) noexcept {
-    return blFontCreateFromFaceWithSettings(this, &face, size, &featureSettings, &variationSettings);
+  //! This is an overloaded function that takes additional arguments, which are used to override font `feature_settings`
+  //! and font `variation_settings`.
+  BL_INLINE_NODEBUG BLResult create_from_face(const BLFontFaceCore& face, float size, const BLFontFeatureSettingsCore& feature_settings, const BLFontVariationSettingsCore& variation_settings) noexcept {
+    return bl_font_create_from_face_with_settings(this, &face, size, &feature_settings, &variation_settings);
   }
 
   //! \}
@@ -251,20 +251,20 @@ public:
 
   //! Returns the type of the font's associated font face.
   [[nodiscard]]
-  BL_INLINE_NODEBUG BLFontFaceType faceType() const noexcept { return face().faceType(); }
+  BL_INLINE_NODEBUG BLFontFaceType face_type() const noexcept { return face().face_type(); }
   //! Returns the flags of the font.
   [[nodiscard]]
-  BL_INLINE_NODEBUG BLFontFaceFlags faceFlags() const noexcept { return face().faceFlags(); }
+  BL_INLINE_NODEBUG BLFontFaceFlags face_flags() const noexcept { return face().face_flags(); }
 
   //! Returns the size of the font (as float).
   [[nodiscard]]
   BL_INLINE_NODEBUG float size() const noexcept { return _impl()->metrics.size; }
   //! Sets the font size to `size`.
-  BL_INLINE_NODEBUG BLResult setSize(float size) noexcept { return blFontSetSize(this, size); }
+  BL_INLINE_NODEBUG BLResult set_size(float size) noexcept { return bl_font_set_size(this, size); }
 
   //! Returns the font's associated font face.
   //!
-  //! Returns the same font face, which was passed to `createFromFace()`.
+  //! Returns the same font face, which was passed to `create_from_face()`.
   [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontFace& face() const noexcept { return _impl()->face.dcast(); }
 
@@ -280,7 +280,7 @@ public:
 
   //! Returns the "units per em" (UPEM) of the font's associated font face.
   [[nodiscard]]
-  BL_INLINE_NODEBUG int unitsPerEm() const noexcept { return face().unitsPerEm(); }
+  BL_INLINE_NODEBUG int units_per_em() const noexcept { return face().units_per_em(); }
 
   //! Returns a 2x2 matrix of the font.
   //!
@@ -299,23 +299,23 @@ public:
   //!
   //! The returned metrics is compatible with the metrics of \ref BLFontFace associated with this font.
   [[nodiscard]]
-  BL_INLINE_NODEBUG const BLFontDesignMetrics& designMetrics() const noexcept { return face().designMetrics(); }
+  BL_INLINE_NODEBUG const BLFontDesignMetrics& design_metrics() const noexcept { return face().design_metrics(); }
 
   //! Returns font feature settings.
   [[nodiscard]]
-  BL_INLINE_NODEBUG const BLFontFeatureSettings& featureSettings() const noexcept { return _impl()->featureSettings.dcast(); }
-  //! Sets font feature settings to `featureSettings`.
-  BL_INLINE_NODEBUG BLResult setFeatureSettings(const BLFontFeatureSettingsCore& featureSettings) noexcept { return blFontSetFeatureSettings(this, &featureSettings); }
+  BL_INLINE_NODEBUG const BLFontFeatureSettings& feature_settings() const noexcept { return _impl()->feature_settings.dcast(); }
+  //! Sets font feature settings to `feature_settings`.
+  BL_INLINE_NODEBUG BLResult set_feature_settings(const BLFontFeatureSettingsCore& feature_settings) noexcept { return bl_font_set_feature_settings(this, &feature_settings); }
   //! Resets font feature settings.
-  BL_INLINE_NODEBUG BLResult resetFeatureSettings() noexcept { return blFontResetFeatureSettings(this); }
+  BL_INLINE_NODEBUG BLResult reset_feature_settings() noexcept { return bl_font_reset_feature_settings(this); }
 
   //! Returns font variation settings.
   [[nodiscard]]
-  BL_INLINE_NODEBUG const BLFontVariationSettings& variationSettings() const noexcept { return _impl()->variationSettings.dcast(); }
-  //! Sets font variation settings to `variationSettings`.
-  BL_INLINE_NODEBUG BLResult setVariationSettings(const BLFontVariationSettingsCore& variationSettings) noexcept { return blFontSetVariationSettings(this, &variationSettings); }
+  BL_INLINE_NODEBUG const BLFontVariationSettings& variation_settings() const noexcept { return _impl()->variation_settings.dcast(); }
+  //! Sets font variation settings to `variation_settings`.
+  BL_INLINE_NODEBUG BLResult set_variation_settings(const BLFontVariationSettingsCore& variation_settings) noexcept { return bl_font_set_variation_settings(this, &variation_settings); }
   //! Resets font variation settings.
-  BL_INLINE_NODEBUG BLResult resetVariationSettings() noexcept { return blFontResetVariationSettings(this); }
+  BL_INLINE_NODEBUG BLResult reset_variation_settings() noexcept { return bl_font_reset_variation_settings(this); }
 
   //! \}
 
@@ -323,79 +323,79 @@ public:
   //! \{
 
   BL_INLINE_NODEBUG BLResult shape(BLGlyphBufferCore& gb) const noexcept {
-    return blFontShape(this, &gb);
+    return bl_font_shape(this, &gb);
   }
 
-  BL_INLINE_NODEBUG BLResult mapTextToGlyphs(BLGlyphBufferCore& gb) const noexcept {
-    return blFontMapTextToGlyphs(this, &gb, nullptr);
+  BL_INLINE_NODEBUG BLResult map_text_to_glyphs(BLGlyphBufferCore& gb) const noexcept {
+    return bl_font_map_text_to_glyphs(this, &gb, nullptr);
   }
 
-  BL_INLINE_NODEBUG BLResult mapTextToGlyphs(BLGlyphBufferCore& gb, BLGlyphMappingState& stateOut) const noexcept {
-    return blFontMapTextToGlyphs(this, &gb, &stateOut);
+  BL_INLINE_NODEBUG BLResult map_text_to_glyphs(BLGlyphBufferCore& gb, BLGlyphMappingState& state_out) const noexcept {
+    return bl_font_map_text_to_glyphs(this, &gb, &state_out);
   }
 
-  BL_INLINE_NODEBUG BLResult positionGlyphs(BLGlyphBufferCore& gb) const noexcept {
-    return blFontPositionGlyphs(this, &gb);
+  BL_INLINE_NODEBUG BLResult position_glyphs(BLGlyphBufferCore& gb) const noexcept {
+    return bl_font_position_glyphs(this, &gb);
   }
 
-  BL_INLINE_NODEBUG BLResult applyKerning(BLGlyphBufferCore& gb) const noexcept {
-    return blFontApplyKerning(this, &gb);
+  BL_INLINE_NODEBUG BLResult apply_kerning(BLGlyphBufferCore& gb) const noexcept {
+    return bl_font_apply_kerning(this, &gb);
   }
 
-  BL_INLINE_NODEBUG BLResult applyGSub(BLGlyphBufferCore& gb, const BLBitArrayCore& lookups) const noexcept {
-    return blFontApplyGSub(this, &gb, &lookups);
+  BL_INLINE_NODEBUG BLResult apply_gsub(BLGlyphBufferCore& gb, const BLBitArrayCore& lookups) const noexcept {
+    return bl_font_apply_gsub(this, &gb, &lookups);
   }
 
-  BL_INLINE_NODEBUG BLResult applyGPos(BLGlyphBufferCore& gb, const BLBitArrayCore& lookups) const noexcept {
-    return blFontApplyGPos(this, &gb, &lookups);
+  BL_INLINE_NODEBUG BLResult apply_gpos(BLGlyphBufferCore& gb, const BLBitArrayCore& lookups) const noexcept {
+    return bl_font_apply_gpos(this, &gb, &lookups);
   }
 
-  BL_INLINE_NODEBUG BLResult getTextMetrics(BLGlyphBufferCore& gb, BLTextMetrics& out) const noexcept {
-    return blFontGetTextMetrics(this, &gb, &out);
+  BL_INLINE_NODEBUG BLResult get_text_metrics(BLGlyphBufferCore& gb, BLTextMetrics& out) const noexcept {
+    return bl_font_get_text_metrics(this, &gb, &out);
   }
 
-  BL_INLINE_NODEBUG BLResult getGlyphBounds(const uint32_t* glyphData, intptr_t glyphAdvance, BLBoxI* out, size_t count) const noexcept {
-    return blFontGetGlyphBounds(this, glyphData, glyphAdvance, out, count);
+  BL_INLINE_NODEBUG BLResult get_glyph_bounds(const uint32_t* glyph_data, intptr_t glyph_advance, BLBoxI* out, size_t count) const noexcept {
+    return bl_font_get_glyph_bounds(this, glyph_data, glyph_advance, out, count);
   }
 
-  BL_INLINE_NODEBUG BLResult getGlyphAdvances(const uint32_t* glyphData, intptr_t glyphAdvance, BLGlyphPlacement* out, size_t count) const noexcept {
-    return blFontGetGlyphAdvances(this, glyphData, glyphAdvance, out, count);
+  BL_INLINE_NODEBUG BLResult get_glyph_advances(const uint32_t* glyph_data, intptr_t glyph_advance, BLGlyphPlacement* out, size_t count) const noexcept {
+    return bl_font_get_glyph_advances(this, glyph_data, glyph_advance, out, count);
   }
 
   //! Retrieves outlines of a single glyph into the `out` path.
   //!
-  //! Optionally, a user can provide a `sink` function with `userData`, which will be called periodically by the
+  //! Optionally, a user can provide a `sink` function with `user_data`, which will be called periodically by the
   //! glyph outline decoder. The `sink` can be used to immediately process the outline to prevent accumulating a
   //! large path in `out`.
-  BL_INLINE_NODEBUG BLResult getGlyphOutlines(BLGlyphId glyphId, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
-    return blFontGetGlyphOutlines(this, glyphId, nullptr, &out, sink, userData);
+  BL_INLINE_NODEBUG BLResult get_glyph_outlines(BLGlyphId glyph_id, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* user_data = nullptr) const noexcept {
+    return bl_font_get_glyph_outlines(this, glyph_id, nullptr, &out, sink, user_data);
   }
 
-  //! Retrieves outlines of a single glyph into the `out` path transformed by `userTransform`.
+  //! Retrieves outlines of a single glyph into the `out` path transformed by `user_transform`.
   //!
-  //! Optionally, a user can provide a `sink` function with `userData`, which will be called periodically by the
+  //! Optionally, a user can provide a `sink` function with `user_data`, which will be called periodically by the
   //! glyph outline decoder. The `sink` can be used to immediately process the outline to prevent accumulating a
   //! large path in `out`.
-  BL_INLINE_NODEBUG BLResult getGlyphOutlines(BLGlyphId glyphId, const BLMatrix2D& userTransform, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
-    return blFontGetGlyphOutlines(this, glyphId, &userTransform, &out, sink, userData);
+  BL_INLINE_NODEBUG BLResult get_glyph_outlines(BLGlyphId glyph_id, const BLMatrix2D& user_transform, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* user_data = nullptr) const noexcept {
+    return bl_font_get_glyph_outlines(this, glyph_id, &user_transform, &out, sink, user_data);
   }
 
   //! Retrieves outlines of a glyph run into the `out` path.
   //!
-  //! Optionally, a user can provide a `sink` function with `userData`, which will be called periodically by the
+  //! Optionally, a user can provide a `sink` function with `user_data`, which will be called periodically by the
   //! glyph outline decoder. The `sink` can be used to immediately process the outline to prevent accumulating a
   //! large path in `out`.
-  BL_INLINE_NODEBUG BLResult getGlyphRunOutlines(const BLGlyphRun& glyphRun, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
-    return blFontGetGlyphRunOutlines(this, &glyphRun, nullptr, &out, sink, userData);
+  BL_INLINE_NODEBUG BLResult get_glyph_run_outlines(const BLGlyphRun& glyph_run, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* user_data = nullptr) const noexcept {
+    return bl_font_get_glyph_run_outlines(this, &glyph_run, nullptr, &out, sink, user_data);
   }
 
-  //! Retrieves outlines of a glyph run into the `out` path transformed by `userTransform`.
+  //! Retrieves outlines of a glyph run into the `out` path transformed by `user_transform`.
   //!
-  //! Optionally, a user can provide a `sink` function with `userData`, which will be called periodically by the
+  //! Optionally, a user can provide a `sink` function with `user_data`, which will be called periodically by the
   //! glyph outline decoder. The `sink` can be used to immediately process the outline to prevent accumulating a
   //! large path in `out`.
-  BL_INLINE_NODEBUG BLResult getGlyphRunOutlines(const BLGlyphRun& glyphRun, const BLMatrix2D& userTransform, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
-    return blFontGetGlyphRunOutlines(this, &glyphRun, &userTransform, &out, sink, userData);
+  BL_INLINE_NODEBUG BLResult get_glyph_run_outlines(const BLGlyphRun& glyph_run, const BLMatrix2D& user_transform, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* user_data = nullptr) const noexcept {
+    return bl_font_get_glyph_run_outlines(this, &glyph_run, &user_transform, &out, sink, user_data);
   }
 
   //! \}

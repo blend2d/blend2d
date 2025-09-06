@@ -14,19 +14,19 @@ namespace bl {
 namespace PixelOps {
 namespace Interpolation {
 
-void BL_CDECL interpolate_prgb32_avx2(uint32_t* dPtr, uint32_t dSize, const BLGradientStop* sPtr, size_t sSize) noexcept {
+void BL_CDECL interpolate_prgb32_avx2(uint32_t* d_ptr, uint32_t d_size, const BLGradientStop* s_ptr, size_t s_size) noexcept {
   using namespace SIMD;
 
-  BL_ASSERT(dPtr != nullptr);
-  BL_ASSERT(dSize > 0);
+  BL_ASSERT(d_ptr != nullptr);
+  BL_ASSERT(d_size > 0);
 
-  BL_ASSERT(sPtr != nullptr);
-  BL_ASSERT(sSize > 0);
+  BL_ASSERT(s_ptr != nullptr);
+  BL_ASSERT(s_size > 0);
 
-  uint32_t* dSpanPtr = dPtr;
-  uint32_t i = dSize;
+  uint32_t* dSpanPtr = d_ptr;
+  uint32_t i = d_size;
 
-  Vec8xU16 c0 = loada_64<Vec8xU16>(&sPtr[0].rgba);
+  Vec8xU16 c0 = loada_64<Vec8xU16>(&s_ptr[0].rgba);
   Vec8xU16 c1;
 
   Vec4xI32 half = make128_i32(1 << (23 - 1));
@@ -35,33 +35,33 @@ void BL_CDECL interpolate_prgb32_avx2(uint32_t* dPtr, uint32_t dSize, const BLGr
   uint32_t u0 = 0;
   uint32_t u1;
 
-  size_t sIndex = size_t(sPtr[0].offset == 0.0 && sSize > 1);
-  double fWidth = double(int32_t(--dSize) << 8);
+  size_t s_index = size_t(s_ptr[0].offset == 0.0 && s_size > 1);
+  double fWidth = double(int32_t(--d_size) << 8);
 
   do {
-    c1 = loada_64<Vec8xU16>(&sPtr[sIndex].rgba);
-    u1 = uint32_t(Math::roundToInt(sPtr[sIndex].offset * fWidth));
+    c1 = loada_64<Vec8xU16>(&s_ptr[s_index].rgba);
+    u1 = uint32_t(Math::round_to_int(s_ptr[s_index].offset * fWidth));
 
-    dSpanPtr = dPtr + (u0 >> 8);
+    dSpanPtr = d_ptr + (u0 >> 8);
     i = ((u1 >> 8) - (u0 >> 8));
     u0 = u1;
 
     if (i <= 1) {
-      Vec8xU16 cPix = interleave_lo_u64(c0, c1);
+      Vec8xU16 c_pix = interleave_lo_u64(c0, c1);
       c0 = c1;
-      cPix = srli_u16<8>(cPix);
+      c_pix = srli_u16<8>(c_pix);
 
-      Vec8xU16 cA = swizzle_u16<3, 3, 3, 3>(cPix);
-      cPix = div255_u16(cPix | vec_cast<Vec8xU16>(argb64_a255) * cA);
-      cPix = packs_128_i16_u8(cPix);
-      storea_32(dSpanPtr, cPix);
+      Vec8xU16 cA = swizzle_u16<3, 3, 3, 3>(c_pix);
+      c_pix = div255_u16(c_pix | vec_cast<Vec8xU16>(argb64_a255) * cA);
+      c_pix = packs_128_i16_u8(c_pix);
+      storea_32(dSpanPtr, c_pix);
       dSpanPtr++;
 
       if (i == 0)
         continue;
 
-      cPix = swizzle_u32<1, 1, 1, 1>(cPix);
-      storea_32(dSpanPtr, cPix);
+      c_pix = swizzle_u32<1, 1, 1, 1>(c_pix);
+      storea_32(dSpanPtr, c_pix);
       dSpanPtr++;
     }
     else {
@@ -127,7 +127,7 @@ void BL_CDECL interpolate_prgb32_avx2(uint32_t* dPtr, uint32_t dSize, const BLGr
         p76543210 = vec_u8(packs_128_i16_u8(p5410, p7632));
 
         if (n <= 8u) {
-          Vec8xI32 msk = loada_64_i8_i32<Vec8xI32>(commonTable.loadstore16_lo8_msk8() + n);
+          Vec8xI32 msk = loada_64_i8_i32<Vec8xI32>(common_table.loadstore16_lo8_msk8() + n);
           storeu_256_mask32(dSpanPtr, p76543210, msk);
           dSpanPtr += n;
           break;
@@ -141,14 +141,14 @@ void BL_CDECL interpolate_prgb32_avx2(uint32_t* dPtr, uint32_t dSize, const BLGr
 
       c0 = c1;
     }
-  } while (++sIndex < sSize);
+  } while (++s_index < s_size);
 
   // The last stop doesn't have to end at 1.0, in such case the remaining space
   // is filled by the last color stop (premultiplied).
   {
-    i = uint32_t((size_t)((dPtr + dSize + 1) - dSpanPtr));
+    i = uint32_t((size_t)((d_ptr + d_size + 1) - dSpanPtr));
 
-    c0 = loadh_64(c0, &sPtr[0].rgba);
+    c0 = loadh_64(c0, &s_ptr[0].rgba);
     c0 = srli_u16<8>(c0);
 
     c0 = div255_u16((c0 | vec_128(argb64_a255)) * swizzle_u16<3, 3, 3, 3>(c0));
@@ -168,7 +168,7 @@ void BL_CDECL interpolate_prgb32_avx2(uint32_t* dPtr, uint32_t dSize, const BLGr
   // previous offset index - for example if multiple stops have the same offset
   // [0.0] the first pixel will be the last stop's color. This is easier to fix
   // here as we don't need extra conditions in the main loop.
-  storea_32(dPtr, swizzle_u32<1, 1, 1, 1>(c1));
+  storea_32(d_ptr, swizzle_u32<1, 1, 1, 1>(c1));
 }
 
 } // {Interpolation}

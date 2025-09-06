@@ -29,17 +29,17 @@ public:
   };
 
   struct Data {
-    int dstSize[2];
-    int srcSize[2];
-    int kernelSize[2];
-    int isUnbound[2];
+    int dst_size[2];
+    int src_size[2];
+    int kernel_size[2];
+    int is_unbound[2];
 
     double scale[2];
     double factor[2];
     double radius[2];
 
-    int32_t* weightList[2];
-    Record* recordList[2];
+    int32_t* weight_list[2];
+    Record* record_list[2];
   };
 
   Data* data;
@@ -49,19 +49,19 @@ public:
 
   BL_INLINE ~ImageScaleContext() noexcept { reset(); }
 
-  BL_INLINE bool isInitialized() const noexcept { return data != nullptr; }
+  BL_INLINE bool is_initialized() const noexcept { return data != nullptr; }
 
-  BL_INLINE int dstWidth() const noexcept { return data->dstSize[kDirHorz]; }
-  BL_INLINE int dstHeight() const noexcept { return data->dstSize[kDirVert]; }
+  BL_INLINE int dst_width() const noexcept { return data->dst_size[kDirHorz]; }
+  BL_INLINE int dst_height() const noexcept { return data->dst_size[kDirVert]; }
 
-  BL_INLINE int srcWidth() const noexcept { return data->srcSize[kDirHorz]; }
-  BL_INLINE int srcHeight() const noexcept { return data->srcSize[kDirVert]; }
+  BL_INLINE int src_width() const noexcept { return data->src_size[kDirHorz]; }
+  BL_INLINE int src_height() const noexcept { return data->src_size[kDirVert]; }
 
   BL_HIDDEN BLResult reset() noexcept;
   BL_HIDDEN BLResult create(const BLSizeI& to, const BLSizeI& from, uint32_t filter) noexcept;
 
-  BL_HIDDEN BLResult processHorzData(uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t format) const noexcept;
-  BL_HIDDEN BLResult processVertData(uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t format) const noexcept;
+  BL_HIDDEN BLResult process_horz_data(uint8_t* dst_line, intptr_t dst_stride, const uint8_t* src_line, intptr_t src_stride, uint32_t format) const noexcept;
+  BL_HIDDEN BLResult process_vert_data(uint8_t* dst_line, intptr_t dst_stride, const uint8_t* src_line, intptr_t src_stride, uint32_t format) const noexcept;
 };
 
 } // {bl}

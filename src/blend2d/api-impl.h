@@ -24,25 +24,25 @@
 
 //! Atomically increments `n` to value `x` (relaxed semantics). The old value is returned.
 template<typename T>
-static BL_INLINE T blAtomicFetchAddRelaxed(T* x, T n = T(1)) noexcept {
+static BL_INLINE T bl_atomic_fetch_add_relaxed(T* x, T n = T(1)) noexcept {
   return ((std::atomic<T>*)x)->fetch_add(n, std::memory_order_relaxed);
 }
 
 //! Atomically increments `n` to value `x` (strong semantics). The old value is returned.
 template<typename T>
-static BL_INLINE T blAtomicFetchAddStrong(T* x, T n = T(1)) noexcept {
+static BL_INLINE T bl_atomic_fetch_add_strong(T* x, T n = T(1)) noexcept {
   return ((std::atomic<T>*)x)->fetch_add(n, std::memory_order_acq_rel);
 }
 
 //! Atomically decrements `n` from value `x` (relaxed semantics). The old value is returned.
 template<typename T>
-static BL_INLINE T blAtomicFetchSubRelaxed(T* x, T n = T(1)) noexcept {
+static BL_INLINE T bl_atomic_fetch_sub_relaxed(T* x, T n = T(1)) noexcept {
   return ((std::atomic<T>*)x)->fetch_sub(n, std::memory_order_relaxed);
 }
 
 //! Atomically decrements `n` from value `x` (strong semantics). The old value is returned.
 template<typename T>
-static BL_INLINE T blAtomicFetchSubStrong(T* x, T n = T(1)) noexcept {
+static BL_INLINE T bl_atomic_fetch_sub_strong(T* x, T n = T(1)) noexcept {
   return ((std::atomic<T>*)x)->fetch_sub(n, std::memory_order_acq_rel);
 }
 

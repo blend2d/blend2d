@@ -241,30 +241,30 @@ template<> struct Vec<64, uint64_t>;
 template<> struct Vec<64, float>;
 template<> struct Vec<64, double>;
 
-#define BL_DECLARE_SIMD_TYPE(typeName, width, simdType, elementType)                 \
+#define BL_DECLARE_SIMD_TYPE(type_name, width, simd_type, element_type)                 \
 template<>                                                                           \
-struct Vec<width, elementType> {                                                     \
+struct Vec<width, element_type> {                                                     \
   static inline constexpr uint32_t kW = width;                                       \
   static inline constexpr uint32_t kHalfVectorWidth = width > 16 ? width / 2u : 16;  \
                                                                                      \
-  static inline constexpr uint32_t kElementWidth = uint32_t(sizeof(elementType));    \
+  static inline constexpr uint32_t kElementWidth = uint32_t(sizeof(element_type));    \
   static inline constexpr uint32_t kElementCount = width / kElementWidth;            \
                                                                                      \
-  typedef Vec<width, elementType> VectorType;                                        \
-  typedef Vec<kHalfVectorWidth, elementType> VectorHalfType;                         \
-  typedef Vec<16, elementType> Vector128Type;                                        \
-  typedef Vec<32, elementType> Vector256Type;                                        \
-  typedef Vec<64, elementType> Vector512Type;                                        \
+  typedef Vec<width, element_type> VectorType;                                        \
+  typedef Vec<kHalfVectorWidth, element_type> VectorHalfType;                         \
+  typedef Vec<16, element_type> Vector128Type;                                        \
+  typedef Vec<32, element_type> Vector256Type;                                        \
+  typedef Vec<64, element_type> Vector512Type;                                        \
                                                                                      \
-  typedef simdType SimdType;                                                         \
+  typedef simd_type SimdType;                                                         \
   typedef typename VectorHalfType::SimdType HalfSimdType;                            \
                                                                                      \
-  typedef elementType ElementType;                                                   \
+  typedef element_type ElementType;                                                   \
                                                                                      \
   SimdType v;                                                                        \
 };                                                                                   \
                                                                                      \
-typedef Vec<width, elementType> typeName
+typedef Vec<width, element_type> type_name
 
 typedef BL_UNALIGNED_TYPE(__m128i, 1) unaligned_m128i;
 typedef BL_UNALIGNED_TYPE(__m128 , 1) unaligned_m128;
@@ -1516,7 +1516,7 @@ template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u32<16>(const __m128i& a) no
 template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u64<16>(const __m128i& a) noexcept { return _mm_broadcastq_epi64(a); }
 #elif defined(BL_TARGET_OPT_SSSE3)
 template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u8<16>(const __m128i& a) noexcept { return _mm_shuffle_epi8(a, _mm_setzero_si128()); }
-template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u16<16>(const __m128i& a) noexcept { return _mm_shuffle_epi8(a, bl::commonTable.i_0100010001000100.as<__m128i>()); }
+template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u16<16>(const __m128i& a) noexcept { return _mm_shuffle_epi8(a, bl::common_table.i_0100010001000100.as<__m128i>()); }
 template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u32<16>(const __m128i& a) noexcept { return _mm_shuffle_epi32(a, _MM_SHUFFLE(0, 0, 0, 0)); }
 template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u64<16>(const __m128i& a) noexcept { return _mm_shuffle_epi32(a, _MM_SHUFFLE(1, 0, 1, 0)); }
 #else
@@ -1769,13 +1769,13 @@ BL_INLINE_NODEBUG __m128i simd_packs_128_i32_u16(const __m128i& a) noexcept { re
 BL_INLINE_NODEBUG __m128i simd_packs_128_i32_u16(const __m128i& a, const __m128i& b) noexcept { return _mm_packus_epi32(a, b); }
 #else
 BL_INLINE_NODEBUG __m128i simd_packs_128_i32_u16(const __m128i& a) noexcept {
-  __m128i aShifted = _mm_srai_epi32(_mm_slli_epi32(a, 16), 16);
-  return _mm_packs_epi32(aShifted, aShifted);
+  __m128i a_shifted = _mm_srai_epi32(_mm_slli_epi32(a, 16), 16);
+  return _mm_packs_epi32(a_shifted, a_shifted);
 }
 BL_INLINE_NODEBUG __m128i simd_packs_128_i32_u16(const __m128i& a, const __m128i& b) noexcept {
-  __m128i aShifted = _mm_srai_epi32(_mm_slli_epi32(a, 16), 16);
-  __m128i bShifted = _mm_srai_epi32(_mm_slli_epi32(b, 16), 16);
-  return _mm_packs_epi32(aShifted, bShifted);
+  __m128i a_shifted = _mm_srai_epi32(_mm_slli_epi32(a, 16), 16);
+  __m128i b_shifted = _mm_srai_epi32(_mm_slli_epi32(b, 16), 16);
+  return _mm_packs_epi32(a_shifted, b_shifted);
 }
 #endif
 
@@ -1798,18 +1798,18 @@ BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a) noexcept { re
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a, const __m128i& b) noexcept { return simd_packs_128_i32_u16(a, b); }
 #else
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a) noexcept {
-  return simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.swizu8_xx76xx54xx32xx10_to_7654321076543210));
+  return simd_swizzlev_u8(a, vec_const<__m128i>(&bl::common_table.swizu8_xx76xx54xx32xx10_to_7654321076543210));
 }
 
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a, const __m128i& b) noexcept {
-  __m128i aLo = simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.swizu8_xx76xx54xx32xx10_to_7654321076543210));
-  __m128i bLo = simd_swizzlev_u8(b, vec_const<__m128i>(&bl::commonTable.swizu8_xx76xx54xx32xx10_to_7654321076543210));
-  return _mm_unpacklo_epi64(aLo, bLo);
+  __m128i a_lo = simd_swizzlev_u8(a, vec_const<__m128i>(&bl::common_table.swizu8_xx76xx54xx32xx10_to_7654321076543210));
+  __m128i b_lo = simd_swizzlev_u8(b, vec_const<__m128i>(&bl::common_table.swizu8_xx76xx54xx32xx10_to_7654321076543210));
+  return _mm_unpacklo_epi64(a_lo, b_lo);
 }
 #endif
 
 #if defined(BL_TARGET_OPT_SSSE3)
-BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u8(const __m128i& a) noexcept { return simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.swizu8_xxx3xxx2xxx1xxx0_to_3210321032103210)); }
+BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u8(const __m128i& a) noexcept { return simd_swizzlev_u8(a, vec_const<__m128i>(&bl::common_table.swizu8_xxx3xxx2xxx1xxx0_to_3210321032103210)); }
 #else
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u8(const __m128i& a) noexcept { return simd_packs_128_i16_u8(_mm_packs_epi32(a, a)); }
 #endif
@@ -2232,8 +2232,8 @@ BL_INLINE_NODEBUG __m128d simd_min_f64(const __m128d& a, const __m128d& b) noexc
 BL_INLINE_NODEBUG __m128 simd_max_f32(const __m128& a, const __m128& b) noexcept { return _mm_max_ps(a, b); }
 BL_INLINE_NODEBUG __m128d simd_max_f64(const __m128d& a, const __m128d& b) noexcept { return _mm_max_pd(a, b); }
 
-BL_INLINE_NODEBUG __m128 simd_abs_f32(const __m128& a) noexcept { return _mm_and_ps(a, bl::commonTable.f32_abs.as<__m128>()); }
-BL_INLINE_NODEBUG __m128d simd_abs_f64(const __m128d& a) noexcept { return _mm_and_pd(a, bl::commonTable.f64_abs.as<__m128d>()); }
+BL_INLINE_NODEBUG __m128 simd_abs_f32(const __m128& a) noexcept { return _mm_and_ps(a, bl::common_table.f32_abs.as<__m128>()); }
+BL_INLINE_NODEBUG __m128d simd_abs_f64(const __m128d& a) noexcept { return _mm_and_pd(a, bl::common_table.f64_abs.as<__m128d>()); }
 
 BL_INLINE_NODEBUG __m128 simd_sqrt_f32(const __m128& a) noexcept { return _mm_sqrt_ps(a); }
 BL_INLINE_NODEBUG __m128d simd_sqrt_f64(const __m128d& a) noexcept { return _mm_sqrt_pd(a); }
@@ -2685,8 +2685,8 @@ BL_INLINE_NODEBUG __m256d simd_min_f64(const __m256d& a, const __m256d& b) noexc
 BL_INLINE_NODEBUG __m256 simd_max_f32(const __m256& a, const __m256& b) noexcept { return _mm256_max_ps(a, b); }
 BL_INLINE_NODEBUG __m256d simd_max_f64(const __m256d& a, const __m256d& b) noexcept { return _mm256_max_pd(a, b); }
 
-BL_INLINE_NODEBUG __m256 simd_abs_f32(const __m256& a) noexcept { return _mm256_and_ps(a, bl::commonTable.f32_abs.as<__m256>()); }
-BL_INLINE_NODEBUG __m256d simd_abs_f64(const __m256d& a) noexcept { return _mm256_and_pd(a, bl::commonTable.f64_abs.as<__m256d>()); }
+BL_INLINE_NODEBUG __m256 simd_abs_f32(const __m256& a) noexcept { return _mm256_and_ps(a, bl::common_table.f32_abs.as<__m256>()); }
+BL_INLINE_NODEBUG __m256d simd_abs_f64(const __m256d& a) noexcept { return _mm256_and_pd(a, bl::common_table.f64_abs.as<__m256d>()); }
 
 BL_INLINE_NODEBUG __m256 simd_sqrt_f32(const __m256& a) noexcept { return _mm256_sqrt_ps(a); }
 BL_INLINE_NODEBUG __m256d simd_sqrt_f64(const __m256d& a) noexcept { return _mm256_sqrt_pd(a); }
@@ -3005,8 +3005,8 @@ BL_INLINE_NODEBUG __m512d simd_cmp_gt_f64(const __m512d& a, const __m512d& b) no
 BL_INLINE_NODEBUG __m512 simd_cmp_ge_f32(const __m512& a, const __m512& b) noexcept { return simd_512f_from_mask32(_mm512_cmp_ps_mask(a, b, _CMP_GE_OQ)); }
 BL_INLINE_NODEBUG __m512d simd_cmp_ge_f64(const __m512d& a, const __m512d& b) noexcept { return simd_512d_from_mask64(_mm512_cmp_pd_mask(a, b, _CMP_GE_OQ)); }
 
-BL_INLINE_NODEBUG __m512 simd_abs_f32(const __m512& a) noexcept { return _mm512_and_ps(a, _mm512_broadcastss_ps(_mm_load_ss(&bl::commonTable.f32_abs.as<float>()))); }
-BL_INLINE_NODEBUG __m512d simd_abs_f64(const __m512d& a) noexcept { return _mm512_and_pd(a, _mm512_broadcastsd_pd(_mm_load_sd(&bl::commonTable.f64_abs.as<double>()))); }
+BL_INLINE_NODEBUG __m512 simd_abs_f32(const __m512& a) noexcept { return _mm512_and_ps(a, _mm512_broadcastss_ps(_mm_load_ss(&bl::common_table.f32_abs.as<float>()))); }
+BL_INLINE_NODEBUG __m512d simd_abs_f64(const __m512d& a) noexcept { return _mm512_and_pd(a, _mm512_broadcastsd_pd(_mm_load_sd(&bl::common_table.f64_abs.as<double>()))); }
 
 BL_INLINE_NODEBUG __m512 simd_sqrt_f32(const __m512& a) noexcept { return _mm512_sqrt_ps(a); }
 BL_INLINE_NODEBUG __m512d simd_sqrt_f64(const __m512d& a) noexcept { return _mm512_sqrt_pd(a); }

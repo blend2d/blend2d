@@ -48,22 +48,22 @@ public:
   //! \name Internal
   //! \{
 
-  static BL_INLINE uint32_t _wordsPerBits(uint32_t bitCount) noexcept {
-    return ((bitCount + kTSizeInBits - 1) / kTSizeInBits);
+  static BL_INLINE uint32_t _words_per_bits(uint32_t bit_count) noexcept {
+    return ((bit_count + kTSizeInBits - 1) / kTSizeInBits);
   }
 
-  static BL_INLINE void _zeroBits(T* dst, uint32_t wordCount) noexcept {
-    for (uint32_t i = 0; i < wordCount; i++)
+  static BL_INLINE void _zero_bits(T* dst, uint32_t word_count) noexcept {
+    for (uint32_t i = 0; i < word_count; i++)
       dst[i] = 0;
   }
 
-  static BL_INLINE void _fillBits(T* dst, uint32_t wordCount) noexcept {
-    for (uint32_t i = 0; i < wordCount; i++)
+  static BL_INLINE void _fill_bits(T* dst, uint32_t word_count) noexcept {
+    for (uint32_t i = 0; i < word_count; i++)
       dst[i] = ~T(0);
   }
 
-  static BL_INLINE void _copyBits(T* dst, const T* src, uint32_t wordCount) noexcept {
-    for (uint32_t i = 0; i < wordCount; i++)
+  static BL_INLINE void _copy_bits(T* dst, const T* src, uint32_t word_count) noexcept {
+    for (uint32_t i = 0; i < word_count; i++)
       dst[i] = src[i];
   }
 
@@ -94,16 +94,16 @@ public:
   //! \{
 
   //! Tests whether the bit array is empty (has no bits).
-  BL_INLINE bool empty() const noexcept { return _size == 0; }
+  BL_INLINE bool is_empty() const noexcept { return _size == 0; }
   //! Returns the size of this bit array (in bits).
   BL_INLINE uint32_t size() const noexcept { return _size; }
   //! Returns the capacity of this bit array (in bits).
   BL_INLINE uint32_t capacity() const noexcept { return _capacity; }
 
   //! Returns the size of the `T[]` array in `T` units.
-  BL_INLINE uint32_t sizeInWords() const noexcept { return _wordsPerBits(_size); }
+  BL_INLINE uint32_t size_in_words() const noexcept { return _words_per_bits(_size); }
   //! Returns the capacity of the `T[]` array in `T` units.
-  BL_INLINE uint32_t capacityInWords() const noexcept { return _wordsPerBits(_capacity); }
+  BL_INLINE uint32_t capacity_in_words() const noexcept { return _words_per_bits(_capacity); }
 
   //! REturns bit array data as `T[]`.
   BL_INLINE T* data() noexcept { return _data; }
@@ -131,47 +131,47 @@ public:
     _capacity = 0;
   }
 
-  BL_INLINE void truncate(uint32_t newSize) noexcept {
-    _size = blMin(_size, newSize);
-    _clearUnusedBits();
+  BL_INLINE void truncate(uint32_t new_size) noexcept {
+    _size = bl_min(_size, new_size);
+    _clear_unused_bits();
   }
 
-  BL_INLINE bool bitAt(uint32_t index) const noexcept {
+  BL_INLINE bool bit_at(uint32_t index) const noexcept {
     BL_ASSERT(index < _size);
-    return Ops::bitArrayTestBit(_data, index);
+    return Ops::bit_array_test_bit(_data, index);
   }
 
-  BL_INLINE void setBit(uint32_t index) noexcept {
+  BL_INLINE void set_bit(uint32_t index) noexcept {
     BL_ASSERT(index < _size);
-    Ops::bitArraySetBit(_data, index);
+    Ops::bit_array_set_bit(_data, index);
   }
 
-  BL_INLINE void fillBits(uint32_t start, uint32_t count) noexcept {
+  BL_INLINE void fill_bits(uint32_t start, uint32_t count) noexcept {
     BL_ASSERT(start <= _size);
     BL_ASSERT(_size - start >= count);
 
-    Ops::bitArrayFill(_data, start, count);
+    Ops::bit_array_fill(_data, start, count);
   }
 
-  BL_INLINE void fillAll() noexcept {
-    _fillBits(_data, _wordsPerBits(_size));
-    _clearUnusedBits();
+  BL_INLINE void fill_all() noexcept {
+    _fill_bits(_data, _words_per_bits(_size));
+    _clear_unused_bits();
   }
 
-  BL_INLINE void clearBit(uint32_t index) noexcept {
+  BL_INLINE void clear_bit(uint32_t index) noexcept {
     BL_ASSERT(index < _size);
-    Ops::bitArrayClearBit(_data, index);
+    Ops::bit_array_clear_bit(_data, index);
   }
 
-  BL_INLINE void clearBits(uint32_t start, uint32_t count) noexcept {
+  BL_INLINE void clear_bits(uint32_t start, uint32_t count) noexcept {
     BL_ASSERT(start <= _size);
     BL_ASSERT(_size - start >= count);
 
-    Ops::bitArrayClear(_data, start, count);
+    Ops::bit_array_clear(_data, start, count);
   }
 
-  BL_INLINE void clearAll() noexcept {
-    _zeroBits(_data, _wordsPerBits(_size));
+  BL_INLINE void clear_all() noexcept {
+    _zero_bits(_data, _words_per_bits(_size));
   }
 
   //! Performs a logical bitwise AND between bits specified in this array and bits in `other`. If `other` has less
@@ -182,17 +182,17 @@ public:
     T* dst = _data;
     const T* src = other._data;
 
-    uint32_t thisBitWordCount = sizeInWords();
-    uint32_t otherBitWordCount = other.sizeInWords();
-    uint32_t commonBitWordCount = blMin(thisBitWordCount, otherBitWordCount);
+    uint32_t this_bit_word_count = size_in_words();
+    uint32_t other_bit_word_count = other.size_in_words();
+    uint32_t common_bit_word_count = bl_min(this_bit_word_count, other_bit_word_count);
 
     uint32_t i = 0;
-    while (i < commonBitWordCount) {
+    while (i < common_bit_word_count) {
       dst[i] = dst[i] & src[i];
       i++;
     }
 
-    while (i < thisBitWordCount) {
+    while (i < this_bit_word_count) {
       dst[i] = 0;
       i++;
     }
@@ -202,12 +202,12 @@ public:
   //! has less bits than `this` then all remaining bits are kept intact.
   //!
   //! \note The size of the BitVector is unaffected by this operation.
-  BL_INLINE void andNot(const ArenaBitArray& other) noexcept {
+  BL_INLINE void and_not(const ArenaBitArray& other) noexcept {
     T* dst = _data;
     const T* src = other._data;
 
-    uint32_t commonBitWordCount = _wordsPerBits(blMin(_size, other._size));
-    for (uint32_t i = 0; i < commonBitWordCount; i++)
+    uint32_t common_bit_word_count = _words_per_bits(bl_min(_size, other._size));
+    for (uint32_t i = 0; i < common_bit_word_count; i++)
       dst[i] = dst[i] & ~src[i];
   }
 
@@ -219,31 +219,31 @@ public:
     T* dst = _data;
     const T* src = other._data;
 
-    uint32_t commonBitWordCount = _wordsPerBits(blMin(_size, other._size));
-    for (uint32_t i = 0; i < commonBitWordCount; i++)
+    uint32_t common_bit_word_count = _words_per_bits(bl_min(_size, other._size));
+    for (uint32_t i = 0; i < common_bit_word_count; i++)
       dst[i] = dst[i] | src[i];
-    _clearUnusedBits();
+    _clear_unused_bits();
   }
 
-  BL_INLINE void _clearUnusedBits() noexcept {
+  BL_INLINE void _clear_unused_bits() noexcept {
     uint32_t idx = _size / kTSizeInBits;
     uint32_t bit = _size % kTSizeInBits;
 
     if (!bit)
       return;
-    _data[idx] &= Ops::nonZeroStartMask(bit);
+    _data[idx] &= Ops::non_zero_start_mask(bit);
   }
 
   BL_INLINE bool eq(const ArenaBitArray& other) const noexcept {
     if (_size != other._size)
       return false;
 
-    const T* aData = _data;
-    const T* bData = other._data;
-    uint32_t count = sizeInWords();
+    const T* a_data = _data;
+    const T* b_data = other._data;
+    uint32_t count = size_in_words();
 
     for (uint32_t i = 0; i < count; i++)
-      if (aData[i] != bData[i])
+      if (a_data[i] != b_data[i])
         return false;
 
     return true;
@@ -262,66 +262,66 @@ public:
     reset();
   }
 
-  BL_INLINE BLResult resize(ArenaAllocator* allocator, uint32_t newSize, bool newBitsValue = false) noexcept {
-    return _resize(allocator, newSize, newSize, newBitsValue);
+  BL_INLINE BLResult resize(ArenaAllocator* allocator, uint32_t new_size, bool new_bits_value = false) noexcept {
+    return _resize(allocator, new_size, new_size, new_bits_value);
   }
 
-  BL_NOINLINE BLResult _resize(ArenaAllocator* allocator, uint32_t newSize, uint32_t capacityHint, bool newBitsValue) noexcept {
-    BL_ASSERT(capacityHint >= newSize);
+  BL_NOINLINE BLResult _resize(ArenaAllocator* allocator, uint32_t new_size, uint32_t capacity_hint, bool new_bits_value) noexcept {
+    BL_ASSERT(capacity_hint >= new_size);
 
-    if (newSize <= _size) {
+    if (new_size <= _size) {
       // The size after the resize is lesser than or equal to the current size.
-      _size = newSize;
-      _clearUnusedBits();
+      _size = new_size;
+      _clear_unused_bits();
       return BL_SUCCESS;
     }
 
-    uint32_t oldSize = _size;
+    uint32_t old_size = _size;
     T* data = _data;
 
-    if (newSize > _capacity) {
+    if (new_size > _capacity) {
       // Realloc needed, calculate the minimum capacity (in bytes) required.
-      uint32_t capacityInBits = IntOps::alignUp<uint32_t>(capacityHint, kTSizeInBits);
+      uint32_t capacity_in_bits = IntOps::align_up<uint32_t>(capacity_hint, kTSizeInBits);
 
-      if (BL_UNLIKELY(capacityInBits < newSize))
-        return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+      if (BL_UNLIKELY(capacity_in_bits < new_size))
+        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
       // Normalize to bytes.
-      uint32_t capacityInBytes = capacityInBits / 8;
+      uint32_t capacity_in_bytes = capacity_in_bits / 8;
 
-      T* newData = static_cast<T*>(allocator->alloc(capacityInBytes, alignof(T)));
-      if (BL_UNLIKELY(!newData))
-        return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+      T* new_data = static_cast<T*>(allocator->alloc(capacity_in_bytes, alignof(T)));
+      if (BL_UNLIKELY(!new_data))
+        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-      _copyBits(newData, data, _wordsPerBits(oldSize));
+      _copy_bits(new_data, data, _words_per_bits(old_size));
 
       if (data)
-        allocator->release(data, capacityInBytes);
-      data = newData;
+        allocator->release(data, capacity_in_bytes);
+      data = new_data;
 
       _data = data;
-      _capacity = capacityInBits;
+      _capacity = capacity_in_bits;
     }
 
     // Start (of the old size) and end (of the new size) bits
-    uint32_t idx = oldSize / kTSizeInBits;
-    uint32_t startBit = oldSize % kTSizeInBits;
+    uint32_t idx = old_size / kTSizeInBits;
+    uint32_t start_bit = old_size % kTSizeInBits;
 
     // Set new bits to either 0 or 1. The `pattern` is used to set multiple bits per word and contains either all
     // zeros or all ones.
-    T pattern = IntOps::bitMaskFromBool<T>(newBitsValue);
+    T pattern = IntOps::bool_as_mask<T>(new_bits_value);
 
     // First initialize the last word of the old size.
-    if (startBit)
-      data[idx++] |= Ops::shiftToEnd(pattern, startBit);
+    if (start_bit)
+      data[idx++] |= Ops::shift_to_end(pattern, start_bit);
 
     // Initialize all words after the last word of the old size.
-    uint32_t endIdx = _wordsPerBits(newSize);
-    while (idx < endIdx)
+    uint32_t end_index = _words_per_bits(new_size);
+    while (idx < end_index)
       data[idx++] = pattern;
 
-    _size = newSize;
-    _clearUnusedBits();
+    _size = new_size;
+    _clear_unused_bits();
     return BL_SUCCESS;
   }
 

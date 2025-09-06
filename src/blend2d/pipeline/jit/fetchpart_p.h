@@ -29,27 +29,27 @@ public:
   //! \{
 
   //! Fetch part type.
-  FetchType _fetchType {};
+  FetchType _fetch_type {};
   //! Information about a fetched pixel.
-  PixelFetchInfo _fetchInfo {};
+  PixelFetchInfo _fetch_info {};
 
   //! Pixel type.
-  PixelType _pixelType = PixelType::kNone;
+  PixelType _pixel_type = PixelType::kNone;
   //! True if the fetching should happen in alpha mode (no RGB).
-  uint8_t _alphaFetch = 0;
+  uint8_t _alpha_fetch = 0;
   //! Source bytes-per-pixel (only required by pattern fetcher).
   uint8_t _bpp = 0;
   //! Maximum pixel step that the fetcher can fetch at a time (0=unlimited).
-  uint8_t _maxPixels = 1;
+  uint8_t _max_pixels = 1;
   //! Pixel granularity passed to init().
-  uint8_t _pixelGranularity = 0;
+  uint8_t _pixel_granularity = 0;
 
   //! \}
 
   //! \name Construction & Destruction
   //! \{
 
-  FetchPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
+  FetchPart(PipeCompiler* pc, FetchType fetch_type, FormatExt format) noexcept;
 
   //! \}
 
@@ -57,60 +57,60 @@ public:
   //! \{
 
   //! Returns the fetch type.
-  BL_INLINE_NODEBUG FetchType fetchType() const noexcept { return _fetchType; }
+  BL_INLINE_NODEBUG FetchType fetch_type() const noexcept { return _fetch_type; }
 
   //! Tests whether the fetch-type equals `value`.
-  BL_INLINE_NODEBUG bool isFetchType(FetchType value) const noexcept { return _fetchType == value; }
+  BL_INLINE_NODEBUG bool is_fetch_type(FetchType value) const noexcept { return _fetch_type == value; }
   //! Tests whether the fetch-type is between `first..last`, inclusive.
-  BL_INLINE_NODEBUG bool isFetchType(FetchType first, FetchType last) const noexcept { return _fetchType >= first && _fetchType <= last; }
+  BL_INLINE_NODEBUG bool is_fetch_type(FetchType first, FetchType last) const noexcept { return _fetch_type >= first && _fetch_type <= last; }
 
   //! Tests whether the fetch-type is solid.
-  BL_INLINE_NODEBUG bool isSolid() const noexcept { return isFetchType(FetchType::kSolid); }
+  BL_INLINE_NODEBUG bool is_solid() const noexcept { return is_fetch_type(FetchType::kSolid); }
   //! Tests whether the fetch-type is gradient.
-  BL_INLINE_NODEBUG bool isGradient() const noexcept { return isFetchType(FetchType::kGradientAnyFirst, FetchType::kGradientAnyLast); }
+  BL_INLINE_NODEBUG bool is_gradient() const noexcept { return is_fetch_type(FetchType::kGradientAnyFirst, FetchType::kGradientAnyLast); }
   //! Tests whether the fetch-type is linear gradient.
-  BL_INLINE_NODEBUG bool isLinearGradient() const noexcept { return isFetchType(FetchType::kGradientLinearFirst, FetchType::kGradientLinearLast); }
+  BL_INLINE_NODEBUG bool is_linear_gradient() const noexcept { return is_fetch_type(FetchType::kGradientLinearFirst, FetchType::kGradientLinearLast); }
   //! Tests whether the fetch-type is radial gradient.
-  BL_INLINE_NODEBUG bool isRadialGradient() const noexcept { return isFetchType(FetchType::kGradientRadialFirst, FetchType::kGradientRadialLast); }
+  BL_INLINE_NODEBUG bool is_radial_gradient() const noexcept { return is_fetch_type(FetchType::kGradientRadialFirst, FetchType::kGradientRadialLast); }
   //! Tests whether the fetch-type is conic gradient.
-  BL_INLINE_NODEBUG bool isConicGradient() const noexcept { return isFetchType(FetchType::kGradientConicFirst, FetchType::kGradientConicLast); }
+  BL_INLINE_NODEBUG bool is_conic_gradient() const noexcept { return is_fetch_type(FetchType::kGradientConicFirst, FetchType::kGradientConicLast); }
   //! Tests whether the fetch-type is pattern.
-  BL_INLINE_NODEBUG bool isPattern() const noexcept { return isFetchType(FetchType::kPatternAnyFirst, FetchType::kPatternAnyLast); }
+  BL_INLINE_NODEBUG bool is_pattern() const noexcept { return is_fetch_type(FetchType::kPatternAnyFirst, FetchType::kPatternAnyLast); }
   //! Tests whether the fetch is the destination (special type).
-  BL_INLINE_NODEBUG bool isPixelPtr() const noexcept { return isFetchType(FetchType::kPixelPtr); }
+  BL_INLINE_NODEBUG bool is_pixel_ptr() const noexcept { return is_fetch_type(FetchType::kPixelPtr); }
 
   //! Returns information about a fetched pixel.
-  BL_INLINE_NODEBUG PixelFetchInfo fetchInfo() const noexcept { return _fetchInfo; }
+  BL_INLINE_NODEBUG PixelFetchInfo fetch_info() const noexcept { return _fetch_info; }
   //! Returns source pixel format.
-  BL_INLINE_NODEBUG FormatExt format() const noexcept { return _fetchInfo.format(); }
+  BL_INLINE_NODEBUG FormatExt format() const noexcept { return _fetch_info.format(); }
   //! Returns source pixel format information.
-  BL_INLINE_NODEBUG BLFormatInfo formatInfo() const noexcept { return _fetchInfo.formatInfo(); }
+  BL_INLINE_NODEBUG BLFormatInfo format_info() const noexcept { return _fetch_info.format_info(); }
   //! Tests whether the fetched pixels contain RGB channels.
-  BL_INLINE_NODEBUG bool hasRGB() const noexcept { return _fetchInfo.hasRGB(); }
+  BL_INLINE_NODEBUG bool has_rgb() const noexcept { return _fetch_info.has_rgb(); }
   //! Tests whether the fetched pixels contain Alpha channel.
-  BL_INLINE_NODEBUG bool hasAlpha() const noexcept { return _fetchInfo.hasAlpha(); }
-  //! Returns source bytes-per-pixel (only used when `isPattern()` is true).
+  BL_INLINE_NODEBUG bool has_alpha() const noexcept { return _fetch_info.has_alpha(); }
+  //! Returns source bytes-per-pixel (only used when `is_pattern()` is true).
   BL_INLINE_NODEBUG uint32_t bpp() const noexcept { return _bpp; }
 
   //! Returns the maximum pixels the fetch part can fetch at a time.
-  BL_INLINE_NODEBUG uint32_t maxPixels() const noexcept { return _maxPixels; }
+  BL_INLINE_NODEBUG uint32_t max_pixels() const noexcept { return _max_pixels; }
 
   //! Tests whether the fetching should happen in alpha-only mode.
-  BL_INLINE_NODEBUG bool isAlphaFetch() const noexcept { return _alphaFetch != 0; }
+  BL_INLINE_NODEBUG bool is_alpha_fetch() const noexcept { return _alpha_fetch != 0; }
 
   //! Returns the pixel granularity passed to `FetchPath::init()`.
-  BL_INLINE_NODEBUG uint32_t pixelGranularity() const noexcept { return _pixelGranularity; }
+  BL_INLINE_NODEBUG uint32_t pixel_granularity() const noexcept { return _pixel_granularity; }
 
   //! \}
 
   //! \name Initialization & Finalization
   //! \{
 
-  void init(const PipeFunction& fn, Gp& x, Gp& y, PixelType pixelType, uint32_t pixelGranularity) noexcept;
+  void init(const PipeFunction& fn, Gp& x, Gp& y, PixelType pixel_type, uint32_t pixel_granularity) noexcept;
   void fini() noexcept;
 
-  virtual void _initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept;
-  virtual void _finiPart() noexcept;
+  virtual void _init_part(const PipeFunction& fn, Gp& x, Gp& y) noexcept;
+  virtual void _fini_part() noexcept;
 
   //! \}
 
@@ -132,11 +132,11 @@ public:
   virtual void advanceX(const Gp& x, const Gp& diff) noexcept;
 
   //! Called as a prolog before fetching multiple pixels at once. This must be called before any loop that would call
-  //! `fetch()` with `n` greater than 1 unless the fetcher is in a vector mode because of `pixelGranularity`.
+  //! `fetch()` with `n` greater than 1 unless the fetcher is in a vector mode because of `pixel_granularity`.
   virtual void enterN() noexcept;
 
   //! Called as an epilog after fetching multiple pixels at once. This must be called after a loop that uses `fetch()`
-  //! with `n` greater than 1 unless the fetcher is in a vector mode because of `pixelGranularity`.
+  //! with `n` greater than 1 unless the fetcher is in a vector mode because of `pixel_granularity`.
   virtual void leaveN() noexcept;
 
   //! Called before a loop that calls `fetch()` with `n` greater than 1. In some cases there will be some instructions

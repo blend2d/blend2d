@@ -24,58 +24,58 @@ struct BLVarCore BL_CLASS_INHERITS(BLObjectCore) {
 
 BL_BEGIN_C_DECLS
 
-BL_API BLResult BL_CDECL blVarInitType(BLUnknown* self, BLObjectType type) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitNull(BLUnknown* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitBool(BLUnknown* self, bool value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitInt32(BLUnknown* self, int32_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitInt64(BLUnknown* self, int64_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitUInt32(BLUnknown* self, uint32_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitUInt64(BLUnknown* self, uint64_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitDouble(BLUnknown* self, double value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitRgba(BLUnknown* self, const BLRgba* rgba) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitRgba32(BLUnknown* self, uint32_t rgba32) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitRgba64(BLUnknown* self, uint64_t rgba64) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitMove(BLUnknown* self, BLUnknown* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarInitWeak(BLUnknown* self, const BLUnknown* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarDestroy(BLUnknown* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarReset(BLUnknown* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_type(BLUnknown* self, BLObjectType type) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_null(BLUnknown* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_bool(BLUnknown* self, bool value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_int32(BLUnknown* self, int32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_int64(BLUnknown* self, int64_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_uint32(BLUnknown* self, uint32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_uint64(BLUnknown* self, uint64_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_double(BLUnknown* self, double value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_rgba(BLUnknown* self, const BLRgba* rgba) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_rgba32(BLUnknown* self, uint32_t rgba32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_rgba64(BLUnknown* self, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_move(BLUnknown* self, BLUnknown* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_init_weak(BLUnknown* self, const BLUnknown* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_destroy(BLUnknown* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_reset(BLUnknown* self) BL_NOEXCEPT_C;
 
-BL_API BLResult BL_CDECL blVarAssignNull(BLUnknown* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarAssignBool(BLUnknown* self, bool value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarAssignInt32(BLUnknown* self, int32_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarAssignInt64(BLUnknown* self, int64_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarAssignUInt32(BLUnknown* self, uint32_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarAssignUInt64(BLUnknown* self, uint64_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarAssignDouble(BLUnknown* self, double value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarAssignRgba(BLUnknown* self, const BLRgba* rgba) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarAssignRgba32(BLUnknown* self, uint32_t rgba32) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarAssignRgba64(BLUnknown* self, uint64_t rgba64) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarAssignMove(BLUnknown* self, BLUnknown* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarAssignWeak(BLUnknown* self, const BLUnknown* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_null(BLUnknown* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_bool(BLUnknown* self, bool value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_int32(BLUnknown* self, int32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_int64(BLUnknown* self, int64_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_uint32(BLUnknown* self, uint32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_uint64(BLUnknown* self, uint64_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_double(BLUnknown* self, double value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_rgba(BLUnknown* self, const BLRgba* rgba) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_rgba32(BLUnknown* self, uint32_t rgba32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_rgba64(BLUnknown* self, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_move(BLUnknown* self, BLUnknown* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_assign_weak(BLUnknown* self, const BLUnknown* other) BL_NOEXCEPT_C;
 
-BL_API BLObjectType BL_CDECL blVarGetType(const BLUnknown* self) BL_NOEXCEPT_C BL_PURE;
+BL_API BLObjectType BL_CDECL bl_var_get_type(const BLUnknown* self) BL_NOEXCEPT_C BL_PURE;
 
-BL_API BLResult BL_CDECL blVarToBool(const BLUnknown* self, bool* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarToInt32(const BLUnknown* self, int32_t* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarToInt64(const BLUnknown* self, int64_t* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarToUInt32(const BLUnknown* self, uint32_t* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarToUInt64(const BLUnknown* self, uint64_t* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarToDouble(const BLUnknown* self, double* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarToRgba(const BLUnknown* self, BLRgba* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarToRgba32(const BLUnknown* self, uint32_t* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVarToRgba64(const BLUnknown* self, uint64_t* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_to_bool(const BLUnknown* self, bool* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_to_int32(const BLUnknown* self, int32_t* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_to_int64(const BLUnknown* self, int64_t* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_to_uint32(const BLUnknown* self, uint32_t* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_to_uint64(const BLUnknown* self, uint64_t* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_to_double(const BLUnknown* self, double* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_to_rgba(const BLUnknown* self, BLRgba* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_to_rgba32(const BLUnknown* self, uint32_t* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_var_to_rgba64(const BLUnknown* self, uint64_t* out) BL_NOEXCEPT_C;
 
-BL_API bool BL_CDECL blVarEquals(const BLUnknown* a, const BLUnknown* b) BL_NOEXCEPT_C BL_PURE;
-BL_API bool BL_CDECL blVarEqualsNull(const BLUnknown* self) BL_NOEXCEPT_C BL_PURE;
-BL_API bool BL_CDECL blVarEqualsBool(const BLUnknown* self, bool value) BL_NOEXCEPT_C BL_PURE;
-BL_API bool BL_CDECL blVarEqualsInt64(const BLUnknown* self, int64_t value) BL_NOEXCEPT_C BL_PURE;
-BL_API bool BL_CDECL blVarEqualsUInt64(const BLUnknown* self, uint64_t value) BL_NOEXCEPT_C BL_PURE;
-BL_API bool BL_CDECL blVarEqualsDouble(const BLUnknown* self, double value) BL_NOEXCEPT_C BL_PURE;
-BL_API bool BL_CDECL blVarEqualsRgba(const BLUnknown* self, const BLRgba* rgba) BL_NOEXCEPT_C BL_PURE;
-BL_API bool BL_CDECL blVarEqualsRgba32(const BLUnknown* self, uint32_t rgba32) BL_NOEXCEPT_C BL_PURE;
-BL_API bool BL_CDECL blVarEqualsRgba64(const BLUnknown* self, uint64_t rgba64) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL bl_var_equals(const BLUnknown* a, const BLUnknown* b) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL bl_var_equals_null(const BLUnknown* self) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL bl_var_equals_bool(const BLUnknown* self, bool value) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL bl_var_equals_int64(const BLUnknown* self, int64_t value) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL bl_var_equals_uint64(const BLUnknown* self, uint64_t value) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL bl_var_equals_double(const BLUnknown* self, double value) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL bl_var_equals_rgba(const BLUnknown* self, const BLRgba* rgba) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL bl_var_equals_rgba32(const BLUnknown* self, uint32_t rgba32) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL bl_var_equals_rgba64(const BLUnknown* self, uint64_t rgba64) BL_NOEXCEPT_C BL_PURE;
 
-BL_API bool BL_CDECL blVarStrictEquals(const BLUnknown* a, const BLUnknown* b) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL bl_var_strict_equals(const BLUnknown* a, const BLUnknown* b) BL_NOEXCEPT_C BL_PURE;
 
 BL_END_C_DECLS
 
@@ -102,15 +102,15 @@ struct VarOps;
 template<typename T>
 struct VarOps<T, kTypeCategoryBool> {
   static BL_INLINE_NODEBUG void init(BLVarCore* self, const T& value) noexcept {
-    self->_d.initBool(value);
+    self->_d.init_bool(value);
   }
 
   static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const T& value) noexcept {
-    return blVarAssignBool(self, value);
+    return bl_var_assign_bool(self, value);
   }
 
   static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const T& value) noexcept {
-    return blVarEqualsBool(self, value);
+    return bl_var_equals_bool(self, value);
   }
 };
 
@@ -118,83 +118,83 @@ template<typename T>
 struct VarOps<T, kTypeCategoryInt> {
   static BL_INLINE void init(BLVarCore* self, const T& value) noexcept {
     if constexpr (std::is_signed_v<T>)
-      self->_d.initInt64(int64_t(value));
+      self->_d.init_int64(int64_t(value));
     else
-      self->_d.initUInt64(uint64_t(value));
+      self->_d.init_uint64(uint64_t(value));
   }
 
   static BL_INLINE BLResult assign(BLVarCore* self, const T& value) noexcept {
     if constexpr (sizeof(T) <= 4 && std::is_signed_v<T>)
-      return blVarAssignInt32(self, int32_t(value));
+      return bl_var_assign_int32(self, int32_t(value));
     else if constexpr (sizeof(T) <= 4)
-      return blVarAssignUInt32(self, uint32_t(value));
+      return bl_var_assign_uint32(self, uint32_t(value));
     else if constexpr (std::is_signed_v<T>)
-      return blVarAssignInt64(self, int64_t(value));
+      return bl_var_assign_int64(self, int64_t(value));
     else
-      return blVarAssignUInt64(self, uint64_t(value));
+      return bl_var_assign_uint64(self, uint64_t(value));
   }
 
   static BL_INLINE bool equals(const BLVarCore* self, const T& value) noexcept {
     if constexpr (std::is_signed_v<T>)
-      return blVarEqualsInt64(self, int64_t(value));
+      return bl_var_equals_int64(self, int64_t(value));
     else
-      return blVarEqualsUInt64(self, uint64_t(value));
+      return bl_var_equals_uint64(self, uint64_t(value));
   }
 };
 
 template<typename T>
 struct VarOps<T, kTypeCategoryFloat> {
   static BL_INLINE_NODEBUG void init(BLVarCore* self, const T& value) noexcept {
-    self->_d.initDouble(double(value));
+    self->_d.init_double(double(value));
   }
 
   static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const T& value) noexcept {
-    return blVarAssignDouble(self, double(value));
+    return bl_var_assign_double(self, double(value));
   }
 
   static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const T& value) noexcept {
-    return blVarEqualsDouble(self, double(value));
+    return bl_var_equals_double(self, double(value));
   }
 };
 
 template<typename T>
 struct VarOps<T, kTypeCategoryObject> {
-  static BL_INLINE_NODEBUG void init(BLVarCore* self, T&& value) noexcept { blVarInitMove(self, &value); }
-  static BL_INLINE_NODEBUG void init(BLVarCore* self, const T& value) noexcept { blVarInitWeak(self, &value); }
+  static BL_INLINE_NODEBUG void init(BLVarCore* self, T&& value) noexcept { bl_var_init_move(self, &value); }
+  static BL_INLINE_NODEBUG void init(BLVarCore* self, const T& value) noexcept { bl_var_init_weak(self, &value); }
 
-  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, T&& value) noexcept { return blVarAssignMove(self, &value); }
-  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const T& value) noexcept { return blVarAssignWeak(self, &value); }
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, T&& value) noexcept { return bl_var_assign_move(self, &value); }
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const T& value) noexcept { return bl_var_assign_weak(self, &value); }
 
-  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const T& value) noexcept { return blVarEquals(self, &value); }
+  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const T& value) noexcept { return bl_var_equals(self, &value); }
 };
 
 template<>
 struct VarOps<BLRgba, kTypeCategoryStruct> {
   static BL_INLINE void init(BLVarCore* self, const BLRgba& value) noexcept {
-    // Inlined version of `blVarInitRgba()`.
-    uint32_t r = blBitCast<uint32_t>(value.r);
-    uint32_t g = blBitCast<uint32_t>(value.g);
-    uint32_t b = blBitCast<uint32_t>(value.b);
-    uint32_t a = blMax<uint32_t>(blBitCast<uint32_t>(value.a), 0);
-    self->_d.initU32x4(r, g, b, a);
+    // Inlined version of `bl_var_init_rgba()`.
+    uint32_t r = bl_bit_cast<uint32_t>(value.r);
+    uint32_t g = bl_bit_cast<uint32_t>(value.g);
+    uint32_t b = bl_bit_cast<uint32_t>(value.b);
+    uint32_t a = bl_max<uint32_t>(bl_bit_cast<uint32_t>(value.a), 0);
+    self->_d.init_u32x4(r, g, b, a);
   }
 
-  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const BLRgba& value) noexcept { return blVarAssignRgba(self, &value); }
-  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const BLRgba& value) noexcept { return blVarStrictEquals(self, &value); }
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const BLRgba& value) noexcept { return bl_var_assign_rgba(self, &value); }
+  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const BLRgba& value) noexcept { return bl_var_strict_equals(self, &value); }
 };
 
 template<>
 struct VarOps<BLRgba32, kTypeCategoryStruct> {
-  static BL_INLINE void init(BLVarCore* self, const BLRgba32& rgba32) noexcept { self->_d.initRgba32(rgba32.value); }
-  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const BLRgba32 rgba32) noexcept { return blVarAssignRgba32(self, rgba32.value); }
-  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const BLRgba32& rgba32) noexcept { return blVarEqualsRgba32(self, rgba32.value); }
+  static BL_INLINE void init(BLVarCore* self, const BLRgba32& rgba32) noexcept { self->_d.init_rgba32(rgba32.value); }
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const BLRgba32 rgba32) noexcept { return bl_var_assign_rgba32(self, rgba32.value); }
+  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const BLRgba32& rgba32) noexcept { return bl_var_equals_rgba32(self, rgba32.value); }
 };
 
 template<>
 struct VarOps<BLRgba64, kTypeCategoryStruct> {
-  static BL_INLINE void init(BLVarCore* self, const BLRgba64& rgba64) noexcept { self->_d.initRgba64(rgba64.value); }
-  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const BLRgba64 rgba64) noexcept { return blVarAssignRgba64(self, rgba64.value); }
-  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const BLRgba64& rgba64) noexcept { return blVarEqualsRgba64(self, rgba64.value); }
+  static BL_INLINE void init(BLVarCore* self, const BLRgba64& rgba64) noexcept { self->_d.init_rgba64(rgba64.value); }
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const BLRgba64 rgba64) noexcept { return bl_var_assign_rgba64(self, rgba64.value); }
+  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const BLRgba64& rgba64) noexcept { return bl_var_equals_rgba64(self, rgba64.value); }
 };
 
 template<typename T>
@@ -232,7 +232,7 @@ public:
   //! \name Internals
   //! \{
 
-  static inline constexpr uint32_t kNullSignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_NULL);
+  static inline constexpr uint32_t kNullSignature = BLObjectInfo::pack_type_with_marker(BL_OBJECT_TYPE_NULL);
 
   //! \}
   //! \endcond
@@ -241,15 +241,15 @@ public:
   //! \{
 
   BL_INLINE_NODEBUG BLVar() noexcept {
-    _d.initStatic(BLObjectInfo{kNullSignature});
+    _d.init_static(BLObjectInfo{kNullSignature});
   }
 
   BL_INLINE_NODEBUG BLVar(BLVar&& other) noexcept {
     _d = other._d;
-    other._d.initStatic(BLObjectInfo{kNullSignature});
+    other._d.init_static(BLObjectInfo{kNullSignature});
   }
 
-  BL_INLINE_NODEBUG BLVar(const BLVar& other) noexcept { blVarInitWeak(this, &other); }
+  BL_INLINE_NODEBUG BLVar(const BLVar& other) noexcept { bl_var_init_weak(this, &other); }
 
   template<typename T>
   BL_INLINE_NODEBUG explicit BLVar(T&& value) noexcept {
@@ -258,8 +258,8 @@ public:
   }
 
   BL_INLINE_NODEBUG ~BLVar() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
-      blVarDestroy(this);
+    if (BLInternal::object_needs_cleanup(_d.info.bits)) {
+      bl_var_destroy(this);
     }
   }
 
@@ -289,7 +289,7 @@ public:
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG BLResult reset() noexcept { return blVarReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept { return bl_var_reset(this); }
   BL_INLINE_NODEBUG void swap(BLVarCore& other) noexcept { _d.swap(other._d); }
 
   //! \}
@@ -299,126 +299,126 @@ public:
 
   //! Returns the type of the underlying object.
   [[nodiscard]]
-  BL_INLINE_NODEBUG BLObjectType type() const noexcept { return _d.getType(); }
+  BL_INLINE_NODEBUG BLObjectType type() const noexcept { return _d.get_type(); }
 
   //! Tests whether this `BLVar` instance represents a `BLArray<T>` storing any supported type.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isArray() const noexcept { return _d.isArray(); }
+  BL_INLINE_NODEBUG bool is_array() const noexcept { return _d.is_array(); }
 
   //! Tests whether this `BLVar` instance represents `BLBitArray`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isBitArray() const noexcept { return _d.isBitArray(); }
+  BL_INLINE_NODEBUG bool is_bit_array() const noexcept { return _d.is_bit_array(); }
 
   //! Tests whether this `BLVar` instance represents `BLBitSet`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isBitSet() const noexcept { return _d.isBitSet(); }
+  BL_INLINE_NODEBUG bool is_bit_set() const noexcept { return _d.is_bit_set(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `bool` value.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isBool() const noexcept { return _d.isBool(); }
+  BL_INLINE_NODEBUG bool is_bool() const noexcept { return _d.is_bool(); }
 
   //! Tests whether this `BLVar` instance represents `BLContext`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isContext() const noexcept { return _d.isContext(); }
+  BL_INLINE_NODEBUG bool is_context() const noexcept { return _d.is_context(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `double` value.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isDouble() const noexcept { return _d.isDouble(); }
+  BL_INLINE_NODEBUG bool is_double() const noexcept { return _d.is_double(); }
 
   //! Tests whether this `BLVar` instance represents `BLFont`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isFont() const noexcept { return _d.isFont(); }
+  BL_INLINE_NODEBUG bool is_font() const noexcept { return _d.is_font(); }
 
   //! Tests whether this `BLVar` instance represents `BLFontData`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isFontData() const noexcept { return _d.isFontData(); }
+  BL_INLINE_NODEBUG bool is_font_data() const noexcept { return _d.is_font_data(); }
 
   //! Tests whether this `BLVar` instance represents `BLFontFace`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isFontFace() const noexcept { return _d.isFontFace(); }
+  BL_INLINE_NODEBUG bool is_font_face() const noexcept { return _d.is_font_face(); }
 
   //! Tests whether this `BLVar` instance represents `BLFontManager`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isFontManager() const noexcept { return _d.isFontManager(); }
+  BL_INLINE_NODEBUG bool is_font_manager() const noexcept { return _d.is_font_manager(); }
 
   //! Tests whether this `BLVar` instance represents `BLGradient`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isGradient() const noexcept { return _d.isGradient(); }
+  BL_INLINE_NODEBUG bool is_gradient() const noexcept { return _d.is_gradient(); }
 
   //! Tests whether this `BLVar` instance represents `BLImage`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isImage() const noexcept { return _d.isImage(); }
+  BL_INLINE_NODEBUG bool is_image() const noexcept { return _d.is_image(); }
 
   //! Tests whether this `BLVar` instance represents `BLImageCodec`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isImageCodec() const noexcept { return _d.isImageCodec(); }
+  BL_INLINE_NODEBUG bool is_image_codec() const noexcept { return _d.is_image_codec(); }
 
   //! Tests whether this `BLVar` instance represents `BLImageDecoder`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isImageDecoder() const noexcept { return _d.isImageDecoder(); }
+  BL_INLINE_NODEBUG bool is_image_decoder() const noexcept { return _d.is_image_decoder(); }
 
   //! Tests whether this `BLVar` instance represents `BLImageEncoder`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isImageEncoder() const noexcept { return _d.isImageEncoder(); }
+  BL_INLINE_NODEBUG bool is_image_encoder() const noexcept { return _d.is_image_encoder(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `int64_t` value.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isInt64() const noexcept { return _d.isInt64(); }
+  BL_INLINE_NODEBUG bool is_int64() const noexcept { return _d.is_int64(); }
 
   //! Tests whether this `BLVar` instance represents a null value.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isNull() const noexcept { return _d.isNull(); }
+  BL_INLINE_NODEBUG bool is_null() const noexcept { return _d.is_null(); }
 
   //! Tests whether this `BLVar` instance represents `BLPath`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isPath() const noexcept { return _d.isPath(); }
+  BL_INLINE_NODEBUG bool is_path() const noexcept { return _d.is_path(); }
 
   //! Tests whether this `BLVar` instance represents `BLPattern.`
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isPattern() const noexcept { return _d.isPattern(); }
+  BL_INLINE_NODEBUG bool is_pattern() const noexcept { return _d.is_pattern(); }
 
   //! Tests whether this `BLVar` instance represents `BLString`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isString() const noexcept { return _d.isString(); }
+  BL_INLINE_NODEBUG bool is_string() const noexcept { return _d.is_string(); }
 
   //! Tests whether this `BLVar` instance represents boxed `BLRgba`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isRgba() const noexcept { return _d.isRgba(); }
+  BL_INLINE_NODEBUG bool is_rgba() const noexcept { return _d.is_rgba(); }
 
   //! Tests whether this `BLVar` instance represents boxed `BLRgba32`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isRgba32() const noexcept { return _d.isRgba32(); }
+  BL_INLINE_NODEBUG bool is_rgba32() const noexcept { return _d.is_rgba32(); }
 
   //! Tests whether this `BLVar` instance represents boxed `BLRgba64`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isRgba64() const noexcept { return _d.isRgba64(); }
+  BL_INLINE_NODEBUG bool is_rgba64() const noexcept { return _d.is_rgba64(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `uint64_t` value.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isUInt64() const noexcept { return _d.isUInt64(); }
+  BL_INLINE_NODEBUG bool is_uint64() const noexcept { return _d.is_uint64(); }
 
   //! Tests whether this `BLVar` instance is a style that can be used with the rendering context.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isStyle() const noexcept { return _d.isStyle(); }
+  BL_INLINE_NODEBUG bool is_style() const noexcept { return _d.is_style(); }
 
   //! Converts this value to `bool` and stores the result in `out`.
-  BL_INLINE_NODEBUG BLResult toBool(bool* out) const noexcept { return blVarToBool(this, out); }
+  BL_INLINE_NODEBUG BLResult to_bool(bool* out) const noexcept { return bl_var_to_bool(this, out); }
   //! Converts this value to `int32_t` and stores the result in `out`.
-  BL_INLINE_NODEBUG BLResult toInt32(int32_t* out) const noexcept { return blVarToInt32(this, out); }
+  BL_INLINE_NODEBUG BLResult to_int32(int32_t* out) const noexcept { return bl_var_to_int32(this, out); }
   //! Converts this value to `int64_t` and stores the result in `out`.
-  BL_INLINE_NODEBUG BLResult toInt64(int64_t* out) const noexcept { return blVarToInt64(this, out); }
+  BL_INLINE_NODEBUG BLResult to_int64(int64_t* out) const noexcept { return bl_var_to_int64(this, out); }
   //! Converts this value to `uint32_t` and stores the result in `out`.
-  BL_INLINE_NODEBUG BLResult toUInt32(uint32_t* out) const noexcept { return blVarToUInt32(this, out); }
+  BL_INLINE_NODEBUG BLResult to_uint32(uint32_t* out) const noexcept { return bl_var_to_uint32(this, out); }
   //! Converts this value to `uint64_t` and stores the result in `out`.
-  BL_INLINE_NODEBUG BLResult toUInt64(uint64_t* out) const noexcept { return blVarToUInt64(this, out); }
+  BL_INLINE_NODEBUG BLResult to_uint64(uint64_t* out) const noexcept { return bl_var_to_uint64(this, out); }
   //! Converts this value to `double` precision floating point and stores the result in `out`.
-  BL_INLINE_NODEBUG BLResult toDouble(double* out) const noexcept { return blVarToDouble(this, out); }
+  BL_INLINE_NODEBUG BLResult to_double(double* out) const noexcept { return bl_var_to_double(this, out); }
   //! Converts this value to `BLRgba` and stores the result in `out`.
-  BL_INLINE_NODEBUG BLResult toRgba(BLRgba* out) const noexcept { return blVarToRgba(this, out); }
+  BL_INLINE_NODEBUG BLResult to_rgba(BLRgba* out) const noexcept { return bl_var_to_rgba(this, out); }
   //! Converts this value to `BLRgba32` and stores the result in `out`.
-  BL_INLINE_NODEBUG BLResult toRgba32(BLRgba32* out) const noexcept { return blVarToRgba32(this, &out->value); }
+  BL_INLINE_NODEBUG BLResult to_rgba32(BLRgba32* out) const noexcept { return bl_var_to_rgba32(this, &out->value); }
   //! Converts this value to `BLRgba64` and stores the result in `out`.
-  BL_INLINE_NODEBUG BLResult toRgba64(BLRgba64* out) const noexcept { return blVarToRgba64(this, &out->value); }
+  BL_INLINE_NODEBUG BLResult to_rgba64(BLRgba64* out) const noexcept { return bl_var_to_rgba64(this, &out->value); }
 
   //! \}
 
@@ -464,7 +464,7 @@ public:
   }
 
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool strictEquals(const BLVarCore& other) const noexcept { return blVarStrictEquals(this, &other); }
+  BL_INLINE_NODEBUG bool strict_equals(const BLVarCore& other) const noexcept { return bl_var_strict_equals(this, &other); }
 
   //! \}
 };

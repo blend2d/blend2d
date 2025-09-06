@@ -23,15 +23,15 @@ static constexpr uint64_t kConstK5 = 0x0163CD6124u;
 static constexpr uint64_t kConstP0 = 0x01DB710641u;
 static constexpr uint64_t kConstP1 = 0x01F7011641u;
 
-BL_INLINE uint32_t crc32Update_CLMUL128(uint32_t checksum, const uint8_t* data, size_t size) noexcept {
+BL_INLINE uint32_t crc32_update_clmul128(uint32_t checksum, const uint8_t* data, size_t size) noexcept {
   using namespace SIMD;
 
-  size_t n = blMin<size_t>(IntOps::alignUpDiff(uintptr_t(data), 16u), size);
+  size_t n = bl_min<size_t>(IntOps::align_up_diff(uintptr_t(data), 16u), size);
   size -= n;
 
   BL_NOUNROLL
   while (n) {
-    checksum = crc32UpdateByte(checksum, *data++);
+    checksum = crc32_update_byte(checksum, *data++);
     n--;
   }
 
@@ -111,7 +111,7 @@ BL_INLINE uint32_t crc32Update_CLMUL128(uint32_t checksum, const uint8_t* data, 
 
   BL_NOUNROLL
   while (size) {
-    checksum = crc32UpdateByte(checksum, *data++);
+    checksum = crc32_update_byte(checksum, *data++);
     size--;
   }
 

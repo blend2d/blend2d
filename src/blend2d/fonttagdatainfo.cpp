@@ -134,10 +134,10 @@ struct FeatureInfoTableGen {
   }
 };
 
-BL_CONSTEXPR_TABLE(featureInfoTable, FeatureInfoTableGen, FeatureInfo, kFeatureIdCount + 1u);
+BL_CONSTEXPR_TABLE(feature_info_table, FeatureInfoTableGen, FeatureInfo, kFeatureIdCount + 1u);
 
-// This is a reverse table that must match feature bit its defined by `featureInfoTable`.
-const uint8_t featureBitIdToFeatureIdTable[32] = {
+// This is a reverse table that must match feature bit its defined by `feature_info_table`.
+const uint8_t feature_bit_id_to_feature_id_table[32] = {
   uint8_t(FeatureId::kCASE),
   uint8_t(FeatureId::kCLIG),
   uint8_t(FeatureId::kCPCT),

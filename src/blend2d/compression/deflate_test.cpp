@@ -40,7 +40,7 @@ enum class TestRandomMode {
   kMaxValue = kAllZeros
 };
 
-static const char* stringifyStrategy(TestStrategy strategy) noexcept {
+static const char* stringify_strategy(TestStrategy strategy) noexcept {
   switch (strategy) {
     case TestStrategy::kWholeData: return "whole data";
     case TestStrategy::kChunkedData: return "chunked data";
@@ -50,7 +50,7 @@ static const char* stringifyStrategy(TestStrategy strategy) noexcept {
   }
 }
 
-static const char* stringifyRandomMode(TestRandomMode mode) noexcept {
+static const char* stringify_random_mode(TestRandomMode mode) noexcept {
   switch (mode) {
     case TestRandomMode::kRandomDataWithRepeats: return "repeats";
     case TestRandomMode::kRandomDataWithNibbles: return "nibbles";
@@ -64,66 +64,66 @@ static const char* stringifyRandomMode(TestRandomMode mode) noexcept {
 class SimpleBitWriter {
 public:
   BLArray<uint8_t>& dst;
-  BLBitWord bitWord {};
-  size_t bitLength {};
+  BLBitWord bit_word {};
+  size_t bit_length {};
 
   SimpleBitWriter(BLArray<uint8_t>& dst) noexcept : dst(dst) {}
   ~SimpleBitWriter() noexcept { finalize(); }
 
-  void alignToByte() noexcept {
-    bitLength = (bitLength + 7u) & ~size_t(7);
+  void align_to_byte() noexcept {
+    bit_length = (bit_length + 7u) & ~size_t(7);
   }
 
   void flush() noexcept {
-    while (bitLength >= 8) {
-      EXPECT_SUCCESS(dst.append(uint8_t(bitWord & 0xFFu)));
-      bitWord >>= 8;
-      bitLength -= 8;
+    while (bit_length >= 8) {
+      EXPECT_SUCCESS(dst.append(uint8_t(bit_word & 0xFFu)));
+      bit_word >>= 8;
+      bit_length -= 8;
     }
   }
 
   void finalize() noexcept {
-    alignToByte();
+    align_to_byte();
     flush();
   }
 
   void append(size_t bits, size_t n) noexcept {
-    bitWord |= bits << bitLength;
-    bitLength += n;
+    bit_word |= bits << bit_length;
+    bit_length += n;
     flush();
   }
 };
 
-static BLResult appendRandomBytes(BLArray<uint8_t>& array, BLRandom& rnd, size_t n, TestRandomMode randomMode) noexcept {
-  uint8_t* dstData;
-  BL_PROPAGATE(array.modifyOp(BL_MODIFY_OP_APPEND_GROW, n, &dstData));
+static BLResult append_random_bytes(BLArray<uint8_t>& array, BLRandom& rnd, size_t n, TestRandomMode random_mode) noexcept {
+  uint8_t* dst_data;
+  BL_PROPAGATE(array.modify_op(BL_MODIFY_OP_APPEND_GROW, n, &dst_data));
 
-  uint8_t* dstPtr = dstData;
+  uint8_t* dst_ptr = dst_data;
   size_t i = n;
 
-  switch (randomMode) {
+  switch (random_mode) {
     case TestRandomMode::kRandomDataWithRepeats: {
       while (i >= 4) {
-        uint32_t cat = rnd.nextUInt32();
+        uint32_t cat = rnd.next_uint32();
 
-        size_t pos = PtrOps::byteOffset(dstData, dstPtr);
+        size_t pos = PtrOps::byte_offset(dst_data, dst_ptr);
         if ((cat & 0x7) == 0x7 && pos > 16) {
           // Repeat sequence of some past bytes.
-          size_t offset = (size_t((cat >> 16)) % blMin<size_t>(pos, 32767)) + 1;
-          size_t length = blMax<size_t>((((cat >> 8) & 0xFF) + 3) % i, 3u);
+          size_t offset = (size_t((cat >> 16)) % bl_min<size_t>(pos, 32767)) + 1;
+          size_t length = bl_max<size_t>((((cat >> 8) & 0xFF) + 3) % i, 3u);
 
           size_t end = i - length;
 
           while (i != end) {
-            dstPtr[0] = dstPtr[-intptr_t(offset)];
-            dstPtr++;
+            dst_ptr[0] = dst_ptr[-intptr_t(offset)];
+            dst_ptr++;
             i--;
           }
 
           continue;
         }
         else {
-          uint32_t val = rnd.nextUInt32();
+          uint32_t val = rnd.next_uint32();
           if (cat & 0x80000000) {
             // Repeat sequence of a single BYTE.
             val = (val & 0xFFu) * 0x01010101u;
@@ -133,53 +133,53 @@ static BLResult appendRandomBytes(BLArray<uint8_t>& array, BLRandom& rnd, size_t
             val = IntOps::byteSwap32LE(val);
           }
 
-          memcpy(dstPtr, &val, 4);
-          dstPtr += 4;
+          memcpy(dst_ptr, &val, 4);
+          dst_ptr += 4;
           i -= 4;
         }
       }
 
       if (i) {
-        uint32_t val = IntOps::byteSwap32LE(rnd.nextUInt32());
-        memcpy(dstPtr, &val, i);
+        uint32_t val = IntOps::byteSwap32LE(rnd.next_uint32());
+        memcpy(dst_ptr, &val, i);
       }
       break;
     }
 
     case TestRandomMode::kRandomDataWithNibbles: {
       while (i >= 8) {
-        uint64_t val = rnd.nextUInt64() & 0x0F0F0F0F0F0F0F0Fu;
-        memcpy(dstPtr, &val, 8);
+        uint64_t val = rnd.next_uint64() & 0x0F0F0F0F0F0F0F0Fu;
+        memcpy(dst_ptr, &val, 8);
 
-        dstPtr += 8;
+        dst_ptr += 8;
         i -= 8;
       }
 
       if (i) {
-        uint64_t val = rnd.nextUInt64() & 0x0F0F0F0F0F0F0F0Fu;
-        memcpy(dstPtr, &val, i);
+        uint64_t val = rnd.next_uint64() & 0x0F0F0F0F0F0F0F0Fu;
+        memcpy(dst_ptr, &val, i);
       }
       break;
     }
 
     case TestRandomMode::kRandomDataWithTwoLiterals: {
       while (i >= 8) {
-        uint64_t val = (rnd.nextUInt64() & 0x0101010101010101u) * 0xFFu;
-        memcpy(dstPtr, &val, 8);
+        uint64_t val = (rnd.next_uint64() & 0x0101010101010101u) * 0xFFu;
+        memcpy(dst_ptr, &val, 8);
 
-        dstPtr += 8;
+        dst_ptr += 8;
         i -= 8;
       }
 
       if (i) {
-        uint64_t val = (rnd.nextUInt64() & 0x0101010101010101u) * 0xFFu;
-        memcpy(dstPtr, &val, i);
+        uint64_t val = (rnd.next_uint64() & 0x0101010101010101u) * 0xFFu;
+        memcpy(dst_ptr, &val, i);
       }
       break;
     }
 
     case TestRandomMode::kAllZeros: {
-      memset(dstPtr, 0, i);
+      memset(dst_ptr, 0, i);
       break;
     }
   }
@@ -187,7 +187,7 @@ static BLResult appendRandomBytes(BLArray<uint8_t>& array, BLRandom& rnd, size_t
   return BL_SUCCESS;
 }
 
-static size_t compareDecodedData(const uint8_t* a, const uint8_t* b, size_t n) noexcept {
+static size_t compare_decoded_data(const uint8_t* a, const uint8_t* b, size_t n) noexcept {
   for (size_t i = 0; i < n; i++) {
     if (a[i] != b[i]) {
       return i;
@@ -196,14 +196,14 @@ static size_t compareDecodedData(const uint8_t* a, const uint8_t* b, size_t n) n
   return SIZE_MAX;
 }
 
-static void test_deflate_invalid_stream_with_data(const char* test_name, Deflate::FormatType format, BLResult expectedResult, BLDataView compressed) noexcept {
+static void test_deflate_invalid_stream_with_data(const char* test_name, Deflate::FormatType format, BLResult expected_result, BLDataView compressed) noexcept {
   BLArray<uint8_t> output;
   Deflate::Decoder decoder;
 
   decoder.init(format);
   BLResult result = decoder.decode(output, compressed);
-  EXPECT_EQ(result, expectedResult)
-    .message("Decompressing invalid stream '%s' didn't fail (0x%08X returned, 0x%08X expected)", test_name, result, expectedResult);
+  EXPECT_EQ(result, expected_result)
+    .message("Decompressing invalid stream '%s' didn't fail (0x%08X returned, 0x%08X expected)", test_name, result, expected_result);
 }
 
 // The content of this test comes from a libdeflate test - `test_incomplete_codes.c`.
@@ -301,7 +301,7 @@ static void test_deflate_empty_offset_code() noexcept {
 
   EXPECT_EQ(output.size(), sizeof(expected));
 
-  size_t index = compareDecodedData(output.data(), expected, sizeof(expected));
+  size_t index = compare_decoded_data(output.data(), expected, sizeof(expected));
   EXPECT_EQ(index, SIZE_MAX)
     .message("Output data doesn't match at %zu: output(0x%08X) != expected(0x%08X)", index, output[index], expected[index]);
 }
@@ -472,7 +472,7 @@ static void test_deflate_singleton_offset_code() noexcept {
 
   EXPECT_EQ(output.size(), sizeof(expected));
 
-  size_t index = compareDecodedData(output.data(), expected, sizeof(expected));
+  size_t index = compare_decoded_data(output.data(), expected, sizeof(expected));
   EXPECT_EQ(index, SIZE_MAX)
     .message("Output data doesn't match at %zu: output(0x%08X) != expected(0x%08X)", index, output[index], expected[index]);
 }
@@ -578,7 +578,7 @@ static void test_deflate_singleton_offset_code_notsymzero() noexcept {
 
   EXPECT_EQ(output.size(), sizeof(expected));
 
-  size_t index = compareDecodedData(output.data(), expected, sizeof(expected));
+  size_t index = compare_decoded_data(output.data(), expected, sizeof(expected));
   EXPECT_EQ(index, SIZE_MAX)
     .message("Output data doesn't match at %zu: output(0x%08X) != expected(0x%08X)", index, output[index], expected[index]);
 }
@@ -775,19 +775,19 @@ static void test_deflate_invalid_streams() noexcept {
   test_deflate_invalid_stream_with_data("stream4", Deflate::FormatType::kZlib, BL_ERROR_DECOMPRESSION_FAILED, BLDataView{stream4, sizeof(stream4)});
 }
 
-static void test_deflate_roundtrip(BLDataView input, Deflate::FormatType format, uint32_t compressionLevel, const char* testDataName) noexcept {
+static void test_deflate_roundtrip(BLDataView input, Deflate::FormatType format, uint32_t compression_level, const char* test_data_name) noexcept {
   BLArray<uint8_t> encoded;
 
   {
     Deflate::Encoder encoder;
-    EXPECT_SUCCESS(encoder.init(format, compressionLevel))
+    EXPECT_SUCCESS(encoder.init(format, compression_level))
       .message("Failed to initialize the encoder");
 
     EXPECT_SUCCESS(encoder.compress(encoded, BL_MODIFY_OP_APPEND_GROW, input));
   }
 
-  for (uint32_t strategyIndex = 0; strategyIndex <= uint32_t(TestStrategy::kMaxValue); strategyIndex++) {
-    TestStrategy strategy = TestStrategy(strategyIndex);
+  for (uint32_t strategy_index = 0; strategy_index <= uint32_t(TestStrategy::kMaxValue); strategy_index++) {
+    TestStrategy strategy = TestStrategy(strategy_index);
 
     Deflate::Decoder decoder;
     EXPECT_SUCCESS(decoder.init(format))
@@ -799,66 +799,66 @@ static void test_deflate_roundtrip(BLDataView input, Deflate::FormatType format,
       case TestStrategy::kWholeData: {
         EXPECT_SUCCESS(decoder.decode(decoded, encoded.view()))
           .message("Decompression failed (%s/%s): input.size=%zu encoded.size=%zu decoded.size=%zu (first mismatching byte at %zd)",
-            stringifyStrategy(strategy),
-            testDataName,
+            stringify_strategy(strategy),
+            test_data_name,
             input.size,
             encoded.size(),
             decoded.size(),
-            compareDecodedData(input.data, decoded.data(), blMin(input.size, decoded.size())));
+            compare_decoded_data(input.data, decoded.data(), bl_min(input.size, decoded.size())));
         break;
       }
 
       case TestStrategy::kChunkedData:
       case TestStrategy::kBytePerByte: {
-        size_t maxChunkSize = strategy == TestStrategy::kChunkedData ? (encoded.size() + 15u) / 16u : 1;
+        size_t max_chunk_size = strategy == TestStrategy::kChunkedData ? (encoded.size() + 15u) / 16u : 1;
         size_t i = 0;
 
         for (;;) {
-          size_t chunkSize = blMin<size_t>(encoded.size() - i, maxChunkSize);
-          BLResult result = decoder.decode(decoded, BLDataView{encoded.data() + i, chunkSize});
+          size_t chunk_size = bl_min<size_t>(encoded.size() - i, max_chunk_size);
+          BLResult result = decoder.decode(decoded, BLDataView{encoded.data() + i, chunk_size});
 
           if (result == BL_SUCCESS)
             break;
 
           if (result == BL_ERROR_DATA_TRUNCATED) {
-            i += chunkSize;
+            i += chunk_size;
             if (i < encoded.size())
               continue;
           }
 
           EXPECT_SUCCESS(result).
             message("Decompression failed (%s/%s): input.size=%zu encoded.size=%zu decoded.size=%zu (first mismatching byte at %zd)",
-              stringifyStrategy(strategy),
-              testDataName,
+              stringify_strategy(strategy),
+              test_data_name,
               input.size,
               encoded.size(),
               decoded.size(),
-              compareDecodedData(input.data, decoded.data(), blMin(input.size, decoded.size())));
+              compare_decoded_data(input.data, decoded.data(), bl_min(input.size, decoded.size())));
         }
       }
     }
 
-    size_t mismatchIndex = compareDecodedData(input.data, decoded.data(), blMin(input.size, decoded.size()));
+    size_t mismatch_index = compare_decoded_data(input.data, decoded.data(), bl_min(input.size, decoded.size()));
     EXPECT_EQ(input.size, decoded.size())
       .message("Input size and decoded size don't match (%s/%s): input.size=%zu encoded.size=%zu decoded.size=%zu (first mismatching byte at %zd)",
-        stringifyStrategy(strategy),
-        testDataName,
+        stringify_strategy(strategy),
+        test_data_name,
         input.size,
         encoded.size(),
         decoded.size(),
-        mismatchIndex);
+        mismatch_index);
 
-    EXPECT_EQ(mismatchIndex, SIZE_MAX)
+    EXPECT_EQ(mismatch_index, SIZE_MAX)
       .message("Decoded data is invalid (%s/%s) at offset=%zu (decoded=0x%02X expected=0x%02X)",
-        stringifyStrategy(strategy),
-        testDataName,
-        mismatchIndex,
-        input[mismatchIndex],
-        decoded[mismatchIndex]);
+        stringify_strategy(strategy),
+        test_data_name,
+        mismatch_index,
+        input[mismatch_index],
+        decoded[mismatch_index]);
   }
 }
 
-static void test_deflate_litrunlen(uint32_t compressionLevel) noexcept {
+static void test_deflate_litrunlen(uint32_t compression_level) noexcept {
   // The content of this test comes from a libdeflate test - `test_litrunlen_overflow.c`.
   //
   // Try to compress a file longer than 65535 bytes where no 2-byte sequence (3 would be sufficient) is
@@ -879,22 +879,22 @@ static void test_deflate_litrunlen(uint32_t compressionLevel) noexcept {
     }
   }
 
-  test_deflate_roundtrip(arr.view(), Deflate::FormatType::kRaw, compressionLevel, "litrunlen");
+  test_deflate_roundtrip(arr.view(), Deflate::FormatType::kRaw, compression_level, "litrunlen");
 }
 
-static void test_deflate_random_data(size_t minBytes, size_t maxBytes, size_t sizeIncrement, uint32_t compressionLevel, TestRandomMode randomMode) noexcept {
+static void test_deflate_random_data(size_t min_bytes, size_t max_bytes, size_t size_increment, uint32_t compression_level, TestRandomMode random_mode) noexcept {
   BLArray<uint8_t> input;
 
-  for (size_t n = minBytes; n <= maxBytes; n += sizeIncrement) {
+  for (size_t n = min_bytes; n <= max_bytes; n += size_increment) {
     input.reset();
 
     // In case of a bug in the compressor/decompressor, uncomment the following to quickly find the right input.
     // INFO("Testing %zu bytes", n);
 
     BLRandom rnd(0x1234u + n * 33u);
-    EXPECT_SUCCESS(appendRandomBytes(input, rnd, n, randomMode));
+    EXPECT_SUCCESS(append_random_bytes(input, rnd, n, random_mode));
 
-    test_deflate_roundtrip(input.view(), Deflate::FormatType::kRaw, compressionLevel, stringifyRandomMode(randomMode));
+    test_deflate_roundtrip(input.view(), Deflate::FormatType::kRaw, compression_level, stringify_random_mode(random_mode));
   }
 }
 

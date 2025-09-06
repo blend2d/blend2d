@@ -81,14 +81,14 @@ public:
   const CommonTable& ct;
 
   //! Part type.
-  PipePartType _partType {};
+  PipePartType _part_type {};
   //! Count of children parts, cannot be greater than the capacity of `_children`.
-  uint8_t _childCount = 0;
+  uint8_t _child_count = 0;
   //! Maximum SIMD width this part supports.
-  VecWidth _maxVecWidthSupported = VecWidth::k128;
+  VecWidth _max_vec_width_supported = VecWidth::k128;
 
   //! Part flags.
-  PipePartFlags _partFlags = PipePartFlags::kNone;
+  PipePartFlags _part_flags = PipePartFlags::kNone;
 
   //! Used to store children parts, can be introspected as well.
   PipePart* _children[2] {};
@@ -100,14 +100,14 @@ public:
   //! is used during the loop only. Initialization hooks define an entry for
   //! the part where an additional  code can be injected at any time during
   //! pipeline construction.
-  asmjit::BaseNode* _globalHook = nullptr;
+  asmjit::BaseNode* _global_hook = nullptr;
 
   //! \}
 
   //! \name Construction & Destruction
   //! \{
 
-  PipePart(PipeCompiler* pc, PipePartType partType) noexcept;
+  PipePart(PipeCompiler* pc, PipePartType part_type) noexcept;
 
   //! \}
 
@@ -120,33 +120,33 @@ public:
   BL_INLINE_NODEBUG const T* as() const noexcept { return static_cast<const T*>(this); }
 
   //! Tests whether the part is initialized
-  BL_INLINE_NODEBUG bool isPartInitialized() const noexcept { return _globalHook != nullptr; }
+  BL_INLINE_NODEBUG bool is_part_initialized() const noexcept { return _global_hook != nullptr; }
   //! Returns the type of the part.
-  BL_INLINE_NODEBUG PipePartType partType() const noexcept { return _partType; }
+  BL_INLINE_NODEBUG PipePartType part_type() const noexcept { return _part_type; }
   //! Returns PipePart flags.
-  BL_INLINE_NODEBUG PipePartFlags partFlags() const noexcept { return _partFlags; }
+  BL_INLINE_NODEBUG PipePartFlags part_flags() const noexcept { return _part_flags; }
   //! Tests whether this part has the given `flag` set.
-  BL_INLINE_NODEBUG bool hasPartFlag(PipePartFlags flag) const noexcept { return blTestFlag(_partFlags, flag); }
+  BL_INLINE_NODEBUG bool has_part_flag(PipePartFlags flag) const noexcept { return bl_test_flag(_part_flags, flag); }
   //! Adds new `flags` to the current \ref PipePartFlags.
-  BL_INLINE_NODEBUG void addPartFlags(PipePartFlags flags) noexcept { _partFlags |= flags; }
+  BL_INLINE_NODEBUG void add_part_flags(PipePartFlags flags) noexcept { _part_flags |= flags; }
   //! Adds new `flags` to the current \ref PipePartFlags.
-  BL_INLINE_NODEBUG void removePartFlags(PipePartFlags flags) noexcept { _partFlags &= ~flags; }
+  BL_INLINE_NODEBUG void remove_part_flags(PipePartFlags flags) noexcept { _part_flags &= ~flags; }
 
   //! Tests whether the fetch is currently initialized for a rectangular fill.
-  BL_INLINE_NODEBUG bool isRectFill() const noexcept { return hasPartFlag(PipePartFlags::kRectFill); }
+  BL_INLINE_NODEBUG bool is_rect_fill() const noexcept { return has_part_flag(PipePartFlags::kRectFill); }
   //! Tests whether a compositor or fetcher perform expensive operations.
-  BL_INLINE_NODEBUG bool isExpensive() const noexcept { return hasPartFlag(PipePartFlags::kExpensive); }
+  BL_INLINE_NODEBUG bool is_expensive() const noexcept { return has_part_flag(PipePartFlags::kExpensive); }
 
   //! Tests whether masked access is available.
   //!
   //! \note This is more a hint than a feature as masked access must be supported by all fetchers.
-  BL_INLINE_NODEBUG bool hasMaskedAccess() const noexcept { return hasPartFlag(PipePartFlags::kMaskedAccess); }
+  BL_INLINE_NODEBUG bool has_masked_access() const noexcept { return has_part_flag(PipePartFlags::kMaskedAccess); }
 
   //! Returns the maximum supported SIMD width.
-  BL_INLINE_NODEBUG VecWidth maxVecWidthSupported() const noexcept { return _maxVecWidthSupported; }
+  BL_INLINE_NODEBUG VecWidth max_vec_width_supported() const noexcept { return _max_vec_width_supported; }
 
   //! Returns the number of children.
-  BL_INLINE_NODEBUG uint32_t childCount() const noexcept { return _childCount; }
+  BL_INLINE_NODEBUG uint32_t child_count() const noexcept { return _child_count; }
   //! Returns children parts as an array.
   BL_INLINE_NODEBUG PipePart** children() const noexcept { return (PipePart**)_children; }
 
@@ -155,7 +155,7 @@ public:
   //! \name Prepare
   //! \{
 
-  virtual void preparePart() noexcept;
+  virtual void prepare_part() noexcept;
 
   //! \}
 
@@ -163,25 +163,25 @@ public:
   //! \{
 
   template<typename Function>
-  void forEachPart(Function&& f) noexcept {
-    uint32_t n = childCount();
+  void for_each_part(Function&& f) noexcept {
+    uint32_t n = child_count();
     for (uint32_t i = 0; i < n; i++) {
       PipePart* child = children()[i];
-      child->forEachPart(BLInternal::forward<Function>(f));
+      child->for_each_part(BLInternal::forward<Function>(f));
     }
 
     f(this);
   }
 
   template<typename Function>
-  void forEachPartAndMark(PipePartFlags flag, Function&& f) noexcept {
-    _partFlags |= flag;
+  void for_each_part_and_mark(PipePartFlags flag, Function&& f) noexcept {
+    _part_flags |= flag;
 
-    uint32_t n = childCount();
+    uint32_t n = child_count();
     for (uint32_t i = 0; i < n; i++) {
       PipePart* child = children()[i];
-      if (uint32_t(child->partFlags() & flag) == 0)
-        child->forEachPartAndMark(flag, BLInternal::forward<Function>(f));
+      if (uint32_t(child->part_flags() & flag) == 0)
+        child->for_each_part_and_mark(flag, BLInternal::forward<Function>(f));
     }
 
     f(this);
@@ -192,16 +192,16 @@ public:
   //! \name Hooks
   //! \{
 
-  BL_INLINE void _initGlobalHook(asmjit::BaseNode* node) noexcept {
+  BL_INLINE void _init_global_hook(asmjit::BaseNode* node) noexcept {
     // Can be initialized only once.
-    BL_ASSERT(_globalHook == nullptr);
-    _globalHook = node;
+    BL_ASSERT(_global_hook == nullptr);
+    _global_hook = node;
   }
 
-  BL_INLINE void _finiGlobalHook() noexcept {
-    // Initialized by `_initGlobalHook()`, cannot be null here.
-    BL_ASSERT(_globalHook != nullptr);
-    _globalHook = nullptr;
+  BL_INLINE void _fini_global_hook() noexcept {
+    // Initialized by `_init_global_hook()`, cannot be null here.
+    BL_ASSERT(_global_hook != nullptr);
+    _global_hook = nullptr;
   }
 
   //! \}

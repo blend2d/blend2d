@@ -61,17 +61,17 @@ struct BmpFileSignature {
 //! Bitmap File Header [12 Bytes] (we don't count signature here, it's separate).
 struct BmpFileHeader {
   //! Bitmap file size in bytes.
-  uint32_t fileSize;
+  uint32_t file_size;
   //! Reserved, should be zero.
   uint32_t reserved;
   //! Offset to image data (54, 124, ...).
-  uint32_t imageOffset;
+  uint32_t image_offset;
 
   BL_INLINE void reset() noexcept { *this = BmpFileHeader{}; }
 
-  BL_INLINE void byteSwap() {
-    fileSize          = IntOps::byteSwap32(fileSize);
-    imageOffset       = IntOps::byteSwap32(imageOffset);
+  BL_INLINE void byte_swap() {
+    file_size          = IntOps::byteSwap32(file_size);
+    image_offset       = IntOps::byteSwap32(image_offset);
   }
 };
 
@@ -85,7 +85,7 @@ struct BmpInfoHeader {
   //! Bitmap OS/2 Header [12 Bytes].
   struct OS2 {
     //! Header size (40, 52).
-    uint32_t headerSize;
+    uint32_t header_size;
     //! Bitmap width (16-bit value).
     int16_t width;
     //! Bitmap height (16-bit value).
@@ -93,14 +93,14 @@ struct BmpInfoHeader {
     //! Number of color planes (always 1).
     uint16_t planes;
     //! Bits per pixel (1, 4, 8 or 24).
-    uint16_t bitsPerPixel;
+    uint16_t bits_per_pixel;
 
-    BL_INLINE void byteSwap() noexcept {
-      headerSize      = IntOps::byteSwap32(headerSize);
-      width           = IntOps::byteSwap16(width);
-      height          = IntOps::byteSwap16(height);
-      planes          = IntOps::byteSwap16(planes);
-      bitsPerPixel    = IntOps::byteSwap16(bitsPerPixel);
+    BL_INLINE void byte_swap() noexcept {
+      header_size    = IntOps::byteSwap32(header_size);
+      width          = IntOps::byteSwap16(width);
+      height         = IntOps::byteSwap16(height);
+      planes         = IntOps::byteSwap16(planes);
+      bits_per_pixel = IntOps::byteSwap16(bits_per_pixel);
     }
   };
 
@@ -109,7 +109,7 @@ struct BmpInfoHeader {
     // Version 1.
 
     //! Header size (40, 52, 56, 108, 124).
-    uint32_t headerSize;
+    uint32_t header_size;
     //! Bitmap width.
     int32_t width;
     //! Bitmap height.
@@ -117,19 +117,19 @@ struct BmpInfoHeader {
     //! Count of planes, always 1.
     uint16_t planes;
     //! Bits per pixel (1, 4, 8, 16, 24 or 32).
-    uint16_t bitsPerPixel;
+    uint16_t bits_per_pixel;
     //! Compression methods used.
     uint32_t compression;
     //! Image data size (in bytes).
-    uint32_t imageSize;
+    uint32_t image_size;
     //! Horizontal resolution in pixels per meter.
-    uint32_t horzResolution;
+    uint32_t horz_resolution;
     //! Vertical resolution in pixels per meter.
-    uint32_t vertResolution;
+    uint32_t vert_resolution;
     //! Number of colors in the image.
-    uint32_t colorsUsed;
+    uint32_t colors_used;
     //! Minimum number of important colors.
-    uint32_t colorsImportant;
+    uint32_t colors_important;
 
     // Version 2 and 3.
 
@@ -137,13 +137,13 @@ struct BmpInfoHeader {
       uint32_t masks[4];
       struct {
         //! Mask identifying bits of red component.
-        uint32_t rMask;
+        uint32_t r_mask;
         //! Mask identifying bits of green component.
-        uint32_t gMask;
+        uint32_t g_mask;
         //! Mask identifying bits of blue component.
-        uint32_t bMask;
+        uint32_t b_mask;
         //! Mask identifying bits of alpha component [Version 3+ only].
-        uint32_t aMask;
+        uint32_t a_mask;
       };
     };
 
@@ -158,60 +158,60 @@ struct BmpInfoHeader {
     //! Coordinates of blue endpoint.
     XYZ b;
     //! Gamma red coordinate scale value.
-    uint32_t rGamma;
+    uint32_t r_gamma;
     //! Gamma green coordinate scale value.
     uint32_t gGamma;
     //! Gamma blue coordinate scale value.
-    uint32_t bGamma;
+    uint32_t b_gamma;
 
     // Version 5.
 
     //! Rendering intent for bitmap.
     uint32_t intent;
     //! ProfileData offset (in bytes), from the beginning of `BmpInfoHeader::Win`.
-    uint32_t profileData;
+    uint32_t profile_data;
     //! Size, in bytes, of embedded profile data.
-    uint32_t profileSize;
+    uint32_t profile_size;
     //! Reserved, should be zero.
     uint32_t reserved;
 
-    BL_INLINE void byteSwap() noexcept {
-      headerSize      = IntOps::byteSwap32(headerSize);
-      width           = IntOps::byteSwap32(width);
-      height          = IntOps::byteSwap32(height);
-      planes          = IntOps::byteSwap16(planes);
-      bitsPerPixel    = IntOps::byteSwap16(bitsPerPixel);
-      compression     = IntOps::byteSwap32(compression);
-      imageSize       = IntOps::byteSwap32(imageSize);
-      horzResolution  = IntOps::byteSwap32(horzResolution);
-      vertResolution  = IntOps::byteSwap32(vertResolution);
-      colorsUsed      = IntOps::byteSwap32(colorsUsed);
-      colorsImportant = IntOps::byteSwap32(colorsImportant);
-      rMask           = IntOps::byteSwap32(rMask);
-      gMask           = IntOps::byteSwap32(gMask);
-      bMask           = IntOps::byteSwap32(bMask);
-      aMask           = IntOps::byteSwap32(aMask);
-      colorspace      = IntOps::byteSwap32(colorspace);
-      r.x             = IntOps::byteSwap32(r.x);
-      r.y             = IntOps::byteSwap32(r.y);
-      r.z             = IntOps::byteSwap32(r.z);
-      g.x             = IntOps::byteSwap32(g.x);
-      g.y             = IntOps::byteSwap32(g.y);
-      g.z             = IntOps::byteSwap32(g.z);
-      b.x             = IntOps::byteSwap32(b.x);
-      b.y             = IntOps::byteSwap32(b.y);
-      b.z             = IntOps::byteSwap32(b.z);
-      rGamma          = IntOps::byteSwap32(rGamma);
-      gGamma          = IntOps::byteSwap32(gGamma);
-      bGamma          = IntOps::byteSwap32(bGamma);
-      intent          = IntOps::byteSwap32(intent);
-      profileData     = IntOps::byteSwap32(profileData);
-      profileSize     = IntOps::byteSwap32(profileSize);
+    BL_INLINE void byte_swap() noexcept {
+      header_size      = IntOps::byteSwap32(header_size);
+      width            = IntOps::byteSwap32(width);
+      height           = IntOps::byteSwap32(height);
+      planes           = IntOps::byteSwap16(planes);
+      bits_per_pixel   = IntOps::byteSwap16(bits_per_pixel);
+      compression      = IntOps::byteSwap32(compression);
+      image_size       = IntOps::byteSwap32(image_size);
+      horz_resolution  = IntOps::byteSwap32(horz_resolution);
+      vert_resolution  = IntOps::byteSwap32(vert_resolution);
+      colors_used      = IntOps::byteSwap32(colors_used);
+      colors_important = IntOps::byteSwap32(colors_important);
+      r_mask           = IntOps::byteSwap32(r_mask);
+      g_mask           = IntOps::byteSwap32(g_mask);
+      b_mask           = IntOps::byteSwap32(b_mask);
+      a_mask           = IntOps::byteSwap32(a_mask);
+      colorspace       = IntOps::byteSwap32(colorspace);
+      r.x              = IntOps::byteSwap32(r.x);
+      r.y              = IntOps::byteSwap32(r.y);
+      r.z              = IntOps::byteSwap32(r.z);
+      g.x              = IntOps::byteSwap32(g.x);
+      g.y              = IntOps::byteSwap32(g.y);
+      g.z              = IntOps::byteSwap32(g.z);
+      b.x              = IntOps::byteSwap32(b.x);
+      b.y              = IntOps::byteSwap32(b.y);
+      b.z              = IntOps::byteSwap32(b.z);
+      r_gamma          = IntOps::byteSwap32(r_gamma);
+      gGamma           = IntOps::byteSwap32(gGamma);
+      b_gamma          = IntOps::byteSwap32(b_gamma);
+      intent           = IntOps::byteSwap32(intent);
+      profile_data     = IntOps::byteSwap32(profile_data);
+      profile_size     = IntOps::byteSwap32(profile_size);
     }
   };
 
   union {
-    uint32_t headerSize;
+    uint32_t header_size;
     OS2 os2;
     Win win;
   };
@@ -219,12 +219,12 @@ struct BmpInfoHeader {
   BL_INLINE void reset() noexcept { *this = BmpInfoHeader{}; }
 };
 
-BL_HIDDEN void bmpCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
+BL_HIDDEN void bmp_codec_on_init(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
 } // {bl::Bmp}
 
 struct BLBmpDecoderImpl : public BLImageDecoderImpl {
-  BLImageInfo imageInfo;
+  BLImageInfo image_info;
   bl::Bmp::BmpFileHeader file;
   bl::Bmp::BmpInfoHeader info;
   BLFormatInfo fmt;

@@ -27,7 +27,7 @@ namespace KernImpl {
 // bl::OpenType::KernImpl - Lookup Tables
 // ======================================
 
-static const uint8_t minKernSubTableSize[4] = {
+static const uint8_t min_kern_sub_table_size[4] = {
   uint8_t(sizeof(KernTable::Format0)),
   uint8_t(sizeof(KernTable::Format1)),
   uint8_t(sizeof(KernTable::Format2) + 6 + 2), // Includes class table and a single kerning value.
@@ -58,17 +58,17 @@ struct UnsortedRange {
   uint32_t end;
 };
 
-// Checks whether the pairs in `pairArray` are sorted and can be b-searched. The last `start` arguments
+// Checks whether the pairs in `pair_array` are sorted and can be b-searched. The last `start` arguments
 // specifies the start index from which the check should start as this is required by some utilities here.
-static size_t checkKernPairs(const KernTable::Pair* pairArray, size_t pairCount, size_t start) noexcept {
-  if (start >= pairCount)
-    return pairCount;
+static size_t check_kern_pairs(const KernTable::Pair* pair_array, size_t pair_count, size_t start) noexcept {
+  if (start >= pair_count)
+    return pair_count;
 
   size_t i;
-  uint32_t prev = pairArray[start].combined();
+  uint32_t prev = pair_array[start].combined();
 
-  for (i = start; i < pairCount; i++) {
-    uint32_t pair = pairArray[i].combined();
+  for (i = start; i < pair_count; i++) {
+    uint32_t pair = pair_array[i].combined();
     // We must use `prev > pair`, because some fonts have kerning pairs duplicated for no reason (the same
     // values repeated). This doesn't violate the binary search requirements so we are okay with it.
     if (BL_UNLIKELY(prev > pair))
@@ -82,7 +82,7 @@ static size_t checkKernPairs(const KernTable::Pair* pairArray, size_t pairCount,
 // Finds ranges of sorted pairs that can be used and creates ranges of unsorted pairs that will be merged into a
 // single (synthesized) range of pairs. This function is only called if the kerning data in 'kern' is not sorted,
 // and thus has to be fixed.
-static BLResult fixUnsortedKernPairs(KernCollection& collection, const KernTable::Format0* fmtData, uint32_t dataOffset, uint32_t pairCount, size_t currentIndex, uint32_t groupFlags, Trace trace) noexcept {
+static BLResult fix_unsorted_kern_pairs(KernCollection& collection, const KernTable::Format0* fmt_data, uint32_t data_offset, uint32_t pair_count, size_t current_index, uint32_t group_flags, Trace trace) noexcept {
   typedef KernTable::Pair Pair;
 
   enum : uint32_t {
@@ -90,85 +90,85 @@ static BLResult fixUnsortedKernPairs(KernCollection& collection, const KernTable
     kMinPairCount = 32 // Minimum number of pairs in a sub-range.
   };
 
-  size_t rangeStart = 0;
-  size_t unsortedStart = 0;
-  size_t threshold = blMax<size_t>((pairCount - rangeStart) / kMaxGroups, kMinPairCount);
+  size_t range_start = 0;
+  size_t unsorted_start = 0;
+  size_t threshold = bl_max<size_t>((pair_count - range_start) / kMaxGroups, kMinPairCount);
 
   // Small ranges that are unsorted will be copied into a single one and then sorted.
   // Number of ranges must be `kMaxGroups + 1` to consider also a last trailing range.
-  UnsortedRange unsortedRanges[kMaxGroups + 1];
-  size_t unsortedCount = 0;
-  size_t unsortedPairSum = 0;
+  UnsortedRange unsorted_ranges[kMaxGroups + 1];
+  size_t unsorted_count = 0;
+  size_t unsorted_pair_sum = 0;
 
   BL_PROPAGATE(collection.groups.reserve(collection.groups.size() + kMaxGroups + 1));
   for (;;) {
-    size_t rangeLength = (currentIndex - rangeStart);
+    size_t range_length = (current_index - range_start);
 
-    if (rangeLength >= threshold) {
-      if (rangeStart != unsortedStart) {
-        BL_ASSERT(unsortedCount < BL_ARRAY_SIZE(unsortedRanges));
+    if (range_length >= threshold) {
+      if (range_start != unsorted_start) {
+        BL_ASSERT(unsorted_count < BL_ARRAY_SIZE(unsorted_ranges));
 
-        unsortedRanges[unsortedCount].reset(uint32_t(unsortedStart), uint32_t(rangeStart));
-        unsortedPairSum += rangeStart - unsortedStart;
-        unsortedCount++;
+        unsorted_ranges[unsorted_count].reset(uint32_t(unsorted_start), uint32_t(range_start));
+        unsorted_pair_sum += range_start - unsorted_start;
+        unsorted_count++;
       }
 
-      unsortedStart = currentIndex;
-      uint32_t subOffset = uint32_t(dataOffset + rangeStart * sizeof(Pair));
+      unsorted_start = current_index;
+      uint32_t sub_offset = uint32_t(data_offset + range_start * sizeof(Pair));
 
       // Cannot fail as we reserved enough.
-      trace.warn("Adding Sorted Range [%zu:%zu]\n", rangeStart, currentIndex);
-      collection.groups.append(KernGroup::makeReferenced(0, groupFlags, subOffset, uint32_t(rangeLength)));
+      trace.warn("Adding Sorted Range [%zu:%zu]\n", range_start, current_index);
+      collection.groups.append(KernGroup::make_referenced(0, group_flags, sub_offset, uint32_t(range_length)));
     }
 
-    rangeStart = currentIndex;
-    if (currentIndex == pairCount)
+    range_start = current_index;
+    if (current_index == pair_count)
       break;
 
-    currentIndex = checkKernPairs(fmtData->pairArray(), pairCount, currentIndex);
+    current_index = check_kern_pairs(fmt_data->pair_array(), pair_count, current_index);
   }
 
   // Trailing unsorted range.
-  if (unsortedStart != pairCount) {
-    BL_ASSERT(unsortedCount < BL_ARRAY_SIZE(unsortedRanges));
+  if (unsorted_start != pair_count) {
+    BL_ASSERT(unsorted_count < BL_ARRAY_SIZE(unsorted_ranges));
 
-    unsortedRanges[unsortedCount].reset(uint32_t(unsortedStart), uint32_t(rangeStart));
-    unsortedPairSum += pairCount - unsortedStart;
-    unsortedCount++;
+    unsorted_ranges[unsorted_count].reset(uint32_t(unsorted_start), uint32_t(range_start));
+    unsorted_pair_sum += pair_count - unsorted_start;
+    unsorted_count++;
   }
 
-  if (unsortedPairSum) {
-    Pair* synthesizedPairs = static_cast<Pair*>(malloc(unsortedPairSum * sizeof(Pair)));
-    if (BL_UNLIKELY(!synthesizedPairs))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+  if (unsorted_pair_sum) {
+    Pair* synthesized_pairs = static_cast<Pair*>(malloc(unsorted_pair_sum * sizeof(Pair)));
+    if (BL_UNLIKELY(!synthesized_pairs))
+      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-    size_t synthesizedIndex = 0;
-    for (size_t i = 0; i < unsortedCount; i++) {
-      UnsortedRange& r = unsortedRanges[i];
-      size_t rangeLength = (r.end - r.start);
+    size_t synthesized_index = 0;
+    for (size_t i = 0; i < unsorted_count; i++) {
+      UnsortedRange& r = unsorted_ranges[i];
+      size_t range_length = (r.end - r.start);
 
       trace.warn("Adding Synthesized Range [%zu:%zu]\n", size_t(r.start), size_t(r.end));
-      memcpy(synthesizedPairs + synthesizedIndex, fmtData->pairArray() + r.start, rangeLength * sizeof(Pair));
+      memcpy(synthesized_pairs + synthesized_index, fmt_data->pair_array() + r.start, range_length * sizeof(Pair));
 
-      synthesizedIndex += rangeLength;
+      synthesized_index += range_length;
     }
-    BL_ASSERT(synthesizedIndex == unsortedPairSum);
+    BL_ASSERT(synthesized_index == unsorted_pair_sum);
 
-    quickSort(synthesizedPairs, unsortedPairSum, [](const Pair& a, const Pair& b) noexcept -> int {
-      uint32_t aCombined = a.combined();
-      uint32_t bCombined = b.combined();
-      return aCombined < bCombined ? -1 : aCombined > bCombined ? 1 : 0;
+    quick_sort(synthesized_pairs, unsorted_pair_sum, [](const Pair& a, const Pair& b) noexcept -> int {
+      uint32_t a_combined = a.combined();
+      uint32_t b_combined = b.combined();
+      return a_combined < b_combined ? -1 : a_combined > b_combined ? 1 : 0;
     });
 
     // Cannot fail as we reserved enough.
-    collection.groups.append(KernGroup::makeSynthesized(0, groupFlags, synthesizedPairs, uint32_t(unsortedPairSum)));
+    collection.groups.append(KernGroup::make_synthesized(0, group_flags, synthesized_pairs, uint32_t(unsorted_pair_sum)));
   }
 
   return BL_SUCCESS;
 }
 
-static BL_INLINE size_t findKernPair(const KernTable::Pair* pairs, size_t count, uint32_t pair) noexcept {
-  return binarySearch(pairs, count, KernMatch(pair));
+static BL_INLINE size_t find_kern_pair(const KernTable::Pair* pairs, size_t count, uint32_t pair) noexcept {
+  return binary_search(pairs, count, KernMatch(pair));
 }
 
 // bl::OpenType::KernImpl - Apply
@@ -178,8 +178,8 @@ static constexpr int32_t kKernMaskOverride = 0x0;
 static constexpr int32_t kKernMaskMinimum = 0x1;
 static constexpr int32_t kKernMaskCombine = -1;
 
-// Calculates the mask required by `combineKernValue()` from coverage `flags`.
-static BL_INLINE int32_t maskFromKernGroupFlags(uint32_t flags) noexcept {
+// Calculates the mask required by `combine_kern_value()` from coverage `flags`.
+static BL_INLINE int32_t mask_from_kern_group_flags(uint32_t flags) noexcept {
   if (flags & KernGroup::kFlagOverride)
     return kKernMaskOverride;
   else if (flags & KernGroup::kFlagMinimum)
@@ -190,189 +190,189 @@ static BL_INLINE int32_t maskFromKernGroupFlags(uint32_t flags) noexcept {
 
 // There are several options of combining the kerning value with the previous one. The most common is simply adding
 // these two together, but there are also minimum and override (aka replace) functions that we handle here.
-static BL_INLINE int32_t combineKernValue(int32_t origVal, int32_t newVal, int32_t mask) noexcept {
+static BL_INLINE int32_t combine_kern_value(int32_t orig_val, int32_t new_val, int32_t mask) noexcept {
   if (mask == kKernMaskMinimum)
-    return blMin<int32_t>(origVal, newVal); // Handles 'minimum' function.
+    return bl_min<int32_t>(orig_val, new_val); // Handles 'minimum' function.
   else
-    return (origVal & mask) + newVal;       // Handles both 'add' and 'override' functions.
+    return (orig_val & mask) + new_val;       // Handles both 'add' and 'override' functions.
 }
 
 // Kern SubTable Format 0 - Ordered list of kerning pairs.
-static BL_INLINE int32_t applyKernFormat0(const OTFaceImpl* faceI, const void* dataPtr, size_t dataSize, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count, int32_t mask) noexcept {
-  blUnused(faceI);
+static BL_INLINE int32_t apply_kern_format0(const OTFaceImpl* ot_face_impl, const void* data_ptr, size_t data_size, uint32_t* glyph_data, BLGlyphPlacement* placement_data, size_t count, int32_t mask) noexcept {
+  bl_unused(ot_face_impl);
 
-  // Format0's `dataPtr` is not a pointer to the start of the table, instead it points to kerning pairs that are
+  // Format0's `data_ptr` is not a pointer to the start of the table, instead it points to kerning pairs that are
   // either references to the original font data or synthesized in case that the data was wrong or not sorted.
-  const KernTable::Pair* pairData = static_cast<const KernTable::Pair*>(dataPtr);
-  size_t pairCount = dataSize;
+  const KernTable::Pair* pair_data = static_cast<const KernTable::Pair*>(data_ptr);
+  size_t pair_count = data_size;
 
-  int32_t allCombined = 0;
-  uint32_t pair = glyphData[0] << 16;
+  int32_t all_combined = 0;
+  uint32_t pair = glyph_data[0] << 16;
 
   for (size_t i = 1; i < count; i++, pair <<= 16) {
-    pair |= glyphData[i];
+    pair |= glyph_data[i];
 
-    size_t index = findKernPair(pairData, pairCount, pair);
+    size_t index = find_kern_pair(pair_data, pair_count, pair);
     if (index == SIZE_MAX)
       continue;
 
-    int32_t value = pairData[index].value();
-    int32_t combined = combineKernValue(placementData[i].placement.x, value, mask);
+    int32_t value = pair_data[index].value();
+    int32_t combined = combine_kern_value(placement_data[i].placement.x, value, mask);
 
-    placementData[i].placement.x = combined;
-    allCombined |= combined;
+    placement_data[i].placement.x = combined;
+    all_combined |= combined;
   }
 
-  return allCombined;
+  return all_combined;
 }
 
 // Kern SubTable Format 2 - Simple NxM array of kerning values.
-static BL_INLINE int32_t applyKernFormat2(const OTFaceImpl* faceI, const void* dataPtr, size_t dataSize, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count, int32_t mask) noexcept {
+static BL_INLINE int32_t apply_kern_format2(const OTFaceImpl* ot_face_impl, const void* data_ptr, size_t data_size, uint32_t* glyph_data, BLGlyphPlacement* placement_data, size_t count, int32_t mask) noexcept {
   typedef KernTable::Format2 Format2;
   typedef Format2::ClassTable ClassTable;
 
-  const Format2* subTable = PtrOps::offset<const Format2>(dataPtr, faceI->kern.headerSize);
-  uint32_t leftClassTableOffset = subTable->leftClassTable();
-  uint32_t rightClassTableOffset = subTable->rightClassTable();
+  const Format2* sub_table = PtrOps::offset<const Format2>(data_ptr, ot_face_impl->kern.header_size);
+  uint32_t left_class_table_offset = sub_table->left_class_table();
+  uint32_t right_class_table_offset = sub_table->right_class_table();
 
-  if (BL_UNLIKELY(blMax(leftClassTableOffset, rightClassTableOffset) > dataSize - sizeof(ClassTable)))
+  if (BL_UNLIKELY(bl_max(left_class_table_offset, right_class_table_offset) > data_size - sizeof(ClassTable)))
     return 0;
 
-  const ClassTable* leftClassTable = PtrOps::offset<const ClassTable>(dataPtr, leftClassTableOffset);
-  const ClassTable* rightClassTable = PtrOps::offset<const ClassTable>(dataPtr, rightClassTableOffset);
+  const ClassTable* left_class_table = PtrOps::offset<const ClassTable>(data_ptr, left_class_table_offset);
+  const ClassTable* right_class_table = PtrOps::offset<const ClassTable>(data_ptr, right_class_table_offset);
 
-  uint32_t leftGlyphCount = leftClassTable->glyphCount();
-  uint32_t rightGlyphCount = rightClassTable->glyphCount();
+  uint32_t left_glyph_count = left_class_table->glyph_count();
+  uint32_t right_glyph_count = right_class_table->glyph_count();
 
-  uint32_t leftTableEnd = leftClassTableOffset + 4u + leftGlyphCount * 2u;
-  uint32_t rightTableEnd = rightClassTableOffset + 4u + rightGlyphCount * 2u;
+  uint32_t left_table_end = left_class_table_offset + 4u + left_glyph_count * 2u;
+  uint32_t right_table_end = right_class_table_offset + 4u + right_glyph_count * 2u;
 
-  if (BL_UNLIKELY(blMax(leftTableEnd, rightTableEnd) > dataSize))
+  if (BL_UNLIKELY(bl_max(left_table_end, right_table_end) > data_size))
     return 0;
 
-  uint32_t leftFirstGlyph = leftClassTable->firstGlyph();
-  uint32_t rightFirstGlyph = rightClassTable->firstGlyph();
+  uint32_t left_first_glyph = left_class_table->first_glyph();
+  uint32_t right_first_glyph = right_class_table->first_glyph();
 
-  int32_t allCombined = 0;
-  uint32_t leftGlyph = glyphData[0];
-  uint32_t rightGlyph = 0;
+  int32_t all_combined = 0;
+  uint32_t left_glyph = glyph_data[0];
+  uint32_t right_glyph = 0;
 
-  for (size_t i = 1; i < count; i++, leftGlyph = rightGlyph) {
-    rightGlyph = glyphData[i];
+  for (size_t i = 1; i < count; i++, left_glyph = right_glyph) {
+    right_glyph = glyph_data[i];
 
-    uint32_t leftIndex  = leftGlyph - leftFirstGlyph;
-    uint32_t rightIndex = rightGlyph - rightFirstGlyph;
+    uint32_t left_index  = left_glyph - left_first_glyph;
+    uint32_t right_index = right_glyph - right_first_glyph;
 
-    if ((leftIndex >= leftGlyphCount) | (rightIndex >= rightGlyphCount))
+    if ((left_index >= left_glyph_count) | (right_index >= right_glyph_count))
       continue;
 
-    uint32_t leftClass = leftClassTable->offsetArray()[leftIndex].value();
-    uint32_t rightClass = rightClassTable->offsetArray()[rightIndex].value();
+    uint32_t left_class = left_class_table->offset_array()[left_index].value();
+    uint32_t right_class = right_class_table->offset_array()[right_index].value();
 
     // Cannot overflow as both components are unsigned 16-bit integers.
-    uint32_t valueOffset = leftClass + rightClass;
-    if (leftClass * rightClass == 0 || valueOffset > dataSize - 2u)
+    uint32_t value_offset = left_class + right_class;
+    if (left_class * right_class == 0 || value_offset > data_size - 2u)
       continue;
 
-    int32_t value = PtrOps::offset<const FWord>(dataPtr, valueOffset)->value();
-    int32_t combined = combineKernValue(placementData[i].placement.x, value, mask);
+    int32_t value = PtrOps::offset<const FWord>(data_ptr, value_offset)->value();
+    int32_t combined = combine_kern_value(placement_data[i].placement.x, value, mask);
 
-    placementData[i].placement.x = combined;
-    allCombined |= combined;
+    placement_data[i].placement.x = combined;
+    all_combined |= combined;
   }
 
-  return allCombined;
+  return all_combined;
 }
 
 // Kern SubTable Format 3 - Simple NxM array of kerning indexes.
-static BL_INLINE int32_t applyKernFormat3(const OTFaceImpl* faceI, const void* dataPtr, size_t dataSize, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count, int32_t mask) noexcept {
+static BL_INLINE int32_t apply_kern_format3(const OTFaceImpl* ot_face_impl, const void* data_ptr, size_t data_size, uint32_t* glyph_data, BLGlyphPlacement* placement_data, size_t count, int32_t mask) noexcept {
   typedef KernTable::Format3 Format3;
 
-  const Format3* subTable = PtrOps::offset<const Format3>(dataPtr, faceI->kern.headerSize);
-  uint32_t glyphCount = subTable->glyphCount();
-  uint32_t kernValueCount = subTable->kernValueCount();
-  uint32_t leftClassCount = subTable->leftClassCount();
-  uint32_t rightClassCount = subTable->rightClassCount();
+  const Format3* sub_table = PtrOps::offset<const Format3>(data_ptr, ot_face_impl->kern.header_size);
+  uint32_t glyph_count = sub_table->glyph_count();
+  uint32_t kern_value_count = sub_table->kern_value_count();
+  uint32_t left_class_count = sub_table->left_class_count();
+  uint32_t right_class_count = sub_table->right_class_count();
 
-  uint32_t requiredSize = faceI->kern.headerSize + uint32_t(sizeof(Format3)) + kernValueCount * 2u + glyphCount * 2u + leftClassCount * rightClassCount;
-  if (BL_UNLIKELY(requiredSize < dataSize))
+  uint32_t required_size = ot_face_impl->kern.header_size + uint32_t(sizeof(Format3)) + kern_value_count * 2u + glyph_count * 2u + left_class_count * right_class_count;
+  if (BL_UNLIKELY(required_size < data_size))
     return 0;
 
-  const FWord* valueTable = PtrOps::offset<const FWord>(subTable, sizeof(Format3));
-  const UInt8* classTable = PtrOps::offset<const UInt8>(valueTable, kernValueCount * 2u);
-  const UInt8* indexTable = classTable + glyphCount * 2u;
+  const FWord* value_table = PtrOps::offset<const FWord>(sub_table, sizeof(Format3));
+  const UInt8* class_table = PtrOps::offset<const UInt8>(value_table, kern_value_count * 2u);
+  const UInt8* index_table = class_table + glyph_count * 2u;
 
-  int32_t allCombined = 0;
-  uint32_t leftGlyph = glyphData[0];
-  uint32_t rightGlyph = 0;
+  int32_t all_combined = 0;
+  uint32_t left_glyph = glyph_data[0];
+  uint32_t right_glyph = 0;
 
-  for (size_t i = 1; i < count; i++, leftGlyph = rightGlyph) {
-    rightGlyph = glyphData[i];
-    if (blMax(leftGlyph, rightGlyph) >= glyphCount)
+  for (size_t i = 1; i < count; i++, left_glyph = right_glyph) {
+    right_glyph = glyph_data[i];
+    if (bl_max(left_glyph, right_glyph) >= glyph_count)
       continue;
 
-    uint32_t leftClass = classTable[leftGlyph].value();
-    uint32_t rightClass = classTable[glyphCount + rightGlyph].value();
+    uint32_t left_class = class_table[left_glyph].value();
+    uint32_t right_class = class_table[glyph_count + right_glyph].value();
 
-    if ((leftClass >= leftClassCount) | (rightClass >= rightClassCount))
+    if ((left_class >= left_class_count) | (right_class >= right_class_count))
       continue;
 
-    uint32_t valueIndex = indexTable[leftClass * rightClassCount + rightClass].value();
-    if (valueIndex >= kernValueCount)
+    uint32_t value_index = index_table[left_class * right_class_count + right_class].value();
+    if (value_index >= kern_value_count)
       continue;
 
-    int32_t value = valueTable[valueIndex].value();
-    int32_t combined = combineKernValue(placementData[i].placement.x, value, mask);
+    int32_t value = value_table[value_index].value();
+    int32_t combined = combine_kern_value(placement_data[i].placement.x, value, mask);
 
-    placementData[i].placement.x = combined;
-    allCombined |= combined;
+    placement_data[i].placement.x = combined;
+    all_combined |= combined;
   }
 
-  return allCombined;
+  return all_combined;
 }
 
-// Applies the data calculated by applyKernFormatN.
-static BL_INLINE void finishKern(const OTFaceImpl* faceI, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count) noexcept {
-  blUnused(faceI, glyphData);
+// Applies the data calculated by apply_kern_formatN.
+static BL_INLINE void finish_kern(const OTFaceImpl* ot_face_impl, uint32_t* glyph_data, BLGlyphPlacement* placement_data, size_t count) noexcept {
+  bl_unused(ot_face_impl, glyph_data);
   for (size_t i = 1; i < count; i++) {
-    placementData[i - 1].advance += placementData[i].placement;
-    placementData[i].placement.reset();
+    placement_data[i - 1].advance += placement_data[i].placement;
+    placement_data[i].placement.reset();
   }
 }
 
-static BLResult BL_CDECL applyKern(const BLFontFaceImpl* faceI_, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count) noexcept {
-  const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
+static BLResult BL_CDECL apply_kern(const BLFontFaceImpl* face_impl, uint32_t* glyph_data, BLGlyphPlacement* placement_data, size_t count) noexcept {
+  const OTFaceImpl* ot_face_impl = static_cast<const OTFaceImpl*>(face_impl);
   if (count < 2)
     return BL_SUCCESS;
 
-  const void* basePtr = faceI->kern.table.data;
-  const KernCollection& collection = faceI->kern.collection[0];
+  const void* base_ptr = ot_face_impl->kern.table.data;
+  const KernCollection& collection = ot_face_impl->kern.collection[0];
 
-  const KernGroup* kernGroups = collection.groups.data();
-  size_t groupCount = collection.groups.size();
+  const KernGroup* kern_groups = collection.groups.data();
+  size_t group_count = collection.groups.size();
 
-  int32_t allCombined = 0;
+  int32_t all_combined = 0;
 
-  for (size_t groupIndex = 0; groupIndex < groupCount; groupIndex++) {
-    const KernGroup& kernGroup = kernGroups[groupIndex];
+  for (size_t group_index = 0; group_index < group_count; group_index++) {
+    const KernGroup& kern_group = kern_groups[group_index];
 
-    const void* dataPtr = kernGroup.calcDataPtr(basePtr);
-    size_t dataSize = kernGroup.dataSize();
+    const void* data_ptr = kern_group.calc_data_ptr(base_ptr);
+    size_t data_size = kern_group.data_size();
 
-    uint32_t format = kernGroup.format();
-    int32_t mask = maskFromKernGroupFlags(kernGroup.flags());
+    uint32_t format = kern_group.format();
+    int32_t mask = mask_from_kern_group_flags(kern_group.flags());
 
     switch (format) {
-      case 0: allCombined |= applyKernFormat0(faceI, dataPtr, dataSize, glyphData, placementData, count, mask); break;
-      case 2: allCombined |= applyKernFormat2(faceI, dataPtr, dataSize, glyphData, placementData, count, mask); break;
-      case 3: allCombined |= applyKernFormat3(faceI, dataPtr, dataSize, glyphData, placementData, count, mask); break;
+      case 0: all_combined |= apply_kern_format0(ot_face_impl, data_ptr, data_size, glyph_data, placement_data, count, mask); break;
+      case 2: all_combined |= apply_kern_format2(ot_face_impl, data_ptr, data_size, glyph_data, placement_data, count, mask); break;
+      case 3: all_combined |= apply_kern_format3(ot_face_impl, data_ptr, data_size, glyph_data, placement_data, count, mask); break;
     }
   }
 
   // Only finish kerning if we actually did something, if no kerning pair was found or all kerning pairs were
   // zero then there is nothing to do.
-  if (allCombined)
-    finishKern(faceI, glyphData, placementData, count);
+  if (all_combined)
+    finish_kern(ot_face_impl, glyph_data, placement_data, count);
 
   return BL_SUCCESS;
 }
@@ -380,7 +380,7 @@ static BLResult BL_CDECL applyKern(const BLFontFaceImpl* faceI_, uint32_t* glyph
 // bl::OpenType::KernImpl - Init
 // =============================
 
-BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
+BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept {
   typedef KernTable::WinGroupHeader WinGroupHeader;
   typedef KernTable::MacGroupHeader MacGroupHeader;
 
@@ -394,12 +394,12 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 
   if (BL_UNLIKELY(!kern.fits())) {
     trace.warn("Table is truncated\n");
-    faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+    ot_face_impl->face_info.diag_flags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
     return BL_SUCCESS;
   }
 
-  const uint8_t* dataPtr = kern.data;
-  const uint8_t* dataEnd = dataPtr + kern.size;
+  const uint8_t* data_ptr = kern.data;
+  const uint8_t* data_end = data_ptr + kern.size;
 
   // Kern Header
   // -----------
@@ -407,35 +407,35 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   // Detect the header format. Windows header uses 16-bit field describing the version of the table and only defines
   // version 0. Apple uses a different header format which uses a 32-bit version number (`F16x16`). Luckily we can
   // distinguish between these two easily.
-  uint32_t majorVersion = MemOps::readU16uBE(dataPtr);
+  uint32_t major_version = MemOps::readU16uBE(data_ptr);
 
-  uint32_t headerType = 0xFFu;
-  uint32_t headerSize = 0;
-  uint32_t groupCount = 0;
+  uint32_t header_type = 0xFFu;
+  uint32_t header_size = 0;
+  uint32_t group_count = 0;
 
-  if (majorVersion == 0) {
-    headerType = KernData::kHeaderWindows;
-    headerSize = uint32_t(sizeof(WinGroupHeader));
-    groupCount = MemOps::readU16uBE(dataPtr + 2u);
+  if (major_version == 0) {
+    header_type = KernData::kHeaderWindows;
+    header_size = uint32_t(sizeof(WinGroupHeader));
+    group_count = MemOps::readU16uBE(data_ptr + 2u);
 
     trace.info("Version: 0 (WINDOWS)\n");
-    trace.info("GroupCount: %u\n", groupCount);
+    trace.info("GroupCount: %u\n", group_count);
 
     // Not forbidden by the spec, just ignore the table if true.
-    if (!groupCount) {
+    if (!group_count) {
       trace.warn("No kerning pairs defined\n");
       return BL_SUCCESS;
     }
 
-    dataPtr += 4;
+    data_ptr += 4;
   }
-  else if (majorVersion == 1) {
-    uint32_t minorVersion = MemOps::readU16uBE(dataPtr + 2u);
+  else if (major_version == 1) {
+    uint32_t minor_version = MemOps::readU16uBE(data_ptr + 2u);
     trace.info("Version: 1 (MAC)\n");
 
-    if (minorVersion != 0) {
-      trace.warn("Invalid minor version (%u)\n", minorVersion);
-      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+    if (minor_version != 0) {
+      trace.warn("Invalid minor version (%u)\n", minor_version);
+      ot_face_impl->face_info.diag_flags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
       return BL_SUCCESS;
     }
 
@@ -443,45 +443,45 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
     // so make sure we won't read beyond.
     if (kern.size < 8u) {
       trace.warn("InvalidSize: %zu\n", size_t(kern.size));
-      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+      ot_face_impl->face_info.diag_flags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
       return BL_SUCCESS;
     }
 
-    headerType = KernData::kHeaderMac;
-    headerSize = uint32_t(sizeof(MacGroupHeader));
+    header_type = KernData::kHeaderMac;
+    header_size = uint32_t(sizeof(MacGroupHeader));
 
-    groupCount = MemOps::readU32uBE(dataPtr + 4u);
-    trace.info("GroupCount: %u\n", groupCount);
+    group_count = MemOps::readU32uBE(data_ptr + 4u);
+    trace.info("GroupCount: %u\n", group_count);
 
     // Not forbidden by the spec, just ignore the table if true.
-    if (!groupCount) {
+    if (!group_count) {
       trace.warn("No kerning pairs defined\n");
       return BL_SUCCESS;
     }
 
-    dataPtr += 8;
+    data_ptr += 8;
   }
   else {
-    trace.info("Version: %u (UNKNOWN)\n", majorVersion);
+    trace.info("Version: %u (UNKNOWN)\n", major_version);
 
     // No other major version is defined by OpenType. Since KERN table has been superseded by "GPOS" table there will
     // never be any other version.
     trace.fail("Invalid version");
-    faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+    ot_face_impl->face_info.diag_flags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
     return BL_SUCCESS;
   }
 
-  faceI->kern.headerType = uint8_t(headerType);
-  faceI->kern.headerSize = uint8_t(headerSize);
+  ot_face_impl->kern.header_type = uint8_t(header_type);
+  ot_face_impl->kern.header_size = uint8_t(header_size);
 
   // Kern Groups
   // -----------
 
-  uint32_t groupIndex = 0;
+  uint32_t group_index = 0;
   do {
-    size_t remainingSize = PtrOps::bytesUntil(dataPtr, dataEnd);
-    if (BL_UNLIKELY(remainingSize < headerSize)) {
-      trace.warn("No more data for group #%u\n", groupIndex);
+    size_t remaining_size = PtrOps::bytes_until(data_ptr, data_end);
+    if (BL_UNLIKELY(remaining_size < header_size)) {
+      trace.warn("No more data for group #%u\n", group_index);
       break;
     }
 
@@ -489,114 +489,114 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
     uint32_t format = 0;
     uint32_t coverage = 0;
 
-    trace.info("Group #%u\n", groupIndex);
+    trace.info("Group #%u\n", group_index);
     trace.indent();
 
-    if (headerType == KernData::kHeaderWindows) {
-      const WinGroupHeader* group = reinterpret_cast<const WinGroupHeader*>(dataPtr);
+    if (header_type == KernData::kHeaderWindows) {
+      const WinGroupHeader* group = reinterpret_cast<const WinGroupHeader*>(data_ptr);
 
       format = group->format();
       length = group->length();
 
       // Some fonts having only one group have an incorrect length set to the same value as the as the whole 'kern'
       // table. Detect it and fix it.
-      if (length == kern.size && groupCount == 1) {
-        length = uint32_t(remainingSize);
+      if (length == kern.size && group_count == 1) {
+        length = uint32_t(remaining_size);
         trace.warn("Group length is same as the table length, fixed to %u\n", length);
       }
 
       // The last sub-table can have truncated length to 16 bits even when it needs more to represent all kerning
       // pairs. This is not covered by the specification, but it's a common practice.
-      if (length != remainingSize && groupIndex == groupCount - 1) {
-        trace.warn("Fixing reported length from %u to %zu\n", length, remainingSize);
-        length = uint32_t(remainingSize);
+      if (length != remaining_size && group_index == group_count - 1) {
+        trace.warn("Fixing reported length from %u to %zu\n", length, remaining_size);
+        length = uint32_t(remaining_size);
       }
 
       // Not interested in undefined flags.
       coverage = group->coverage() & ~WinGroupHeader::kCoverageReservedBits;
     }
     else {
-      const MacGroupHeader* group = reinterpret_cast<const MacGroupHeader*>(dataPtr);
+      const MacGroupHeader* group = reinterpret_cast<const MacGroupHeader*>(data_ptr);
 
       format = group->format();
       length = group->length();
 
       // Translate coverate flags from MAC format to Windows format that we prefer.
-      uint32_t macCoverage = group->coverage();
-      if ((macCoverage & MacGroupHeader::kCoverageVertical   ) == 0) coverage |= WinGroupHeader::kCoverageHorizontal;
-      if ((macCoverage & MacGroupHeader::kCoverageCrossStream) != 0) coverage |= WinGroupHeader::kCoverageCrossStream;
+      uint32_t mac_coverage = group->coverage();
+      if ((mac_coverage & MacGroupHeader::kCoverageVertical   ) == 0) coverage |= WinGroupHeader::kCoverageHorizontal;
+      if ((mac_coverage & MacGroupHeader::kCoverageCrossStream) != 0) coverage |= WinGroupHeader::kCoverageCrossStream;
     }
 
-    if (length < headerSize) {
-      trace.fail("Group length too small [Length=%u RemainingSize=%zu]\n", length, remainingSize);
-      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+    if (length < header_size) {
+      trace.fail("Group length too small [Length=%u RemainingSize=%zu]\n", length, remaining_size);
+      ot_face_impl->face_info.diag_flags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
       return BL_SUCCESS;
     }
 
-    if (length > remainingSize) {
-      trace.fail("Group length exceeds the remaining space [Length=%u RemainingSize=%zu]\n", length, remainingSize);
-      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+    if (length > remaining_size) {
+      trace.fail("Group length exceeds the remaining space [Length=%u RemainingSize=%zu]\n", length, remaining_size);
+      ot_face_impl->face_info.diag_flags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
       return BL_SUCCESS;
     }
 
     // Move to the beginning of the content of the group.
-    dataPtr += headerSize;
+    data_ptr += header_size;
 
     // It's easier to calculate everything without the header (as its size is variable), so make `length` raw data size
     // that we will store in KernData.
-    length -= headerSize;
-    remainingSize -= headerSize;
+    length -= header_size;
+    remaining_size -= header_size;
 
     // Even on 64-bit machine this cannot overflow as a table length in SFNT header is stored as UInt32.
-    uint32_t offset = (uint32_t)PtrOps::byteOffset(kern.data, dataPtr);
+    uint32_t offset = (uint32_t)PtrOps::byte_offset(kern.data, data_ptr);
     uint32_t orientation = (coverage & WinGroupHeader::kCoverageHorizontal) ? BL_ORIENTATION_HORIZONTAL : BL_ORIENTATION_VERTICAL;
-    uint32_t groupFlags = coverage & (KernGroup::kFlagMinimum | KernGroup::kFlagCrossStream | KernGroup::kFlagOverride);
+    uint32_t group_flags = coverage & (KernGroup::kFlagMinimum | KernGroup::kFlagCrossStream | KernGroup::kFlagOverride);
 
     trace.info("Format: %u%s\n", format, format > 3 ? " (UNKNOWN)" : "");
     trace.info("Coverage: %u\n", coverage);
     trace.info("Orientation: %s\n", orientation == BL_ORIENTATION_HORIZONTAL ? "Horizontal" : "Vertical");
 
-    if (format < BL_ARRAY_SIZE(minKernSubTableSize) && length >= minKernSubTableSize[format]) {
-      KernCollection& collection = faceI->kern.collection[orientation];
+    if (format < BL_ARRAY_SIZE(min_kern_sub_table_size) && length >= min_kern_sub_table_size[format]) {
+      KernCollection& collection = ot_face_impl->kern.collection[orientation];
       switch (format) {
         // Kern SubTable Format 0 - Ordered list of kerning pairs.
         case 0: {
-          const KernTable::Format0* fmtData = reinterpret_cast<const KernTable::Format0*>(dataPtr);
-          uint32_t pairCount = fmtData->pairCount();
-          trace.info("PairCount=%zu\n", pairCount);
+          const KernTable::Format0* fmt_data = reinterpret_cast<const KernTable::Format0*>(data_ptr);
+          uint32_t pair_count = fmt_data->pair_count();
+          trace.info("PairCount=%zu\n", pair_count);
 
-          if (pairCount == 0)
+          if (pair_count == 0)
             break;
 
-          uint32_t pairDataOffset = offset + 8;
-          uint32_t pairDataSize = pairCount * uint32_t(sizeof(KernTable::Pair)) + uint32_t(sizeof(KernTable::Format0));
+          uint32_t pair_data_offset = offset + 8;
+          uint32_t pair_data_size = pair_count * uint32_t(sizeof(KernTable::Pair)) + uint32_t(sizeof(KernTable::Format0));
 
-          if (BL_UNLIKELY(pairDataSize > length)) {
-            uint32_t fixedPairCount = (length - uint32_t(sizeof(KernTable::Format0))) / 6;
-            trace.warn("Fixing the number of pairs from [%u] to [%u] to match the remaining size [%u]\n", pairCount, fixedPairCount, length);
+          if (BL_UNLIKELY(pair_data_size > length)) {
+            uint32_t fixed_pair_count = (length - uint32_t(sizeof(KernTable::Format0))) / 6;
+            trace.warn("Fixing the number of pairs from [%u] to [%u] to match the remaining size [%u]\n", pair_count, fixed_pair_count, length);
 
-            faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_FIXED_KERN_DATA;
-            pairCount = fixedPairCount;
+            ot_face_impl->face_info.diag_flags |= BL_FONT_FACE_DIAG_FIXED_KERN_DATA;
+            pair_count = fixed_pair_count;
           }
 
           // Check whether the pairs are sorted.
-          const KernTable::Pair* pairData = fmtData->pairArray();
-          size_t unsortedIndex = checkKernPairs(pairData, pairCount, 0);
+          const KernTable::Pair* pair_data = fmt_data->pair_array();
+          size_t unsorted_index = check_kern_pairs(pair_data, pair_count, 0);
 
-          if (unsortedIndex != pairCount) {
-            trace.warn("Pair #%zu violates ordering constraint (kerning pairs are not sorted)\n", unsortedIndex);
+          if (unsorted_index != pair_count) {
+            trace.warn("Pair #%zu violates ordering constraint (kerning pairs are not sorted)\n", unsorted_index);
 
-            BLResult result = fixUnsortedKernPairs(collection, fmtData, pairDataOffset, pairCount, unsortedIndex, groupFlags, trace);
+            BLResult result = fix_unsorted_kern_pairs(collection, fmt_data, pair_data_offset, pair_count, unsorted_index, group_flags, trace);
             if (result != BL_SUCCESS) {
               trace.fail("Cannot allocate data for synthesized kerning pairs\n");
               return result;
             }
 
-            faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_FIXED_KERN_DATA;
+            ot_face_impl->face_info.diag_flags |= BL_FONT_FACE_DIAG_FIXED_KERN_DATA;
             break;
           }
           else {
-            BLResult result = collection.groups.append(KernGroup::makeReferenced(0, groupFlags, pairDataOffset, uint32_t(pairCount)));
+            BLResult result = collection.groups.append(KernGroup::make_referenced(0, group_flags, pair_data_offset, uint32_t(pair_count)));
             if (result != BL_SUCCESS) {
               trace.fail("Cannot allocate data for referenced kerning pairs\n");
               return result;
@@ -608,49 +608,49 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 
         // Kern SubTable Format 2 - Simple NxM array of kerning values.
         case 2: {
-          const void* subTable = static_cast<const uint8_t*>(dataPtr) - headerSize;
-          size_t subTableSize = length + headerSize;
+          const void* sub_table = static_cast<const uint8_t*>(data_ptr) - header_size;
+          size_t sub_table_size = length + header_size;
 
-          const KernTable::Format2* fmtData = reinterpret_cast<const KernTable::Format2*>(dataPtr);
-          uint32_t leftClassTableOffset = fmtData->leftClassTable();
-          uint32_t rightClassTableOffset = fmtData->rightClassTable();
-          uint32_t kerningArrayOffset = fmtData->kerningArray();
+          const KernTable::Format2* fmt_data = reinterpret_cast<const KernTable::Format2*>(data_ptr);
+          uint32_t left_class_table_offset = fmt_data->left_class_table();
+          uint32_t right_class_table_offset = fmt_data->right_class_table();
+          uint32_t kerning_array_offset = fmt_data->kerning_array();
 
-          if (leftClassTableOffset > subTableSize - 6u) {
-            trace.warn("Invalid offset [%u] of left ClassTable\n", unsigned(leftClassTableOffset));
+          if (left_class_table_offset > sub_table_size - 6u) {
+            trace.warn("Invalid offset [%u] of left ClassTable\n", unsigned(left_class_table_offset));
             break;
           }
 
-          if (rightClassTableOffset > subTableSize - 6u) {
-            trace.warn("Invalid offset [%u] of right ClassTable\n", unsigned(rightClassTableOffset));
+          if (right_class_table_offset > sub_table_size - 6u) {
+            trace.warn("Invalid offset [%u] of right ClassTable\n", unsigned(right_class_table_offset));
             break;
           }
 
-          if (kerningArrayOffset > subTableSize - 2u) {
-            trace.warn("Invalid offset [%u] of KerningArray\n", unsigned(kerningArrayOffset));
+          if (kerning_array_offset > sub_table_size - 2u) {
+            trace.warn("Invalid offset [%u] of KerningArray\n", unsigned(kerning_array_offset));
             break;
           }
 
-          const KernTable::Format2::ClassTable* leftClassTable = PtrOps::offset<const KernTable::Format2::ClassTable>(subTable, leftClassTableOffset);
-          const KernTable::Format2::ClassTable* rightClassTable = PtrOps::offset<const KernTable::Format2::ClassTable>(subTable, rightClassTableOffset);
+          const KernTable::Format2::ClassTable* left_class_table = PtrOps::offset<const KernTable::Format2::ClassTable>(sub_table, left_class_table_offset);
+          const KernTable::Format2::ClassTable* right_class_table = PtrOps::offset<const KernTable::Format2::ClassTable>(sub_table, right_class_table_offset);
 
-          uint32_t leftGlyphCount = leftClassTable->glyphCount();
-          uint32_t rightGlyphCount = rightClassTable->glyphCount();
+          uint32_t left_glyph_count = left_class_table->glyph_count();
+          uint32_t right_glyph_count = right_class_table->glyph_count();
 
-          uint32_t leftTableSize = leftClassTableOffset + 4u + leftGlyphCount * 2u;
-          uint32_t rightTableSize = rightClassTableOffset + 4u + rightGlyphCount * 2u;
+          uint32_t left_table_size = left_class_table_offset + 4u + left_glyph_count * 2u;
+          uint32_t right_table_size = right_class_table_offset + 4u + right_glyph_count * 2u;
 
-          if (leftTableSize > subTableSize) {
-            trace.warn("Left ClassTable's GlyphCount [%u] overflows table size by [%zu] bytes\n", unsigned(leftGlyphCount), size_t(leftTableSize - subTableSize));
+          if (left_table_size > sub_table_size) {
+            trace.warn("Left ClassTable's GlyphCount [%u] overflows table size by [%zu] bytes\n", unsigned(left_glyph_count), size_t(left_table_size - sub_table_size));
             break;
           }
 
-          if (rightTableSize > subTableSize) {
-            trace.warn("Right ClassTable's GlyphCount [%u] overflows table size by [%zu] bytes\n", unsigned(rightGlyphCount), size_t(rightTableSize - subTableSize));
+          if (right_table_size > sub_table_size) {
+            trace.warn("Right ClassTable's GlyphCount [%u] overflows table size by [%zu] bytes\n", unsigned(right_glyph_count), size_t(right_table_size - sub_table_size));
             break;
           }
 
-          BLResult result = collection.groups.append(KernGroup::makeReferenced(format, groupFlags, offset - headerSize, uint32_t(subTableSize)));
+          BLResult result = collection.groups.append(KernGroup::make_referenced(format, group_flags, offset - header_size, uint32_t(sub_table_size)));
           if (result != BL_SUCCESS) {
             trace.fail("Cannot allocate data for a referenced kerning group of format #%u\n", unsigned(format));
             return result;
@@ -661,21 +661,21 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 
         // Kern SubTable Format 3 - Simple NxM array of kerning indexes.
         case 3: {
-          size_t subTableSize = length + headerSize;
+          size_t sub_table_size = length + header_size;
 
-          const KernTable::Format3* fmtData = reinterpret_cast<const KernTable::Format3*>(dataPtr);
-          uint32_t glyphCount = fmtData->glyphCount();
-          uint32_t kernValueCount = fmtData->kernValueCount();
-          uint32_t leftClassCount = fmtData->leftClassCount();
-          uint32_t rightClassCount = fmtData->rightClassCount();
+          const KernTable::Format3* fmt_data = reinterpret_cast<const KernTable::Format3*>(data_ptr);
+          uint32_t glyph_count = fmt_data->glyph_count();
+          uint32_t kern_value_count = fmt_data->kern_value_count();
+          uint32_t left_class_count = fmt_data->left_class_count();
+          uint32_t right_class_count = fmt_data->right_class_count();
 
-          uint32_t requiredSize = faceI->kern.headerSize + uint32_t(sizeof(KernTable::Format3)) + kernValueCount * 2u + glyphCount * 2u + leftClassCount * rightClassCount;
-          if (BL_UNLIKELY(requiredSize > subTableSize)) {
-            trace.warn("Kerning table data overflows the table size by [%zu] bytes\n", size_t(requiredSize - subTableSize));
+          uint32_t required_size = ot_face_impl->kern.header_size + uint32_t(sizeof(KernTable::Format3)) + kern_value_count * 2u + glyph_count * 2u + left_class_count * right_class_count;
+          if (BL_UNLIKELY(required_size > sub_table_size)) {
+            trace.warn("Kerning table data overflows the table size by [%zu] bytes\n", size_t(required_size - sub_table_size));
             break;
           }
 
-          BLResult result = collection.groups.append(KernGroup::makeReferenced(format, groupFlags, offset - headerSize, uint32_t(subTableSize)));
+          BLResult result = collection.groups.append(KernGroup::make_referenced(format, group_flags, offset - header_size, uint32_t(sub_table_size)));
           if (result != BL_SUCCESS) {
             trace.fail("Cannot allocate data for a referenced kerning group of format #%u\n", unsigned(format));
             return result;
@@ -685,7 +685,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
         }
 
         default:
-          faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+          ot_face_impl->face_info.diag_flags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
           break;
       }
     }
@@ -694,16 +694,16 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
     }
 
     trace.deindent();
-    dataPtr += length;
-  } while (++groupIndex < groupCount);
+    data_ptr += length;
+  } while (++group_index < group_count);
 
-  if (!faceI->kern.collection[BL_ORIENTATION_HORIZONTAL].empty()) {
-    faceI->kern.table = kern;
-    faceI->kern.collection[BL_ORIENTATION_HORIZONTAL].groups.shrink();
-    faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_HORIZONTAL_KERNING;
-    faceI->featureTagSet._addKnownTagId(uint32_t(FontTagData::FeatureId::kKERN));
-    faceI->funcs.applyKern = applyKern;
-    faceI->otFlags |= OTFaceFlags::kLegacyKernAvailable;
+  if (!ot_face_impl->kern.collection[BL_ORIENTATION_HORIZONTAL].is_empty()) {
+    ot_face_impl->kern.table = kern;
+    ot_face_impl->kern.collection[BL_ORIENTATION_HORIZONTAL].groups.shrink();
+    ot_face_impl->face_info.face_flags |= BL_FONT_FACE_FLAG_HORIZONTAL_KERNING;
+    ot_face_impl->feature_tag_set._add_known_tag_id(uint32_t(FontTagData::FeatureId::kKERN));
+    ot_face_impl->funcs.apply_kern = apply_kern;
+    ot_face_impl->ot_flags |= OTFaceFlags::kLegacyKernAvailable;
   }
 
   return BL_SUCCESS;

@@ -22,13 +22,13 @@ UNIT(path_allocation_strategy, BL_TEST_GROUP_GEOMETRY_CONTAINERS) {
 
   for (size_t i = 0; i < kNumItems; i++) {
     if (i == 0)
-      p.moveTo(0, 0);
+      p.move_to(0, 0);
     else
-      p.moveTo(double(i), double(i));
+      p.move_to(double(i), double(i));
 
     if (capacity != p.capacity()) {
-      size_t implSize = PathInternal::implSizeFromCapacity(p.capacity()).value();
-      INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, p.capacity(), implSize);
+      size_t impl_size = PathInternal::impl_size_from_capacity(p.capacity()).value();
+      INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, p.capacity(), impl_size);
 
       capacity = p.capacity();
     }

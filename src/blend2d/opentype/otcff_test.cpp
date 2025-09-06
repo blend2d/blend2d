@@ -26,7 +26,7 @@ namespace CFFImpl {
 // bl::OpenType::CFFImpl - Tests
 // =============================
 
-static void testReadFloat() noexcept {
+static void test_read_float() noexcept {
   struct TestEntry {
     char data[16];
     uint32_t size;
@@ -67,23 +67,23 @@ static void testReadFloat() noexcept {
 
   for (size_t i = 0; i < BL_ARRAY_SIZE(entries); i++) {
     const TestEntry& entry = entries[i];
-    double valueOut = 0.0;
-    size_t valueSizeInBytes = 0;
+    double value_out = 0.0;
+    size_t value_size_in_bytes = 0;
 
-    BLResult result = readFloat(
+    BLResult result = read_float(
       reinterpret_cast<const uint8_t*>(entry.data),
       reinterpret_cast<const uint8_t*>(entry.data) + entry.size,
-      valueOut,
-      valueSizeInBytes);
+      value_out,
+      value_size_in_bytes);
 
     if (entry.pass) {
-      double a = valueOut;
+      double a = value_out;
       double b = entry.value;
 
       EXPECT_SUCCESS(result)
         .message("Entry %zu should have passed {Error=%08X}", i, unsigned(result));
 
-      EXPECT_LE(blAbs(a - b), kTolerance)
+      EXPECT_LE(bl_abs(a - b), kTolerance)
         .message("Entry %zu returned value '%g' which doesn't match the expected value '%g'", i, a, b);
     }
     else {
@@ -93,7 +93,7 @@ static void testReadFloat() noexcept {
   }
 }
 
-static void testDictIterator() noexcept {
+static void test_dict_iterator() noexcept {
   // This example dump was taken from "The Compact Font Format Specification" Appendix D.
   static const uint8_t dump[] = {
     0xF8, 0x1B, 0x00, 0xF8, 0x1C, 0x02, 0xF8, 0x1D, 0x03, 0xF8,
@@ -107,7 +107,7 @@ static void testDictIterator() noexcept {
     double values[4];
   };
 
-  static const TestEntry testEntries[] = {
+  static const TestEntry test_entries[] = {
     { CFFTable::kDictOpTopVersion    , 1, { 391                   } },
     { CFFTable::kDictOpTopFullName   , 1, { 392                   } },
     { CFFTable::kDictOpTopFamilyName , 1, { 393                   } },
@@ -121,34 +121,34 @@ static void testDictIterator() noexcept {
   uint32_t index = 0;
   DictIterator iter(dump, BL_ARRAY_SIZE(dump));
 
-  while (iter.hasNext()) {
-    EXPECT_LT(index, BL_ARRAY_SIZE(testEntries))
+  while (iter.has_next()) {
+    EXPECT_LT(index, BL_ARRAY_SIZE(test_entries))
       .message("DictIterator found more entries than the data contains");
 
     DictEntry entry;
     EXPECT_EQ(iter.next(entry), BL_SUCCESS)
       .message("DictIterator failed to read entry #%u", index);
 
-    EXPECT_EQ(entry.count, testEntries[index].count)
+    EXPECT_EQ(entry.count, test_entries[index].count)
       .message("DictIterator failed to read entry #%u properly {entry.count == 0}", index);
 
     for (uint32_t j = 0; j < entry.count; j++) {
-      EXPECT_EQ(entry.values[j], testEntries[index].values[j])
-        .message("DictIterator failed to read entry #%u properly {entry.values[%u] (%f) != %f)", index, j, entry.values[j], testEntries[index].values[j]);
+      EXPECT_EQ(entry.values[j], test_entries[index].values[j])
+        .message("DictIterator failed to read entry #%u properly {entry.values[%u] (%f) != %f)", index, j, entry.values[j], test_entries[index].values[j]);
     }
     index++;
   }
 
-  EXPECT_EQ(index, BL_ARRAY_SIZE(testEntries))
-    .message("DictIterator must iterate over all entries, only %u of %u iterated", index, unsigned(BL_ARRAY_SIZE(testEntries)));
+  EXPECT_EQ(index, BL_ARRAY_SIZE(test_entries))
+    .message("DictIterator must iterate over all entries, only %u of %u iterated", index, unsigned(BL_ARRAY_SIZE(test_entries)));
 }
 
 UNIT(opentype_cff, BL_TEST_GROUP_TEXT_OPENTYPE) {
-  INFO("bl::OpenType::CFFImpl::readFloat()");
-  testReadFloat();
+  INFO("bl::OpenType::CFFImpl::read_float()");
+  test_read_float();
 
   INFO("bl::OpenType::CFFImpl::DictIterator");
-  testDictIterator();
+  test_dict_iterator();
 }
 
 } // {CFFImpl}

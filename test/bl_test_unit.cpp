@@ -8,20 +8,20 @@
 #include <blend2d/runtimescope.h>
 
 int main(int argc, const char* argv[]) {
-  BLRuntimeBuildInfo buildInfo;
-  BLRuntime::queryBuildInfo(&buildInfo);
+  BLRuntimeBuildInfo build_info;
+  BLRuntime::query_build_info(&build_info);
 
   INFO(
     "Blend2D Unit Tests [use --help for command line options]\n"
     "  Version    : %u.%u.%u\n"
     "  Build Type : %s\n"
     "  Compiled By: %s\n\n",
-    buildInfo.majorVersion,
-    buildInfo.minorVersion,
-    buildInfo.patchVersion,
-    buildInfo.buildType == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
-    buildInfo.compilerInfo);
+    build_info.major_version,
+    build_info.minor_version,
+    build_info.patch_version,
+    build_info.build_type == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
+    build_info.compiler_info);
 
-  BLRuntimeScope rtScope;
+  BLRuntimeScope rt_scope;
   return BrokenAPI::run(argc, argv);
 }

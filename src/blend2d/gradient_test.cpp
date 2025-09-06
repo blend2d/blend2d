@@ -22,11 +22,11 @@ UNIT(gradient_allocation_strategy, BL_TEST_GROUP_RENDERING_STYLES) {
   size_t capacity = g.capacity();
 
   for (size_t i = 0; i < kNumItems; i++) {
-    g.addStop(double(i) / double(kNumItems), BLRgba32(0xFFFFFFFF));
+    g.add_stop(double(i) / double(kNumItems), BLRgba32(0xFFFFFFFF));
 
     if (capacity != g.capacity()) {
-      size_t implSize = GradientInternal::implSizeFromCapacity(g.capacity()).value();
-      INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, g.capacity(), implSize);
+      size_t impl_size = GradientInternal::impl_size_from_capacity(g.capacity()).value();
+      INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, g.capacity(), impl_size);
 
       capacity = g.capacity();
     }
@@ -38,44 +38,44 @@ UNIT(gradient_color_stops, BL_TEST_GROUP_RENDERING_STYLES) {
   {
     BLGradient g;
 
-    g.addStop(0.0, BLRgba32(0x00000000u));
+    g.add_stop(0.0, BLRgba32(0x00000000u));
     EXPECT_EQ(g.size(), 1u);
-    EXPECT_EQ(g.stopAt(0).rgba.value, 0x0000000000000000u);
+    EXPECT_EQ(g.stop_at(0).rgba.value, 0x0000000000000000u);
 
-    g.addStop(1.0, BLRgba32(0xFF000000u));
+    g.add_stop(1.0, BLRgba32(0xFF000000u));
     EXPECT_EQ(g.size(), 2u);
-    EXPECT_EQ(g.stopAt(1).rgba.value, 0xFFFF000000000000u);
+    EXPECT_EQ(g.stop_at(1).rgba.value, 0xFFFF000000000000u);
 
-    g.addStop(0.5, BLRgba32(0xFFFF0000u));
+    g.add_stop(0.5, BLRgba32(0xFFFF0000u));
     EXPECT_EQ(g.size(), 3u);
-    EXPECT_EQ(g.stopAt(1).rgba.value, 0xFFFFFFFF00000000u);
+    EXPECT_EQ(g.stop_at(1).rgba.value, 0xFFFFFFFF00000000u);
 
-    g.addStop(0.5, BLRgba32(0xFFFFFF00u));
+    g.add_stop(0.5, BLRgba32(0xFFFFFF00u));
     EXPECT_EQ(g.size(), 4u);
-    EXPECT_EQ(g.stopAt(2).rgba.value, 0xFFFFFFFFFFFF0000u);
+    EXPECT_EQ(g.stop_at(2).rgba.value, 0xFFFFFFFFFFFF0000u);
 
-    g.removeStopByOffset(0.5, true);
+    g.remove_stop_by_offset(0.5, true);
     EXPECT_EQ(g.size(), 2u);
-    EXPECT_EQ(g.stopAt(0).rgba.value, 0x0000000000000000u);
-    EXPECT_EQ(g.stopAt(1).rgba.value, 0xFFFF000000000000u);
+    EXPECT_EQ(g.stop_at(0).rgba.value, 0x0000000000000000u);
+    EXPECT_EQ(g.stop_at(1).rgba.value, 0xFFFF000000000000u);
 
-    g.addStop(0.5, BLRgba32(0x80000000u));
+    g.add_stop(0.5, BLRgba32(0x80000000u));
     EXPECT_EQ(g.size(), 3u);
-    EXPECT_EQ(g.stopAt(1).rgba.value, 0x8080000000000000u);
+    EXPECT_EQ(g.stop_at(1).rgba.value, 0x8080000000000000u);
 
     // Check whether copy-on-write works as expected.
     BLGradient copy(g);
     EXPECT_EQ(copy.size(), 3u);
 
-    g.addStop(0.5, BLRgba32(0xCC000000u));
+    g.add_stop(0.5, BLRgba32(0xCC000000u));
     EXPECT_EQ(copy.size(), 3u);
     EXPECT_EQ(g.size(), 4u);
-    EXPECT_EQ(g.stopAt(0).rgba.value, 0x0000000000000000u);
-    EXPECT_EQ(g.stopAt(1).rgba.value, 0x8080000000000000u);
-    EXPECT_EQ(g.stopAt(2).rgba.value, 0xCCCC000000000000u);
-    EXPECT_EQ(g.stopAt(3).rgba.value, 0xFFFF000000000000u);
+    EXPECT_EQ(g.stop_at(0).rgba.value, 0x0000000000000000u);
+    EXPECT_EQ(g.stop_at(1).rgba.value, 0x8080000000000000u);
+    EXPECT_EQ(g.stop_at(2).rgba.value, 0xCCCC000000000000u);
+    EXPECT_EQ(g.stop_at(3).rgba.value, 0xFFFF000000000000u);
 
-    g.resetStops();
+    g.reset_stops();
     EXPECT_EQ(g.size(), 0u);
   }
 }
@@ -91,10 +91,10 @@ UNIT(gradient_values, BL_TEST_GROUP_RENDERING_STYLES) {
     EXPECT_EQ(g.x1(), 1.0);
     EXPECT_EQ(g.y1(), 1.5);
 
-    g.setX0(0.15);
-    g.setY0(0.85);
-    g.setX1(0.75);
-    g.setY1(0.25);
+    g.set_x0(0.15);
+    g.set_y0(0.85);
+    g.set_x1(0.75);
+    g.set_y1(0.25);
 
     EXPECT_EQ(g.x0(), 0.15);
     EXPECT_EQ(g.y0(), 0.85);
@@ -113,7 +113,7 @@ UNIT(gradient_values, BL_TEST_GROUP_RENDERING_STYLES) {
     EXPECT_EQ(g.y1(), 0.5);
     EXPECT_EQ(g.r0(), 500.0);
 
-    g.setR0(150.0);
+    g.set_r0(150.0);
     EXPECT_EQ(g.r0(), 150.0);
   }
 

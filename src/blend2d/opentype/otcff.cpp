@@ -39,22 +39,22 @@ namespace CFFImpl {
 // =================================
 
 // Specified by "CFF - Local/Global Subrs INDEXes"
-static BL_INLINE uint16_t calcSubRBias(uint32_t subrCount) noexcept {
+static BL_INLINE uint16_t calc_subr_bias(uint32_t subr_count) noexcept {
   // NOTE: For CharStrings v1 this would return 0, but since OpenType fonts use exclusively CharStrings v2 we always
   // calculate the bias. The calculated bias is added to each call to global or local subroutine before its index is
   // used to get its offset.
-  if (subrCount < 1240u)
+  if (subr_count < 1240u)
     return 107u;
-  else if (subrCount < 33900u)
+  else if (subr_count < 33900u)
     return 1131u;
   else
     return 32768u;
 }
 
 template<typename T>
-static BL_INLINE uint32_t readOffset(const T* p, size_t offsetSize) noexcept {
+static BL_INLINE uint32_t read_offset(const T* p, size_t offset_size) noexcept {
   const uint8_t* oPtr = reinterpret_cast<const uint8_t*>(p);
-  const uint8_t* oEnd = oPtr + offsetSize;
+  const uint8_t* oEnd = oPtr + offset_size;
 
   uint32_t offset = 0;
   for (;;) {
@@ -67,13 +67,13 @@ static BL_INLINE uint32_t readOffset(const T* p, size_t offsetSize) noexcept {
 }
 
 template<typename T>
-static BL_INLINE void readOffsetArray(const T* p, size_t offsetSize, uint32_t* offsetArrayOut, size_t n) noexcept {
+static BL_INLINE void read_offset_array(const T* p, size_t offset_size, uint32_t* offset_array_out, size_t n) noexcept {
   const uint8_t* oPtr = reinterpret_cast<const uint8_t*>(p);
   const uint8_t* oEnd = oPtr;
 
   for (size_t i = 0; i < n; i++) {
     uint32_t offset = 0;
-    oEnd += offsetSize;
+    oEnd += offset_size;
 
     for (;;) {
       offset |= oPtr[0];
@@ -82,11 +82,11 @@ static BL_INLINE void readOffsetArray(const T* p, size_t offsetSize, uint32_t* o
       offset <<= 8;
     }
 
-    offsetArrayOut[i] = offset;
+    offset_array_out[i] = offset;
   }
 }
 
-BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size_t& valueSizeInBytes) noexcept {
+BLResult read_float(const uint8_t* p, const uint8_t* pEnd, double& value_out, size_t& value_size_in_bytes) noexcept {
   // Maximum digits that we would attempt to read, excluding leading zeros.
   enum : uint32_t { kSafeDigits = 15 };
 
@@ -113,7 +113,7 @@ BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size
   for (;;) {
     if (acc & 0x100u) {
       if (BL_UNLIKELY(p == pEnd))
-        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
       acc = (uint32_t(*p++) << 24) | 0x1;
     }
 
@@ -125,24 +125,24 @@ BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size
       if (digits < kSafeDigits) {
         value = value * 10.0 + double(int(nib));
         digits += uint32_t(value != 0.0);
-        if (IntOps::bitTest(flags, kDecimalPoint))
+        if (IntOps::bit_test(flags, kDecimalPoint))
           scale--;
       }
       else {
-        if (!IntOps::bitTest(flags, kDecimalPoint))
+        if (!IntOps::bit_test(flags, kDecimalPoint))
           scale++;
       }
       flags |= msk;
     }
     else {
       if (BL_UNLIKELY(flags & msk))
-        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
       flags |= msk;
       if (nib == kMinusSign) {
         // Minus must start the string, so check the whole mask...
         if (BL_UNLIKELY(flags & (0xFFFF ^ (1u << kMinusSign))))
-          return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
       }
       else if (nib != kDecimalPoint) {
         break;
@@ -152,14 +152,14 @@ BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size
 
   // Exponent.
   if (nib == kPositiveExponent || nib == kNegativeExponent) {
-    int expValue = 0;
-    int expDigits = 0;
-    bool positiveExponent = (nib == kPositiveExponent);
+    int exp_value = 0;
+    int exp_digits = 0;
+    bool positive_exponent = (nib == kPositiveExponent);
 
     for (;;) {
       if (acc & 0x100u) {
         if (BL_UNLIKELY(p == pEnd))
-          return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         acc = (uint32_t(*p++) << 24) | 0x1;
       }
 
@@ -170,29 +170,29 @@ BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size
         break;
 
       // If this happens the data is probably invalid anyway...
-      if (BL_UNLIKELY(expDigits >= 6))
-        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+      if (BL_UNLIKELY(exp_digits >= 6))
+        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-      expValue = expValue * 10 + int(nib);
-      expDigits += int(expValue != 0);
+      exp_value = exp_value * 10 + int(nib);
+      exp_digits += int(exp_value != 0);
     }
 
-    if (positiveExponent)
-      scale += expValue;
+    if (positive_exponent)
+      scale += exp_value;
     else
-      scale -= expValue;
+      scale -= exp_value;
   }
 
   if (nib != kEndOfNumber)
-    return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   if (scale) {
-    double s = Math::pow(10.0, blAbs(double(scale)));
+    double s = Math::pow(10.0, bl_abs(double(scale)));
     value = scale > 0 ? value * s : value / s;
   }
 
-  valueOut = IntOps::bitTest(flags, kMinusSign) ? -value : value;
-  valueSizeInBytes = PtrOps::byteOffset(pStart, p);
+  value_out = IntOps::bit_test(flags, kMinusSign) ? -value : value;
+  value_size_in_bytes = PtrOps::byte_offset(pStart, p);
 
   return BL_SUCCESS;
 }
@@ -202,66 +202,66 @@ BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size
 
 struct Index {
   uint32_t count;
-  uint8_t headerSize;
-  uint8_t offsetSize;
+  uint8_t header_size;
+  uint8_t offset_size;
   uint16_t reserved;
-  uint32_t payloadSize;
-  uint32_t totalSize;
+  uint32_t payload_size;
+  uint32_t total_size;
   const uint8_t* offsets;
   const uint8_t* payload;
 
-  BL_INLINE uint32_t offsetAt(size_t index) const noexcept {
+  BL_INLINE uint32_t offset_at(size_t index) const noexcept {
     BL_ASSERT(index <= count);
-    return readOffset(offsets + index * offsetSize, offsetSize) - CFFTable::kOffsetAdjustment;
+    return read_offset(offsets + index * offset_size, offset_size) - CFFTable::kOffsetAdjustment;
   }
 };
 
 // bl::OpenType::CFFImpl - ReadIndex
 // =================================
 
-static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion, Index* indexOut) noexcept {
+static BLResult read_index(const void* data, size_t data_size, uint32_t cff_version, Index* index_out) noexcept {
   uint32_t count = 0;
-  uint32_t headerSize = 0;
+  uint32_t header_size = 0;
 
-  if (cffVersion == CFFData::kVersion1) {
-    if (BL_UNLIKELY(dataSize < 2))
-      return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+  if (cff_version == CFFData::kVersion1) {
+    if (BL_UNLIKELY(data_size < 2))
+      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
     count = MemOps::readU16uBE(data);
-    headerSize = 2;
+    header_size = 2;
   }
   else {
-    if (BL_UNLIKELY(dataSize < 4))
-      return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    if (BL_UNLIKELY(data_size < 4))
+      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
     count = MemOps::readU32uBE(data);
-    headerSize = 4;
+    header_size = 4;
   }
 
   // Index with no data is allowed by the specification.
   if (!count) {
-    indexOut->totalSize = headerSize;
+    index_out->total_size = header_size;
     return BL_SUCCESS;
   }
 
-  // Include also `offsetSize` in header, if the `count` is non-zero.
-  headerSize++;
-  if (BL_UNLIKELY(dataSize < headerSize))
-    return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+  // Include also `offset_size` in header, if the `count` is non-zero.
+  header_size++;
+  if (BL_UNLIKELY(data_size < header_size))
+    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-  uint32_t offsetSize = MemOps::readU8(PtrOps::offset<const uint8_t>(data, headerSize - 1));
-  uint32_t offsetArraySize = (count + 1) * offsetSize;
-  uint32_t indexSizeIncludingOffsets = headerSize + offsetArraySize;
+  uint32_t offset_size = MemOps::readU8(PtrOps::offset<const uint8_t>(data, header_size - 1));
+  uint32_t offset_array_size = (count + 1) * offset_size;
+  uint32_t index_size_including_offsets = header_size + offset_array_size;
 
-  if (BL_UNLIKELY(offsetSize < 1 || offsetSize > 4 || indexSizeIncludingOffsets > dataSize))
-    return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+  if (BL_UNLIKELY(offset_size < 1 || offset_size > 4 || index_size_including_offsets > data_size))
+    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-  const uint8_t* offsetArray = PtrOps::offset<const uint8_t>(data, headerSize);
-  uint32_t offset = readOffset(offsetArray, offsetSize);
+  const uint8_t* offset_array = PtrOps::offset<const uint8_t>(data, header_size);
+  uint32_t offset = read_offset(offset_array, offset_size);
 
   // The first offset should be 1.
   if (BL_UNLIKELY(offset != 1))
-    return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   // Validate that the offsets are increasing and don't cross each other. The specification says that size of each
   // object stored in the table can be determined by checking its offset and the next one, so valid data should
@@ -269,14 +269,14 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
   //
   // Please note the use of `kOffsetAdjustment`. Since all offsets are relative to "RELATIVE TO THE BYTE THAT
   // PRECEDES THE OBJECT DATA" we must account that.
-  uint32_t maxOffset = uint32_t(blMin<size_t>(Traits::maxValue<uint32_t>(), dataSize - indexSizeIncludingOffsets + CFFTable::kOffsetAdjustment));
+  uint32_t max_offset = uint32_t(bl_min<size_t>(Traits::max_value<uint32_t>(), data_size - index_size_including_offsets + CFFTable::kOffsetAdjustment));
 
-  switch (offsetSize) {
+  switch (offset_size) {
     case 1: {
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = MemOps::readU8(offsetArray + i);
-        if (BL_UNLIKELY(next < offset || next > maxOffset))
-          return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        uint32_t next = MemOps::readU8(offset_array + i);
+        if (BL_UNLIKELY(next < offset || next > max_offset))
+          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
       }
       break;
@@ -284,43 +284,43 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
 
     case 2:
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = MemOps::readU16uBE(offsetArray + i * 2u);
-        if (BL_UNLIKELY(next < offset || next > maxOffset))
-          return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        uint32_t next = MemOps::readU16uBE(offset_array + i * 2u);
+        if (BL_UNLIKELY(next < offset || next > max_offset))
+          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
       }
       break;
 
     case 3:
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = MemOps::readU24uBE(offsetArray + i * 3u);
-        if (BL_UNLIKELY(next < offset || next > maxOffset))
-          return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        uint32_t next = MemOps::readU24uBE(offset_array + i * 3u);
+        if (BL_UNLIKELY(next < offset || next > max_offset))
+          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
       }
       break;
 
     case 4:
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = MemOps::readU32uBE(offsetArray + i * 4u);
-        if (BL_UNLIKELY(next < offset || next > maxOffset))
-          return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        uint32_t next = MemOps::readU32uBE(offset_array + i * 4u);
+        if (BL_UNLIKELY(next < offset || next > max_offset))
+          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
       }
       break;
   }
 
-  const uint8_t* payload = offsetArray + offsetArraySize;
-  uint32_t payloadSize = offset - 1;
+  const uint8_t* payload = offset_array + offset_array_size;
+  uint32_t payload_size = offset - 1;
 
-  indexOut->count = count;
-  indexOut->headerSize = uint8_t(headerSize);
-  indexOut->offsetSize = uint8_t(offsetSize);
-  indexOut->reserved = 0;
-  indexOut->payloadSize = payloadSize;
-  indexOut->totalSize = headerSize + offsetArraySize + payloadSize;
-  indexOut->offsets = offsetArray;
-  indexOut->payload = payload;
+  index_out->count = count;
+  index_out->header_size = uint8_t(header_size);
+  index_out->offset_size = uint8_t(offset_size);
+  index_out->reserved = 0;
+  index_out->payload_size = payload_size;
+  index_out->total_size = header_size + offset_array_size + payload_size;
+  index_out->offsets = offset_array;
+  index_out->payload = payload;
 
   return BL_SUCCESS;
 }
@@ -329,22 +329,22 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
 // ====================================
 
 BLResult DictIterator::next(DictEntry& entry) noexcept {
-  BL_ASSERT(hasNext());
+  BL_ASSERT(has_next());
 
   uint32_t i = 0;
   uint32_t op = 0;
-  uint64_t fpMask = 0;
+  uint64_t fp_mask = 0;
 
   for (;;) {
-    uint32_t b0 = *_dataPtr++;
+    uint32_t b0 = *_data_ptr++;
 
     // Operators are encoded in range [0..21].
     if (b0 < 22) {
       // 12 is a special escape code to encode additional operators.
       if (b0 == CFFTable::kEscapeDictOp) {
-        if (BL_UNLIKELY(_dataPtr == _dataEnd))
-          return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
-        b0 = (b0 << 8) | (*_dataPtr++);
+        if (BL_UNLIKELY(_data_ptr == _data_end))
+          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+        b0 = (b0 << 8) | (*_data_ptr++);
       }
       op = b0;
       break;
@@ -354,46 +354,46 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
 
       if (b0 == 30) {
         size_t size;
-        BL_PROPAGATE(readFloat(_dataPtr, _dataEnd, v, size));
+        BL_PROPAGATE(read_float(_data_ptr, _data_end, v, size));
 
-        fpMask |= uint64_t(1) << i;
-        _dataPtr += size;
+        fp_mask |= uint64_t(1) << i;
+        _data_ptr += size;
       }
       else {
-        int32_t vInt = 0;
+        int32_t v_int = 0;
         if (b0 >= 32 && b0 <= 246) {
-          vInt = int32_t(b0) - 139;
+          v_int = int32_t(b0) - 139;
         }
         else if (b0 >= 247 && b0 <= 254) {
-          if (BL_UNLIKELY(_dataPtr == _dataEnd))
-            return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+          if (BL_UNLIKELY(_data_ptr == _data_end))
+            return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-          uint32_t b1 = *_dataPtr++;
-          vInt = b0 <= 250 ? (108 - 247 * 256) + int(b0 * 256 + b1)
+          uint32_t b1 = *_data_ptr++;
+          v_int = b0 <= 250 ? (108 - 247 * 256) + int(b0 * 256 + b1)
                            : (251 * 256 - 108) - int(b0 * 256 + b1);
         }
         else if (b0 == 28) {
-          _dataPtr += 2;
-          if (BL_UNLIKELY(_dataPtr > _dataEnd))
-            return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
-          vInt = MemOps::readI16uBE(_dataPtr - 2);
+          _data_ptr += 2;
+          if (BL_UNLIKELY(_data_ptr > _data_end))
+            return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          v_int = MemOps::readI16uBE(_data_ptr - 2);
         }
         else if (b0 == 29) {
-          _dataPtr += 4;
-          if (BL_UNLIKELY(_dataPtr > _dataEnd))
-            return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
-          vInt = MemOps::readI32uBE(_dataPtr - 4);
+          _data_ptr += 4;
+          if (BL_UNLIKELY(_data_ptr > _data_end))
+            return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          v_int = MemOps::readI32uBE(_data_ptr - 4);
         }
         else {
           // Byte values 22..27, 31, and 255 are reserved.
-          return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         }
 
-        v = double(vInt);
+        v = double(v_int);
       }
 
       if (BL_UNLIKELY(i == DictEntry::kValueCapacity - 1))
-        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
       entry.values[i++] = v;
     }
@@ -401,11 +401,11 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
 
   // Specification doesn't talk about entries that have no values.
   if (BL_UNLIKELY(!i))
-    return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   entry.op = op;
   entry.count = i;
-  entry.fpMask = fpMask;
+  entry.fp_mask = fp_mask;
 
   return BL_SUCCESS;
 }
@@ -417,7 +417,7 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
 // font complexity or their PostScript support.
 //
 // It seems that this limit is too optimistic to be reached by any OpenType font. We use a different metric, a program
-// size, which is referenced by `bytesProcessed` counter in the decoder. This counter doesn't have to be advanced every
+// size, which is referenced by `bytes_processed` counter in the decoder. This counter doesn't have to be advanced every
 // time we process an opcode, instead, we advance it every time we enter a subroutine (or CharString program itself).
 // If we reach `kCFFProgramLimit` the interpreter is terminated immediately.
 static constexpr uint32_t kCFFProgramLimit = 1000000;
@@ -547,9 +547,9 @@ struct ExecutionFeaturesInfo {
   static constexpr const uint16_t kUnknown = 0xFFFFu;
 
   //! Stack size required to process a base operator.
-  LookupTable<uint16_t, kBaseOpCount> baseOpStackSize;
+  LookupTable<uint16_t, kBaseOpCount> base_op_stack_size;
   //! Stack size required to process an escaped operator.
-  LookupTable<uint16_t, kEscapedOpCount> escapedOpStackSize;
+  LookupTable<uint16_t, kEscapedOpCount> escaped_op_stack_size;
 };
 
 template<uint32_t Escape, uint32_t V>
@@ -617,17 +617,17 @@ struct ExecutionFeaturesInfoOpStackSizeGen {
   }
 };
 
-static constexpr const ExecutionFeaturesInfo executionFeaturesInfo[2] = {
+static constexpr const ExecutionFeaturesInfo execution_features_info[2] = {
   // CFFv1 [Index #0]
   {
-    makeLookupTable<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 1>>(),
-    makeLookupTable<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 1>>()
+    make_lookup_table<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 1>>(),
+    make_lookup_table<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 1>>()
   },
 
   // CFFv2 [Index #1]
   {
-    makeLookupTable<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 2>>(),
-    makeLookupTable<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 2>>()
+    make_lookup_table<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 2>>(),
+    make_lookup_table<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 2>>()
   }
 };
 
@@ -651,14 +651,14 @@ struct ExecutionState {
 // =================================
 
 struct Matrix2x2 {
-  BL_INLINE double xByA(double x, double y) const noexcept { return x * m00 + y * m10; }
-  BL_INLINE double yByA(double x, double y) const noexcept { return x * m01 + y * m11; }
+  BL_INLINE double x_by_a(double x, double y) const noexcept { return x * m00 + y * m10; }
+  BL_INLINE double y_by_a(double x, double y) const noexcept { return x * m01 + y * m11; }
 
-  BL_INLINE double xByX(double x) const noexcept { return x * m00; }
-  BL_INLINE double xByY(double y) const noexcept { return y * m10; }
+  BL_INLINE double x_by_x(double x) const noexcept { return x * m00; }
+  BL_INLINE double x_by_y(double y) const noexcept { return y * m10; }
 
-  BL_INLINE double yByX(double x) const noexcept { return x * m01; }
-  BL_INLINE double yByY(double y) const noexcept { return y * m11; }
+  BL_INLINE double y_by_x(double x) const noexcept { return x * m01; }
+  BL_INLINE double y_by_y(double y) const noexcept { return y * m11; }
 
   double m00, m01;
   double m10, m11;
@@ -668,12 +668,12 @@ struct Matrix2x2 {
 // =============================
 
 #ifdef BL_TRACE_OT_CFF
-static void traceCharStringOp(const OTFaceImpl* faceI, Trace& trace, uint32_t op, const double* values, size_t count) noexcept {
+static void trace_char_string_op(const OTFaceImpl* ot_face_impl, Trace& trace, uint32_t op, const double* values, size_t count) noexcept {
   char buf[64];
-  const char* opName = "";
+  const char* op_name = "";
 
   switch (op) {
-    #define CASE(op) case kCSOp##op: opName = #op; break
+    #define CASE(op) case kCSOp##op: op_name = #op; break
 
     CASE(Escape);
     CASE(PushI16);
@@ -738,11 +738,11 @@ static void traceCharStringOp(const OTFaceImpl* faceI, Trace& trace, uint32_t op
 
     default:
       snprintf(buf, BL_ARRAY_SIZE(buf), "Op #%04X", op);
-      opName = buf;
+      op_name = buf;
       break;
   }
 
-  trace.info("%s", opName);
+  trace.info("%s", op_name);
   if (count) {
     trace.out(" [");
     for (size_t i = 0; i < count; i++)
@@ -752,7 +752,7 @@ static void traceCharStringOp(const OTFaceImpl* faceI, Trace& trace, uint32_t op
 
   if (count > 0 && (op == kCSOpCallGSubR || op == kCSOpCallLSubR)) {
     int32_t idx = int32_t(values[count - 1]);
-    idx += faceI->cff.index[op == kCSOpCallLSubR ? CFFData::kIndexLSubR : CFFData::kIndexGSubR].bias;
+    idx += face_impl->cff.index[op == kCSOpCallLSubR ? CFFData::kIndexLSubR : CFFData::kIndexGSubR].bias;
     trace.out(" {SubR #%d}", idx);
   }
 
@@ -763,22 +763,22 @@ static void traceCharStringOp(const OTFaceImpl* faceI, Trace& trace, uint32_t op
 // bl::OpenType::CFFImpl - Interpreter
 // ===================================
 
-static BL_INLINE bool findGlyphInRange3(BLGlyphId glyphId, const uint8_t* ranges, size_t nRanges, uint32_t& fd) noexcept {
+static BL_INLINE bool find_glyph_in_range3(BLGlyphId glyph_id, const uint8_t* ranges, size_t n_ranges, uint32_t& fd) noexcept {
   constexpr size_t kRangeSize = 3;
-  for (size_t i = nRanges; i != 0; i >>= 1) {
+  for (size_t i = n_ranges; i != 0; i >>= 1) {
     const uint8_t* half = ranges + (i >> 1) * kRangeSize;
 
     // Read either the next Range3[] record or sentinel.
     uint32_t gEnd = MemOps::readU16uBE(half + kRangeSize);
 
-    if (glyphId >= gEnd) {
+    if (glyph_id >= gEnd) {
       ranges = half + kRangeSize;
       i--;
       continue;
     }
 
     uint32_t gStart = MemOps::readU16uBE(half);
-    if (glyphId < gStart)
+    if (glyph_id < gStart)
       continue;
 
     fd = half[2]; // Read `Range3::fd`.
@@ -789,102 +789,103 @@ static BL_INLINE bool findGlyphInRange3(BLGlyphId glyphId, const uint8_t* ranges
 }
 
 template<typename Consumer>
-static BLResult getGlyphOutlinesT(
-  const BLFontFaceImpl* faceI_,
-  BLGlyphId glyphId,
+static BLResult get_glyph_outlines_t(
+  const BLFontFaceImpl* face_impl,
+  BLGlyphId glyph_id,
   const BLMatrix2D* transform,
   Consumer& consumer,
-  ScopedBuffer* tmpBuffer) noexcept {
+  ScopedBuffer* tmp_buffer) noexcept {
 
-  blUnused(tmpBuffer);
-  const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
+  bl_unused(tmp_buffer);
+  const OTFaceImpl* ot_face_impl = static_cast<const OTFaceImpl*>(face_impl);
 
   // Will only do something if tracing is enabled.
   Trace trace;
-  trace.info("bl::OpenType::CFFImpl::DecodeGlyph #%u\n", glyphId);
+  trace.info("bl::OpenType::CFFImpl::DecodeGlyph #%u\n", glyph_id);
   trace.indent();
 
   // --------------------------------------------------------------------------
   // [Prepare for Execution]
   // --------------------------------------------------------------------------
 
-  const uint8_t* ip    = nullptr;             // Pointer in the instruction array.
-  const uint8_t* ipEnd = nullptr;             // End of the instruction array.
+  const uint8_t* ip     = nullptr;             // Pointer in the instruction array.
+  const uint8_t* ip_end = nullptr;             // End of the instruction array.
 
-  ExecutionState cBuf[kCFFCallStackSize + 1]; // Call stack.
-  double vBuf[kCFFValueStackSizeV1 + 1];      // Value stack.
+  ExecutionState c_buf[kCFFCallStackSize + 1]; // Call stack.
+  double v_buf[kCFFValueStackSizeV1 + 1];      // Value stack.
 
-  uint32_t cIdx = 0;                          // Call stack index.
-  uint32_t vIdx = 0;                          // Value stack index.
+  uint32_t c_idx = 0;                          // Call stack index.
+  uint32_t v_idx = 0;                          // Value stack index.
 
-  double sBuf[kCFFStorageSize + 1];           // Storage (get/put).
-  uint32_t sMsk = 0;                          // Mask that contains which indexes in `sBuf` are used.
-  sBuf[kCFFStorageSize] = 0.0;                // Only the last item is set to zero, used for out-of-range expressions.
+  double s_buf[kCFFStorageSize + 1];           // Storage (get/put).
+  uint32_t s_msk = 0;                          // Mask that contains which indexes in `s_buf` are used.
+  s_buf[kCFFStorageSize] = 0.0;                // Only the last item is set to zero, used for out-of-range expressions.
 
-  size_t bytesProcessed = 0;                  // Bytes processed, increasing counter.
-  uint32_t hintBitCount = 0;                  // Number of bits required by 'HintMask' and 'CntrMask' operators.
-  uint32_t executionFlags = 0;                // Execution status flags.
-  uint32_t vMinOperands = 0;                  // Minimum operands the current opcode requires (updated per opcode).
+  size_t bytes_processed = 0;                  // Bytes processed, increasing counter.
+  uint32_t hint_bit_count = 0;                 // Number of bits required by 'HintMask' and 'CntrMask' operators.
+  uint32_t execution_flags = 0;                // Execution status flags.
+  uint32_t v_min_operands = 0;                 // Minimum operands the current opcode requires (updated per opcode).
 
-  double px = transform->m20;                 // Current X coordinate.
-  double py = transform->m21;                 // Current Y coordinate.
+  double px = transform->m20;                  // Current X coordinate.
+  double py = transform->m21;                  // Current Y coordinate.
 
-  const CFFData& cffInfo = faceI->cff;
-  const uint8_t* cffData = faceI->cff.table.data;
+  const CFFData& cff_info = ot_face_impl->cff;
+  const uint8_t* cff_data = ot_face_impl->cff.table.data;
 
   // Execution features describe either CFFv1 or CFFv2 environment. It contains minimum operand count for each
   // opcode (or operator) and some other data.
-  const ExecutionFeaturesInfo* executionFeatures = &executionFeaturesInfo[0];
+  const ExecutionFeaturesInfo* execution_features = &execution_features_info[0];
 
   // This is used to perform a function (subroutine) call. Initially we set it to the charstring referenced by the
-  // `glyphId`. Later, when we process a function call opcode it would be changed to either GSubR or LSubR index.
-  const CFFData::IndexData* subrIndex = &cffInfo.index[CFFData::kIndexCharString];
-  uint32_t subrId = glyphId;
+  // `glyph_id`. Later, when we process a function call opcode it would be changed to either GSubR or LSubR index.
+  const CFFData::IndexData* subr_index = &cff_info.index[CFFData::kIndexCharString];
+  uint32_t subr_id = glyph_id;
 
-  // We really want to report a correct error when we face an invalid glyphId, this is the only difference between
+  // We really want to report a correct error when we face an invalid glyph_id, this is the only difference between
   // handling a function call and handling the initial CharString program.
-  if (BL_UNLIKELY(glyphId >= subrIndex->entryCount)) {
+  if (BL_UNLIKELY(glyph_id >= subr_index->entry_count)) {
     trace.fail("Invalid Glyph ID\n");
-    return blTraceError(BL_ERROR_INVALID_GLYPH);
+    return bl_trace_error(BL_ERROR_INVALID_GLYPH);
   }
 
   // LSubR index that will be used by CallLSubR operator. CID fonts provide multiple indexes that can be used based
-  // on `glyphId`.
-  const CFFData::IndexData* localSubrIndex = &cffInfo.index[CFFData::kIndexLSubR];
-  if (cffInfo.fdSelectOffset) {
+  // on `glyph_id`.
+  const CFFData::IndexData* local_subr_index = &cff_info.index[CFFData::kIndexLSubR];
+  if (cff_info.fd_select_offset) {
     // We are not interested in format byte, we already know the format.
-    size_t fdSelectOffset = cffInfo.fdSelectOffset + 1;
+    size_t fd_select_offset = cff_info.fd_select_offset + 1;
 
-    const uint8_t* fdData = cffData + fdSelectOffset;
-    size_t fdDataSize = cffInfo.table.size - fdSelectOffset;
+    const uint8_t* fd_data = cff_data + fd_select_offset;
+    size_t fd_data_size = cff_info.table.size - fd_select_offset;
 
     // There are only two formats - 0 and 3.
     uint32_t fd = 0xFFFFFFFFu;
-    if (cffInfo.fdSelectFormat == 0) {
+    if (cff_info.fd_select_format == 0) {
       // Format 0:
       //   UInt8 format;
-      //   UInt8 fds[nGlyphs];
-      if (glyphId < fdDataSize)
-        fd = fdData[glyphId];
+      //   UInt8 fds[n_glyphs];
+      if (glyph_id < fd_data_size)
+        fd = fd_data[glyph_id];
     }
     else {
       // Format 3:
       //   UInt8 format;
-      //   UInt16 nRanges;
+      //   UInt16 n_ranges;
       //   struct Range3 {
       //     UInt16 first;
       //     UInt8 id;
-      //   } ranges[nRanges];
+      //   } ranges[n_ranges];
       //   UInt16 sentinel;
-      if (fdDataSize >= 2) {
-        uint32_t nRanges = MemOps::readU16uBE(fdData);
-        if (fdDataSize >= 2u + nRanges * 3u + 2u)
-          findGlyphInRange3(glyphId, fdData + 2u, nRanges, fd);
+      if (fd_data_size >= 2) {
+        uint32_t n_ranges = MemOps::readU16uBE(fd_data);
+        if (fd_data_size >= 2u + n_ranges * 3u + 2u)
+          find_glyph_in_range3(glyph_id, fd_data + 2u, n_ranges, fd);
       }
     }
 
-    if (fd < faceI->cffFDSubrIndexes.size())
-      localSubrIndex = &faceI->cffFDSubrIndexes[fd];
+    if (fd < ot_face_impl->cff_fd_subr_indexes.size()) {
+      local_subr_index = &ot_face_impl->cff_fd_subr_indexes[fd];
+    }
   }
 
   // Compiler can better optimize the transform if it knows that it won't be changed outside of this function.
@@ -897,34 +898,34 @@ static BLResult getGlyphOutlinesT(
 
 OnSubRCall:
   {
-    uint32_t offsetSize = subrIndex->offsetSize;
-    uint32_t payloadSize = subrIndex->payloadSize();
+    uint32_t offset_size = subr_index->offset_size;
+    uint32_t payload_size = subr_index->payload_size();
 
-    ip = cffData + subrIndex->dataRange.offset;
+    ip = cff_data + subr_index->data_range.offset;
 
-    uint32_t oArray[2];
-    readOffsetArray(ip + subrIndex->offsetsOffset() + subrId * offsetSize, offsetSize, oArray, 2);
+    uint32_t o_array[2];
+    read_offset_array(ip + subr_index->offsets_offset() + subr_id * offset_size, offset_size, o_array, 2);
 
-    ip += subrIndex->payloadOffset();
-    ipEnd = ip;
+    ip += subr_index->payload_offset();
+    ip_end = ip;
 
-    oArray[0] -= CFFTable::kOffsetAdjustment;
-    oArray[1] -= CFFTable::kOffsetAdjustment;
+    o_array[0] -= CFFTable::kOffsetAdjustment;
+    o_array[1] -= CFFTable::kOffsetAdjustment;
 
-    if (BL_UNLIKELY(oArray[0] >= oArray[1] || oArray[1] > payloadSize)) {
-      trace.fail("Invalid SubR range [Start=%u End=%u Max=%u]\n", oArray[0], oArray[1], payloadSize);
-      return blTraceError(BL_ERROR_INVALID_DATA);
+    if (BL_UNLIKELY(o_array[0] >= o_array[1] || o_array[1] > payload_size)) {
+      trace.fail("Invalid SubR range [Start=%u End=%u Max=%u]\n", o_array[0], o_array[1], payload_size);
+      return bl_trace_error(BL_ERROR_INVALID_DATA);
     }
 
-    ip    += oArray[0];
-    ipEnd += oArray[1];
+    ip     += o_array[0];
+    ip_end += o_array[1];
 
-    size_t programSize = oArray[1] - oArray[0];
-    if (BL_UNLIKELY(kCFFProgramLimit - bytesProcessed < programSize)) {
-      trace.fail("Program limit exceeded [%zu bytes processed]\n", bytesProcessed);
-      return blTraceError(BL_ERROR_FONT_PROGRAM_TERMINATED);
+    size_t program_size = o_array[1] - o_array[0];
+    if (BL_UNLIKELY(kCFFProgramLimit - bytes_processed < program_size)) {
+      trace.fail("Program limit exceeded [%zu bytes processed]\n", bytes_processed);
+      return bl_trace_error(BL_ERROR_FONT_PROGRAM_TERMINATED);
     }
-    bytesProcessed += programSize;
+    bytes_processed += program_size;
   }
 
   // Program | SubR - Execute
@@ -934,12 +935,12 @@ OnSubRCall:
     // Current opcode read from `ip`.
     uint32_t b0;
 
-    if (BL_UNLIKELY(ip >= ipEnd)) {
+    if (BL_UNLIKELY(ip >= ip_end)) {
       // CFF vs CFF2 diverged a bit. CFF2 doesn't require 'Return' and 'EndChar'
       // operators and made them implicit. When we reach the end of the current
       // subroutine then a 'Return' is implied, similarly when we reach the end
       // of the current CharString 'EndChar' is implied as well.
-      if (cIdx > 0)
+      if (c_idx > 0)
         goto OnReturn;
       break;
     }
@@ -948,18 +949,18 @@ OnSubRCall:
     b0 = *ip++;
 
     if (b0 >= 32) {
-      if (BL_UNLIKELY(++vIdx > kCFFValueStackSizeV1)) {
+      if (BL_UNLIKELY(++v_idx > kCFFValueStackSizeV1)) {
         goto InvalidData;
       }
       else {
         // Push Number (Small)
         // -------------------
 
-        if (ip < ipEnd) {
+        if (ip < ip_end) {
           if (b0 <= 246) {
             // Number in range [-107..107].
             int v = int(b0) - 139;
-            vBuf[vIdx - 1] = double(v);
+            v_buf[v_idx - 1] = double(v);
 
             // There is a big chance that there would be another number. If it's
             // true then this acts as 2x unrolled push. If not then we perform
@@ -968,16 +969,16 @@ OnSubRCall:
             if (b0 < 32)
               goto OnOperator;
 
-            if (BL_UNLIKELY(++vIdx > kCFFValueStackSizeV1))
+            if (BL_UNLIKELY(++v_idx > kCFFValueStackSizeV1))
               goto InvalidData;
 
             if (b0 <= 246) {
               v = int(b0) - 139;
-              vBuf[vIdx - 1] = double(v);
+              v_buf[v_idx - 1] = double(v);
               continue;
             }
 
-            if (ip == ipEnd)
+            if (ip == ip_end)
               goto InvalidData;
           }
 
@@ -987,18 +988,18 @@ OnSubRCall:
             int v = b0 <= 250 ? (108 - 247 * 256) + int(b0 * 256 + b1)
                               : (251 * 256 - 108) - int(b0 * 256 + b1);
 
-            vBuf[vIdx - 1] = double(v);
+            v_buf[v_idx - 1] = double(v);
           }
           else {
             // Number encoded as 16x16 fixed-point.
             BL_ASSERT(b0 == kCSOpPushF16x16);
 
             ip += 4;
-            if (BL_UNLIKELY(ip > ipEnd))
+            if (BL_UNLIKELY(ip > ip_end))
               goto InvalidData;
 
             int v = MemOps::readI32uBE(ip - 4);
-            vBuf[vIdx - 1] = double(v) * kCFFDoubleFromF16x16;
+            v_buf[v_idx - 1] = double(v) * kCFFDoubleFromF16x16;
           }
           continue;
         }
@@ -1009,7 +1010,7 @@ OnSubRCall:
 
           // Number in range [-107..107].
           int v = int(b0) - 139;
-          vBuf[vIdx - 1] = double(v);
+          v_buf[v_idx - 1] = double(v);
           continue;
         }
       }
@@ -1017,18 +1018,18 @@ OnSubRCall:
     else {
 OnOperator:
       #ifdef BL_TRACE_OT_CFF
-      traceCharStringOp(faceI, trace, b0, vBuf, vIdx);
+      trace_char_string_op(ot_face_impl, trace, b0, v_buf, v_idx);
       #endif
 
-      vMinOperands = executionFeatures->baseOpStackSize[b0];
-      if (BL_UNLIKELY(vIdx < vMinOperands)) {
+      v_min_operands = execution_features->base_op_stack_size[b0];
+      if (BL_UNLIKELY(v_idx < v_min_operands)) {
         // If this is not an unknown operand it would mean that we have less
         // values on stack than the operator requires. That's an error in CS.
-        if (vMinOperands != ExecutionFeaturesInfo::kUnknown)
+        if (v_min_operands != ExecutionFeaturesInfo::kUnknown)
           goto InvalidData;
 
         // Unknown operators should clear the stack and act as NOPs.
-        vIdx = 0;
+        v_idx = 0;
         continue;
       }
 
@@ -1038,11 +1039,11 @@ OnOperator:
 
         case kCSOpPushI16: {
           ip += 2;
-          if (BL_UNLIKELY(ip > ipEnd || ++vIdx > kCFFValueStackSizeV1))
+          if (BL_UNLIKELY(ip > ip_end || ++v_idx > kCFFValueStackSizeV1))
             goto InvalidData;
 
           int v = MemOps::readI16uBE(ip - 2);
-          vBuf[vIdx - 1] = double(v);
+          v_buf[v_idx - 1] = double(v);
           continue;
         }
 
@@ -1051,52 +1052,52 @@ OnOperator:
 
         // |- dx1 dy1 rmoveto (21) |-
         case kCSOpRMoveTo: {
-          BL_ASSERT(vMinOperands >= 2);
+          BL_ASSERT(v_min_operands >= 2);
           BL_PROPAGATE(consumer.ensure(2));
 
-          if (executionFlags & kCSFlagPathOpen)
+          if (execution_flags & kCSFlagPathOpen)
             consumer.close();
 
-          px += m.xByA(vBuf[vIdx - 2], vBuf[vIdx - 1]);
-          py += m.yByA(vBuf[vIdx - 2], vBuf[vIdx - 1]);
-          consumer.moveTo(px, py);
+          px += m.x_by_a(v_buf[v_idx - 2], v_buf[v_idx - 1]);
+          py += m.y_by_a(v_buf[v_idx - 2], v_buf[v_idx - 1]);
+          consumer.move_to(px, py);
 
-          vIdx = 0;
-          executionFlags |= kCSFlagHasWidth | kCSFlagPathOpen;
+          v_idx = 0;
+          execution_flags |= kCSFlagHasWidth | kCSFlagPathOpen;
           continue;
         }
 
         // |- dx1 hmoveto (22) |-
         case kCSOpHMoveTo: {
-          BL_ASSERT(vMinOperands >= 1);
+          BL_ASSERT(v_min_operands >= 1);
           BL_PROPAGATE(consumer.ensure(2));
 
-          if (executionFlags & kCSFlagPathOpen)
+          if (execution_flags & kCSFlagPathOpen)
             consumer.close();
 
-          px += m.xByX(vBuf[vIdx - 1]);
-          py += m.yByX(vBuf[vIdx - 1]);
-          consumer.moveTo(px, py);
+          px += m.x_by_x(v_buf[v_idx - 1]);
+          py += m.y_by_x(v_buf[v_idx - 1]);
+          consumer.move_to(px, py);
 
-          vIdx = 0;
-          executionFlags |= kCSFlagHasWidth | kCSFlagPathOpen;
+          v_idx = 0;
+          execution_flags |= kCSFlagHasWidth | kCSFlagPathOpen;
           continue;
         }
 
         // |- dy1 vmoveto (4) |-
         case kCSOpVMoveTo: {
-          BL_ASSERT(vMinOperands >= 1);
+          BL_ASSERT(v_min_operands >= 1);
           BL_PROPAGATE(consumer.ensure(2));
 
-          if (executionFlags & kCSFlagPathOpen)
+          if (execution_flags & kCSFlagPathOpen)
             consumer.close();
 
-          px += m.xByY(vBuf[vIdx - 1]);
-          py += m.yByY(vBuf[vIdx - 1]);
-          consumer.moveTo(px, py);
+          px += m.x_by_y(v_buf[v_idx - 1]);
+          py += m.y_by_y(v_buf[v_idx - 1]);
+          consumer.move_to(px, py);
 
-          vIdx = 0;
-          executionFlags |= kCSFlagHasWidth | kCSFlagPathOpen;
+          v_idx = 0;
+          execution_flags |= kCSFlagHasWidth | kCSFlagPathOpen;
           continue;
         }
 
@@ -1105,27 +1106,27 @@ OnOperator:
 
         // |- {dxa dya}+ rlineto (5) |-
         case kCSOpRLineTo: {
-          BL_ASSERT(vMinOperands >= 2);
-          BL_PROPAGATE(consumer.ensure((vIdx + 1) / 2u));
+          BL_ASSERT(v_min_operands >= 2);
+          BL_PROPAGATE(consumer.ensure((v_idx + 1) / 2u));
 
           // NOTE: The specification talks about a pair of numbers, however,
           // other implementations like FreeType allow odd number of arguments
           // implicitly adding zero as the last one argument missing... It's a
           // specification violation that we follow for compatibility reasons.
           size_t i = 0;
-          while ((i += 2) <= vIdx) {
-            px += m.xByA(vBuf[i - 2], vBuf[i - 1]);
-            py += m.yByA(vBuf[i - 2], vBuf[i - 1]);
-            consumer.lineTo(px, py);
+          while ((i += 2) <= v_idx) {
+            px += m.x_by_a(v_buf[i - 2], v_buf[i - 1]);
+            py += m.y_by_a(v_buf[i - 2], v_buf[i - 1]);
+            consumer.line_to(px, py);
           }
 
-          if (vIdx & 1) {
-            px += m.xByX(vBuf[vIdx - 1]);
-            py += m.yByX(vBuf[vIdx - 1]);
-            consumer.lineTo(px, py);
+          if (v_idx & 1) {
+            px += m.x_by_x(v_buf[v_idx - 1]);
+            py += m.y_by_x(v_buf[v_idx - 1]);
+            consumer.line_to(px, py);
           }
 
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
 
@@ -1133,30 +1134,30 @@ OnOperator:
         // |- dy1 {dxa dyb}* vlineto (7) |- or |- {dya dxb}+ vlineto (7) |-
         case kCSOpHLineTo:
         case kCSOpVLineTo: {
-          BL_ASSERT(vMinOperands >= 1);
-          BL_PROPAGATE(consumer.ensure(vIdx));
+          BL_ASSERT(v_min_operands >= 1);
+          BL_PROPAGATE(consumer.ensure(v_idx));
 
           size_t i = 0;
           if (b0 == kCSOpVLineTo)
             goto OnVLineTo;
 
           for (;;) {
-            px += m.xByX(vBuf[i]);
-            py += m.yByX(vBuf[i]);
-            consumer.lineTo(px, py);
+            px += m.x_by_x(v_buf[i]);
+            py += m.y_by_x(v_buf[i]);
+            consumer.line_to(px, py);
 
-            if (++i >= vIdx)
+            if (++i >= v_idx)
               break;
 OnVLineTo:
-            px += m.xByY(vBuf[i]);
-            py += m.yByY(vBuf[i]);
-            consumer.lineTo(px, py);
+            px += m.x_by_y(v_buf[i]);
+            py += m.y_by_y(v_buf[i]);
+            consumer.line_to(px, py);
 
-            if (++i >= vIdx)
+            if (++i >= v_idx)
               break;
           }
 
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
 
@@ -1165,23 +1166,23 @@ OnVLineTo:
 
         // |- {dxa dya dxb dyb dxc dyc}+ rrcurveto (8) |-
         case kCSOpRRCurveTo: {
-          BL_ASSERT(vMinOperands >= 6);
-          BL_PROPAGATE(consumer.ensure(vIdx / 2u));
+          BL_ASSERT(v_min_operands >= 6);
+          BL_PROPAGATE(consumer.ensure(v_idx / 2u));
 
           size_t i = 0;
           double x1, y1, x2, y2;
 
-          while ((i += 6) <= vIdx) {
-            x1 = px + m.xByA(vBuf[i - 6], vBuf[i - 5]);
-            y1 = py + m.yByA(vBuf[i - 6], vBuf[i - 5]);
-            x2 = x1 + m.xByA(vBuf[i - 4], vBuf[i - 3]);
-            y2 = y1 + m.yByA(vBuf[i - 4], vBuf[i - 3]);
-            px = x2 + m.xByA(vBuf[i - 2], vBuf[i - 1]);
-            py = y2 + m.yByA(vBuf[i - 2], vBuf[i - 1]);
-            consumer.cubicTo(x1, y1, x2, y2, px, py);
+          while ((i += 6) <= v_idx) {
+            x1 = px + m.x_by_a(v_buf[i - 6], v_buf[i - 5]);
+            y1 = py + m.y_by_a(v_buf[i - 6], v_buf[i - 5]);
+            x2 = x1 + m.x_by_a(v_buf[i - 4], v_buf[i - 3]);
+            y2 = y1 + m.y_by_a(v_buf[i - 4], v_buf[i - 3]);
+            px = x2 + m.x_by_a(v_buf[i - 2], v_buf[i - 1]);
+            py = y2 + m.y_by_a(v_buf[i - 2], v_buf[i - 1]);
+            consumer.cubic_to(x1, y1, x2, y2, px, py);
           }
 
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
 
@@ -1189,8 +1190,8 @@ OnVLineTo:
         // |- dx1 dx2 dy2 dy3 {dya dxb dyb dxc dxd dxe dye dyf}* dxf? hvcurveto (31) |- or |- {dxa dxb dyb dyc dyd dxe dye dxf}+ dyf? hvcurveto (31) |-
         case kCSOpVHCurveTo:
         case kCSOpHVCurveTo: {
-          BL_ASSERT(vMinOperands >= 4);
-          BL_PROPAGATE(consumer.ensure(vIdx));
+          BL_ASSERT(v_min_operands >= 4);
+          BL_PROPAGATE(consumer.ensure(v_idx));
 
           size_t i = 0;
           double x1, y1, x2, y2;
@@ -1198,150 +1199,150 @@ OnVLineTo:
           if (b0 == kCSOpVHCurveTo)
             goto OnVHCurveTo;
 
-          while ((i += 4) <= vIdx) {
-            x1 = px + m.xByX(vBuf[i - 4]);
-            y1 = py + m.yByX(vBuf[i - 4]);
-            x2 = x1 + m.xByA(vBuf[i - 3], vBuf[i - 2]);
-            y2 = y1 + m.yByA(vBuf[i - 3], vBuf[i - 2]);
-            px = x2 + m.xByY(vBuf[i - 1]);
-            py = y2 + m.yByY(vBuf[i - 1]);
+          while ((i += 4) <= v_idx) {
+            x1 = px + m.x_by_x(v_buf[i - 4]);
+            y1 = py + m.y_by_x(v_buf[i - 4]);
+            x2 = x1 + m.x_by_a(v_buf[i - 3], v_buf[i - 2]);
+            y2 = y1 + m.y_by_a(v_buf[i - 3], v_buf[i - 2]);
+            px = x2 + m.x_by_y(v_buf[i - 1]);
+            py = y2 + m.y_by_y(v_buf[i - 1]);
 
-            if (vIdx - i == 1) {
-              px += m.xByX(vBuf[i]);
-              py += m.yByX(vBuf[i]);
+            if (v_idx - i == 1) {
+              px += m.x_by_x(v_buf[i]);
+              py += m.y_by_x(v_buf[i]);
             }
-            consumer.cubicTo(x1, y1, x2, y2, px, py);
+            consumer.cubic_to(x1, y1, x2, y2, px, py);
 OnVHCurveTo:
-            if ((i += 4) > vIdx)
+            if ((i += 4) > v_idx)
               break;
 
-            x1 = px + m.xByY(vBuf[i - 4]);
-            y1 = py + m.yByY(vBuf[i - 4]);
-            x2 = x1 + m.xByA(vBuf[i - 3], vBuf[i - 2]);
-            y2 = y1 + m.yByA(vBuf[i - 3], vBuf[i - 2]);
-            px = x2 + m.xByX(vBuf[i - 1]);
-            py = y2 + m.yByX(vBuf[i - 1]);
+            x1 = px + m.x_by_y(v_buf[i - 4]);
+            y1 = py + m.y_by_y(v_buf[i - 4]);
+            x2 = x1 + m.x_by_a(v_buf[i - 3], v_buf[i - 2]);
+            y2 = y1 + m.y_by_a(v_buf[i - 3], v_buf[i - 2]);
+            px = x2 + m.x_by_x(v_buf[i - 1]);
+            py = y2 + m.y_by_x(v_buf[i - 1]);
 
-            if (vIdx - i == 1) {
-              px += m.xByY(vBuf[i]);
-              py += m.yByY(vBuf[i]);
+            if (v_idx - i == 1) {
+              px += m.x_by_y(v_buf[i]);
+              py += m.y_by_y(v_buf[i]);
             }
-            consumer.cubicTo(x1, y1, x2, y2, px, py);
+            consumer.cubic_to(x1, y1, x2, y2, px, py);
           }
 
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
 
         // |- dy1? {dxa dxb dyb dxc}+ hhcurveto (27) |-
         case kCSOpHHCurveTo: {
-          BL_ASSERT(vMinOperands >= 4);
-          BL_PROPAGATE(consumer.ensure(vIdx));
+          BL_ASSERT(v_min_operands >= 4);
+          BL_PROPAGATE(consumer.ensure(v_idx));
 
           size_t i = 0;
           double x1, y1, x2, y2;
 
           // Odd argument case.
-          if (vIdx & 0x1) {
-            px += m.xByY(vBuf[i]);
-            py += m.yByY(vBuf[i]);
+          if (v_idx & 0x1) {
+            px += m.x_by_y(v_buf[i]);
+            py += m.y_by_y(v_buf[i]);
             i++;
           }
 
-          while ((i += 4) <= vIdx) {
-            x1 = px + m.xByX(vBuf[i - 4]);
-            y1 = py + m.yByX(vBuf[i - 4]);
-            x2 = x1 + m.xByA(vBuf[i - 3], vBuf[i - 2]);
-            y2 = y1 + m.yByA(vBuf[i - 3], vBuf[i - 2]);
-            px = x2 + m.xByX(vBuf[i - 1]);
-            py = y2 + m.yByX(vBuf[i - 1]);
-            consumer.cubicTo(x1, y1, x2, y2, px, py);
+          while ((i += 4) <= v_idx) {
+            x1 = px + m.x_by_x(v_buf[i - 4]);
+            y1 = py + m.y_by_x(v_buf[i - 4]);
+            x2 = x1 + m.x_by_a(v_buf[i - 3], v_buf[i - 2]);
+            y2 = y1 + m.y_by_a(v_buf[i - 3], v_buf[i - 2]);
+            px = x2 + m.x_by_x(v_buf[i - 1]);
+            py = y2 + m.y_by_x(v_buf[i - 1]);
+            consumer.cubic_to(x1, y1, x2, y2, px, py);
           }
 
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
 
         // |- dx1? {dya dxb dyb dyc}+ vvcurveto (26) |-
         case kCSOpVVCurveTo: {
-          BL_ASSERT(vMinOperands >= 4);
-          BL_PROPAGATE(consumer.ensure(vIdx));
+          BL_ASSERT(v_min_operands >= 4);
+          BL_PROPAGATE(consumer.ensure(v_idx));
 
           size_t i = 0;
           double x1, y1, x2, y2;
 
           // Odd argument case.
-          if (vIdx & 0x1) {
-            px += m.xByX(vBuf[i]);
-            py += m.yByX(vBuf[i]);
+          if (v_idx & 0x1) {
+            px += m.x_by_x(v_buf[i]);
+            py += m.y_by_x(v_buf[i]);
             i++;
           }
 
-          while ((i += 4) <= vIdx) {
-            x1 = px + m.xByY(vBuf[i - 4]);
-            y1 = py + m.yByY(vBuf[i - 4]);
-            x2 = x1 + m.xByA(vBuf[i - 3], vBuf[i - 2]);
-            y2 = y1 + m.yByA(vBuf[i - 3], vBuf[i - 2]);
-            px = x2 + m.xByY(vBuf[i - 1]);
-            py = y2 + m.yByY(vBuf[i - 1]);
-            consumer.cubicTo(x1, y1, x2, y2, px, py);
+          while ((i += 4) <= v_idx) {
+            x1 = px + m.x_by_y(v_buf[i - 4]);
+            y1 = py + m.y_by_y(v_buf[i - 4]);
+            x2 = x1 + m.x_by_a(v_buf[i - 3], v_buf[i - 2]);
+            y2 = y1 + m.y_by_a(v_buf[i - 3], v_buf[i - 2]);
+            px = x2 + m.x_by_y(v_buf[i - 1]);
+            py = y2 + m.y_by_y(v_buf[i - 1]);
+            consumer.cubic_to(x1, y1, x2, y2, px, py);
           }
 
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
 
         // |- {dxa dya dxb dyb dxc dyc}+ dxd dyd rcurveline (24) |-
         case kCSOpRCurveLine: {
-          BL_ASSERT(vMinOperands >= 8);
-          BL_PROPAGATE(consumer.ensure(vIdx / 2u));
+          BL_ASSERT(v_min_operands >= 8);
+          BL_PROPAGATE(consumer.ensure(v_idx / 2u));
 
           size_t i = 0;
           double x1, y1, x2, y2;
 
-          vIdx -= 2;
-          while ((i += 6) <= vIdx) {
-            x1 = px + m.xByA(vBuf[i - 6], vBuf[i - 5]);
-            y1 = py + m.yByA(vBuf[i - 6], vBuf[i - 5]);
-            x2 = x1 + m.xByA(vBuf[i - 4], vBuf[i - 3]);
-            y2 = y1 + m.yByA(vBuf[i - 4], vBuf[i - 3]);
-            px = x2 + m.xByA(vBuf[i - 2], vBuf[i - 1]);
-            py = y2 + m.yByA(vBuf[i - 2], vBuf[i - 1]);
-            consumer.cubicTo(x1, y1, x2, y2, px, py);
+          v_idx -= 2;
+          while ((i += 6) <= v_idx) {
+            x1 = px + m.x_by_a(v_buf[i - 6], v_buf[i - 5]);
+            y1 = py + m.y_by_a(v_buf[i - 6], v_buf[i - 5]);
+            x2 = x1 + m.x_by_a(v_buf[i - 4], v_buf[i - 3]);
+            y2 = y1 + m.y_by_a(v_buf[i - 4], v_buf[i - 3]);
+            px = x2 + m.x_by_a(v_buf[i - 2], v_buf[i - 1]);
+            py = y2 + m.y_by_a(v_buf[i - 2], v_buf[i - 1]);
+            consumer.cubic_to(x1, y1, x2, y2, px, py);
           }
 
-          px += m.xByA(vBuf[vIdx + 0], vBuf[vIdx + 1]);
-          py += m.yByA(vBuf[vIdx + 0], vBuf[vIdx + 1]);
-          consumer.lineTo(px, py);
+          px += m.x_by_a(v_buf[v_idx + 0], v_buf[v_idx + 1]);
+          py += m.y_by_a(v_buf[v_idx + 0], v_buf[v_idx + 1]);
+          consumer.line_to(px, py);
 
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
 
         // |- {dxa dya}+ dxb dyb dxc dyc dxd dyd rlinecurve (25) |-
         case kCSOpRLineCurve: {
-          BL_ASSERT(vMinOperands >= 8);
-          BL_PROPAGATE(consumer.ensure(vIdx / 2u));
+          BL_ASSERT(v_min_operands >= 8);
+          BL_PROPAGATE(consumer.ensure(v_idx / 2u));
 
           size_t i = 0;
           double x1, y1, x2, y2;
 
-          vIdx -= 6;
-          while ((i += 2) <= vIdx) {
-            px += m.xByA(vBuf[i - 2], vBuf[i - 1]);
-            py += m.yByA(vBuf[i - 2], vBuf[i - 1]);
-            consumer.lineTo(px, py);
+          v_idx -= 6;
+          while ((i += 2) <= v_idx) {
+            px += m.x_by_a(v_buf[i - 2], v_buf[i - 1]);
+            py += m.y_by_a(v_buf[i - 2], v_buf[i - 1]);
+            consumer.line_to(px, py);
           }
 
-          x1 = px + m.xByA(vBuf[vIdx + 0], vBuf[vIdx + 1]);
-          y1 = py + m.yByA(vBuf[vIdx + 0], vBuf[vIdx + 1]);
-          x2 = x1 + m.xByA(vBuf[vIdx + 2], vBuf[vIdx + 3]);
-          y2 = y1 + m.yByA(vBuf[vIdx + 2], vBuf[vIdx + 3]);
-          px = x2 + m.xByA(vBuf[vIdx + 4], vBuf[vIdx + 5]);
-          py = y2 + m.yByA(vBuf[vIdx + 4], vBuf[vIdx + 5]);
-          consumer.cubicTo(x1, y1, x2, y2, px, py);
+          x1 = px + m.x_by_a(v_buf[v_idx + 0], v_buf[v_idx + 1]);
+          y1 = py + m.y_by_a(v_buf[v_idx + 0], v_buf[v_idx + 1]);
+          x2 = x1 + m.x_by_a(v_buf[v_idx + 2], v_buf[v_idx + 3]);
+          y2 = y1 + m.y_by_a(v_buf[v_idx + 2], v_buf[v_idx + 3]);
+          px = x2 + m.x_by_a(v_buf[v_idx + 4], v_buf[v_idx + 5]);
+          py = y2 + m.y_by_a(v_buf[v_idx + 4], v_buf[v_idx + 5]);
+          consumer.cubic_to(x1, y1, x2, y2, px, py);
 
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
 
@@ -1356,9 +1357,9 @@ OnVHCurveTo:
         case kCSOpVStem:
         case kCSOpHStemHM:
         case kCSOpVStemHM: {
-          hintBitCount += (vIdx / 2);
+          hint_bit_count += (v_idx / 2);
 
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
 
@@ -1367,18 +1368,18 @@ OnVHCurveTo:
         case kCSOpHintMask:
         case kCSOpCntrMask: {
           // Acts as an implicit VSTEM.
-          hintBitCount += (vIdx / 2);
+          hint_bit_count += (v_idx / 2);
 
-          size_t hintByteSize = (hintBitCount + 7u) / 8u;
-          if (BL_UNLIKELY(PtrOps::bytesUntil(ip, ipEnd) < hintByteSize)) {
+          size_t hint_byte_size = (hint_bit_count + 7u) / 8u;
+          if (BL_UNLIKELY(PtrOps::bytes_until(ip, ip_end) < hint_byte_size)) {
             goto InvalidData;
           }
 
           // TODO: [OpenType] CFF HINTING: These bits are ignored atm.
-          ip += hintByteSize;
+          ip += hint_byte_size;
 
-          vIdx = 0;
-          executionFlags |= kCSFlagHasWidth;
+          v_idx = 0;
+          execution_flags |= kCSFlagHasWidth;
           continue;
         }
 
@@ -1388,14 +1389,14 @@ OnVHCurveTo:
         // |- ivs vsindex (15) |-
         case kCSOpVSIndex: {
           // TODO: [OpenType] CFF VARIATIONS
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
 
         // in(0)...in(N-1), d(0,0)...d(K-1,0), d(0,1)...d(K-1,1) ... d(0,N-1)...d(K-1,N-1) N blend (16) out(0)...(N-1)
         case kCSOpBlend: {
           // TODO: [OpenType] CFF VARIATIONS
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
 
@@ -1404,17 +1405,17 @@ OnVHCurveTo:
 
         // lsubr# calllsubr (10) -
         case kCSOpCallLSubR: {
-          BL_ASSERT(vMinOperands >= 1);
+          BL_ASSERT(v_min_operands >= 1);
 
-          cBuf[cIdx].reset(ip, ipEnd);
-          if (BL_UNLIKELY(++cIdx >= kCFFCallStackSize)) {
+          c_buf[c_idx].reset(ip, ip_end);
+          if (BL_UNLIKELY(++c_idx >= kCFFCallStackSize)) {
             goto InvalidData;
           }
 
-          subrIndex = localSubrIndex;
-          subrId = uint32_t(int32_t(vBuf[--vIdx]) + int32_t(subrIndex->bias));
+          subr_index = local_subr_index;
+          subr_id = uint32_t(int32_t(v_buf[--v_idx]) + int32_t(subr_index->bias));
 
-          if (subrId < subrIndex->entryCount) {
+          if (subr_id < subr_index->entry_count) {
             goto OnSubRCall;
           }
 
@@ -1423,17 +1424,17 @@ OnVHCurveTo:
 
         // gsubr# callgsubr (29) -
         case kCSOpCallGSubR: {
-          BL_ASSERT(vMinOperands >= 1);
+          BL_ASSERT(v_min_operands >= 1);
 
-          cBuf[cIdx].reset(ip, ipEnd);
-          if (BL_UNLIKELY(++cIdx >= kCFFCallStackSize)) {
+          c_buf[c_idx].reset(ip, ip_end);
+          if (BL_UNLIKELY(++c_idx >= kCFFCallStackSize)) {
             goto InvalidData;
           }
 
-          subrIndex = &cffInfo.index[CFFData::kIndexGSubR];
-          subrId = uint32_t(int32_t(vBuf[--vIdx]) + int32_t(subrIndex->bias));
+          subr_index = &cff_info.index[CFFData::kIndexGSubR];
+          subr_id = uint32_t(int32_t(v_buf[--v_idx]) + int32_t(subr_index->bias));
 
-          if (subrId < subrIndex->entryCount)
+          if (subr_id < subr_index->entry_count)
             goto OnSubRCall;
 
           goto InvalidData;
@@ -1441,13 +1442,13 @@ OnVHCurveTo:
 
         // return (11)
         case kCSOpReturn: {
-          if (BL_UNLIKELY(cIdx == 0)) {
+          if (BL_UNLIKELY(c_idx == 0)) {
             goto InvalidData;
           }
 OnReturn:
-          cIdx--;
-          ip    = cBuf[cIdx]._ptr;
-          ipEnd = cBuf[cIdx]._end;
+          c_idx--;
+          ip    = c_buf[c_idx]._ptr;
+          ip_end = c_buf[c_idx]._end;
           continue;
         }
 
@@ -1460,31 +1461,31 @@ OnReturn:
         // -----------------
 
         case kCSOpEscape: {
-          if (BL_UNLIKELY(ip >= ipEnd)) {
+          if (BL_UNLIKELY(ip >= ip_end)) {
             goto InvalidData;
           }
           b0 = *ip++;
 
           #ifdef BL_TRACE_OT_CFF
-          traceCharStringOp(faceI, trace, 0x0C00 | b0, vBuf, vIdx);
+          trace_char_string_op(ot_face_impl, trace, 0x0C00 | b0, v_buf, v_idx);
           #endif
 
           if (BL_UNLIKELY(b0 >= ExecutionFeaturesInfo::kEscapedOpCount)) {
             // Unknown operators should clear the stack and act as NOPs.
-            vIdx = 0;
+            v_idx = 0;
             continue;
           }
 
-          vMinOperands = executionFeatures->escapedOpStackSize[b0];
-          if (BL_UNLIKELY(vIdx < vMinOperands)) {
+          v_min_operands = execution_features->escaped_op_stack_size[b0];
+          if (BL_UNLIKELY(v_idx < v_min_operands)) {
             // If this is not an unknown operand it would mean that we have less
             // values on stack than the operator requires. That's an error in CS.
-            if (vMinOperands != ExecutionFeaturesInfo::kUnknown) {
+            if (v_min_operands != ExecutionFeaturesInfo::kUnknown) {
               goto InvalidData;
             }
 
             // Unknown operators should clear the stack and act as NOPs.
-            vIdx = 0;
+            v_idx = 0;
             continue;
           }
 
@@ -1498,23 +1499,23 @@ OnReturn:
               double x1, y1, x2, y2;
               BL_PROPAGATE(consumer.ensure(6));
 
-              x1 = px + m.xByA(vBuf[0], vBuf[1]);
-              y1 = py + m.yByA(vBuf[0], vBuf[1]);
-              x2 = x1 + m.xByA(vBuf[2], vBuf[3]);
-              y2 = y1 + m.yByA(vBuf[2], vBuf[3]);
-              px = x2 + m.xByA(vBuf[4], vBuf[5]);
-              py = y2 + m.yByA(vBuf[4], vBuf[5]);
-              consumer.cubicTo(x1, y1, x2, y2, px, py);
+              x1 = px + m.x_by_a(v_buf[0], v_buf[1]);
+              y1 = py + m.y_by_a(v_buf[0], v_buf[1]);
+              x2 = x1 + m.x_by_a(v_buf[2], v_buf[3]);
+              y2 = y1 + m.y_by_a(v_buf[2], v_buf[3]);
+              px = x2 + m.x_by_a(v_buf[4], v_buf[5]);
+              py = y2 + m.y_by_a(v_buf[4], v_buf[5]);
+              consumer.cubic_to(x1, y1, x2, y2, px, py);
 
-              x1 = px + m.xByA(vBuf[6], vBuf[7]);
-              y1 = py + m.yByA(vBuf[6], vBuf[7]);
-              x2 = x1 + m.xByA(vBuf[8], vBuf[9]);
-              y2 = y1 + m.yByA(vBuf[8], vBuf[9]);
-              px = x2 + m.xByA(vBuf[10], vBuf[11]);
-              py = y2 + m.yByA(vBuf[10], vBuf[11]);
-              consumer.cubicTo(x1, y1, x2, y2, px, py);
+              x1 = px + m.x_by_a(v_buf[6], v_buf[7]);
+              y1 = py + m.y_by_a(v_buf[6], v_buf[7]);
+              x2 = x1 + m.x_by_a(v_buf[8], v_buf[9]);
+              y2 = y1 + m.y_by_a(v_buf[8], v_buf[9]);
+              px = x2 + m.x_by_a(v_buf[10], v_buf[11]);
+              py = y2 + m.y_by_a(v_buf[10], v_buf[11]);
+              consumer.cubic_to(x1, y1, x2, y2, px, py);
 
-              vIdx = 0;
+              v_idx = 0;
               continue;
             }
 
@@ -1523,32 +1524,32 @@ OnReturn:
               double x1, y1, x2, y2, x3, y3, x4, y4, x5, y5;
               BL_PROPAGATE(consumer.ensure(6));
 
-              x1 = px + m.xByA(vBuf[0], vBuf[1]);
-              y1 = py + m.yByA(vBuf[0], vBuf[1]);
-              x2 = x1 + m.xByA(vBuf[2], vBuf[3]);
-              y2 = y1 + m.yByA(vBuf[2], vBuf[3]);
-              x3 = x2 + m.xByA(vBuf[4], vBuf[5]);
-              y3 = y2 + m.yByA(vBuf[4], vBuf[5]);
-              consumer.cubicTo(x1, y1, x2, y2, x3, y3);
+              x1 = px + m.x_by_a(v_buf[0], v_buf[1]);
+              y1 = py + m.y_by_a(v_buf[0], v_buf[1]);
+              x2 = x1 + m.x_by_a(v_buf[2], v_buf[3]);
+              y2 = y1 + m.y_by_a(v_buf[2], v_buf[3]);
+              x3 = x2 + m.x_by_a(v_buf[4], v_buf[5]);
+              y3 = y2 + m.y_by_a(v_buf[4], v_buf[5]);
+              consumer.cubic_to(x1, y1, x2, y2, x3, y3);
 
-              x4 = x3 + m.xByA(vBuf[6], vBuf[7]);
-              y4 = y3 + m.yByA(vBuf[6], vBuf[7]);
-              x5 = x4 + m.xByA(vBuf[8], vBuf[9]);
-              y5 = y4 + m.yByA(vBuf[8], vBuf[9]);
+              x4 = x3 + m.x_by_a(v_buf[6], v_buf[7]);
+              y4 = y3 + m.y_by_a(v_buf[6], v_buf[7]);
+              x5 = x4 + m.x_by_a(v_buf[8], v_buf[9]);
+              y5 = y4 + m.y_by_a(v_buf[8], v_buf[9]);
 
-              double dx = blAbs(vBuf[0] + vBuf[2] + vBuf[4] + vBuf[6] + vBuf[8]);
-              double dy = blAbs(vBuf[1] + vBuf[3] + vBuf[5] + vBuf[7] + vBuf[9]);
+              double dx = bl_abs(v_buf[0] + v_buf[2] + v_buf[4] + v_buf[6] + v_buf[8]);
+              double dy = bl_abs(v_buf[1] + v_buf[3] + v_buf[5] + v_buf[7] + v_buf[9]);
               if (dx > dy) {
-                px = x5 + m.xByX(vBuf[10]);
-                py = y5 + m.yByX(vBuf[10]);
+                px = x5 + m.x_by_x(v_buf[10]);
+                py = y5 + m.y_by_x(v_buf[10]);
               }
               else {
-                px = x5 + m.xByY(vBuf[10]);
-                py = y5 + m.yByY(vBuf[10]);
+                px = x5 + m.x_by_y(v_buf[10]);
+                py = y5 + m.y_by_y(v_buf[10]);
               }
-              consumer.cubicTo(x4, y4, x5, y5, px, py);
+              consumer.cubic_to(x4, y4, x5, y5, px, py);
 
-              vIdx = 0;
+              v_idx = 0;
               continue;
             }
 
@@ -1557,23 +1558,23 @@ OnReturn:
               double x1, y1, x2, y2, x3, y3, x4, y4, x5, y5;
               BL_PROPAGATE(consumer.ensure(6));
 
-              x1 = px + m.xByX(vBuf[0]);
-              y1 = py + m.yByX(vBuf[0]);
-              x2 = x1 + m.xByA(vBuf[1], vBuf[2]);
-              y2 = y1 + m.yByA(vBuf[1], vBuf[2]);
-              x3 = x2 + m.xByX(vBuf[3]);
-              y3 = y2 + m.yByX(vBuf[3]);
-              consumer.cubicTo(x1, y1, x2, y2, x3, y3);
+              x1 = px + m.x_by_x(v_buf[0]);
+              y1 = py + m.y_by_x(v_buf[0]);
+              x2 = x1 + m.x_by_a(v_buf[1], v_buf[2]);
+              y2 = y1 + m.y_by_a(v_buf[1], v_buf[2]);
+              x3 = x2 + m.x_by_x(v_buf[3]);
+              y3 = y2 + m.y_by_x(v_buf[3]);
+              consumer.cubic_to(x1, y1, x2, y2, x3, y3);
 
-              x4 = x3 + m.xByX(vBuf[4]);
-              y4 = y3 + m.yByX(vBuf[4]);
-              x5 = x4 + m.xByA(vBuf[5], -vBuf[2]);
-              y5 = y4 + m.yByA(vBuf[5], -vBuf[2]);
-              px = x5 + m.xByX(vBuf[6]);
-              py = y5 + m.yByX(vBuf[6]);
-              consumer.cubicTo(x4, y4, x5, y5, px, py);
+              x4 = x3 + m.x_by_x(v_buf[4]);
+              y4 = y3 + m.y_by_x(v_buf[4]);
+              x5 = x4 + m.x_by_a(v_buf[5], -v_buf[2]);
+              y5 = y4 + m.y_by_a(v_buf[5], -v_buf[2]);
+              px = x5 + m.x_by_x(v_buf[6]);
+              py = y5 + m.y_by_x(v_buf[6]);
+              consumer.cubic_to(x4, y4, x5, y5, px, py);
 
-              vIdx = 0;
+              v_idx = 0;
               continue;
             }
 
@@ -1582,188 +1583,188 @@ OnReturn:
               double x1, y1, x2, y2, x3, y3, x4, y4, x5, y5;
               BL_PROPAGATE(consumer.ensure(6));
 
-              x1 = px + m.xByA(vBuf[0], vBuf[1]);
-              y1 = py + m.yByA(vBuf[0], vBuf[1]);
-              x2 = x1 + m.xByA(vBuf[2], vBuf[3]);
-              y2 = y1 + m.yByA(vBuf[2], vBuf[3]);
-              x3 = x2 + m.xByX(vBuf[4]);
-              y3 = y2 + m.yByX(vBuf[4]);
-              consumer.cubicTo(x1, y1, x2, y2, x3, y3);
+              x1 = px + m.x_by_a(v_buf[0], v_buf[1]);
+              y1 = py + m.y_by_a(v_buf[0], v_buf[1]);
+              x2 = x1 + m.x_by_a(v_buf[2], v_buf[3]);
+              y2 = y1 + m.y_by_a(v_buf[2], v_buf[3]);
+              x3 = x2 + m.x_by_x(v_buf[4]);
+              y3 = y2 + m.y_by_x(v_buf[4]);
+              consumer.cubic_to(x1, y1, x2, y2, x3, y3);
 
-              x4 = x3 + m.xByX(vBuf[5]);
-              y4 = y3 + m.yByX(vBuf[5]);
-              x5 = x4 + m.xByA(vBuf[6], vBuf[7]);
-              y5 = y4 + m.yByA(vBuf[6], vBuf[7]);
-              px = x5 + m.xByX(vBuf[8]);
-              py = y5 + m.yByX(vBuf[8]);
-              consumer.cubicTo(x4, y4, x5, y5, px, py);
+              x4 = x3 + m.x_by_x(v_buf[5]);
+              y4 = y3 + m.y_by_x(v_buf[5]);
+              x5 = x4 + m.x_by_a(v_buf[6], v_buf[7]);
+              y5 = y4 + m.y_by_a(v_buf[6], v_buf[7]);
+              px = x5 + m.x_by_x(v_buf[8]);
+              py = y5 + m.y_by_x(v_buf[8]);
+              consumer.cubic_to(x4, y4, x5, y5, px, py);
 
-              vIdx = 0;
+              v_idx = 0;
               continue;
             }
 
             // in1 in2 and (12 3) out {in1 && in2}
             case kCSOpAnd & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 2);
-              vBuf[vIdx - 2] = double((vBuf[vIdx - 2] != 0.0) & (vBuf[vIdx - 1] != 0.0));
-              vIdx--;
+              BL_ASSERT(v_min_operands >= 2);
+              v_buf[v_idx - 2] = double((v_buf[v_idx - 2] != 0.0) & (v_buf[v_idx - 1] != 0.0));
+              v_idx--;
               continue;
             }
 
             // in1 in2 or (12 4) out {in1 || in2}
             case kCSOpOr & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 2);
-              vBuf[vIdx - 2] = double((vBuf[vIdx - 2] != 0.0) | (vBuf[vIdx - 1] != 0.0));
-              vIdx--;
+              BL_ASSERT(v_min_operands >= 2);
+              v_buf[v_idx - 2] = double((v_buf[v_idx - 2] != 0.0) | (v_buf[v_idx - 1] != 0.0));
+              v_idx--;
               continue;
             }
 
             // in1 in2 eq (12 15) out {in1 == in2}
             case kCSOpEq & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 2);
-              vBuf[vIdx - 2] = double(vBuf[vIdx - 2] == vBuf[vIdx - 1]);
-              vIdx--;
+              BL_ASSERT(v_min_operands >= 2);
+              v_buf[v_idx - 2] = double(v_buf[v_idx - 2] == v_buf[v_idx - 1]);
+              v_idx--;
               continue;
             }
 
             // s1 s2 v1 v2 ifelse (12 22) out {v1 <= v2 ? s1 : s2}
             case kCSOpIfElse & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 4);
-              vBuf[vIdx - 4] = vBuf[vIdx - 4 + size_t(vBuf[vIdx - 2] <= vBuf[vIdx - 1])];
-              vIdx -= 3;
+              BL_ASSERT(v_min_operands >= 4);
+              v_buf[v_idx - 4] = v_buf[v_idx - 4 + size_t(v_buf[v_idx - 2] <= v_buf[v_idx - 1])];
+              v_idx -= 3;
               continue;
             }
 
             // in not (12 5) out {!in}
             case kCSOpNot & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 1);
-              vBuf[vIdx - 1] = double(vBuf[vIdx - 1] == 0.0);
+              BL_ASSERT(v_min_operands >= 1);
+              v_buf[v_idx - 1] = double(v_buf[v_idx - 1] == 0.0);
               continue;
             }
 
             // in neg (12 14) out {-in}
             case kCSOpNeg & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 1);
-              vBuf[vIdx - 1] = -vBuf[vIdx - 1];
+              BL_ASSERT(v_min_operands >= 1);
+              v_buf[v_idx - 1] = -v_buf[v_idx - 1];
               continue;
             }
 
             // in abs (12 9) out {abs(in)}
             case kCSOpAbs & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 1);
-              vBuf[vIdx - 1] = blAbs(vBuf[vIdx - 1]);
+              BL_ASSERT(v_min_operands >= 1);
+              v_buf[v_idx - 1] = bl_abs(v_buf[v_idx - 1]);
               continue;
             }
 
             // in sqrt (12 26) out {sqrt(in)}
             case kCSOpSqrt & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 1);
-              vBuf[vIdx - 1] = Math::sqrt(blMax(vBuf[vIdx - 1], 0.0));
+              BL_ASSERT(v_min_operands >= 1);
+              v_buf[v_idx - 1] = Math::sqrt(bl_max(v_buf[v_idx - 1], 0.0));
               continue;
             }
 
             // in1 in2 add (12 10) out {in1 + in2}
             case kCSOpAdd & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 2);
-              double result = vBuf[vIdx - 2] + vBuf[vIdx - 1];
-              vBuf[vIdx - 2] = Math::isFinite(result) ? result : 0.0;
-              vIdx--;
+              BL_ASSERT(v_min_operands >= 2);
+              double result = v_buf[v_idx - 2] + v_buf[v_idx - 1];
+              v_buf[v_idx - 2] = Math::is_finite(result) ? result : 0.0;
+              v_idx--;
               continue;
             }
 
             // in1 in2 sub (12 11) out {in1 - in2}
             case kCSOpSub & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 2);
-              double result = vBuf[vIdx - 2] - vBuf[vIdx - 1];
-              vBuf[vIdx - 2] = Math::isFinite(result) ? result : 0.0;
-              vIdx--;
+              BL_ASSERT(v_min_operands >= 2);
+              double result = v_buf[v_idx - 2] - v_buf[v_idx - 1];
+              v_buf[v_idx - 2] = Math::is_finite(result) ? result : 0.0;
+              v_idx--;
               continue;
             }
 
             // CFFv1: in1 in2 mul (12 24) out {in1 * in2}
             case kCSOpMul & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 2);
-              double result = vBuf[vIdx - 2] * vBuf[vIdx - 1];
-              vBuf[vIdx - 2] = Math::isFinite(result) ? result : 0.0;
-              vIdx--;
+              BL_ASSERT(v_min_operands >= 2);
+              double result = v_buf[v_idx - 2] * v_buf[v_idx - 1];
+              v_buf[v_idx - 2] = Math::is_finite(result) ? result : 0.0;
+              v_idx--;
               continue;
             }
 
             // CFFv1: in1 in2 div (12 12) out {in1 / in2}
             case kCSOpDiv & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 2);
-              double result = vBuf[vIdx - 2] / vBuf[vIdx - 1];
-              vBuf[vIdx - 2] = Math::isFinite(result) ? result : 0.0;
-              vIdx--;
+              BL_ASSERT(v_min_operands >= 2);
+              double result = v_buf[v_idx - 2] / v_buf[v_idx - 1];
+              v_buf[v_idx - 2] = Math::is_finite(result) ? result : 0.0;
+              v_idx--;
               continue;
             }
 
             // random (12 23) out
             case kCSOpRandom & 0xFFu: {
-              if (BL_UNLIKELY(++vIdx > kCFFValueStackSizeV1))
+              if (BL_UNLIKELY(++v_idx > kCFFValueStackSizeV1))
                 goto InvalidData;
 
               // NOTE: Don't allow anything random.
-              vBuf[vIdx - 1] = 0.5;
+              v_buf[v_idx - 1] = 0.5;
               continue;
             }
 
             // in dup (12 27) out out
             case kCSOpDup & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 1);
-              if (BL_UNLIKELY(++vIdx > kCFFValueStackSizeV1))
+              BL_ASSERT(v_min_operands >= 1);
+              if (BL_UNLIKELY(++v_idx > kCFFValueStackSizeV1))
                 goto InvalidData;
-              vBuf[vIdx - 1] = vBuf[vIdx - 2];
+              v_buf[v_idx - 1] = v_buf[v_idx - 2];
               continue;
             }
 
             // in drop (12 18)
             case kCSOpDrop & 0xFFu: {
-              if (BL_UNLIKELY(vIdx == 0))
+              if (BL_UNLIKELY(v_idx == 0))
                 goto InvalidData;
-              vIdx--;
+              v_idx--;
               continue;
             }
 
             // in1 in2 exch (12 28) out1 out2
             case kCSOpExch & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 2);
-              BLInternal::swap(vBuf[vIdx - 2], vBuf[vIdx - 1]);
+              BL_ASSERT(v_min_operands >= 2);
+              BLInternal::swap(v_buf[v_idx - 2], v_buf[v_idx - 1]);
               continue;
             }
 
             // nX...n0 I index (12 29) nX...n0 n[I]
             case kCSOpIndex & 0xFFu: {
-              BL_ASSERT(vMinOperands >= 2);
+              BL_ASSERT(v_min_operands >= 2);
 
-              double idxValue = vBuf[vIdx - 1];
-              double valToPush = 0.0;
+              double idx_value = v_buf[v_idx - 1];
+              double val_to_push = 0.0;
 
-              if (idxValue < 0.0) {
+              if (idx_value < 0.0) {
                 // If I is negative, top element is copied.
-                valToPush = vBuf[vIdx - 2];
+                val_to_push = v_buf[v_idx - 2];
               }
               else {
-                // It will overflow if idxValue is greater than `vIdx - 1`, thus,
-                // `indexToRead` would become a very large number that would not
+                // It will overflow if idx_value is greater than `v_idx - 1`, thus,
+                // `index_to_read` would become a very large number that would not
                 // pass the condition afterwards.
-                size_t indexToRead = vIdx - 1 - size_t(unsigned(idxValue));
-                if (indexToRead < vIdx - 1) {
-                  valToPush = vBuf[indexToRead];
+                size_t index_to_read = v_idx - 1 - size_t(unsigned(idx_value));
+                if (index_to_read < v_idx - 1) {
+                  val_to_push = v_buf[index_to_read];
                 }
               }
 
-              vBuf[vIdx - 1] = valToPush;
+              v_buf[v_idx - 1] = val_to_push;
               continue;
             }
 
             // n(N–1)...n0 N J roll (12 30) n((J–1) % N)...n0 n(N–1)...n(J % N)
             case kCSOpRoll & 0xFFu: {
-              unsigned int shift = unsigned(int(vBuf[--vIdx]));
-              unsigned int count = unsigned(int(vBuf[--vIdx]));
+              unsigned int shift = unsigned(int(v_buf[--v_idx]));
+              unsigned int count = unsigned(int(v_buf[--v_idx]));
 
-              if (count > vIdx)
-                count = unsigned(vIdx);
+              if (count > v_idx)
+                count = unsigned(v_idx);
 
               if (count < 2)
                 continue;
@@ -1780,21 +1781,21 @@ OnReturn:
                 continue;
 
               double last = 0;
-              uint32_t curIdx = IntOps::negate(uint32_t(1));
-              uint32_t baseIdx = curIdx;
+              uint32_t cur_idx = IntOps::negate(uint32_t(1));
+              uint32_t base_idx = cur_idx;
 
               for (uint32_t i = 0; i < count; i++) {
-                if (curIdx == baseIdx) {
-                  last = vBuf[++curIdx];
-                  baseIdx = curIdx;
+                if (cur_idx == base_idx) {
+                  last = v_buf[++cur_idx];
+                  base_idx = cur_idx;
                 }
 
-                curIdx += shift;
-                if (curIdx >= count) {
-                  curIdx -= count;
+                cur_idx += shift;
+                if (cur_idx >= count) {
+                  cur_idx -= count;
                 }
 
-                BLInternal::swap(vBuf[curIdx], last);
+                BLInternal::swap(v_buf[cur_idx], last);
               }
 
               continue;
@@ -1802,34 +1803,34 @@ OnReturn:
 
             // in I put (12 20)
             case kCSOpPut & 0xFFu: {
-              unsigned int sIdx = unsigned(int(vBuf[vIdx - 1]));
-              if (sIdx < kCFFStorageSize) {
-                sBuf[sIdx] = vBuf[vIdx - 2];
-                sMsk |= IntOps::lsbBitAt<uint32_t>(sIdx);
+              unsigned int s_idx = unsigned(int(v_buf[v_idx - 1]));
+              if (s_idx < kCFFStorageSize) {
+                s_buf[s_idx] = v_buf[v_idx - 2];
+                s_msk |= IntOps::lsb_bit_at<uint32_t>(s_idx);
               }
 
-              vIdx -= 2;
+              v_idx -= 2;
               continue;
             }
 
             // I get (12 21) out
             case kCSOpGet & 0xFFu: {
-              unsigned int sIdx = unsigned(int(vBuf[vIdx - 1]));
+              unsigned int s_idx = unsigned(int(v_buf[v_idx - 1]));
 
-              // When `sIdx == kCFFStorageSize` it points to `0.0` (the only value guaranteed to be set).
-              // Otherwise we check the bit in `sMsk` and won't allow to get an uninitialized value that
-              // was not stored at `sIdx` before (for security reasons).
-              if (sIdx >= kCFFStorageSize || !IntOps::bitTest(sMsk, sIdx)) {
-                sIdx = kCFFStorageSize;
+              // When `s_idx == kCFFStorageSize` it points to `0.0` (the only value guaranteed to be set).
+              // Otherwise we check the bit in `s_msk` and won't allow to get an uninitialized value that
+              // was not stored at `s_idx` before (for security reasons).
+              if (s_idx >= kCFFStorageSize || !IntOps::bit_test(s_msk, s_idx)) {
+                s_idx = kCFFStorageSize;
               }
 
-              vBuf[vIdx - 1] = sBuf[sIdx];
+              v_buf[v_idx - 1] = s_buf[s_idx];
               continue;
             }
 
             // Unknown operator - drop the stack and continue.
             default: {
-              vIdx = 0;
+              v_idx = 0;
               continue;
             }
           }
@@ -1837,7 +1838,7 @@ OnReturn:
 
         // Unknown operator - drop the stack and continue.
         default: {
-          vIdx = 0;
+          v_idx = 0;
           continue;
         }
       }
@@ -1845,21 +1846,21 @@ OnReturn:
   }
 
 EndCharString:
-  if (executionFlags & kCSFlagPathOpen) {
+  if (execution_flags & kCSFlagPathOpen) {
     BL_PROPAGATE(consumer.ensure(1));
     consumer.close();
   }
 
   consumer.done();
-  trace.info("[%zu bytes processed]\n", bytesProcessed);
+  trace.info("[%zu bytes processed]\n", bytes_processed);
 
   return BL_SUCCESS;
 
 InvalidData:
   consumer.done();
-  trace.fail("Invalid data [%zu bytes processed]\n", bytesProcessed);
+  trace.fail("Invalid data [%zu bytes processed]\n", bytes_processed);
 
-  return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+  return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 }
 
 // bl::OpenType::CFFImpl - GetGlyphBounds
@@ -1875,8 +1876,8 @@ public:
   double cy = 0.0;
 
   BL_INLINE BLResult begin(size_t n) noexcept {
-    blUnused(n);
-    bounds.reset(Traits::maxValue<double>(), Traits::maxValue<double>(), Traits::minValue<double>(), Traits::minValue<double>());
+    bl_unused(n);
+    bounds.reset(Traits::max_value<double>(), Traits::max_value<double>(), Traits::min_value<double>(), Traits::min_value<double>());
     cx = 0;
     cy = 0;
     return BL_SUCCESS;
@@ -1885,35 +1886,35 @@ public:
   BL_INLINE void done() noexcept {}
 
   BL_INLINE BLResult ensure(size_t n) noexcept {
-    blUnused(n);
+    bl_unused(n);
     return BL_SUCCESS;
   }
 
-  BL_INLINE void moveTo(double x0, double y0) noexcept {
+  BL_INLINE void move_to(double x0, double y0) noexcept {
     Geometry::bound(bounds, BLPoint(x0, y0));
     cx = x0;
     cy = y0;
   }
 
-  BL_INLINE void lineTo(double x1, double y1) noexcept {
+  BL_INLINE void line_to(double x1, double y1) noexcept {
     Geometry::bound(bounds, BLPoint(x1, y1));
     cx = x1;
     cy = y1;
   }
 
   // Not used by CFF, provided for completness.
-  BL_INLINE void quadTo(double x1, double y1, double x2, double y2) noexcept {
+  BL_INLINE void quad_to(double x1, double y1, double x2, double y2) noexcept {
     Geometry::bound(bounds, BLPoint(x2, y2));
     if (!bounds.contains(x1, y1))
-      mergeQuadExtrema(x1, y1, x2, y2);
+      merge_quad_extrema(x1, y1, x2, y2);
     cx = x2;
     cy = y2;
   }
 
-  BL_INLINE void cubicTo(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
+  BL_INLINE void cubic_to(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
     Geometry::bound(bounds, BLPoint(x3, y3));
-    if (!Geometry::subsumes(bounds, BLBox(blMin(x1, x2), blMin(y1, y2), blMax(x1, x2), blMax(y1, y2))))
-      mergeCubicExtrema(x1, y1, x2, y2, x3, y3);
+    if (!Geometry::subsumes(bounds, BLBox(bl_min(x1, x2), bl_min(y1, y2), bl_max(x1, x2), bl_max(y1, y2))))
+      merge_cubic_extrema(x1, y1, x2, y2, x3, y3);
     cx = x3;
     cy = y3;
   }
@@ -1924,17 +1925,17 @@ public:
   // such case, because most control points in fonts are within the bounding box defined by start/end points anyway.
   //
   // Making these two functions no-inline saves around 8kB.
-  BL_NOINLINE void mergeQuadExtrema(double x1, double y1, double x2, double y2) noexcept {
+  BL_NOINLINE void merge_quad_extrema(double x1, double y1, double x2, double y2) noexcept {
     BLPoint quad[3] { { cx, cy }, { x1, y1 }, { x2, y2 } };
-    BLPoint extrema = Geometry::quadExtremaPoint(quad);
+    BLPoint extrema = Geometry::quad_extrema_point(quad);
     Geometry::bound(bounds, extrema);
   }
 
-  BL_NOINLINE void mergeCubicExtrema(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
+  BL_NOINLINE void merge_cubic_extrema(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
     BLPoint cubic[4] { { cx, cy }, { x1, y1 }, { x2, y2 }, { x3, y3 } };
     BLPoint extrema[2];
 
-    Geometry::getCubicExtremaPoints(cubic, extrema);
+    Geometry::get_cubic_extrema_points(cubic, extrema);
     Geometry::bound(bounds, extrema[0]);
     Geometry::bound(bounds, extrema[1]);
   }
@@ -1942,36 +1943,36 @@ public:
 
 } // {anonymous}
 
-static BLResult BL_CDECL getGlyphBounds(
-  const BLFontFaceImpl* faceI_,
-  const uint32_t* glyphData,
-  intptr_t glyphAdvance,
+static BLResult BL_CDECL get_glyph_bounds(
+  const BLFontFaceImpl* face_impl,
+  const uint32_t* glyph_data,
+  intptr_t glyph_advance,
   BLBoxI* boxes,
   size_t count) noexcept {
 
   BLResult result = BL_SUCCESS;
-  BLMatrix2D transform = BLMatrix2D::makeIdentity();
+  BLMatrix2D transform = BLMatrix2D::make_identity();
 
-  ScopedBufferTmp<1024> tmpBuffer;
+  ScopedBufferTmp<1024> tmp_buffer;
   GlyphBoundsConsumer consumer;
 
   for (size_t i = 0; i < count; i++) {
-    BLGlyphId glyphId = glyphData[0];
-    glyphData = PtrOps::offset(glyphData, glyphAdvance);
+    BLGlyphId glyph_id = glyph_data[0];
+    glyph_data = PtrOps::offset(glyph_data, glyph_advance);
 
-    BLResult localResult = getGlyphOutlinesT<GlyphBoundsConsumer>(faceI_, glyphId, &transform, consumer, &tmpBuffer);
-    if (localResult) {
+    BLResult local_result = get_glyph_outlines_t<GlyphBoundsConsumer>(face_impl, glyph_id, &transform, consumer, &tmp_buffer);
+    if (local_result) {
       boxes[i].reset();
-      result = localResult;
+      result = local_result;
       continue;
     }
     else {
       const BLBox& bounds = consumer.bounds;
       if (bounds.x0 <= bounds.x1 && bounds.y0 <= bounds.y1) {
-        boxes[i].reset(Math::floorToInt(bounds.x0),
-                       Math::floorToInt(bounds.y0),
-                       Math::ceilToInt(bounds.x1),
-                       Math::ceilToInt(bounds.y1));
+        boxes[i].reset(Math::floor_to_int(bounds.x0),
+                       Math::floor_to_int(bounds.y0),
+                       Math::ceil_to_int(bounds.x1),
+                       Math::ceil_to_int(bounds.y1));
       }
       else {
         boxes[i].reset();
@@ -1991,15 +1992,15 @@ namespace {
 class GlyphOutlineConsumer {
 public:
   BLPath* path;
-  size_t contourCount;
+  size_t contour_count;
   PathAppender appender;
 
   BL_INLINE GlyphOutlineConsumer(BLPath* p) noexcept
     : path(p),
-      contourCount(0) {}
+      contour_count(0) {}
 
   BL_INLINE BLResult begin(size_t n) noexcept {
-    return appender.beginAppend(path, n);
+    return appender.begin_append(path, n);
   }
 
   BL_INLINE BLResult ensure(size_t n) noexcept {
@@ -2010,22 +2011,22 @@ public:
     appender.done(path);
   }
 
-  BL_INLINE void moveTo(double x0, double y0) noexcept {
-    contourCount++;
-    appender.moveTo(x0, y0);
+  BL_INLINE void move_to(double x0, double y0) noexcept {
+    contour_count++;
+    appender.move_to(x0, y0);
   }
 
-  BL_INLINE void lineTo(double x1, double y1) noexcept {
-    appender.lineTo(x1, y1);
+  BL_INLINE void line_to(double x1, double y1) noexcept {
+    appender.line_to(x1, y1);
   }
 
   // Not used by CFF, provided for completness.
-  BL_INLINE void quadTo(double x1, double y1, double x2, double y2) noexcept {
-    appender.quadTo(x1, y1, x2, y2);
+  BL_INLINE void quad_to(double x1, double y1, double x2, double y2) noexcept {
+    appender.quad_to(x1, y1, x2, y2);
   }
 
-  BL_INLINE void cubicTo(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
-    appender.cubicTo(x1, y1, x2, y2, x3, y3);
+  BL_INLINE void cubic_to(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
+    appender.cubic_to(x1, y1, x2, y2, x3, y3);
   }
 
   BL_INLINE void close() noexcept {
@@ -2035,18 +2036,18 @@ public:
 
 } // {anonymous}
 
-static BLResult BL_CDECL getGlyphOutlines(
-  const BLFontFaceImpl* faceI_,
-  BLGlyphId glyphId,
+static BLResult BL_CDECL get_glyph_outlines(
+  const BLFontFaceImpl* face_impl,
+  BLGlyphId glyph_id,
   const BLMatrix2D* transform,
   BLPath* out,
-  size_t* contourCountOut,
-  ScopedBuffer* tmpBuffer) noexcept {
+  size_t* contour_count_out,
+  ScopedBuffer* tmp_buffer) noexcept {
 
   GlyphOutlineConsumer consumer(out);
-  BLResult result = getGlyphOutlinesT<GlyphOutlineConsumer>(faceI_, glyphId, transform, consumer, tmpBuffer);
+  BLResult result = get_glyph_outlines_t<GlyphOutlineConsumer>(face_impl, glyph_id, transform, consumer, tmp_buffer);
 
-  *contourCountOut = consumer.contourCount;
+  *contour_count_out = consumer.contour_count;
   return result;
 }
 
@@ -2063,9 +2064,9 @@ struct CIDInfo {
 
   uint32_t flags;
   uint32_t ros[2];
-  uint32_t fdArrayOffset;
-  uint32_t fdSelectOffset;
-  uint8_t fdSelectFormat;
+  uint32_t fd_array_offset;
+  uint32_t fd_select_offset;
+  uint8_t fd_select_format;
 };
 
 // bl::OpenType::CFFImpl - Init
@@ -2075,155 +2076,155 @@ static BL_INLINE bool isSupportedFDSelectFormat(uint32_t format) noexcept {
   return format == 0 || format == 3;
 }
 
-BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noexcept {
-  DictIterator dictIter;
-  DictEntry dictEntry;
+BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_version) noexcept {
+  DictIterator dict_iter;
+  DictEntry dict_entry;
 
-  Index nameIndex {};
-  Index topDictIndex {};
-  Index stringIndex {};
-  Index gsubrIndex {};
-  Index lsubrIndex {};
-  Index charStringIndex {};
+  Index name_index {};
+  Index top_dict_index {};
+  Index string_index {};
+  Index gsubr_index {};
+  Index lsubr_index {};
+  Index char_string_index {};
 
-  uint32_t nameOffset = 0;
-  uint32_t topDictOffset = 0;
-  uint32_t stringOffset = 0;
-  uint32_t gsubrOffset = 0;
-  uint32_t charStringOffset = 0;
+  uint32_t name_offset = 0;
+  uint32_t top_dict_offset = 0;
+  uint32_t string_offset = 0;
+  uint32_t gsubr_offset = 0;
+  uint32_t char_string_offset = 0;
 
-  uint32_t beginDataOffset = 0;
-  uint32_t privateOffset = 0;
-  uint32_t privateLength = 0;
-  uint32_t lsubrOffset = 0;
+  uint32_t begin_data_offset = 0;
+  uint32_t private_offset = 0;
+  uint32_t private_length = 0;
+  uint32_t lsubr_offset = 0;
 
   CIDInfo cid {};
-  BLArray<CFFData::IndexData> fdSubrIndexes;
+  BLArray<CFFData::IndexData> fd_subr_indexes;
 
-  faceI->faceInfo.outlineType = uint8_t(BL_FONT_OUTLINE_TYPE_CFF + cffVersion);
+  ot_face_impl->face_info.outline_type = uint8_t(BL_FONT_OUTLINE_TYPE_CFF + cff_version);
 
   // CFF Header
   // ----------
 
-  Table<CFFTable> cff { cffVersion == CFFData::kVersion1 ? tables.cff : tables.cff2 };
+  Table<CFFTable> cff { cff_version == CFFData::kVersion1 ? tables.cff : tables.cff2 };
   if (BL_UNLIKELY(!cff.fits()))
-    return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   // The specification says that the implementation should refuse MAJOR version, which it doesn't understand.
   // We understand version 1 & 2 (there seems to be no other version) so refuse anything else. It also says
   // that change in MINOR version should never cause an incompatibility, so we ignore it completely.
-  if (BL_UNLIKELY(cffVersion + 1 != cff->header.majorVersion()))
-    return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+  if (BL_UNLIKELY(cff_version + 1 != cff->header.major_version()))
+    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-  uint32_t topDictSize = 0;
-  uint32_t headerSize = cff->header.headerSize();
+  uint32_t top_dict_size = 0;
+  uint32_t header_size = cff->header.header_size();
 
-  if (cffVersion == CFFData::kVersion1) {
-    if (BL_UNLIKELY(headerSize < 4 || headerSize > cff.size - 4)) {
-      return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+  if (cff_version == CFFData::kVersion1) {
+    if (BL_UNLIKELY(header_size < 4 || header_size > cff.size - 4)) {
+      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
 
-    uint32_t offsetSize = cff->headerV1()->offsetSize();
-    if (BL_UNLIKELY(offsetSize < 1 || offsetSize > 4)) {
-      return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    uint32_t offset_size = cff->headerV1()->offset_size();
+    if (BL_UNLIKELY(offset_size < 1 || offset_size > 4)) {
+      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
   }
   else {
-    if (BL_UNLIKELY(headerSize < 5 || headerSize > cff.size - 5)) {
-      return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    if (BL_UNLIKELY(header_size < 5 || header_size > cff.size - 5)) {
+      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
 
-    topDictSize = cff->headerV2()->topDictLength();
+    top_dict_size = cff->headerV2()->top_dict_length();
   }
 
   // CFF NameIndex
   // -------------
 
   // NameIndex is only used by CFF, CFF2 doesn't use it.
-  if (cffVersion == CFFData::kVersion1) {
-    nameOffset = headerSize;
-    BL_PROPAGATE(readIndex(cff.data + nameOffset, cff.size - nameOffset, cffVersion, &nameIndex));
+  if (cff_version == CFFData::kVersion1) {
+    name_offset = header_size;
+    BL_PROPAGATE(read_index(cff.data + name_offset, cff.size - name_offset, cff_version, &name_index));
 
     // There should be exactly one font in the table according to OpenType specification.
-    if (BL_UNLIKELY(nameIndex.count != 1)) {
-      return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    if (BL_UNLIKELY(name_index.count != 1)) {
+      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
 
-    topDictOffset = nameOffset + nameIndex.totalSize;
+    top_dict_offset = name_offset + name_index.total_size;
   }
   else {
-    topDictOffset = headerSize;
+    top_dict_offset = header_size;
   }
 
   // CFF TopDictIndex
   // ----------------
 
-  if (cffVersion == CFFData::kVersion1) {
+  if (cff_version == CFFData::kVersion1) {
     // CFF doesn't have the size specified in the header, so we have to compute it.
-    topDictSize = uint32_t(cff.size - topDictOffset);
+    top_dict_size = uint32_t(cff.size - top_dict_offset);
   }
   else {
     // CFF2 specifies the size in the header, so make sure it doesn't overflow our limits.
-    if (BL_UNLIKELY(topDictSize > cff.size - topDictOffset)) {
-      return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    if (BL_UNLIKELY(top_dict_size > cff.size - top_dict_offset)) {
+      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
   }
 
-  BL_PROPAGATE(readIndex(cff.data + topDictOffset, topDictSize, cffVersion, &topDictIndex));
-  if (cffVersion == CFFData::kVersion1) {
+  BL_PROPAGATE(read_index(cff.data + top_dict_offset, top_dict_size, cff_version, &top_dict_index));
+  if (cff_version == CFFData::kVersion1) {
     // TopDict index size must match NameIndex size (v1).
-    if (BL_UNLIKELY(nameIndex.count != topDictIndex.count)) {
-      return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    if (BL_UNLIKELY(name_index.count != top_dict_index.count)) {
+      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
   }
 
   {
-    uint32_t offsets[2] = { topDictIndex.offsetAt(0), topDictIndex.offsetAt(1) };
-    dictIter.reset(topDictIndex.payload + offsets[0], offsets[1] - offsets[0]);
+    uint32_t offsets[2] = { top_dict_index.offset_at(0), top_dict_index.offset_at(1) };
+    dict_iter.reset(top_dict_index.payload + offsets[0], offsets[1] - offsets[0]);
   }
 
-  while (dictIter.hasNext()) {
-    BL_PROPAGATE(dictIter.next(dictEntry));
-    switch (dictEntry.op) {
+  while (dict_iter.has_next()) {
+    BL_PROPAGATE(dict_iter.next(dict_entry));
+    switch (dict_entry.op) {
       case CFFTable::kDictOpTopCharStrings: {
-        if (BL_UNLIKELY(dictEntry.count != 1)) {
-          return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        if (BL_UNLIKELY(dict_entry.count != 1)) {
+          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         }
 
-        charStringOffset = uint32_t(dictEntry.values[0]);
+        char_string_offset = uint32_t(dict_entry.values[0]);
         break;
       }
 
       case CFFTable::kDictOpTopPrivate: {
-        if (BL_UNLIKELY(dictEntry.count != 2)) {
-          return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        if (BL_UNLIKELY(dict_entry.count != 2)) {
+          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         }
 
-        privateOffset = uint32_t(dictEntry.values[1]);
-        privateLength = uint32_t(dictEntry.values[0]);
+        private_offset = uint32_t(dict_entry.values[1]);
+        private_length = uint32_t(dict_entry.values[0]);
         break;
       }
 
       case CFFTable::kDictOpTopROS: {
-        if (dictEntry.count == 3) {
-          cid.ros[0] = uint32_t(dictEntry.values[0]);
-          cid.ros[1] = uint32_t(dictEntry.values[1]);
+        if (dict_entry.count == 3) {
+          cid.ros[0] = uint32_t(dict_entry.values[0]);
+          cid.ros[1] = uint32_t(dict_entry.values[1]);
           cid.flags |= CIDInfo::kFlagIsCID;
         }
         break;
       }
 
       case CFFTable::kDictOpTopFDArray: {
-        if (dictEntry.count == 1) {
-          cid.fdArrayOffset = uint32_t(dictEntry.values[0]);
+        if (dict_entry.count == 1) {
+          cid.fd_array_offset = uint32_t(dict_entry.values[0]);
           cid.flags |= CIDInfo::kFlagHasFDArray;
         }
         break;
       }
 
       case CFFTable::kDictOpTopFDSelect: {
-        if (dictEntry.count == 1) {
-          cid.fdSelectOffset = uint32_t(dictEntry.values[0]);
+        if (dict_entry.count == 1) {
+          cid.fd_select_offset = uint32_t(dict_entry.values[0]);
           cid.flags |= CIDInfo::kFlagHasFDSelect;
         }
         break;
@@ -2235,44 +2236,44 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
   // ---------------
 
   // StringIndex is only used by CFF, CFF2 doesn't use it.
-  if (cffVersion == CFFData::kVersion1) {
-    stringOffset = topDictOffset + topDictIndex.totalSize;
-    BL_PROPAGATE(readIndex(cff.data + stringOffset, cff.size - stringOffset, cffVersion, &stringIndex));
-    gsubrOffset = stringOffset + stringIndex.totalSize;
+  if (cff_version == CFFData::kVersion1) {
+    string_offset = top_dict_offset + top_dict_index.total_size;
+    BL_PROPAGATE(read_index(cff.data + string_offset, cff.size - string_offset, cff_version, &string_index));
+    gsubr_offset = string_offset + string_index.total_size;
   }
   else {
-    gsubrOffset = topDictOffset + topDictIndex.totalSize;
+    gsubr_offset = top_dict_offset + top_dict_index.total_size;
   }
 
   // CFF GSubRIndex
   // --------------
 
-  BL_PROPAGATE(readIndex(cff.data + gsubrOffset, cff.size - gsubrOffset, cffVersion, &gsubrIndex));
-  beginDataOffset = gsubrOffset + gsubrIndex.totalSize;
+  BL_PROPAGATE(read_index(cff.data + gsubr_offset, cff.size - gsubr_offset, cff_version, &gsubr_index));
+  begin_data_offset = gsubr_offset + gsubr_index.total_size;
 
   // CFF PrivateDict
   // ---------------
 
-  if (privateOffset) {
-    if (BL_UNLIKELY(privateOffset < beginDataOffset ||
-                    privateOffset > cff.size ||
-                    privateLength > cff.size - privateOffset)) {
-        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+  if (private_offset) {
+    if (BL_UNLIKELY(private_offset < begin_data_offset ||
+                    private_offset > cff.size ||
+                    private_length > cff.size - private_offset)) {
+        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
 
-    // There are fonts where `privateOffset` is equal to `cff.size` and `privateLength` is
-    // zero. So only search the private dictionary if `privateLength` is greater than zero.
-    if (privateLength) {
-      dictIter.reset(cff.data + privateOffset, privateLength);
-      while (dictIter.hasNext()) {
-        BL_PROPAGATE(dictIter.next(dictEntry));
-        switch (dictEntry.op) {
+    // There are fonts where `private_offset` is equal to `cff.size` and `private_length` is
+    // zero. So only search the private dictionary if `private_length` is greater than zero.
+    if (private_length) {
+      dict_iter.reset(cff.data + private_offset, private_length);
+      while (dict_iter.has_next()) {
+        BL_PROPAGATE(dict_iter.next(dict_entry));
+        switch (dict_entry.op) {
           case CFFTable::kDictOpPrivSubrs: {
-            if (BL_UNLIKELY(dictEntry.count != 1)) {
-              return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+            if (BL_UNLIKELY(dict_entry.count != 1)) {
+              return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
             }
 
-            lsubrOffset = uint32_t(dictEntry.values[0]);
+            lsubr_offset = uint32_t(dict_entry.values[0]);
             break;
           }
         }
@@ -2283,124 +2284,124 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
   // CFF LSubRIndex
   // --------------
 
-  if (lsubrOffset) {
-    // `lsubrOffset` is relative to `privateOffset`.
-    if (BL_UNLIKELY(lsubrOffset < privateLength || lsubrOffset > cff.size - privateOffset)) {
-      return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+  if (lsubr_offset) {
+    // `lsubr_offset` is relative to `private_offset`.
+    if (BL_UNLIKELY(lsubr_offset < private_length || lsubr_offset > cff.size - private_offset)) {
+      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
 
-    lsubrOffset += privateOffset;
-    BL_PROPAGATE(readIndex(cff.data + lsubrOffset, cff.size - lsubrOffset, cffVersion, &lsubrIndex));
+    lsubr_offset += private_offset;
+    BL_PROPAGATE(read_index(cff.data + lsubr_offset, cff.size - lsubr_offset, cff_version, &lsubr_index));
   }
 
   // CFF CharStrings
   // ---------------
 
-  if (BL_UNLIKELY(charStringOffset < beginDataOffset || charStringOffset >= cff.size)) {
-    return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+  if (BL_UNLIKELY(char_string_offset < begin_data_offset || char_string_offset >= cff.size)) {
+    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
   }
 
-  BL_PROPAGATE(readIndex(cff.data + charStringOffset, cff.size - charStringOffset, cffVersion, &charStringIndex));
+  BL_PROPAGATE(read_index(cff.data + char_string_offset, cff.size - char_string_offset, cff_version, &char_string_index));
 
   // CFF/CID
   // -------
 
   if ((cid.flags & CIDInfo::kFlagsAll) == CIDInfo::kFlagsAll) {
-    uint32_t fdArrayOffset = cid.fdArrayOffset;
-    uint32_t fdSelectOffset = cid.fdSelectOffset;
+    uint32_t fd_array_offset = cid.fd_array_offset;
+    uint32_t fd_select_offset = cid.fd_select_offset;
 
     // CID fonts require both FDArray and FDOffset.
-    if (fdArrayOffset && fdSelectOffset) {
-      if (fdArrayOffset < beginDataOffset || fdArrayOffset >= cff.size) {
-        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    if (fd_array_offset && fd_select_offset) {
+      if (fd_array_offset < begin_data_offset || fd_array_offset >= cff.size) {
+        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
       }
 
-      if (fdSelectOffset < beginDataOffset || fdSelectOffset >= cff.size) {
-        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+      if (fd_select_offset < begin_data_offset || fd_select_offset >= cff.size) {
+        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
       }
 
       // The index contains offsets to the additional TopDicts. To speed up glyph processing we read
       // these TopDicts and build our own array that will be used during glyph metrics/outline decoding.
-      Index fdArrayIndex;
-      BL_PROPAGATE(readIndex(cff.data + fdArrayOffset, cff.size - fdArrayOffset, cffVersion, &fdArrayIndex));
-      BL_PROPAGATE(fdSubrIndexes.reserve(fdArrayIndex.count));
+      Index fd_array_index;
+      BL_PROPAGATE(read_index(cff.data + fd_array_offset, cff.size - fd_array_offset, cff_version, &fd_array_index));
+      BL_PROPAGATE(fd_subr_indexes.reserve(fd_array_index.count));
 
-      const uint8_t* fdArrayOffsets = fdArrayIndex.offsets;
-      for (uint32_t i = 0; i < fdArrayIndex.count; i++) {
-        Index fdSubrIndex {};
-        uint32_t subrOffset = 0;
-        uint32_t subrBaseOffset = 0;
+      const uint8_t* fd_array_offsets = fd_array_index.offsets;
+      for (uint32_t i = 0; i < fd_array_index.count; i++) {
+        Index fd_subr_index {};
+        uint32_t subr_offset = 0;
+        uint32_t subr_base_offset = 0;
 
-        // NOTE: The offsets were already verified by `readIndex()`.
+        // NOTE: The offsets were already verified by `read_index()`.
         uint32_t offsets[2];
-        readOffsetArray(fdArrayOffsets, fdArrayIndex.offsetSize, offsets, 2);
+        read_offset_array(fd_array_offsets, fd_array_index.offset_size, offsets, 2);
 
         // Offsets start from 1, we have to adjust them to start from 0.
         offsets[0] -= CFFTable::kOffsetAdjustment;
         offsets[1] -= CFFTable::kOffsetAdjustment;
 
-        // dictData[1] would be a private dictionary, if present...
-        RawTable dictData[2];
-        dictData[0].reset(fdArrayIndex.payload + offsets[0], offsets[1] - offsets[0]);
-        dictData[1].reset();
+        // dict_data[1] would be a private dictionary, if present...
+        RawTable dict_data[2];
+        dict_data[0].reset(fd_array_index.payload + offsets[0], offsets[1] - offsets[0]);
+        dict_data[1].reset();
 
         for (uint32_t d = 0; d < 2; d++) {
-          dictIter.reset(dictData[d].data, dictData[d].size);
-          while (dictIter.hasNext()) {
-            BL_PROPAGATE(dictIter.next(dictEntry));
-            switch (dictEntry.op) {
+          dict_iter.reset(dict_data[d].data, dict_data[d].size);
+          while (dict_iter.has_next()) {
+            BL_PROPAGATE(dict_iter.next(dict_entry));
+            switch (dict_entry.op) {
               case CFFTable::kDictOpTopPrivate: {
-                if (BL_UNLIKELY(dictEntry.count != 2)) {
-                  return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+                if (BL_UNLIKELY(dict_entry.count != 2)) {
+                  return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
                 }
 
-                uint32_t offset = uint32_t(dictEntry.values[1]);
-                uint32_t length = uint32_t(dictEntry.values[0]);
+                uint32_t offset = uint32_t(dict_entry.values[1]);
+                uint32_t length = uint32_t(dict_entry.values[0]);
 
-                if (BL_UNLIKELY(offset < beginDataOffset || offset > cff.size || length > cff.size - offset)) {
-                  return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+                if (BL_UNLIKELY(offset < begin_data_offset || offset > cff.size || length > cff.size - offset)) {
+                  return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
                 }
 
-                dictData[1].reset(cff.data + offset, length);
-                subrBaseOffset = offset;
+                dict_data[1].reset(cff.data + offset, length);
+                subr_base_offset = offset;
                 break;
               }
 
               case CFFTable::kDictOpPrivSubrs: {
-                if (BL_UNLIKELY(dictEntry.count != 1)) {
-                  return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+                if (BL_UNLIKELY(dict_entry.count != 1)) {
+                  return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
                 }
 
-                // The local subr `offset` is relative to the `subrBaseOffset`.
-                subrOffset = uint32_t(dictEntry.values[0]);
-                if (BL_UNLIKELY(subrOffset > cff.size - subrBaseOffset)) {
-                  return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+                // The local subr `offset` is relative to the `subr_base_offset`.
+                subr_offset = uint32_t(dict_entry.values[0]);
+                if (BL_UNLIKELY(subr_offset > cff.size - subr_base_offset)) {
+                  return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
                 }
 
-                subrOffset += subrBaseOffset;
-                BL_PROPAGATE(readIndex(cff.data + subrOffset, cff.size - subrOffset, cffVersion, &fdSubrIndex));
+                subr_offset += subr_base_offset;
+                BL_PROPAGATE(read_index(cff.data + subr_offset, cff.size - subr_offset, cff_version, &fd_subr_index));
                 break;
               }
             }
           }
         }
 
-        CFFData::IndexData fdSubrIndexData;
-        fdSubrIndexData.reset(
-          DataRange { subrOffset, fdSubrIndex.totalSize },
-          fdSubrIndex.headerSize,
-          fdSubrIndex.offsetSize,
-          fdSubrIndex.count,
-          calcSubRBias(fdSubrIndex.count));
+        CFFData::IndexData fd_subr_index_data;
+        fd_subr_index_data.reset(
+          DataRange { subr_offset, fd_subr_index.total_size },
+          fd_subr_index.header_size,
+          fd_subr_index.offset_size,
+          fd_subr_index.count,
+          calc_subr_bias(fd_subr_index.count));
 
-        fdSubrIndexes.append(fdSubrIndexData);
-        fdArrayOffsets += fdArrayIndex.offsetSize;
+        fd_subr_indexes.append(fd_subr_index_data);
+        fd_array_offsets += fd_array_index.offset_size;
       }
 
       // Validate FDSelect data.
-      cid.fdSelectFormat = cff.data[fdSelectOffset];
-      if (BL_UNLIKELY(!isSupportedFDSelectFormat(cid.fdSelectFormat))) {
-        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+      cid.fd_select_format = cff.data[fd_select_offset];
+      if (BL_UNLIKELY(!isSupportedFDSelectFormat(cid.fd_select_format))) {
+        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
       }
     }
   }
@@ -2408,35 +2409,36 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
   // Done
   // ----
 
-  faceI->cff.table = cff;
+  ot_face_impl->cff.table = cff;
 
-  faceI->cff.index[CFFData::kIndexGSubR].reset(
-    DataRange { gsubrOffset, gsubrIndex.totalSize },
-    gsubrIndex.headerSize,
-    gsubrIndex.offsetSize,
-    gsubrIndex.count,
-    calcSubRBias(gsubrIndex.count));
+  ot_face_impl->cff.index[CFFData::kIndexGSubR].reset(
+    DataRange { gsubr_offset, gsubr_index.total_size },
+    gsubr_index.header_size,
+    gsubr_index.offset_size,
+    gsubr_index.count,
+    calc_subr_bias(gsubr_index.count));
 
-  faceI->cff.index[CFFData::kIndexLSubR].reset(
-    DataRange { lsubrOffset, lsubrIndex.totalSize },
-    lsubrIndex.headerSize,
-    lsubrIndex.offsetSize,
-    lsubrIndex.count,
-    calcSubRBias(lsubrIndex.count));
+  ot_face_impl->cff.index[CFFData::kIndexLSubR].reset(
+    DataRange { lsubr_offset, lsubr_index.total_size },
+    lsubr_index.header_size,
+    lsubr_index.offset_size,
+    lsubr_index.count,
+    calc_subr_bias(lsubr_index.count));
 
-  faceI->cff.index[CFFData::kIndexCharString].reset(
-    DataRange { charStringOffset, charStringIndex.totalSize },
-    charStringIndex.headerSize,
-    charStringIndex.offsetSize,
-    charStringIndex.count,
+  ot_face_impl->cff.index[CFFData::kIndexCharString].reset(
+    DataRange { char_string_offset, char_string_index.total_size },
+    char_string_index.header_size,
+    char_string_index.offset_size,
+    char_string_index.count,
     0);
 
-  faceI->cff.fdSelectOffset = cid.fdSelectOffset;
-  faceI->cff.fdSelectFormat = cid.fdSelectFormat;
-  faceI->cffFDSubrIndexes.swap(fdSubrIndexes);
+  ot_face_impl->cff.fd_select_offset = cid.fd_select_offset;
+  ot_face_impl->cff.fd_select_format = cid.fd_select_format;
+  ot_face_impl->cff_fd_subr_indexes.swap(fd_subr_indexes);
 
-  faceI->funcs.getGlyphBounds = getGlyphBounds;
-  faceI->funcs.getGlyphOutlines = getGlyphOutlines;
+  ot_face_impl->funcs.get_glyph_bounds = get_glyph_bounds;
+  ot_face_impl->funcs.get_glyph_outlines = get_glyph_outlines;
+
   return BL_SUCCESS;
 };
 

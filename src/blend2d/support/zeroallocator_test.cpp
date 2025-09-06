@@ -66,9 +66,9 @@ public:
       EXPECT_EQ(record, nullptr)
         .message("Address [%p:%p] collides with a newly allocated [%p:%p]\n", record->addr, record->addr + record->size, p, p + size);
 
-    void* rPtr = malloc(sizeof(Record));
-    EXPECT_NE(rPtr, nullptr).message("Out of memory, cannot allocate 'Record'");
-    _records.insert(new(BLInternal::PlacementNew{rPtr}) Record(p, size));
+    void* r_ptr = malloc(sizeof(Record));
+    EXPECT_NE(r_ptr, nullptr).message("Out of memory, cannot allocate 'Record'");
+    _records.insert(new(BLInternal::PlacementNew{r_ptr}) Record(p, size));
   }
 
   void _remove(void* p) noexcept {
@@ -80,44 +80,44 @@ public:
   }
 
   void* alloc(size_t size) noexcept {
-    size_t allocatedSize = 0;
-    void* p = blZeroAllocatorAlloc(size, &allocatedSize);
+    size_t allocated_size = 0;
+    void* p = bl_zero_allocator_alloc(size, &allocated_size);
     EXPECT_NE(p, nullptr).message("BLZeroAllocator failed to allocate '%u' bytes\n", unsigned(size));
 
-    for (size_t i = 0; i < allocatedSize; i++) {
+    for (size_t i = 0; i < allocated_size; i++) {
       EXPECT_EQ(static_cast<const uint8_t*>(p)[i], 0)
         .message("The returned pointer doesn't point to a zeroed memory %p[%u]\n", p, int(size));
     }
 
-    _insert(p, allocatedSize);
+    _insert(p, allocated_size);
     return p;
   }
 
-  size_t getSizeOfPtr(void* p) noexcept {
+  size_t get_size_of_ptr(void* p) noexcept {
     Record* record = _records.get(static_cast<uint8_t*>(p));
     return record ? record->size : size_t(0);
   }
 
   void release(void* p) noexcept {
-    size_t size = getSizeOfPtr(p);
+    size_t size = get_size_of_ptr(p);
     _remove(p);
-    blZeroAllocatorRelease(p, size);
+    bl_zero_allocator_release(p, size);
   }
 };
 
-static void blZeroAllocatorTestShuffle(void** ptrArray, size_t count, BLRandom& prng) noexcept {
+static void bl_zero_allocator_test_shuffle(void** ptr_array, size_t count, BLRandom& prng) noexcept {
   for (size_t i = 0; i < count; ++i)
-    BLInternal::swap(ptrArray[i], ptrArray[size_t(prng.nextUInt32() % count)]);
+    BLInternal::swap(ptr_array[i], ptr_array[size_t(prng.next_uint32() % count)]);
 }
 
-static void blZeroAllocatorTestUsage() noexcept {
+static void bl_zero_allocator_test_usage() noexcept {
   BLRuntimeResourceInfo info;
-  BLRuntime::queryResourceInfo(&info);
+  BLRuntime::query_resource_info(&info);
 
-  INFO("  NumBlocks: %9llu"         , (unsigned long long)(info.zmBlockCount));
-  INFO("  UsedSize : %9llu [Bytes]" , (unsigned long long)(info.zmUsed));
-  INFO("  Reserved : %9llu [Bytes]" , (unsigned long long)(info.zmReserved));
-  INFO("  Overhead : %9llu [Bytes]" , (unsigned long long)(info.zmOverhead));
+  INFO("  NumBlocks: %9llu"         , (unsigned long long)(info.zm_block_count));
+  INFO("  UsedSize : %9llu [Bytes]" , (unsigned long long)(info.zm_used));
+  INFO("  Reserved : %9llu [Bytes]" , (unsigned long long)(info.zm_reserved));
+  INFO("  Overhead : %9llu [Bytes]" , (unsigned long long)(info.zm_overhead));
 }
 
 UNIT(zero_allocator, BL_TEST_GROUP_CORE_UTILITIES) {
@@ -129,48 +129,48 @@ UNIT(zero_allocator, BL_TEST_GROUP_CORE_UTILITIES) {
 
   INFO("Memory alloc/release test - %d allocations", kCount);
 
-  void** ptrArray = (void**)malloc(sizeof(void*) * size_t(kCount));
-  EXPECT_NE(ptrArray, nullptr)
+  void** ptr_array = (void**)malloc(sizeof(void*) * size_t(kCount));
+  EXPECT_NE(ptr_array, nullptr)
     .message("Couldn't allocate '%u' bytes for pointer-array", unsigned(sizeof(void*) * size_t(kCount)));
 
   INFO("Allocating zeroed memory...");
   for (i = 0; i < kCount; i++)
-    ptrArray[i] = wrapper.alloc((prng.nextUInt32() % 8000) + 128);
-  blZeroAllocatorTestUsage();
+    ptr_array[i] = wrapper.alloc((prng.next_uint32() % 8000) + 128);
+  bl_zero_allocator_test_usage();
 
   INFO("Releasing zeroed memory...");
   for (i = 0; i < kCount; i++)
-    wrapper.release(ptrArray[i]);
-  blZeroAllocatorTestUsage();
+    wrapper.release(ptr_array[i]);
+  bl_zero_allocator_test_usage();
 
   INFO("Submitting manual cleanup...");
   BLRuntime::cleanup(BL_RUNTIME_CLEANUP_ZEROED_POOL);
-  blZeroAllocatorTestUsage();
+  bl_zero_allocator_test_usage();
 
   INFO("Allocating zeroed memory...", kCount);
   for (i = 0; i < kCount; i++)
-    ptrArray[i] = wrapper.alloc((prng.nextUInt32() % 8000) + 128);
-  blZeroAllocatorTestUsage();
+    ptr_array[i] = wrapper.alloc((prng.next_uint32() % 8000) + 128);
+  bl_zero_allocator_test_usage();
 
   INFO("Shuffling...");
-  blZeroAllocatorTestShuffle(ptrArray, unsigned(kCount), prng);
+  bl_zero_allocator_test_shuffle(ptr_array, unsigned(kCount), prng);
 
   INFO("Releasing 50%% blocks...");
   for (i = 0; i < kCount / 2; i++)
-    wrapper.release(ptrArray[i]);
-  blZeroAllocatorTestUsage();
+    wrapper.release(ptr_array[i]);
+  bl_zero_allocator_test_usage();
 
   INFO("Allocating 50%% blocks again...");
   for (i = 0; i < kCount / 2; i++)
-    ptrArray[i] = wrapper.alloc((prng.nextUInt32() % 8000) + 128);
-  blZeroAllocatorTestUsage();
+    ptr_array[i] = wrapper.alloc((prng.next_uint32() % 8000) + 128);
+  bl_zero_allocator_test_usage();
 
   INFO("Releasing zeroed memory...");
   for (i = 0; i < kCount; i++)
-    wrapper.release(ptrArray[i]);
-  blZeroAllocatorTestUsage();
+    wrapper.release(ptr_array[i]);
+  bl_zero_allocator_test_usage();
 
-  free(ptrArray);
+  free(ptr_array);
 }
 
 } // {Tests}

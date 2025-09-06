@@ -24,94 +24,94 @@
 // bl::FontFace - Globals
 // ======================
 
-BLFontFacePrivateFuncs blNullFontFaceFuncs;
-static BLObjectEternalVirtualImpl<BLFontFacePrivateImpl, BLFontFaceVirt> blFontFaceDefaultImpl;
+BLFontFacePrivateFuncs bl_null_font_face_funcs;
+static BLObjectEternalVirtualImpl<BLFontFacePrivateImpl, BLFontFaceVirt> bl_font_face_default_impl;
 
 // bl::FontFace - Default Impl
 // ===========================
 
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
 
-static BLResult BL_CDECL blNullFontFaceImplDestroy(BLObjectImpl* impl) noexcept {
+static BLResult BL_CDECL bl_null_font_face_impl_destroy(BLObjectImpl* impl) noexcept {
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blNullFontFaceMapTextToGlyphs(
+static BLResult BL_CDECL bl_null_font_face_map_text_to_glyphs(
   const BLFontFaceImpl* impl,
   uint32_t* content,
   size_t count,
   BLGlyphMappingState* state) noexcept {
 
   state->reset();
-  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
-static BLResult BL_CDECL blNullFontFaceGetGlyphBounds(
+static BLResult BL_CDECL bl_null_font_face_get_glyph_bounds(
   const BLFontFaceImpl* impl,
-  const uint32_t* glyphData,
-  intptr_t glyphAdvance,
+  const uint32_t* glyph_data,
+  intptr_t glyph_advance,
   BLBoxI* boxes,
   size_t count) noexcept {
 
-  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
-static BLResult BL_CDECL blNullFontFaceGetGlyphAdvances(
+static BLResult BL_CDECL bl_null_font_face_get_glyph_advances(
   const BLFontFaceImpl* impl,
-  const uint32_t* glyphData,
-  intptr_t glyphAdvance,
-  BLGlyphPlacement* placementData,
+  const uint32_t* glyph_data,
+  intptr_t glyph_advance,
+  BLGlyphPlacement* placement_data,
   size_t count) noexcept {
 
-  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
-static BLResult BL_CDECL blNullFontFaceGetGlyphOutlines(
+static BLResult BL_CDECL bl_null_font_face_get_glyph_outlines(
   const BLFontFaceImpl* impl,
-  BLGlyphId glyphId,
-  const BLMatrix2D* userTransform,
+  BLGlyphId glyph_id,
+  const BLMatrix2D* user_transform,
   BLPath* out,
-  size_t* contourCountOut,
-  bl::ScopedBuffer* tmpBuffer) noexcept {
+  size_t* contour_count_out,
+  bl::ScopedBuffer* tmp_buffer) noexcept {
 
-  *contourCountOut = 0;
-  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
+  *contour_count_out = 0;
+  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
-static BLResult BL_CDECL blNullFontFaceApplyKern(
-  const BLFontFaceImpl* faceI,
-  uint32_t* glyphData,
-  BLGlyphPlacement* placementData,
+static BLResult BL_CDECL bl_null_font_face_apply_kern(
+  const BLFontFaceImpl* face_impl,
+  uint32_t* glyph_data,
+  BLGlyphPlacement* placement_data,
   size_t count) noexcept {
 
-  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
-static BLResult BL_CDECL blNullFontFaceApplyGSub(
+static BLResult BL_CDECL bl_null_font_face_apply_gsub(
   const BLFontFaceImpl* impl,
   BLGlyphBuffer* gb,
-  const uint32_t* bitWords,
-  size_t bitWordCount) noexcept {
+  const uint32_t* bit_words,
+  size_t bit_word_count) noexcept {
 
-  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
-static BLResult BL_CDECL blNullFontFaceApplyGPos(
+static BLResult BL_CDECL bl_null_font_face_apply_gpos(
   const BLFontFaceImpl* impl,
   BLGlyphBuffer* gb,
-  const uint32_t* bitWords,
-  size_t bitWordCount) noexcept {
+  const uint32_t* bit_words,
+  size_t bit_word_count) noexcept {
 
-  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
-static BLResult BL_CDECL blNullFontFacePositionGlyphs(
+static BLResult BL_CDECL bl_null_font_face_position_glyphs(
   const BLFontFaceImpl* impl,
-  uint32_t* glyphData,
-  BLGlyphPlacement* placementData,
+  uint32_t* glyph_data,
+  BLGlyphPlacement* placement_data,
   size_t count) noexcept {
 
-  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 BL_DIAGNOSTIC_POP
@@ -119,68 +119,68 @@ BL_DIAGNOSTIC_POP
 // bl::FontFace - Init & Destroy
 // =============================
 
-BLResult blFontFaceInit(BLFontFaceCore* self) noexcept {
-  self->_d = blObjectDefaults[BL_OBJECT_TYPE_FONT_FACE]._d;
+BLResult bl_font_face_init(BLFontFaceCore* self) noexcept {
+  self->_d = bl_object_defaults[BL_OBJECT_TYPE_FONT_FACE]._d;
   return BL_SUCCESS;
 }
 
-BLResult blFontFaceInitMove(BLFontFaceCore* self, BLFontFaceCore* other) noexcept {
+BLResult bl_font_face_init_move(BLFontFaceCore* self, BLFontFaceCore* other) noexcept {
   BL_ASSERT(self != other);
-  BL_ASSERT(other->_d.isFontFace());
+  BL_ASSERT(other->_d.is_font_face());
 
   self->_d = other->_d;
-  other->_d = blObjectDefaults[BL_OBJECT_TYPE_FONT_FACE]._d;
+  other->_d = bl_object_defaults[BL_OBJECT_TYPE_FONT_FACE]._d;
 
   return BL_SUCCESS;
 }
 
-BLResult blFontFaceInitWeak(BLFontFaceCore* self, const BLFontFaceCore* other) noexcept {
+BLResult bl_font_face_init_weak(BLFontFaceCore* self, const BLFontFaceCore* other) noexcept {
   BL_ASSERT(self != other);
-  BL_ASSERT(other->_d.isFontFace());
+  BL_ASSERT(other->_d.is_font_face());
 
-  return blObjectPrivateInitWeakTagged(self, other);
+  return bl_object_private_init_weak_tagged(self, other);
 }
 
-BLResult blFontFaceDestroy(BLFontFaceCore* self) noexcept {
-  BL_ASSERT(self->_d.isFontFace());
+BLResult bl_font_face_destroy(BLFontFaceCore* self) noexcept {
+  BL_ASSERT(self->_d.is_font_face());
 
-  return bl::ObjectInternal::releaseVirtualInstance(self);
+  return bl::ObjectInternal::release_virtual_instance(self);
 }
 
 // bl::FontFace - Reset
 // ====================
 
-BLResult blFontFaceReset(BLFontFaceCore* self) noexcept {
-  BL_ASSERT(self->_d.isFontFace());
+BLResult bl_font_face_reset(BLFontFaceCore* self) noexcept {
+  BL_ASSERT(self->_d.is_font_face());
 
-  return bl::ObjectInternal::replaceVirtualInstance(self, static_cast<BLFontFaceCore*>(&blObjectDefaults[BL_OBJECT_TYPE_FONT_FACE]));
+  return bl::ObjectInternal::replace_virtual_instance(self, static_cast<BLFontFaceCore*>(&bl_object_defaults[BL_OBJECT_TYPE_FONT_FACE]));
 }
 
 // bl::FontFace - Assign
 // =====================
 
-BLResult blFontFaceAssignMove(BLFontFaceCore* self, BLFontFaceCore* other) noexcept {
-  BL_ASSERT(self->_d.isFontFace());
-  BL_ASSERT(other->_d.isFontFace());
+BLResult bl_font_face_assign_move(BLFontFaceCore* self, BLFontFaceCore* other) noexcept {
+  BL_ASSERT(self->_d.is_font_face());
+  BL_ASSERT(other->_d.is_font_face());
 
   BLFontFaceCore tmp = *other;
-  other->_d = blObjectDefaults[BL_OBJECT_TYPE_FONT_FACE]._d;
-  return bl::ObjectInternal::replaceVirtualInstance(self, &tmp);
+  other->_d = bl_object_defaults[BL_OBJECT_TYPE_FONT_FACE]._d;
+  return bl::ObjectInternal::replace_virtual_instance(self, &tmp);
 }
 
-BLResult blFontFaceAssignWeak(BLFontFaceCore* self, const BLFontFaceCore* other) noexcept {
-  BL_ASSERT(self->_d.isFontFace());
-  BL_ASSERT(other->_d.isFontFace());
+BLResult bl_font_face_assign_weak(BLFontFaceCore* self, const BLFontFaceCore* other) noexcept {
+  BL_ASSERT(self->_d.is_font_face());
+  BL_ASSERT(other->_d.is_font_face());
 
-  return bl::ObjectInternal::assignVirtualInstance(self, other);
+  return bl::ObjectInternal::assign_virtual_instance(self, other);
 }
 
 // bl::FontFace - Equality & Comparison
 // ====================================
 
-bool blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) noexcept {
-  BL_ASSERT(a->_d.isFontFace());
-  BL_ASSERT(b->_d.isFontFace());
+bool bl_font_face_equals(const BLFontFaceCore* a, const BLFontFaceCore* b) noexcept {
+  BL_ASSERT(a->_d.is_font_face());
+  BL_ASSERT(b->_d.is_font_face());
 
   return a->_d.impl == b->_d.impl;
 }
@@ -188,204 +188,204 @@ bool blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) noexcept
 // bl::FontFace - Create
 // =====================
 
-BLResult blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName, BLFileReadFlags readFlags) noexcept {
-  BL_ASSERT(self->_d.isFontFace());
+BLResult bl_font_face_create_from_file(BLFontFaceCore* self, const char* file_name, BLFileReadFlags read_flags) noexcept {
+  BL_ASSERT(self->_d.is_font_face());
 
-  BLFontData fontData;
-  BL_PROPAGATE(fontData.createFromFile(fileName, readFlags));
-  return blFontFaceCreateFromData(self, &fontData, 0);
+  BLFontData font_data;
+  BL_PROPAGATE(font_data.create_from_file(file_name, read_flags));
+  return bl_font_face_create_from_data(self, &font_data, 0);
 }
 
-BLResult blFontFaceCreateFromData(BLFontFaceCore* self, const BLFontDataCore* fontData, uint32_t faceIndex) noexcept {
+BLResult bl_font_face_create_from_data(BLFontFaceCore* self, const BLFontDataCore* font_data, uint32_t face_index) noexcept {
   using namespace bl::FontFaceInternal;
 
-  BL_ASSERT(self->_d.isFontFace());
-  BL_ASSERT(fontData->_d.isFontData());
+  BL_ASSERT(self->_d.is_font_face());
+  BL_ASSERT(font_data->_d.is_font_data());
 
-  if (BL_UNLIKELY(!fontData->dcast().isValid()))
-    return blTraceError(BL_ERROR_NOT_INITIALIZED);
+  if (BL_UNLIKELY(!font_data->dcast().is_valid()))
+    return bl_trace_error(BL_ERROR_NOT_INITIALIZED);
 
-  if (faceIndex >= fontData->dcast().faceCount())
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (face_index >= font_data->dcast().face_count())
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
   BLFontFaceCore newO;
-  BL_PROPAGATE(bl::OpenType::createOpenTypeFace(&newO, static_cast<const BLFontData*>(fontData), faceIndex));
+  BL_PROPAGATE(bl::OpenType::create_open_type_face(&newO, static_cast<const BLFontData*>(font_data), face_index));
 
   // TODO: Move to OTFace?
-  getImpl<bl::OpenType::OTFaceImpl>(&newO)->uniqueId = BLUniqueIdGenerator::generateId(BLUniqueIdGenerator::Domain::kAny);
+  get_impl<bl::OpenType::OTFaceImpl>(&newO)->unique_id = BLUniqueIdGenerator::generate_id(BLUniqueIdGenerator::Domain::kAny);
 
-  return bl::ObjectInternal::replaceVirtualInstance(self, &newO);
+  return bl::ObjectInternal::replace_virtual_instance(self, &newO);
 }
 
 // bl::FontFace - Accessors
 // ========================
 
-BLResult blFontFaceGetFullName(const BLFontFaceCore* self, BLStringCore* out) noexcept {
+BLResult bl_font_face_get_full_name(const BLFontFaceCore* self, BLStringCore* out) noexcept {
   using namespace bl::FontFaceInternal;
 
-  BL_ASSERT(self->_d.isFontFace());
-  BL_ASSERT(out->_d.isString());
+  BL_ASSERT(self->_d.is_font_face());
+  BL_ASSERT(out->_d.is_string());
 
-  BLFontFacePrivateImpl* selfI = getImpl(self);
-  return blStringAssignWeak(out, &selfI->fullName);
+  BLFontFacePrivateImpl* self_impl = get_impl(self);
+  return bl_string_assign_weak(out, &self_impl->full_name);
 }
 
-BLResult blFontFaceGetFamilyName(const BLFontFaceCore* self, BLStringCore* out) noexcept {
+BLResult bl_font_face_get_family_name(const BLFontFaceCore* self, BLStringCore* out) noexcept {
   using namespace bl::FontFaceInternal;
 
-  BL_ASSERT(self->_d.isFontFace());
-  BL_ASSERT(out->_d.isString());
+  BL_ASSERT(self->_d.is_font_face());
+  BL_ASSERT(out->_d.is_string());
 
-  BLFontFacePrivateImpl* selfI = getImpl(self);
-  return blStringAssignWeak(out, &selfI->familyName);
+  BLFontFacePrivateImpl* self_impl = get_impl(self);
+  return bl_string_assign_weak(out, &self_impl->family_name);
 }
 
-BLResult blFontFaceGetSubfamilyName(const BLFontFaceCore* self, BLStringCore* out) noexcept {
+BLResult bl_font_face_get_subfamily_name(const BLFontFaceCore* self, BLStringCore* out) noexcept {
   using namespace bl::FontFaceInternal;
 
-  BL_ASSERT(self->_d.isFontFace());
-  BL_ASSERT(out->_d.isString());
+  BL_ASSERT(self->_d.is_font_face());
+  BL_ASSERT(out->_d.is_string());
 
-  BLFontFacePrivateImpl* selfI = getImpl(self);
-  return blStringAssignWeak(out, &selfI->subfamilyName);
+  BLFontFacePrivateImpl* self_impl = get_impl(self);
+  return bl_string_assign_weak(out, &self_impl->subfamily_name);
 }
 
-BLResult blFontFaceGetPostScriptName(const BLFontFaceCore* self, BLStringCore* out) noexcept {
+BLResult bl_font_face_get_post_script_name(const BLFontFaceCore* self, BLStringCore* out) noexcept {
   using namespace bl::FontFaceInternal;
 
-  BL_ASSERT(self->_d.isFontFace());
-  BL_ASSERT(out->_d.isString());
+  BL_ASSERT(self->_d.is_font_face());
+  BL_ASSERT(out->_d.is_string());
 
-  BLFontFacePrivateImpl* selfI = getImpl(self);
-  return blStringAssignWeak(out, &selfI->postScriptName);
+  BLFontFacePrivateImpl* self_impl = get_impl(self);
+  return bl_string_assign_weak(out, &self_impl->post_script_name);
 }
 
-BLResult blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) noexcept {
-  BL_ASSERT(self->_d.isFontFace());
+BLResult bl_font_face_get_face_info(const BLFontFaceCore* self, BLFontFaceInfo* out) noexcept {
+  BL_ASSERT(self->_d.is_font_face());
 
-  *out = self->dcast().faceInfo();
+  *out = self->dcast().face_info();
   return BL_SUCCESS;
 }
 
-BLResult blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) noexcept {
-  BL_ASSERT(self->_d.isFontFace());
+BLResult bl_font_face_get_design_metrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) noexcept {
+  BL_ASSERT(self->_d.is_font_face());
 
-  *out = self->dcast().designMetrics();
+  *out = self->dcast().design_metrics();
   return BL_SUCCESS;
 }
 
-BLResult blFontFaceGetCoverageInfo(const BLFontFaceCore* self, BLFontCoverageInfo* out) noexcept {
-  BL_ASSERT(self->_d.isFontFace());
+BLResult bl_font_face_get_coverage_info(const BLFontFaceCore* self, BLFontCoverageInfo* out) noexcept {
+  BL_ASSERT(self->_d.is_font_face());
 
-  *out = self->dcast().coverageInfo();
+  *out = self->dcast().coverage_info();
   return BL_SUCCESS;
 }
 
-BLResult blFontFaceGetPanoseInfo(const BLFontFaceCore* self, BLFontPanoseInfo* out) noexcept {
-  BL_ASSERT(self->_d.isFontFace());
+BLResult bl_font_face_get_panose_info(const BLFontFaceCore* self, BLFontPanoseInfo* out) noexcept {
+  BL_ASSERT(self->_d.is_font_face());
 
-  *out = self->dcast().panoseInfo();
+  *out = self->dcast().panose_info();
   return BL_SUCCESS;
 }
 
-BLResult blFontFaceGetCharacterCoverage(const BLFontFaceCore* self, BLBitSetCore* out) noexcept {
+BLResult bl_font_face_get_character_coverage(const BLFontFaceCore* self, BLBitSetCore* out) noexcept {
   using namespace bl::FontFaceInternal;
 
-  BL_ASSERT(self->_d.isFontFace());
+  BL_ASSERT(self->_d.is_font_face());
 
-  // Don't calculate the `characterCoverage` again if it was already calculated. We don't need atomics here as it
+  // Don't calculate the `character_coverage` again if it was already calculated. We don't need atomics here as it
   // is set only once, atomics will be used only if it hasn't been calculated yet or if there is a race (already
   // calculated by another thread, but nullptr at this exact moment here).
-  BLFontFacePrivateImpl* selfI = getImpl(self);
-  if (!blObjectAtomicContentTest(&selfI->characterCoverage)) {
-    if (selfI->faceInfo.faceType != BL_FONT_FACE_TYPE_OPENTYPE)
-      return blTraceError(BL_ERROR_NOT_IMPLEMENTED);
+  BLFontFacePrivateImpl* self_impl = get_impl(self);
+  if (!bl_object_atomic_content_test(&self_impl->character_coverage)) {
+    if (self_impl->face_info.face_type != BL_FONT_FACE_TYPE_OPENTYPE)
+      return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
 
-    BLBitSet tmpBitSet;
-    BL_PROPAGATE(bl::OpenType::CMapImpl::populateCharacterCoverage(static_cast<bl::OpenType::OTFaceImpl*>(selfI), &tmpBitSet.dcast()));
+    BLBitSet tmp_bit_set;
+    BL_PROPAGATE(bl::OpenType::CMapImpl::populate_character_coverage(static_cast<bl::OpenType::OTFaceImpl*>(self_impl), &tmp_bit_set.dcast()));
 
-    tmpBitSet.shrink();
-    if (!blObjectAtomicContentMove(&selfI->characterCoverage, &tmpBitSet))
-      return blBitSetAssignMove(out, &tmpBitSet);
+    tmp_bit_set.shrink();
+    if (!bl_object_atomic_content_move(&self_impl->character_coverage, &tmp_bit_set))
+      return bl_bit_set_assign_move(out, &tmp_bit_set);
   }
 
-  return blBitSetAssignWeak(out, &selfI->characterCoverage);
+  return bl_bit_set_assign_weak(out, &self_impl->character_coverage);
 }
 
-bool blFontFaceHasScriptTag(const BLFontFaceCore* self, BLTag scriptTag) noexcept {
+bool bl_font_face_has_script_tag(const BLFontFaceCore* self, BLTag script_tag) noexcept {
   using namespace bl::FontFaceInternal;
-  BL_ASSERT(self->_d.isFontFace());
+  BL_ASSERT(self->_d.is_font_face());
 
-  const BLFontFacePrivateImpl* selfI = getImpl(self);
-  return selfI->scriptTagSet.hasTag(scriptTag);
+  const BLFontFacePrivateImpl* self_impl = get_impl(self);
+  return self_impl->script_tag_set.has_tag(script_tag);
 }
 
-bool blFontFaceHasFeatureTag(const BLFontFaceCore* self, BLTag featureTag) noexcept {
+bool bl_font_face_has_feature_tag(const BLFontFaceCore* self, BLTag feature_tag) noexcept {
   using namespace bl::FontFaceInternal;
-  BL_ASSERT(self->_d.isFontFace());
+  BL_ASSERT(self->_d.is_font_face());
 
-  const BLFontFacePrivateImpl* selfI = getImpl(self);
-  return selfI->featureTagSet.hasTag(featureTag);
+  const BLFontFacePrivateImpl* self_impl = get_impl(self);
+  return self_impl->feature_tag_set.has_tag(feature_tag);
 }
 
-bool blFontFaceHasVariationTag(const BLFontFaceCore* self, BLTag variationTag) noexcept {
+bool bl_font_face_has_variation_tag(const BLFontFaceCore* self, BLTag variation_tag) noexcept {
   using namespace bl::FontFaceInternal;
-  BL_ASSERT(self->_d.isFontFace());
+  BL_ASSERT(self->_d.is_font_face());
 
-  const BLFontFacePrivateImpl* selfI = getImpl(self);
-  return selfI->variationTagSet.hasTag(variationTag);
+  const BLFontFacePrivateImpl* self_impl = get_impl(self);
+  return self_impl->variation_tag_set.has_tag(variation_tag);
 }
 
-BLResult blFontFaceGetScriptTags(const BLFontFaceCore* self, BLArrayCore* out) noexcept {
+BLResult bl_font_face_get_script_tags(const BLFontFaceCore* self, BLArrayCore* out) noexcept {
   using namespace bl::FontFaceInternal;
 
-  BL_ASSERT(self->_d.isFontFace());
-  BL_ASSERT(out->_d.isArray());
+  BL_ASSERT(self->_d.is_font_face());
+  BL_ASSERT(out->_d.is_array());
 
-  const BLFontFacePrivateImpl* selfI = getImpl(self);
-  return selfI->scriptTagSet.flattenTo(out->dcast<BLArray<BLTag>>());
+  const BLFontFacePrivateImpl* self_impl = get_impl(self);
+  return self_impl->script_tag_set.flatten_to(out->dcast<BLArray<BLTag>>());
 }
 
-BLResult blFontFaceGetFeatureTags(const BLFontFaceCore* self, BLArrayCore* out) noexcept {
+BLResult bl_font_face_get_feature_tags(const BLFontFaceCore* self, BLArrayCore* out) noexcept {
   using namespace bl::FontFaceInternal;
 
-  BL_ASSERT(self->_d.isFontFace());
-  BL_ASSERT(out->_d.isArray());
+  BL_ASSERT(self->_d.is_font_face());
+  BL_ASSERT(out->_d.is_array());
 
-  const BLFontFacePrivateImpl* selfI = getImpl(self);
-  return selfI->featureTagSet.flattenTo(out->dcast<BLArray<BLTag>>());
+  const BLFontFacePrivateImpl* self_impl = get_impl(self);
+  return self_impl->feature_tag_set.flatten_to(out->dcast<BLArray<BLTag>>());
 }
 
-BLResult blFontFaceGetVariationTags(const BLFontFaceCore* self, BLArrayCore* out) noexcept {
+BLResult bl_font_face_get_variation_tags(const BLFontFaceCore* self, BLArrayCore* out) noexcept {
   using namespace bl::FontFaceInternal;
 
-  BL_ASSERT(self->_d.isFontFace());
-  BL_ASSERT(out->_d.isArray());
+  BL_ASSERT(self->_d.is_font_face());
+  BL_ASSERT(out->_d.is_array());
 
-  const BLFontFacePrivateImpl* selfI = getImpl(self);
-  return selfI->variationTagSet.flattenTo(out->dcast<BLArray<BLTag>>());
+  const BLFontFacePrivateImpl* self_impl = get_impl(self);
+  return self_impl->variation_tag_set.flatten_to(out->dcast<BLArray<BLTag>>());
 }
 
 // bl::FontFace - Runtime Registration
 // ===================================
 
-void blFontFaceRtInit(BLRuntimeContext* rt) noexcept {
-  blUnused(rt);
+void bl_font_face_rt_init(BLRuntimeContext* rt) noexcept {
+  bl_unused(rt);
 
   // Initialize BLFontFace built-ins.
-  blNullFontFaceFuncs.mapTextToGlyphs = blNullFontFaceMapTextToGlyphs;
-  blNullFontFaceFuncs.getGlyphBounds = blNullFontFaceGetGlyphBounds;
-  blNullFontFaceFuncs.getGlyphAdvances = blNullFontFaceGetGlyphAdvances;
-  blNullFontFaceFuncs.getGlyphOutlines = blNullFontFaceGetGlyphOutlines;
-  blNullFontFaceFuncs.applyKern = blNullFontFaceApplyKern;
-  blNullFontFaceFuncs.applyGSub = blNullFontFaceApplyGSub;
-  blNullFontFaceFuncs.applyGPos = blNullFontFaceApplyGPos;
-  blNullFontFaceFuncs.positionGlyphs = blNullFontFacePositionGlyphs;
+  bl_null_font_face_funcs.map_text_to_glyphs = bl_null_font_face_map_text_to_glyphs;
+  bl_null_font_face_funcs.get_glyph_bounds = bl_null_font_face_get_glyph_bounds;
+  bl_null_font_face_funcs.get_glyph_advances = bl_null_font_face_get_glyph_advances;
+  bl_null_font_face_funcs.get_glyph_outlines = bl_null_font_face_get_glyph_outlines;
+  bl_null_font_face_funcs.apply_kern = bl_null_font_face_apply_kern;
+  bl_null_font_face_funcs.apply_gsub = bl_null_font_face_apply_gsub;
+  bl_null_font_face_funcs.apply_gpos = bl_null_font_face_apply_gpos;
+  bl_null_font_face_funcs.position_glyphs = bl_null_font_face_position_glyphs;
 
-  blFontFaceDefaultImpl.virt.base.destroy = blNullFontFaceImplDestroy;
-  blFontFaceDefaultImpl.virt.base.getProperty = blObjectImplGetProperty;
-  blFontFaceDefaultImpl.virt.base.setProperty = blObjectImplSetProperty;
-  blFontFaceImplCtor(&blFontFaceDefaultImpl.impl, &blFontFaceDefaultImpl.virt, blNullFontFaceFuncs);
+  bl_font_face_default_impl.virt.base.destroy = bl_null_font_face_impl_destroy;
+  bl_font_face_default_impl.virt.base.get_property = bl_object_impl_get_property;
+  bl_font_face_default_impl.virt.base.set_property = bl_object_impl_set_property;
+  bl_font_face_impl_ctor(&bl_font_face_default_impl.impl, &bl_font_face_default_impl.virt, bl_null_font_face_funcs);
 
-  blObjectDefaults[BL_OBJECT_TYPE_FONT_FACE]._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT_FACE), &blFontFaceDefaultImpl.impl);
+  bl_object_defaults[BL_OBJECT_TYPE_FONT_FACE]._d.init_dynamic(BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_FONT_FACE), &bl_font_face_default_impl.impl);
 }

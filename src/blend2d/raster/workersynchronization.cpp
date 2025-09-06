@@ -13,81 +13,81 @@ WorkerSynchronization::WorkerSynchronization() noexcept
   : _header{},
     _status{} {
 
-  _header.useFutex = BL_FUTEX_ENABLED;
+  _header.use_futex = BL_FUTEX_ENABLED;
 
-  if (!useFutex()) {
-    blCallCtor(_portableData);
+  if (!use_futex()) {
+    bl_call_ctor(_portable_data);
   }
 }
 
 WorkerSynchronization::~WorkerSynchronization() noexcept {
-  if (!useFutex()) {
-    blCallDtor(_portableData);
+  if (!use_futex()) {
+    bl_call_dtor(_portable_data);
   }
 }
 
-void WorkerSynchronization::waitForJobsToFinish() noexcept {
-  if (useFutex()) {
-    if (blAtomicFetchSubStrong(&_status.jobsRunningCount) == 1) {
-      blAtomicFetchAddStrong(&_status.futexJobsFinished);
-      Futex::wakeAll(&_status.futexJobsFinished);
+void WorkerSynchronization::wait_for_jobs_to_finish() noexcept {
+  if (use_futex()) {
+    if (bl_atomic_fetch_sub_strong(&_status.jobs_running_count) == 1) {
+      bl_atomic_fetch_add_strong(&_status.futex_jobs_finished);
+      Futex::wake_all(&_status.futex_jobs_finished);
     }
     else {
       do {
-        Futex::wait(&_status.futexJobsFinished, 0u);
-      } while (blAtomicFetchStrong(&_status.futexJobsFinished) != 1);
+        Futex::wait(&_status.futex_jobs_finished, 0u);
+      } while (bl_atomic_fetch_strong(&_status.futex_jobs_finished) != 1);
     }
   }
   else {
-    BLLockGuard<BLMutex> guard(_portableData.mutex);
-    if (--_status.jobsRunningCount == 0) {
+    BLLockGuard<BLMutex> guard(_portable_data.mutex);
+    if (--_status.jobs_running_count == 0) {
       guard.release();
-      _portableData.jobsCondition.broadcast();
+      _portable_data.jobs_condition.broadcast();
     }
     else {
-      while (_status.jobsRunningCount) {
-        _portableData.jobsCondition.wait(_portableData.mutex);
+      while (_status.jobs_running_count) {
+        _portable_data.jobs_condition.wait(_portable_data.mutex);
       }
     }
   }
 }
 
-void WorkerSynchronization::threadDone() noexcept {
-  uint32_t remainingPlusOne = blAtomicFetchSubStrong(&_status.threadsRunningCount);
+void WorkerSynchronization::thread_done() noexcept {
+  uint32_t remaining_plus_one = bl_atomic_fetch_sub_strong(&_status.threads_running_count);
 
-  if (remainingPlusOne != 1)
+  if (remaining_plus_one != 1)
     return;
 
-  if (useFutex()) {
-    blAtomicFetchAddStrong(&_status.futexBandsFinished);
-    Futex::wakeOne(&_status.futexBandsFinished);
+  if (use_futex()) {
+    bl_atomic_fetch_add_strong(&_status.futex_bands_finished);
+    Futex::wake_one(&_status.futex_bands_finished);
   }
   else {
-    BLLockGuard<BLMutex> guard(_portableData.mutex);
-    if (_status.waitingForCompletion) {
-      _portableData.doneCondition.signal();
+    BLLockGuard<BLMutex> guard(_portable_data.mutex);
+    if (_status.waiting_for_completion) {
+      _portable_data.done_condition.signal();
     }
   }
 }
 
-void WorkerSynchronization::waitForThreadsToFinish() noexcept {
-  if (useFutex()) {
+void WorkerSynchronization::wait_for_threads_to_finish() noexcept {
+  if (use_futex()) {
     for (;;) {
-      uint32_t finished = blAtomicFetchStrong(&_status.futexBandsFinished);
+      uint32_t finished = bl_atomic_fetch_strong(&_status.futex_bands_finished);
       if (finished)
         break;
-      Futex::wait(&_status.futexBandsFinished, 0);
+      Futex::wait(&_status.futex_bands_finished, 0);
     }
-    blAtomicStoreRelaxed(&_status.futexBandsFinished, 0u);
+    bl_atomic_store_relaxed(&_status.futex_bands_finished, 0u);
   }
   else {
-    BLLockGuard<BLMutex> guard(_portableData.mutex);
-    if (blAtomicFetchStrong(&_status.threadsRunningCount) > 0) {
-      _status.waitingForCompletion = true;
-      while (blAtomicFetchStrong(&_status.threadsRunningCount) > 0) {
-        _portableData.doneCondition.wait(_portableData.mutex);
+    BLLockGuard<BLMutex> guard(_portable_data.mutex);
+    if (bl_atomic_fetch_strong(&_status.threads_running_count) > 0) {
+      _status.waiting_for_completion = true;
+      while (bl_atomic_fetch_strong(&_status.threads_running_count) > 0) {
+        _portable_data.done_condition.wait(_portable_data.mutex);
       }
-      _status.waitingForCompletion = false;
+      _status.waiting_for_completion = false;
     }
   }
 }

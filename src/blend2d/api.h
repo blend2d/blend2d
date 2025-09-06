@@ -139,7 +139,7 @@
 //!     - \ref BLPathCore - C API type representing \ref BLPath
 //!     - \ref BLPathCmd - path command specifies the type of a path segment withing \ref BLPath
 //!     - \ref BLPathFlags - flags associated with \ref BLPath
-//!     - \ref BLPathReverseMode - reverse mode accepted by  \ref BLPath::addReversedPath()
+//!     - \ref BLPathReverseMode - reverse mode accepted by  \ref BLPath::add_reversed_path()
 //!     - \ref BLPathView - view providing all necessary variables to inspect and iterate a \ref BLPath
 //!
 //! ### Path Operations
@@ -282,8 +282,8 @@
 //!   - \ref BLGlyphMappingState - information accumulated during mapping characters to glyphs
 //!   - \ref BLGlyphPlacement - glyph placement used by \ref BLGlyphBuffer and \ref BLGlyphRun
 //!   - \ref BLGlyphPlacementType - glyph placement used \ref BLGlyphBuffer and \ref BLGlyphRun
-//!   - \ref BLGlyphOutlineSinkInfo - additional information passed to a callback by \ref BLFont::getGlyphOutlines()
-//!     and \ref BLFont::getGlyphRunOutlines()
+//!   - \ref BLGlyphOutlineSinkInfo - additional information passed to a callback by \ref BLFont::get_glyph_outlines()
+//!     and \ref BLFont::get_glyph_run_outlines()
 //!
 //! ### Fonts
 //!
@@ -308,10 +308,10 @@
 //!     - \ref BLFontFaceType - type of a font face, provided by \ref BLFontFace
 //!     - \ref BLFontDesignMetrics - design font metrics, used by \ref BLFontFace
 //!     - \ref BLFontOutlineType - type of outlines used by a font, used by \ref BLFontFace
-//!     - \ref BLFontPanose - panose information, provided by \ref BLFontFace
+//!     - \ref BLFontPanoseInfo - panose information, provided by \ref BLFontFace
 //!     - \ref BLFontStringId - identifier of a string stored in a font face, used by \ref BLFontFace
 //!     - \ref BLFontCoverageInfo - unicode coverage bits, provided by \ref BLFontFace
-//!     - \ref BLFontCoverageIndex - meaning of unicode coverage bits of \ref BLFontCoverageInfo
+//!     - \ref BLFontCoverageGroup - meaning of unicode coverage bits of \ref BLFontCoverageInfo
 //!
 //!   - \ref BLFontFeatureSettings - provides feature settings of a \ref BLFont
 //!     - \ref BLFontFeatureSettingsCore - C API type representing \ref BLFontFeatureSettings
@@ -377,7 +377,7 @@
 //!   - \ref BLFile - a lightweight non-shareable file API that uses a system file descriptor API where possible.
 //!     - \ref BLFileCore - C API type representing \ref BLFile
 //!     - \ref BLFileOpenFlags - flags used by \ref BLFile::open() function
-//!     - \ref BLFileReadFlags - flags used when reading whole files by \ref BLFileSystem::readFile()
+//!     - \ref BLFileReadFlags - flags used when reading whole files by \ref BLFileSystem::read_file()
 //!     - \ref BLFileSeekType - flags used by \ref BLFile::seek() function
 //!
 //! ### Filesystem
@@ -422,13 +422,13 @@
 //! BLImageCore img;
 //!
 //! // Initializes the BLImage object, always succeeds.
-//! blImageInit(&img);
+//! bl_image_init(&img);
 //!
 //! // Creates image data, note how it's called on an already initialized object.
-//! blImageCreate(&img, 128, 128, BL_FORMAT_PRGB32);
+//! bl_image_create(&img, 128, 128, BL_FORMAT_PRGB32);
 //!
 //! // Destroys the BLImage object, always succeeds.
-//! blImageDestroy(&img);
+//! bl_image_destroy(&img);
 //! ```
 //!
 //! Some init functions may provide shortcuts for the most used scenarios that
@@ -437,11 +437,11 @@
 //! ```
 //! BLImageCore img;
 //!
-//! // Combines blImageInit() with blImageCreate().
-//! blImageInitAs(&img, 128, 128, BL_FORMAT_PRGB32);
+//! // Combines bl_image_init() with bl_image_create().
+//! bl_image_init_as(&img, 128, 128, BL_FORMAT_PRGB32);
 //!
-//! // Destroys the data, doesn't have to be called if blImageInitAs() failed.
-//! blImageDestroy(&img);
+//! // Destroys the data, doesn't have to be called if bl_image_init_as() failed.
+//! bl_image_destroy(&img);
 //! ```
 //!
 //! It's worth knowing that default initialization in Blend2D costs nothing and no resources are allocated, thus
@@ -463,30 +463,30 @@
 //!
 //! // Now image is default constructed/initialized. if you did just this and abandon it then no resources will
 //! // be leaked as default construction is not allocating any resources nor increasing any reference counters.
-//! blImageInit(&img);
+//! bl_image_init(&img);
 //!
 //! // Now image will have to dynamically allocate some memory to store pixel data. If this succeeds the image
 //! // will have to be explicitly destroyed when it's no longer needed to release the associated data it holds.
-//! BLResult result = blImageCreate(&img, 128, 128, BL_FORMAT_PRGB32);
+//! BLResult result = bl_image_create(&img, 128, 128, BL_FORMAT_PRGB32);
 //!
-//! // If `blImageCreate()` failed it leaves the object in the state it was prior to the call. Most of API calls
+//! // If `bl_image_create()` failed it leaves the object in the state it was prior to the call. Most of API calls
 //! // in Blend2D behave like this (it's transactional). This means that if the call failed the `img` would still
 //! // be default constructed and the function can simply return without leaking any resources. In C++ API the
-//! // compiler would emit a call to `blImageDestroy()` implicitly, but that's just how RAII works.
+//! // compiler would emit a call to `bl_image_destroy()` implicitly, but that's just how RAII works.
 //! if (result != BL_SUCCESS)
 //!   return result;
 //!
 //! // Resetting image would destroy its data and make it default constructed.
-//! blImageReset(&img);
+//! bl_image_reset(&img);
 //!
-//! // The instance is valid after `reset()` - it's now a default constructed instance as created by `blImageInit()`.
+//! // The instance is valid after `reset()` - it's now a default constructed instance as created by `bl_image_init()`.
 //! printf("%p", img.impl);
 //!
-//! // Calling `blImageDestroy()` would make the instance invalid.
-//! blImageDestroy(&img);
+//! // Calling `bl_image_destroy()` would make the instance invalid.
+//! bl_image_destroy(&img);
 //!
-//! // Calling any method except initialization such as `blImageInit()` on invalid instance is UNDEFINED BEHAVIOR!
-//! blImageCreate(&img, 128, 128, BL_FORMAT_PRGB32); // Can crash, can corrupt memory, can succeed, never do that!
+//! // Calling any method except initialization such as `bl_image_init()` on invalid instance is UNDEFINED BEHAVIOR!
+//! bl_image_create(&img, 128, 128, BL_FORMAT_PRGB32); // Can crash, can corrupt memory, can succeed, never do that!
 //! ```
 
 
@@ -536,7 +536,7 @@
 #define BL_MAKE_VERSION(MAJOR, MINOR, PATCH) (((MAJOR) << 16) | ((MINOR) << 8) | (PATCH))
 
 //! Blend2D library version.
-#define BL_VERSION BL_MAKE_VERSION(0, 12, 0)
+#define BL_VERSION BL_MAKE_VERSION(0, 20, 0)
 
 //! \}
 //! \}
@@ -666,7 +666,7 @@
 //! \def BL_NORETURN
 //!
 //! Function attribute used by functions that never return (that terminate the process). This attribute is used
-//! only once by \ref blRuntimeAssertionFailure() function, which is only used when assertions are enabled. This
+//! only once by \ref bl_runtime_assertion_failure() function, which is only used when assertions are enabled. This
 //! macro should be considered internal and it's not designed for Blend2D users.
 #if defined(__GNUC__)
   #define BL_NORETURN __attribute__((__noreturn__))
@@ -757,7 +757,7 @@
   #define BL_ASSERT(EXP)                                                      \
     do {                                                                      \
       if (BL_UNLIKELY(!(EXP))) {                                              \
-        blRuntimeAssertionFailure(__FILE__, __LINE__, #EXP);                  \
+        bl_runtime_assertion_failure(__FILE__, __LINE__, #EXP);                  \
       }                                                                       \
     } while (0)
 #else
@@ -770,9 +770,9 @@
 //! errors returned by Blend2D or user code returning \ref BLResult.
 #define BL_PROPAGATE(...)                                                     \
   do {                                                                        \
-    BLResult resultToPropagate = (__VA_ARGS__);                               \
-    if (BL_UNLIKELY(resultToPropagate)) {                                     \
-      return resultToPropagate;                                               \
+    BLResult result_to_propagate = (__VA_ARGS__);                               \
+    if (BL_UNLIKELY(result_to_propagate)) {                                     \
+      return result_to_propagate;                                               \
     }                                                                         \
   } while (0)
 
@@ -1085,9 +1085,9 @@ class BLVar;
 //! it's recommended to use the following check to determine whether a call failed or not:
 //!
 //! ```
-//! BLResult result = doSomething();
+//! BLResult result = do_something();
 //! if (result != BL_SUCCESS) {
-//!   // `doSomething()` failed...
+//!   // `do_something()` failed...
 //! }
 //! ```
 typedef uint32_t BLResult;
@@ -1127,7 +1127,7 @@ typedef void BLUnknown;
 //! \ingroup bl_globals
 //!
 //! A sink that can be used to debug various parts of Blend2D.
-typedef void (BL_CDECL* BLDebugMessageSinkFunc)(const char* message, size_t size, void* userData) BL_NOEXCEPT_C;
+typedef void (BL_CDECL* BLDebugMessageSinkFunc)(const char* message, size_t size, void* user_data) BL_NOEXCEPT_C;
 
 // Public Constants
 // ================
@@ -1646,14 +1646,14 @@ BL_INLINE_NODEBUG void operator delete(void*, const BLInternal::PlacementNew&) n
 
 //! Returns the `result` passed.
 //!
-//! Provided for debugging purposes. Putting a breakpoint inside `blTraceError()` can help with tracing an origin
+//! Provided for debugging purposes. Putting a breakpoint inside `bl_trace_error()` can help with tracing an origin
 //! of errors reported / returned by Blend2D as each error goes through this function.
 //!
 //! It's a zero-cost solution that doesn't affect release builds in any way.
 #ifdef __cplusplus
 [[nodiscard]]
 #endif
-static inline BLResult blTraceError(BLResult result) BL_NOEXCEPT_C { return result; }
+static inline BLResult bl_trace_error(BLResult result) BL_NOEXCEPT_C { return result; }
 
 BL_BEGIN_C_DECLS
 
@@ -1662,7 +1662,7 @@ BL_BEGIN_C_DECLS
 //! Failing an assertion means that there is either a bug in Blend2D or in user code that uses Blend2D and that the
 //! state of the application is already corrupted and thus irrecoverable. Note that this would be a fatal error if
 //! this function gets called in production.
-BL_API BL_NORETURN void BL_CDECL blRuntimeAssertionFailure(const char* file, int line, const char* msg) BL_NOEXCEPT_C;
+BL_API BL_NORETURN void BL_CDECL bl_runtime_assertion_failure(const char* file, int line, const char* msg) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
@@ -1674,7 +1674,7 @@ BL_END_C_DECLS
 
 #ifdef __cplusplus
 // These are the only global functions provided in C++ mode. They are needed by C++ API wrappers and can be used
-// freely by Blend2D users as these templates have specializations for some geometry types. For example \ref blMin()
+// freely by Blend2D users as these templates have specializations for some geometry types. For example \ref bl_min()
 // works with numbers as well as with \ref BLPoint.
 
 //! \addtogroup bl_globals
@@ -1688,7 +1688,7 @@ BL_END_C_DECLS
 
 //! Constructs an instance in place (calls its constructor) with optional `args`.
 template<typename T, typename... Args>
-static BL_INLINE void blCallCtor(T& instance, Args&&... args) noexcept {
+static BL_INLINE void bl_call_ctor(T& instance, Args&&... args) noexcept {
   // Only needed by MSVC as otherwise it could generate null-pointer check before calling the constructor. If the
   // assumption is used with GCC or Clang it would emit a "-Wtautological-undefined-compare" warning so we really
   // have to only enable this for compilers that don't have the necessary diagnostics to remove the nullptr check.
@@ -1701,7 +1701,7 @@ static BL_INLINE void blCallCtor(T& instance, Args&&... args) noexcept {
 
 //! Destroys an instance in place (calls its destructor).
 template<typename T>
-static BL_INLINE void blCallDtor(T& instance) noexcept {
+static BL_INLINE void bl_call_dtor(T& instance) noexcept {
   // Only needed by MSVC as otherwise it could generate null-pointer check before calling the destructor. If the
   // assumption is used with GCC or Clang it would emit a "-Wtautological-undefined-compare" warning so we really
   // have to only enable this for compilers that don't have the necessary diagnostics to remove the nullptr check.
@@ -1720,10 +1720,10 @@ static BL_INLINE void blCallDtor(T& instance) noexcept {
 //! Bit-cast `x` of `In` type to the given `Out` type.
 //!
 //! Useful to bit-cast between integers and floating points. The size of `Out` and `In` must be the same otherwise the
-//! compilation would fail. Bit casting is used by \ref blEquals() to implement bit equality for floating point types.
+//! compilation would fail. Bit casting is used by \ref bl_equals() to implement bit equality for floating point types.
 template<typename Out, typename In>
 [[nodiscard]]
-static BL_INLINE_NODEBUG Out blBitCast(const In& x) noexcept {
+static BL_INLINE_NODEBUG Out bl_bit_cast(const In& x) noexcept {
   static_assert(sizeof(Out) == sizeof(In),
                 "The size of 'In' and 'Out' types must match");
   union { In in; Out out; } u = { x };
@@ -1733,51 +1733,51 @@ static BL_INLINE_NODEBUG Out blBitCast(const In& x) noexcept {
 //! Returns an absolute value of `a`.
 template<typename T>
 [[nodiscard]]
-BL_INLINE_CONSTEXPR T blAbs(const T& a) noexcept { return T(a < T(0) ? -a : a); }
+BL_INLINE_CONSTEXPR T bl_abs(const T& a) noexcept { return T(a < T(0) ? -a : a); }
 
 //! Returns a minimum value of `a` and `b`.
 template<typename T>
 [[nodiscard]]
-BL_INLINE_CONSTEXPR T blMin(const T& a, const T& b) noexcept { return T(b < a ? b : a); }
+BL_INLINE_CONSTEXPR T bl_min(const T& a, const T& b) noexcept { return T(b < a ? b : a); }
 
 //! Returns a maximum value of `a` and `b`.
 template<typename T>
 [[nodiscard]]
-BL_INLINE_CONSTEXPR T blMax(const T& a, const T& b) noexcept { return T(a < b ? b : a); }
+BL_INLINE_CONSTEXPR T bl_max(const T& a, const T& b) noexcept { return T(a < b ? b : a); }
 
 //! Clamps `a` to a range defined as `[b, c]`.
 template<typename T>
 [[nodiscard]]
-BL_INLINE_CONSTEXPR T blClamp(const T& a, const T& b, const T& c) noexcept { return blMin(c, blMax(b, a)); }
+BL_INLINE_CONSTEXPR T bl_clamp(const T& a, const T& b, const T& c) noexcept { return bl_min(c, bl_max(b, a)); }
 
 //! Returns a minimum value of all arguments passed.
 template<typename T, typename... Args>
 [[nodiscard]]
-BL_INLINE_CONSTEXPR T blMin(const T& a, const T& b, Args&&... args) noexcept { return blMin(blMin(a, b), BLInternal::forward<Args>(args)...); }
+BL_INLINE_CONSTEXPR T bl_min(const T& a, const T& b, Args&&... args) noexcept { return bl_min(bl_min(a, b), BLInternal::forward<Args>(args)...); }
 
 //! Returns a maximum value of all arguments passed.
 template<typename T, typename... Args>
 [[nodiscard]]
-BL_INLINE_CONSTEXPR T blMax(const T& a, const T& b, Args&&... args) noexcept { return blMax(blMax(a, b), BLInternal::forward<Args>(args)...); }
+BL_INLINE_CONSTEXPR T bl_max(const T& a, const T& b, Args&&... args) noexcept { return bl_max(bl_max(a, b), BLInternal::forward<Args>(args)...); }
 
 //! Returns `true` if `a` and `b` equals at binary level.
 //!
-//! For example `blEquals(NaN, NaN) == true`.
+//! For example `bl_equals(NaN, NaN) == true`.
 template<typename T>
 [[nodiscard]]
-BL_INLINE_NODEBUG bool blEquals(const T& a, const T& b) noexcept { return a == b; }
+BL_INLINE_NODEBUG bool bl_equals(const T& a, const T& b) noexcept { return a == b; }
 
 //! \cond NEVER
 template<>
 [[nodiscard]]
-BL_INLINE_NODEBUG bool blEquals(const float& a, const float& b) noexcept {
-  return blBitCast<uint32_t>(a) == blBitCast<uint32_t>(b);
+BL_INLINE_NODEBUG bool bl_equals(const float& a, const float& b) noexcept {
+  return bl_bit_cast<uint32_t>(a) == bl_bit_cast<uint32_t>(b);
 }
 
 template<>
 [[nodiscard]]
-BL_INLINE_NODEBUG bool blEquals(const double& a, const double& b) noexcept {
-  return blBitCast<uint64_t>(a) == blBitCast<uint64_t>(b);
+BL_INLINE_NODEBUG bool bl_equals(const double& a, const double& b) noexcept {
+  return bl_bit_cast<uint64_t>(a) == bl_bit_cast<uint64_t>(b);
 }
 //! \endcond
 
@@ -1822,7 +1822,7 @@ struct BLRange {
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLRange{}; }
 
   //! Reset the range to [start, end).
-  BL_INLINE_NODEBUG void reset(size_t rStart, size_t rEnd) noexcept { *this = BLRange{rStart, rEnd}; }
+  BL_INLINE_NODEBUG void reset(size_t r_start, size_t r_end) noexcept { *this = BLRange{r_start, r_end}; }
 
   //! \}
 
@@ -1831,8 +1831,8 @@ struct BLRange {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRange& other) const noexcept {
-    return BLInternal::bool_and(blEquals(start, other.start),
-                                blEquals(end, other.end));
+    return BLInternal::bool_and(bl_equals(start, other.start),
+                                bl_equals(end, other.end));
   }
 
   //! \}
@@ -1852,9 +1852,9 @@ struct BLArrayView {
 
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLArrayView{}; }
 
-  BL_INLINE_NODEBUG void reset(const T* dataIn, size_t sizeIn) noexcept {
-    data = dataIn;
-    size = sizeIn;
+  BL_INLINE_NODEBUG void reset(const T* data_in, size_t size_in) noexcept {
+    data = data_in;
+    size = size_in;
   }
 
   [[nodiscard]]

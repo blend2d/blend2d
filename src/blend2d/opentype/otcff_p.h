@@ -39,7 +39,7 @@ namespace bl::OpenType {
 //!   - http://wwwimages.adobe.com/www.adobe.com/content/dam/acom/en/devnet/font/pdfs/5177.Type2.pdf
 //!
 //! NOTE 1: The term `VarOffset` that is used inside CFF code means that the offset size is variable and must
-//!  be previously specified by an `offsetSize` field.
+//!  be previously specified by an `offset_size` field.
 //!
 //! NOTE 2: Many enums inside this structure are just for reference purposes. They would be useful if we want
 //! to implement support for RAW PostScript fonts (CFF) that are not part of OpenType.
@@ -119,13 +119,13 @@ struct CFFTable {
   };
 
   struct Header {
-    UInt8 majorVersion;
-    UInt8 minorVersion;
-    UInt8 headerSize;
+    UInt8 major_version;
+    UInt8 minor_version;
+    UInt8 header_size;
   };
 
-  struct HeaderV1 : public Header { UInt8 offsetSize; };
-  struct HeaderV2 : public Header { UInt16 topDictLength; };
+  struct HeaderV1 : public Header { UInt8 offset_size; };
+  struct HeaderV2 : public Header { UInt16 top_dict_length; };
 
   //! Index table (v1).
   struct IndexV1 {
@@ -134,13 +134,13 @@ struct CFFTable {
     enum : uint32_t { kBaseSize = 2 };
 
     UInt16 count;
-    UInt8 offsetSize;
+    UInt8 offset_size;
     /*
-    Offset offsetArray[count + 1];
+    Offset offset_array[count + 1];
     UInt8 data[...];
     */
 
-    BL_INLINE const uint8_t* offsetArray() const noexcept { return PtrOps::offset<const uint8_t>(this, 3); }
+    BL_INLINE const uint8_t* offset_array() const noexcept { return PtrOps::offset<const uint8_t>(this, 3); }
   };
 
   //! Index table (v2).
@@ -150,13 +150,13 @@ struct CFFTable {
     enum : uint32_t { kBaseSize = 4 };
 
     UInt32 count;
-    UInt8 offsetSize;
+    UInt8 offset_size;
     /*
-    Offset offsetArray[count + 1];
+    Offset offset_array[count + 1];
     UInt8 data[...];
     */
 
-    BL_INLINE const uint8_t* offsetArray() const noexcept { return PtrOps::offset<const uint8_t>(this, 5); }
+    BL_INLINE const uint8_t* offset_array() const noexcept { return PtrOps::offset<const uint8_t>(this, 5); }
   };
 
   Header header;
@@ -183,29 +183,29 @@ struct CFFData {
 
   //! CFF index.
   struct IndexData {
-    DataRange dataRange;
-    uint32_t entryCount;
-    uint8_t headerSize;
-    uint8_t offsetSize;
+    DataRange data_range;
+    uint32_t entry_count;
+    uint8_t header_size;
+    uint8_t offset_size;
     uint16_t bias;
 
-    BL_INLINE void reset(const DataRange& dataRange_, uint32_t headerSize_, uint32_t offsetSize_, uint32_t entryCount_, uint16_t bias_) noexcept {
-      this->dataRange = dataRange_;
-      this->entryCount = entryCount_;
-      this->headerSize = uint8_t(headerSize_);
-      this->offsetSize = uint8_t(offsetSize_);
+    BL_INLINE void reset(const DataRange& data_range_, uint32_t header_size_, uint32_t offset_size_, uint32_t entry_count_, uint16_t bias_) noexcept {
+      this->data_range = data_range_;
+      this->entry_count = entry_count_;
+      this->header_size = uint8_t(header_size_);
+      this->offset_size = uint8_t(offset_size_);
       this->bias = bias_;
     }
 
     //! Returns the offset to the offsets data (array of offsets).
-    BL_INLINE uint32_t offsetsOffset() const noexcept { return headerSize; }
+    BL_INLINE uint32_t offsets_offset() const noexcept { return header_size; }
     //! Returns the size of offset data (array of offsets) in bytes.
-    BL_INLINE uint32_t offsetsSize() const noexcept { return (entryCount + 1) * offsetSize; }
+    BL_INLINE uint32_t offsets_size() const noexcept { return (entry_count + 1) * offset_size; }
 
     //! Returns the offset to the payload data.
-    BL_INLINE uint32_t payloadOffset() const noexcept { return offsetsOffset() + offsetsSize(); }
+    BL_INLINE uint32_t payload_offset() const noexcept { return offsets_offset() + offsets_size(); }
     //! Returns the payload size in bytes.
-    BL_INLINE uint32_t payloadSize() const noexcept { return dataRange.size - payloadOffset(); }
+    BL_INLINE uint32_t payload_size() const noexcept { return data_range.size - payload_offset(); }
   };
 
   //! Content of 'CFF ' or 'CFF2' table.
@@ -213,9 +213,9 @@ struct CFFData {
   //! GSubR, LSubR, and CharString indexes.
   IndexData index[kIndexCount];
   //! Associates an FD (font dict) with a glyph by specifying an FD index for that glyph.
-  uint32_t fdSelectOffset;
+  uint32_t fd_select_offset;
   //! Format of FDSelect data (0 or 3).
-  uint8_t fdSelectFormat;
+  uint8_t fd_select_format;
   uint8_t reserved[3];
 };
 
@@ -226,7 +226,7 @@ namespace CFFImpl {
 //!
 //! Each byte is divided into 2 nibbles (4 bits), which are accessed separately. Each nibble contains either a
 //! decimal value (0..9), decimal point, or other instructions which meaning is described by `NibbleAbove9` enum.
-BL_HIDDEN BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size_t& valueSizeInBytes) noexcept;
+BL_HIDDEN BLResult read_float(const uint8_t* p, const uint8_t* pEnd, double& value_out, size_t& value_size_in_bytes) noexcept;
 
 // bl::OpenType::CFFImpl - DictEntry
 // =================================
@@ -237,41 +237,41 @@ struct DictEntry {
 
   uint32_t op;
   uint32_t count;
-  uint64_t fpMask;
+  uint64_t fp_mask;
   double values[kValueCapacity];
 
-  BL_INLINE bool isFpValue(uint32_t index) const noexcept {
-    return (fpMask & (uint64_t(1) << index)) != 0;
+  BL_INLINE bool is_fp_value(uint32_t index) const noexcept {
+    return (fp_mask & (uint64_t(1) << index)) != 0;
   }
 };
 
 //! CFF dictionary iterator.
 class DictIterator {
 public:
-  const uint8_t* _dataPtr;
-  const uint8_t* _dataEnd;
+  const uint8_t* _data_ptr;
+  const uint8_t* _data_end;
 
   BL_INLINE DictIterator() noexcept
-    : _dataPtr(nullptr),
-      _dataEnd(nullptr) {}
+    : _data_ptr(nullptr),
+      _data_end(nullptr) {}
 
   BL_INLINE DictIterator(const uint8_t* data, size_t size) noexcept
-    : _dataPtr(data),
-      _dataEnd(data + size) {}
+    : _data_ptr(data),
+      _data_end(data + size) {}
 
   BL_INLINE void reset(const uint8_t* data, size_t size) noexcept {
-    _dataPtr = data;
-    _dataEnd = data + size;
+    _data_ptr = data;
+    _data_end = data + size;
   }
 
-  BL_INLINE bool hasNext() const noexcept {
-    return _dataPtr != _dataEnd;
+  BL_INLINE bool has_next() const noexcept {
+    return _data_ptr != _data_end;
   }
 
   BLResult next(DictEntry& entry) noexcept;
 };
 
-BL_HIDDEN BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noexcept;
+BL_HIDDEN BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_version) noexcept;
 
 } // {CFFImpl}
 } // {bl::OpenType}

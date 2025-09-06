@@ -19,12 +19,12 @@ template<typename NodeT>
 struct TreeTestUtils {
   typedef ArenaTree<NodeT> Tree;
 
-  static void verifyTree(Tree& tree) noexcept {
-    EXPECT_GT(checkHeight(static_cast<NodeT*>(tree._root)), 0);
+  static void verify_tree(Tree& tree) noexcept {
+    EXPECT_GT(check_height(static_cast<NodeT*>(tree._root)), 0);
   }
 
   // Check whether the Red-Black tree is valid.
-  static int checkHeight(NodeT* node) noexcept {
+  static int check_height(NodeT* node) noexcept {
     if (!node) return 1;
 
     NodeT* ln = node->left();
@@ -35,15 +35,15 @@ struct TreeTestUtils {
     EXPECT_TRUE(rn == nullptr || *rn > *node);
 
     // Red violation.
-    EXPECT_TRUE(!node->isRed() || (!ArenaTreeNodeBase::_isValidRed(ln) && !ArenaTreeNodeBase::_isValidRed(rn)));
+    EXPECT_TRUE(!node->is_red() || (!ArenaTreeNodeBase::_is_valid_red(ln) && !ArenaTreeNodeBase::_is_valid_red(rn)));
 
     // Black violation.
-    int lh = checkHeight(ln);
-    int rh = checkHeight(rn);
+    int lh = check_height(ln);
+    int rh = check_height(rn);
     EXPECT_TRUE(!lh || !rh || lh == rh);
 
     // Only count black links.
-    return (lh && rh) ? lh + !node->isRed() : 0;
+    return (lh && rh) ? lh + !node->is_red() : 0;
   }
 };
 
@@ -57,8 +57,8 @@ public:
   BL_INLINE bool operator<(const MyTreeNode& other) const noexcept { return _key < other._key; }
   BL_INLINE bool operator>(const MyTreeNode& other) const noexcept { return _key > other._key; }
 
-  BL_INLINE bool operator<(uint32_t queryKey) const noexcept { return _key < queryKey; }
-  BL_INLINE bool operator>(uint32_t queryKey) const noexcept { return _key > queryKey; }
+  BL_INLINE bool operator<(uint32_t query_key) const noexcept { return _key < query_key; }
+  BL_INLINE bool operator>(uint32_t query_key) const noexcept { return _key > query_key; }
 
   uint32_t _key;
 };
@@ -67,13 +67,13 @@ UNIT(arena_tree, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   constexpr uint32_t kCount = 2000;
 
   ArenaAllocator zone(4096);
-  ArenaTree<MyTreeNode> rbTree;
+  ArenaTree<MyTreeNode> rb_tree;
 
   uint32_t key;
   INFO("Inserting %u elements to the tree and validating each operation", unsigned(kCount));
   for (key = 0; key < kCount; key++) {
-    rbTree.insert(zone.newT<MyTreeNode>(key));
-    TreeTestUtils<MyTreeNode>::verifyTree(rbTree);
+    rb_tree.insert(zone.new_t<MyTreeNode>(key));
+    TreeTestUtils<MyTreeNode>::verify_tree(rb_tree);
   }
 
   uint32_t count = kCount;
@@ -82,17 +82,17 @@ UNIT(arena_tree, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
     MyTreeNode* node;
 
     for (key = 0; key < count; key++) {
-      node = rbTree.get(key);
+      node = rb_tree.get(key);
       EXPECT_NE(node, nullptr);
       EXPECT_EQ(node->_key, key);
     }
 
-    node = rbTree.get(--count);
-    rbTree.remove(node);
-    TreeTestUtils<MyTreeNode>::verifyTree(rbTree);
+    node = rb_tree.get(--count);
+    rb_tree.remove(node);
+    TreeTestUtils<MyTreeNode>::verify_tree(rb_tree);
   } while (count);
 
-  EXPECT_TRUE(rbTree.empty());
+  EXPECT_TRUE(rb_tree.is_empty());
 }
 
 } // {Tests}

@@ -37,11 +37,11 @@ public:
 
   BL_INLINE BLResult wait(BLMutex& mutex) noexcept {
     BOOL ret = SleepConditionVariableSRW(&handle, &mutex.handle, INFINITE, 0);
-    return ret ? BL_SUCCESS : blTraceError(BL_ERROR_INVALID_STATE);
+    return ret ? BL_SUCCESS : bl_trace_error(BL_ERROR_INVALID_STATE);
   }
 
-  BL_INLINE BLResult waitFor(BLMutex& mutex, uint64_t microseconds) noexcept {
-    uint32_t milliseconds = uint32_t(blMin<uint64_t>(microseconds / 1000u, INFINITE));
+  BL_INLINE BLResult wait_for(BLMutex& mutex, uint64_t microseconds) noexcept {
+    uint32_t milliseconds = uint32_t(bl_min<uint64_t>(microseconds / 1000u, INFINITE));
     BOOL ret = SleepConditionVariableSRW(&handle, &mutex.handle, milliseconds, 0);
 
     if (ret)
@@ -59,28 +59,28 @@ public:
   BL_INLINE void signal() noexcept {
     int ret = pthread_cond_signal(&handle);
     BL_ASSERT(ret == 0);
-    blUnused(ret);
+    bl_unused(ret);
   }
 
   BL_INLINE void broadcast() noexcept {
     int ret = pthread_cond_broadcast(&handle);
     BL_ASSERT(ret == 0);
-    blUnused(ret);
+    bl_unused(ret);
   }
 
   BL_INLINE BLResult wait(BLMutex& mutex) noexcept {
     int ret = pthread_cond_wait(&handle, &mutex.handle);
-    return ret == 0 ? BL_SUCCESS : blTraceError(BL_ERROR_INVALID_STATE);
+    return ret == 0 ? BL_SUCCESS : bl_trace_error(BL_ERROR_INVALID_STATE);
   }
 
-  BL_INLINE BLResult waitFor(BLMutex& mutex, uint64_t microseconds) noexcept {
-    struct timespec absTime;
-    BLThreadingUtils::getAbsTimeForWaitCondition(absTime, microseconds);
-    return waitUntil(mutex, &absTime);
+  BL_INLINE BLResult wait_for(BLMutex& mutex, uint64_t microseconds) noexcept {
+    struct timespec abs_time;
+    BLThreadingUtils::get_abs_time_for_wait_condition(abs_time, microseconds);
+    return wait_until(mutex, &abs_time);
   }
 
-  BL_INLINE BLResult waitUntil(BLMutex& mutex, const struct timespec* absTime) noexcept {
-    int ret = pthread_cond_timedwait(&handle, &mutex.handle, absTime);
+  BL_INLINE BLResult wait_until(BLMutex& mutex, const struct timespec* abs_time) noexcept {
+    int ret = pthread_cond_timedwait(&handle, &mutex.handle, abs_time);
     if (ret == 0)
       return BL_SUCCESS;
 

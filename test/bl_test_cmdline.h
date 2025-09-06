@@ -24,7 +24,7 @@ public:
   inline int count() const { return _argc; }
   inline const char* const* args() const { return _argv; }
 
-  int findArg(const char* key) const {
+  int find_arg(const char* key) const {
     for (int i = 1; i < _argc; i++) {
       if (strcmp(key, _argv[i]) == 0)
         return i;
@@ -33,37 +33,37 @@ public:
     return -1;
   }
 
-  bool hasArg(const char* key) const {
-    return findArg(key) > 0;
+  bool has_arg(const char* key) const {
+    return find_arg(key) > 0;
   }
 
-  const char* valueOf(const char* key, const char* defaultValue) const {
-    size_t keySize = strlen(key);
+  const char* value_of(const char* key, const char* default_value) const {
+    size_t key_size = strlen(key);
     for (int i = 1; i < _argc; i++) {
       const char* val = _argv[i];
-      if (strlen(val) >= keySize + 1 && val[keySize] == '=' && memcmp(val, key, keySize) == 0)
-        return val + keySize + 1;
+      if (strlen(val) >= key_size + 1 && val[key_size] == '=' && memcmp(val, key, key_size) == 0)
+        return val + key_size + 1;
     }
 
-    return defaultValue;
+    return default_value;
   }
 
-  int valueAsInt(const char* key, int defaultValue) const {
-    const char* val = valueOf(key, nullptr);
+  int value_as_int(const char* key, int default_value) const {
+    const char* val = value_of(key, nullptr);
     if (val == nullptr || val[0] == '\0')
-      return defaultValue;
+      return default_value;
 
     return atoi(val);
   }
 
-  unsigned valueAsUInt(const char* key, unsigned defaultValue) const {
-    const char* val = valueOf(key, nullptr);
+  unsigned value_as_uint(const char* key, unsigned default_value) const {
+    const char* val = value_of(key, nullptr);
     if (val == nullptr || val[0] == '\0')
-      return defaultValue;
+      return default_value;
 
     int v = atoi(val);
     if (v < 0)
-      return defaultValue;
+      return default_value;
     else
       return unsigned(v);
   }

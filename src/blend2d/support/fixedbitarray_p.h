@@ -19,50 +19,50 @@ template<typename T, size_t N>
 class FixedBitArray {
 public:
   enum : size_t {
-    kSizeOfTInBits = IntOps::bitSizeOf<T>(),
+    kSizeOfTInBits = IntOps::bit_size_of<T>(),
     kFixedArraySize = (N + kSizeOfTInBits - 1) / kSizeOfTInBits
   };
 
   T data[kFixedArraySize];
 
-  BL_INLINE constexpr size_t sizeInWords() const noexcept { return kFixedArraySize; }
+  BL_INLINE constexpr size_t size_in_words() const noexcept { return kFixedArraySize; }
 
-  BL_INLINE bool bitAt(size_t index) const noexcept {
+  BL_INLINE bool bit_at(size_t index) const noexcept {
     BL_ASSERT(index < N);
     return bool((data[index / kSizeOfTInBits] >> (index % kSizeOfTInBits)) & 0x1);
   }
 
-  BL_INLINE void setAt(size_t index) noexcept {
+  BL_INLINE void set_at(size_t index) noexcept {
     BL_ASSERT(index < N);
     data[index / kSizeOfTInBits] |= T(1) << (index % kSizeOfTInBits);
   }
 
-  BL_INLINE void setAt(size_t index, T value) noexcept {
+  BL_INLINE void set_at(size_t index, T value) noexcept {
     BL_ASSERT(index < N);
 
-    T clrMask = T(1    ) << (index % kSizeOfTInBits);
-    T setMask = T(value) << (index % kSizeOfTInBits);
-    data[index / kSizeOfTInBits] = (data[index / kSizeOfTInBits] & ~clrMask) | setMask;
+    T clr_mask = T(1    ) << (index % kSizeOfTInBits);
+    T set_mask = T(value) << (index % kSizeOfTInBits);
+    data[index / kSizeOfTInBits] = (data[index / kSizeOfTInBits] & ~clr_mask) | set_mask;
   }
 
-  BL_INLINE void fillAt(size_t index, T value) noexcept {
+  BL_INLINE void fill_at(size_t index, T value) noexcept {
     BL_ASSERT(index < N);
     data[index / kSizeOfTInBits] |= T(value) << (index % kSizeOfTInBits);
   }
 
-  BL_INLINE void clearAt(size_t index) noexcept {
+  BL_INLINE void clear_at(size_t index) noexcept {
     BL_ASSERT(index < N);
     data[index / kSizeOfTInBits] &= ~(T(1) << (index % kSizeOfTInBits));
   }
 
-  BL_INLINE void clearAll() noexcept {
+  BL_INLINE void clear_all() noexcept {
     for (size_t i = 0; i < kFixedArraySize; i++)
       data[i] = 0;
   }
 
-  BL_INLINE void setAll() noexcept {
+  BL_INLINE void set_all() noexcept {
     for (size_t i = 0; i < kFixedArraySize; i++)
-      data[i] = IntOps::allOnes<T>();
+      data[i] = IntOps::all_ones<T>();
   }
 };
 

@@ -37,22 +37,22 @@ struct BLFontManagerImpl BL_CLASS_INHERITS(BLObjectImpl) {
 
 BL_BEGIN_C_DECLS
 
-BL_API BLResult BL_CDECL blFontManagerInit(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerInitMove(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerInitWeak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerInitNew(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerDestroy(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerReset(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerAssignMove(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerAssignWeak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerCreate(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontManagerGetFaceCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontManagerGetFamilyCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontManagerHasFace(const BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerAddFace(BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerQueryFace(const BLFontManagerCore* self, const char* name, size_t nameSize, const BLFontQueryProperties* properties, BLFontFaceCore* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerQueryFacesByFamilyName(const BLFontManagerCore* self, const char* name, size_t nameSize, BLArrayCore* out) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontManagerEquals(const BLFontManagerCore* a, const BLFontManagerCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_init(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_init_move(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_init_weak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_init_new(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_destroy(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_reset(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_assign_move(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_assign_weak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_create(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL bl_font_manager_get_face_count(const BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL bl_font_manager_get_family_count(const BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_font_manager_has_face(const BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_add_face(BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_query_face(const BLFontManagerCore* self, const char* name, size_t name_size, const BLFontQueryProperties* properties, BLFontFaceCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_manager_query_faces_by_family_name(const BLFontManagerCore* self, const char* name, size_t name_size, BLArrayCore* out) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_font_manager_equals(const BLFontManagerCore* a, const BLFontManagerCore* b) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
@@ -109,18 +109,18 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE_NODEBUG BLFontManager() noexcept { blFontManagerInit(this); }
-  BL_INLINE_NODEBUG BLFontManager(BLFontManager&& other) noexcept { blFontManagerInitMove(this, &other); }
-  BL_INLINE_NODEBUG BLFontManager(const BLFontManager& other) noexcept { blFontManagerInitWeak(this, &other); }
-  BL_INLINE_NODEBUG ~BLFontManager() noexcept { blFontManagerDestroy(this); }
+  BL_INLINE_NODEBUG BLFontManager() noexcept { bl_font_manager_init(this); }
+  BL_INLINE_NODEBUG BLFontManager(BLFontManager&& other) noexcept { bl_font_manager_init_move(this, &other); }
+  BL_INLINE_NODEBUG BLFontManager(const BLFontManager& other) noexcept { bl_font_manager_init_weak(this, &other); }
+  BL_INLINE_NODEBUG ~BLFontManager() noexcept { bl_font_manager_destroy(this); }
 
   //! \}
 
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE_NODEBUG BLFontManager& operator=(BLFontManager&& other) noexcept { blFontManagerAssignMove(this, &other); return *this; }
-  BL_INLINE_NODEBUG BLFontManager& operator=(const BLFontManager& other) noexcept { blFontManagerAssignWeak(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLFontManager& operator=(BLFontManager&& other) noexcept { bl_font_manager_assign_move(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLFontManager& operator=(const BLFontManager& other) noexcept { bl_font_manager_assign_weak(this, &other); return *this; }
 
   BL_INLINE_NODEBUG bool operator==(const BLFontManager& other) const noexcept { return  equals(other); }
   BL_INLINE_NODEBUG bool operator!=(const BLFontManager& other) const noexcept { return !equals(other); }
@@ -130,43 +130,43 @@ public:
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG BLResult reset() noexcept { return blFontManagerReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept { return bl_font_manager_reset(this); }
   BL_INLINE_NODEBUG void swap(BLFontManager& other) noexcept { _d.swap(other._d); }
 
-  BL_INLINE_NODEBUG BLResult assign(BLFontManager&& other) noexcept { return blFontManagerAssignMove(this, &other); }
-  BL_INLINE_NODEBUG BLResult assign(const BLFontManager& other) noexcept { return blFontManagerAssignWeak(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(BLFontManager&& other) noexcept { return bl_font_manager_assign_move(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(const BLFontManager& other) noexcept { return bl_font_manager_assign_weak(this, &other); }
 
   //! Tests whether the font-manager is a valid FontManager and not a built-in default instance.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool isValid() const noexcept { return _d.aField() == 0; }
+  BL_INLINE_NODEBUG bool is_valid() const noexcept { return _d.a_field() == 0; }
 
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool equals(const BLFontManager& other) const noexcept { return blFontManagerEquals(this, &other); }
+  BL_INLINE_NODEBUG bool equals(const BLFontManager& other) const noexcept { return bl_font_manager_equals(this, &other); }
 
   //! \}
 
   //! \name Create Functionality
   //! \{
 
-  BL_INLINE_NODEBUG BLResult create() noexcept { return blFontManagerCreate(this); }
+  BL_INLINE_NODEBUG BLResult create() noexcept { return bl_font_manager_create(this); }
 
   //! \}
 
   //! Returns the number of BLFontFace instances the font manager holds.
   [[nodiscard]]
-  BL_INLINE_NODEBUG size_t faceCount() const noexcept { return blFontManagerGetFaceCount(this); }
+  BL_INLINE_NODEBUG size_t face_count() const noexcept { return bl_font_manager_get_face_count(this); }
 
   //! Returns the number of unique font families the font manager holds.
   [[nodiscard]]
-  BL_INLINE_NODEBUG size_t familyCount() const noexcept { return blFontManagerGetFamilyCount(this); }
+  BL_INLINE_NODEBUG size_t family_count() const noexcept { return bl_font_manager_get_family_count(this); }
 
   //! \name Face Management
   //! \{
 
   //! Tests whether the font manager contains the given font `face`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool hasFace(const BLFontFaceCore& face) const noexcept {
-    return blFontManagerHasFace(this, &face);
+  BL_INLINE_NODEBUG bool has_face(const BLFontFaceCore& face) const noexcept {
+    return bl_font_manager_has_face(this, &face);
   }
 
   //! Adds a font `face` to the font manager.
@@ -176,18 +176,18 @@ public:
   //!     held it.
   //!   - \ref BL_ERROR_FONT_NOT_INITIALIZED is returned if the font `face` is invalid.
   //!   - \ref BL_ERROR_OUT_OF_MEMORY is returned if memory allocation failed.
-  BL_INLINE_NODEBUG BLResult addFace(const BLFontFaceCore& face) noexcept {
-    return blFontManagerAddFace(this, &face);
+  BL_INLINE_NODEBUG BLResult add_face(const BLFontFaceCore& face) noexcept {
+    return bl_font_manager_add_face(this, &face);
   }
 
   //! Queries a font face by family `name` and stores the result to `out`.
-  BL_INLINE_NODEBUG BLResult queryFace(const char* name, BLFontFaceCore& out) const noexcept {
-    return blFontManagerQueryFace(this, name, SIZE_MAX, nullptr, &out);
+  BL_INLINE_NODEBUG BLResult query_face(const char* name, BLFontFaceCore& out) const noexcept {
+    return bl_font_manager_query_face(this, name, SIZE_MAX, nullptr, &out);
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult queryFace(BLStringView name, BLFontFaceCore& out) const noexcept {
-    return blFontManagerQueryFace(this, name.data, name.size, nullptr, &out);
+  BL_INLINE_NODEBUG BLResult query_face(BLStringView name, BLFontFaceCore& out) const noexcept {
+    return bl_font_manager_query_face(this, name.data, name.size, nullptr, &out);
   }
 
   //! Queries a font face by family `name` and stores the result to `out`.
@@ -197,23 +197,23 @@ public:
   //!
   //!   - Style has the highest priority.
   //!   - Weight has the lowest priority.
-  BL_INLINE_NODEBUG BLResult queryFace(const char* name, const BLFontQueryProperties& properties, BLFontFaceCore& out) const noexcept {
-    return blFontManagerQueryFace(this, name, SIZE_MAX, &properties, &out);
+  BL_INLINE_NODEBUG BLResult query_face(const char* name, const BLFontQueryProperties& properties, BLFontFaceCore& out) const noexcept {
+    return bl_font_manager_query_face(this, name, SIZE_MAX, &properties, &out);
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult queryFace(BLStringView name, const BLFontQueryProperties& properties, BLFontFaceCore& out) const noexcept {
-    return blFontManagerQueryFace(this, name.data, name.size, &properties, &out);
+  BL_INLINE_NODEBUG BLResult query_face(BLStringView name, const BLFontQueryProperties& properties, BLFontFaceCore& out) const noexcept {
+    return bl_font_manager_query_face(this, name.data, name.size, &properties, &out);
   }
 
   //! Queries all font faces by family `name` and stores the result to `out`.
-  BL_INLINE_NODEBUG BLResult queryFacesByFamilyName(const char* name, BLArray<BLFontFace>& out) const noexcept {
-    return blFontManagerQueryFacesByFamilyName(this, name, SIZE_MAX, &out);
+  BL_INLINE_NODEBUG BLResult query_faces_by_family_name(const char* name, BLArray<BLFontFace>& out) const noexcept {
+    return bl_font_manager_query_faces_by_family_name(this, name, SIZE_MAX, &out);
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult queryFacesByFamilyName(BLStringView name, BLArray<BLFontFace>& out) const noexcept {
-    return blFontManagerQueryFacesByFamilyName(this, name.data, name.size, &out);
+  BL_INLINE_NODEBUG BLResult query_faces_by_family_name(BLStringView name, BLArray<BLFontFace>& out) const noexcept {
+    return bl_font_manager_query_faces_by_family_name(this, name.data, name.size, &out);
   }
 
   //! \}

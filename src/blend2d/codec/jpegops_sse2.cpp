@@ -35,9 +35,9 @@ struct alignas(16) OptConstSSE2 {
   int32_t ycbcr_allones[4];
   int16_t ycbcr_tosigned[8];
   int32_t ycbcr_round[4];
-  int16_t ycbcr_yycrMul[8];
-  int16_t ycbcr_yycbMul[8];
-  int16_t ycbcr_cbcrMul[8];
+  int16_t ycbcr_yycr_mul[8];
+  int16_t ycbcr_yycb_mul[8];
+  int16_t ycbcr_cbcr_mul[8];
 };
 
 #define DATA_4X(...) { __VA_ARGS__, __VA_ARGS__, __VA_ARGS__, __VA_ARGS__ }
@@ -151,20 +151,20 @@ static const OptConstSSE2 optConstSSE2 = {
   BL_JPEG_IDCT_BFLY_XMM(row3, row4, x3, x4, bias, norm)                  \
 }
 
-void BL_CDECL idct8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* src, const uint16_t* qTable) noexcept {
+void BL_CDECL idct8_sse2(uint8_t* dst, intptr_t dst_stride, const int16_t* src, const uint16_t* q_table) noexcept {
   using namespace SIMD;
 
   const OptConstSSE2& constants = optConstSSE2;
 
-  // Load and dequantize (`src` is aligned to 16 bytes, `qTable` doesn't have to be).
-  Vec8xI16 row0 = loadu<Vec8xI16>(qTable +  0) * loada<Vec8xI16>(src +  0);
-  Vec8xI16 row1 = loadu<Vec8xI16>(qTable +  8) * loada<Vec8xI16>(src +  8);
-  Vec8xI16 row2 = loadu<Vec8xI16>(qTable + 16) * loada<Vec8xI16>(src + 16);
-  Vec8xI16 row3 = loadu<Vec8xI16>(qTable + 24) * loada<Vec8xI16>(src + 24);
-  Vec8xI16 row4 = loadu<Vec8xI16>(qTable + 32) * loada<Vec8xI16>(src + 32);
-  Vec8xI16 row5 = loadu<Vec8xI16>(qTable + 40) * loada<Vec8xI16>(src + 40);
-  Vec8xI16 row6 = loadu<Vec8xI16>(qTable + 48) * loada<Vec8xI16>(src + 48);
-  Vec8xI16 row7 = loadu<Vec8xI16>(qTable + 56) * loada<Vec8xI16>(src + 56);
+  // Load and dequantize (`src` is aligned to 16 bytes, `q_table` doesn't have to be).
+  Vec8xI16 row0 = loadu<Vec8xI16>(q_table +  0) * loada<Vec8xI16>(src +  0);
+  Vec8xI16 row1 = loadu<Vec8xI16>(q_table +  8) * loada<Vec8xI16>(src +  8);
+  Vec8xI16 row2 = loadu<Vec8xI16>(q_table + 16) * loada<Vec8xI16>(src + 16);
+  Vec8xI16 row3 = loadu<Vec8xI16>(q_table + 24) * loada<Vec8xI16>(src + 24);
+  Vec8xI16 row4 = loadu<Vec8xI16>(q_table + 32) * loada<Vec8xI16>(src + 32);
+  Vec8xI16 row5 = loadu<Vec8xI16>(q_table + 40) * loada<Vec8xI16>(src + 40);
+  Vec8xI16 row6 = loadu<Vec8xI16>(q_table + 48) * loada<Vec8xI16>(src + 48);
+  Vec8xI16 row7 = loadu<Vec8xI16>(q_table + 56) * loada<Vec8xI16>(src + 56);
 
   // IDCT columns.
   BL_JPEG_IDCT_IDCT_PASS_XMM(vec_const<Vec4xI32>(constants.idct_col_bias), BL_JPEG_IDCT_COL_NORM)
@@ -204,8 +204,8 @@ void BL_CDECL idct8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* src, c
 
   // Store.
   uint8_t* dst0 = dst;
-  uint8_t* dst1 = dst + dstStride;
-  intptr_t dstStride2 = dstStride * 2;
+  uint8_t* dst1 = dst + dst_stride;
+  intptr_t dstStride2 = dst_stride * 2;
 
   storeu_64(dst0, row0); dst0 += dstStride2;
   storeh_64(dst1, row0); dst1 += dstStride2;
@@ -223,7 +223,7 @@ void BL_CDECL idct8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* src, c
 // bl::Jpeg::Opts - RGB32 From YCbCr8 - SSE2
 // =========================================
 
-void BL_CDECL rgb32_from_ycbcr8_SSE2(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) noexcept {
+void BL_CDECL rgb32_from_ycbcr8_sse2(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) noexcept {
   using namespace SIMD;
   uint32_t i = count;
 
@@ -237,14 +237,14 @@ void BL_CDECL rgb32_from_ycbcr8_SSE2(uint8_t* dst, const uint8_t* pY, const uint
     cb = add_i16(cb, vec_const<Vec8xI16>(constants.ycbcr_tosigned));
     cr = add_i16(cr, vec_const<Vec8xI16>(constants.ycbcr_tosigned));
 
-    Vec4xI32 r_l = vec_i32(maddw_i16_i32(interleave_lo_u16(yy, cr), vec_const<Vec8xI16>(constants.ycbcr_yycrMul)));
-    Vec4xI32 r_h = vec_i32(maddw_i16_i32(interleave_hi_u16(yy, cr), vec_const<Vec8xI16>(constants.ycbcr_yycrMul)));
+    Vec4xI32 r_l = vec_i32(maddw_i16_i32(interleave_lo_u16(yy, cr), vec_const<Vec8xI16>(constants.ycbcr_yycr_mul)));
+    Vec4xI32 r_h = vec_i32(maddw_i16_i32(interleave_hi_u16(yy, cr), vec_const<Vec8xI16>(constants.ycbcr_yycr_mul)));
 
-    Vec4xI32 b_l = vec_i32(maddw_i16_i32(interleave_lo_u16(yy, cb), vec_const<Vec8xI16>(constants.ycbcr_yycbMul)));
-    Vec4xI32 b_h = vec_i32(maddw_i16_i32(interleave_hi_u16(yy, cb), vec_const<Vec8xI16>(constants.ycbcr_yycbMul)));
+    Vec4xI32 b_l = vec_i32(maddw_i16_i32(interleave_lo_u16(yy, cb), vec_const<Vec8xI16>(constants.ycbcr_yycb_mul)));
+    Vec4xI32 b_h = vec_i32(maddw_i16_i32(interleave_hi_u16(yy, cb), vec_const<Vec8xI16>(constants.ycbcr_yycb_mul)));
 
-    Vec4xI32 g_l = vec_i32(maddw_i16_i32(interleave_lo_u16(cb, cr), vec_const<Vec8xI16>(constants.ycbcr_cbcrMul)));
-    Vec4xI32 g_h = vec_i32(maddw_i16_i32(interleave_hi_u16(cb, cr), vec_const<Vec8xI16>(constants.ycbcr_cbcrMul)));
+    Vec4xI32 g_l = vec_i32(maddw_i16_i32(interleave_lo_u16(cb, cr), vec_const<Vec8xI16>(constants.ycbcr_cbcr_mul)));
+    Vec4xI32 g_h = vec_i32(maddw_i16_i32(interleave_hi_u16(cb, cr), vec_const<Vec8xI16>(constants.ycbcr_cbcr_mul)));
 
     g_l = add_i32(g_l, slli_i32<BL_JPEG_YCBCR_PREC>(vec_i32(unpack_lo64_u16_u32(yy))));
     g_h = add_i32(g_h, slli_i32<BL_JPEG_YCBCR_PREC>(vec_i32(unpack_hi64_u16_u32(yy))));
@@ -292,9 +292,9 @@ void BL_CDECL rgb32_from_ycbcr8_SSE2(uint8_t* dst, const uint8_t* pY, const uint
     int g = yy - cr * BL_JPEG_YCBCR_FIXED(0.71414) - cb * BL_JPEG_YCBCR_FIXED(0.34414);
     int b = yy + cb * BL_JPEG_YCBCR_FIXED(1.77200);
 
-    uint32_t rgba32 = RgbaInternal::packRgba32(IntOps::clampToByte(r >> BL_JPEG_YCBCR_PREC),
-                                               IntOps::clampToByte(g >> BL_JPEG_YCBCR_PREC),
-                                               IntOps::clampToByte(b >> BL_JPEG_YCBCR_PREC));
+    uint32_t rgba32 = RgbaInternal::packRgba32(IntOps::clamp_to_byte(r >> BL_JPEG_YCBCR_PREC),
+                                               IntOps::clamp_to_byte(g >> BL_JPEG_YCBCR_PREC),
+                                               IntOps::clamp_to_byte(b >> BL_JPEG_YCBCR_PREC));
     MemOps::writeU32a(dst, rgba32);
 
     dst += 4;

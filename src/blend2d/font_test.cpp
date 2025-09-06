@@ -22,20 +22,20 @@ namespace bl {
 namespace Tests {
 
 UNIT(font, BL_TEST_GROUP_TEXT_COMBINED) {
-  BLFontData fontData;
-  BLFontFace fontFace;
+  BLFontData font_data;
+  BLFontFace font_face;
 
   INFO("Testing creation of BLFontData from raw buffer");
-  EXPECT_SUCCESS(fontData.createFromData(resource_abeezee_regular_ttf, sizeof(resource_abeezee_regular_ttf)));
-  EXPECT_SUCCESS(fontFace.createFromData(fontData, 0));
+  EXPECT_SUCCESS(font_data.create_from_data(resource_abeezee_regular_ttf, sizeof(resource_abeezee_regular_ttf)));
+  EXPECT_SUCCESS(font_face.create_from_data(font_data, 0));
 
   INFO("Testing retrieving unicode character coverage from BLFontFace");
   {
-    BLBitSet characterCoverage;
-    EXPECT_SUCCESS(fontFace.getCharacterCoverage(&characterCoverage));
+    BLBitSet character_coverage;
+    EXPECT_SUCCESS(font_face.get_character_coverage(&character_coverage));
 
     // The font provides 252 characters - verify at least this.
-    uint32_t cardinality = characterCoverage.cardinality();
+    uint32_t cardinality = character_coverage.cardinality();
     EXPECT_EQ(cardinality, 252u);
   }
 }

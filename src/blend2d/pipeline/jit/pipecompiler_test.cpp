@@ -22,7 +22,7 @@ namespace bl::Pipeline::JIT::Tests {
 static constexpr uint64_t kRandomSeed = 0x1234u;
 static constexpr uint32_t kTestIterCount = 1000u;
 
-static BL_INLINE_CONSTEXPR uint32_t byteWidthFromVecWidth(VecWidth vw) noexcept {
+static BL_INLINE_CONSTEXPR uint32_t byte_width_from_vec_width(VecWidth vw) noexcept {
   return 16u << uint32_t(vw);
 }
 
@@ -95,9 +95,9 @@ public:
   TestErrorHandler() noexcept {}
   ~TestErrorHandler() noexcept override {}
 
-  void handleError(asmjit::Error err, const char* message, asmjit::BaseEmitter* origin) override {
-    blUnused(origin);
-    EXPECT_EQ(err, asmjit::kErrorOk)
+  void handle_error(asmjit::Error err, const char* message, asmjit::BaseEmitter* origin) override {
+    bl_unused(origin);
+    EXPECT_EQ(err, asmjit::Error::kOk)
       .message("AsmJit Error: %s", message);
   }
 };
@@ -108,7 +108,7 @@ class JitContext {
 public:
   asmjit::JitRuntime rt;
   asmjit::CpuFeatures features {};
-  PipeOptFlags optFlags {};
+  PipeOptFlags opt_flags {};
 
   asmjit::StringLogger logger;
   // asmjit::FileLogger fl;
@@ -122,24 +122,24 @@ public:
 
     code.reset();
     code.init(rt.environment());
-    code.setErrorHandler(&eh);
+    code.set_error_handler(&eh);
 
-    // fl.setFile(stdout);
-    // fl.addFlags(asmjit::FormatFlags::kMachineCode);
-    // code.setLogger(&fl);
-    code.setLogger(&logger);
+    // fl.set_file(stdout);
+    // fl.add_flags(asmjit::FormatFlags::kMachineCode);
+    // code.set_logger(&fl);
+    code.set_logger(&logger);
 
     code.attach(&cc);
-    cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kRAAnnotate);
-    cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateAssembler);
-    cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateIntermediate);
+    cc.add_diagnostic_options(asmjit::DiagnosticOptions::kRAAnnotate);
+    cc.add_diagnostic_options(asmjit::DiagnosticOptions::kValidateAssembler);
+    cc.add_diagnostic_options(asmjit::DiagnosticOptions::kValidateIntermediate);
   }
 
   template<typename Fn>
   Fn finish() noexcept {
     Fn fn;
-    EXPECT_EQ(cc.finalize(), asmjit::kErrorOk);
-    EXPECT_EQ(rt.add(&fn, &code), asmjit::kErrorOk);
+    EXPECT_EQ(cc.finalize(), asmjit::Error::kOk);
+    EXPECT_EQ(rt.add(&fn, &code), asmjit::Error::kOk);
     code.reset();
     return fn;
   }
@@ -148,29 +148,29 @@ public:
 // bl::Pipeline::JIT - Tests - Conditional Operations - Functions
 // ==============================================================
 
-static TestCondRRFunc create_func_cond_rr(JitContext& ctx, OpcodeCond op, CondCode condCode, uint32_t variation) noexcept {
+static TestCondRRFunc create_func_cond_rr(JitContext& ctx, OpcodeCond op, CondCode cond_code, uint32_t variation) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<uint32_t, int32_t, int32_t>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<uint32_t, int32_t, int32_t>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(VecWidth::k128);
-  pc.initFunction(node);
+  pc.init_vec_width(VecWidth::k128);
+  pc.init_function(node);
 
-  Gp a = pc.newGp32("a");
-  Gp b = pc.newGp32("b");
-  Gp result = pc.newGp32("result");
+  Gp a = pc.new_gp32("a");
+  Gp b = pc.new_gp32("b");
+  Gp result = pc.new_gp32("result");
 
-  node->setArg(0, a);
-  node->setArg(1, b);
+  node->set_arg(0, a);
+  node->set_arg(1, b);
 
   switch (variation) {
     case 0: {
       // Test a conditional branch based on the given condition.
-      Label done = pc.newLabel();
+      Label done = pc.new_label();
       pc.mov(result, 1);
-      pc.j(done, Condition(op, condCode, a, b));
+      pc.j(done, Condition(op, cond_code, a, b));
       pc.mov(result, 0);
       pc.bind(done);
       break;
@@ -178,62 +178,62 @@ static TestCondRRFunc create_func_cond_rr(JitContext& ctx, OpcodeCond op, CondCo
 
     case 1: {
       // Test a cmov functionality.
-      Gp trueValue = pc.newGp32("trueValue");
+      Gp true_value = pc.new_gp32("true_value");
       pc.mov(result, 0);
-      pc.mov(trueValue, 1);
-      pc.cmov(result, trueValue, Condition(op, condCode, a, b));
+      pc.mov(true_value, 1);
+      pc.cmov(result, true_value, Condition(op, cond_code, a, b));
       break;
     }
 
     case 2: {
       // Test a select functionality.
-      Gp falseValue = pc.newGp32("falseValue");
-      Gp trueValue = pc.newGp32("trueValue");
-      pc.mov(falseValue, 0);
-      pc.mov(trueValue, 1);
-      pc.select(result, trueValue, falseValue, Condition(op, condCode, a, b));
+      Gp false_value = pc.new_gp32("false_value");
+      Gp true_value = pc.new_gp32("true_value");
+      pc.mov(false_value, 0);
+      pc.mov(true_value, 1);
+      pc.select(result, true_value, false_value, Condition(op, cond_code, a, b));
       break;
     }
   }
 
   ctx.cc.ret(result);
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
 
   return ctx.finish<TestCondRRFunc>();
 }
 
-static TestCondRIFunc create_func_cond_ri(JitContext& ctx, OpcodeCond op, CondCode condCode, Imm bImm) noexcept {
+static TestCondRIFunc create_func_cond_ri(JitContext& ctx, OpcodeCond op, CondCode cond_code, Imm b_imm) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<uint32_t, int32_t>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<uint32_t, int32_t>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(VecWidth::k128);
-  pc.initFunction(node);
+  pc.init_vec_width(VecWidth::k128);
+  pc.init_function(node);
 
-  Gp a = pc.newGp32("a");
-  Gp result = pc.newGp32("result");
-  Label done = pc.newLabel();
+  Gp a = pc.new_gp32("a");
+  Gp result = pc.new_gp32("result");
+  Label done = pc.new_label();
 
-  node->setArg(0, a);
+  node->set_arg(0, a);
   pc.mov(result, 1);
-  pc.j(done, Condition(op, condCode, a, bImm));
+  pc.j(done, Condition(op, cond_code, a, b_imm));
   pc.mov(result, 0);
   pc.bind(done);
   ctx.cc.ret(result);
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestCondRIFunc>();
 }
 
 // bl::Pipeline::JIT - Tests - Conditional Operations - Runner
 // ===========================================================
 
-static BL_NOINLINE void test_conditional_op(JitContext& ctx, OpcodeCond op, CondCode condCode, int32_t a, int32_t b, bool expected) noexcept {
+static BL_NOINLINE void test_conditional_op(JitContext& ctx, OpcodeCond op, CondCode cond_code, int32_t a, int32_t b, bool expected) noexcept {
   for (uint32_t variation = 0; variation < 3; variation++) {
-    TestCondRRFunc fn_rr = create_func_cond_rr(ctx, op, condCode, variation);
-    TestCondRIFunc fn_ri = create_func_cond_ri(ctx, op, condCode, b);
+    TestCondRRFunc fn_rr = create_func_cond_rr(ctx, op, cond_code, variation);
+    TestCondRIFunc fn_ri = create_func_cond_ri(ctx, op, cond_code, b);
 
     uint32_t observed_rr = fn_rr(a, b);
     EXPECT_EQ(observed_rr, uint32_t(expected))
@@ -522,19 +522,19 @@ static BL_NOINLINE void test_cond_ops(JitContext& ctx) noexcept {
 
 static TestMFunc create_func_m(JitContext& ctx, OpcodeM op) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<void, void*>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<void, void*>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(VecWidth::k128);
-  pc.initFunction(node);
+  pc.init_vec_width(VecWidth::k128);
+  pc.init_function(node);
 
-  Gp ptr = pc.newGpPtr("ptr");
-  node->setArg(0, ptr);
+  Gp ptr = pc.new_gp("ptr");
+  node->set_arg(0, ptr);
   pc.emit_m(op, mem_ptr(ptr));
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestMFunc>();
 }
 
@@ -589,24 +589,24 @@ static BL_NOINLINE void test_m_ops(JitContext& ctx) noexcept {
 
 static TestRMFunc create_func_rm(JitContext& ctx, OpcodeRM op) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<uintptr_t, uintptr_t, void*>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<uintptr_t, uintptr_t, void*>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(VecWidth::k128);
-  pc.initFunction(node);
+  pc.init_vec_width(VecWidth::k128);
+  pc.init_function(node);
 
-  Gp reg = pc.newGpPtr("reg");
-  Gp ptr = pc.newGpPtr("ptr");
+  Gp reg = pc.new_gp("reg");
+  Gp ptr = pc.new_gp("ptr");
 
-  node->setArg(0, reg);
-  node->setArg(1, ptr);
+  node->set_arg(0, reg);
+  node->set_arg(1, ptr);
 
   pc.emit_rm(op, reg, mem_ptr(ptr));
   ctx.cc.ret(reg);
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestRMFunc>();
 }
 
@@ -705,23 +705,23 @@ static BL_NOINLINE void test_rm_ops(JitContext& ctx) noexcept {
 
 static TestMRFunc create_func_mr(JitContext& ctx, OpcodeMR op) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<void, void*, uintptr_t>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<void, void*, uintptr_t>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(VecWidth::k128);
-  pc.initFunction(node);
+  pc.init_vec_width(VecWidth::k128);
+  pc.init_function(node);
 
-  Gp ptr = pc.newGpPtr("ptr");
-  Gp reg = pc.newGpPtr("reg");
+  Gp ptr = pc.new_gp("ptr");
+  Gp reg = pc.new_gp("reg");
 
-  node->setArg(0, ptr);
-  node->setArg(1, reg);
+  node->set_arg(0, ptr);
+  node->set_arg(1, reg);
 
   pc.emit_mr(op, mem_ptr(ptr), reg);
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestMRFunc>();
 }
 
@@ -819,20 +819,20 @@ static BL_NOINLINE void test_mr_ops(JitContext& ctx) noexcept {
 
 static TestRRFunc create_func_rr(JitContext& ctx, OpcodeRR op) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<uint32_t, uint32_t>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<uint32_t, uint32_t>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(VecWidth::k128);
-  pc.initFunction(node);
+  pc.init_vec_width(VecWidth::k128);
+  pc.init_function(node);
 
-  Gp r = pc.newGp32("r");
-  node->setArg(0, r);
+  Gp r = pc.new_gp32("r");
+  node->set_arg(0, r);
   pc.emit_2i(op, r, r);
   ctx.cc.ret(r);
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestRRFunc>();
 }
 
@@ -899,47 +899,47 @@ static BL_NOINLINE void test_rr_ops(JitContext& ctx) noexcept {
 
 static TestRRRFunc create_func_rrr(JitContext& ctx, OpcodeRRR op) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<uint32_t, uint32_t, uint32_t>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<uint32_t, uint32_t, uint32_t>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(VecWidth::k128);
-  pc.initFunction(node);
+  pc.init_vec_width(VecWidth::k128);
+  pc.init_function(node);
 
-  Gp a = pc.newGp32("a");
-  Gp b = pc.newGp32("b");
-  Gp result = pc.newGp32("result");
+  Gp a = pc.new_gp32("a");
+  Gp b = pc.new_gp32("b");
+  Gp result = pc.new_gp32("result");
 
-  node->setArg(0, a);
-  node->setArg(1, b);
+  node->set_arg(0, a);
+  node->set_arg(1, b);
 
   pc.emit_3i(op, result, a, b);
   ctx.cc.ret(result);
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestRRRFunc>();
 }
 
-static TestRRIFunc create_func_rri(JitContext& ctx, OpcodeRRR op, Imm bImm) noexcept {
+static TestRRIFunc create_func_rri(JitContext& ctx, OpcodeRRR op, Imm b_imm) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<uint32_t, uint32_t>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<uint32_t, uint32_t>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(VecWidth::k128);
-  pc.initFunction(node);
+  pc.init_vec_width(VecWidth::k128);
+  pc.init_function(node);
 
-  Gp a = pc.newGp32("a");
-  Gp result = pc.newGp32("result");
+  Gp a = pc.new_gp32("a");
+  Gp result = pc.new_gp32("result");
 
-  node->setArg(0, a);
+  node->set_arg(0, a);
 
-  pc.emit_3i(op, result, a, bImm);
+  pc.emit_3i(op, result, a, b_imm);
   ctx.cc.ret(result);
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestRRIFunc>();
 }
 
@@ -1131,25 +1131,25 @@ static constexpr uint32_t kNumVariationsVV_Broadcast = 4;
 
 static TestVVFunc create_func_vv(JitContext& ctx, VecWidth vw, OpcodeVV op, Variation variation = Variation{0}) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<void, void*, const void*>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<void, void*, const void*>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(vw);
-  pc.initFunction(node);
+  pc.init_vec_width(vw);
+  pc.init_function(node);
 
-  Gp dstPtr = pc.newGpPtr("dstPtr");
-  Gp srcPtr = pc.newGpPtr("srcPtr");
+  Gp dst_ptr = pc.new_gp("dst_ptr");
+  Gp src_ptr = pc.new_gp("src_ptr");
 
-  node->setArg(0, dstPtr);
-  node->setArg(1, srcPtr);
+  node->set_arg(0, dst_ptr);
+  node->set_arg(1, src_ptr);
 
-  Vec dstVec = pc.newVec(vw, "dstVec");
+  Vec dst_vec = pc.new_vec(vw, "dst_vec");
 
   // There are some instructions that fill the high part of the register, so just zero the destination to make
   // sure that we can test this function (that the low part is actually zeroed and doesn't contain garbage).
-  pc.v_zero_i(dstVec);
+  pc.v_zero_i(dst_vec);
 
   if (variation == 3u && (op == OpcodeVV::kBroadcastU8  ||
                           op == OpcodeVV::kBroadcastU8Z ||
@@ -1158,36 +1158,36 @@ static TestVVFunc create_func_vv(JitContext& ctx, VecWidth vw, OpcodeVV op, Vari
                           op == OpcodeVV::kBroadcastF32 ||
                           op == OpcodeVV::kBroadcastF64)) {
     // This is used to test broadcasts from a GP register to a vector register.
-    Gp srcGp = pc.newGpPtr("srcGp");
+    Gp src_gp = pc.new_gp("src_gp");
 
     switch (op) {
       case OpcodeVV::kBroadcastU8:
       case OpcodeVV::kBroadcastU8Z:
-        pc.load_u8(srcGp, mem_ptr(srcPtr));
-        pc.emit_2v(op, dstVec, srcGp);
+        pc.load_u8(src_gp, mem_ptr(src_ptr));
+        pc.emit_2v(op, dst_vec, src_gp);
         break;
 
       case OpcodeVV::kBroadcastU16:
       case OpcodeVV::kBroadcastU16Z:
-        pc.load_u16(srcGp, mem_ptr(srcPtr));
-        pc.emit_2v(op, dstVec, srcGp);
+        pc.load_u16(src_gp, mem_ptr(src_ptr));
+        pc.emit_2v(op, dst_vec, src_gp);
         break;
 
       case OpcodeVV::kBroadcastU32:
       case OpcodeVV::kBroadcastF32:
-        pc.load_u32(srcGp, mem_ptr(srcPtr));
-        pc.emit_2v(op, dstVec, srcGp);
+        pc.load_u32(src_gp, mem_ptr(src_ptr));
+        pc.emit_2v(op, dst_vec, src_gp);
         break;
 
       case OpcodeVV::kBroadcastU64:
       case OpcodeVV::kBroadcastF64:
         // Prevent using 64-bit registers on 32-bit architectures (that would fail).
-        if (pc.is64Bit()) {
-          pc.load_u64(srcGp, mem_ptr(srcPtr));
-          pc.emit_2v(op, dstVec, srcGp);
+        if (pc.is_64bit()) {
+          pc.load_u64(src_gp, mem_ptr(src_ptr));
+          pc.emit_2v(op, dst_vec, src_gp);
         }
         else {
-          pc.emit_2v(op, dstVec, mem_ptr(srcPtr));
+          pc.emit_2v(op, dst_vec, mem_ptr(src_ptr));
         }
         break;
 
@@ -1196,21 +1196,21 @@ static TestVVFunc create_func_vv(JitContext& ctx, VecWidth vw, OpcodeVV op, Vari
     }
   }
   else if (variation == 2u) {
-    pc.emit_2v(op, dstVec, mem_ptr(srcPtr));
+    pc.emit_2v(op, dst_vec, mem_ptr(src_ptr));
   }
   else if (variation == 1u) {
-    pc.v_loaduvec(dstVec, mem_ptr(srcPtr));
-    pc.emit_2v(op, dstVec, dstVec);
+    pc.v_loaduvec(dst_vec, mem_ptr(src_ptr));
+    pc.emit_2v(op, dst_vec, dst_vec);
   }
   else {
-    Vec srcVec = pc.newVec(vw, "srcVec");
-    pc.v_loaduvec(srcVec, mem_ptr(srcPtr));
-    pc.emit_2v(op, dstVec, srcVec);
+    Vec src_vec = pc.new_vec(vw, "src_vec");
+    pc.v_loaduvec(src_vec, mem_ptr(src_ptr));
+    pc.emit_2v(op, dst_vec, src_vec);
   }
 
-  pc.v_storeuvec(mem_ptr(dstPtr), dstVec);
+  pc.v_storeuvec(mem_ptr(dst_ptr), dst_vec);
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestVVFunc>();
 }
 
@@ -1222,53 +1222,53 @@ static constexpr uint32_t kNumVariationsVVI = 3;
 
 static TestVVFunc create_func_vvi(JitContext& ctx, VecWidth vw, OpcodeVVI op, uint32_t imm, Variation variation = Variation{0}) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<void, void*, const void*>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<void, void*, const void*>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(vw);
-  pc.initFunction(node);
+  pc.init_vec_width(vw);
+  pc.init_function(node);
 
-  Gp dstPtr = pc.newGpPtr("dstPtr");
-  Gp srcPtr = pc.newGpPtr("srcPtr");
+  Gp dst_ptr = pc.new_gp("dst_ptr");
+  Gp src_ptr = pc.new_gp("src_ptr");
 
-  node->setArg(0, dstPtr);
-  node->setArg(1, srcPtr);
+  node->set_arg(0, dst_ptr);
+  node->set_arg(1, src_ptr);
 
-  Vec srcVec = pc.newVec(vw, "srcVec");
+  Vec src_vec = pc.new_vec(vw, "src_vec");
 
   switch (variation.value) {
     default:
     case 0: {
       // There are some instructions that fill the high part of the register, so just zero the destination to make
       // sure that we can test this function (that the low part is actually zeroed and doesn't contain garbage).
-      Vec dstVec = pc.newVec(vw, "dstVec");
-      pc.v_zero_i(dstVec);
+      Vec dst_vec = pc.new_vec(vw, "dst_vec");
+      pc.v_zero_i(dst_vec);
 
-      pc.v_loaduvec(srcVec, mem_ptr(srcPtr));
-      pc.emit_2vi(op, dstVec, srcVec, imm);
-      pc.v_storeuvec(mem_ptr(dstPtr), dstVec);
+      pc.v_loaduvec(src_vec, mem_ptr(src_ptr));
+      pc.emit_2vi(op, dst_vec, src_vec, imm);
+      pc.v_storeuvec(mem_ptr(dst_ptr), dst_vec);
 
       break;
     }
 
     case 1: {
-      pc.v_loaduvec(srcVec, mem_ptr(srcPtr));
-      pc.emit_2vi(op, srcVec, srcVec, imm);
-      pc.v_storeuvec(mem_ptr(dstPtr), srcVec);
+      pc.v_loaduvec(src_vec, mem_ptr(src_ptr));
+      pc.emit_2vi(op, src_vec, src_vec, imm);
+      pc.v_storeuvec(mem_ptr(dst_ptr), src_vec);
       break;
     }
 
     case 2: {
-      Vec dstVec = pc.newVec(vw, "dstVec");
-      pc.emit_2vi(op, dstVec, mem_ptr(srcPtr), imm);
-      pc.v_storeuvec(mem_ptr(dstPtr), dstVec);
+      Vec dst_vec = pc.new_vec(vw, "dst_vec");
+      pc.emit_2vi(op, dst_vec, mem_ptr(src_ptr), imm);
+      pc.v_storeuvec(mem_ptr(dst_ptr), dst_vec);
       break;
     }
   }
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestVVFunc>();
 }
 
@@ -1282,80 +1282,80 @@ static constexpr uint32_t kNumVariationsVVV = 5;
 
 static TestVVVFunc create_func_vvv(JitContext& ctx, VecWidth vw, OpcodeVVV op, Variation variation = Variation{0}) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<void, void*, const void*, const void*>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<void, void*, const void*, const void*>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(vw);
-  pc.initFunction(node);
+  pc.init_vec_width(vw);
+  pc.init_function(node);
 
-  Gp dstPtr = pc.newGpPtr("dstPtr");
-  Gp src1Ptr = pc.newGpPtr("src1Ptr");
-  Gp src2Ptr = pc.newGpPtr("src2Ptr");
+  Gp dst_ptr = pc.new_gp("dst_ptr");
+  Gp src1_ptr = pc.new_gp("src1_ptr");
+  Gp src2_ptr = pc.new_gp("src2_ptr");
 
-  node->setArg(0, dstPtr);
-  node->setArg(1, src1Ptr);
-  node->setArg(2, src2Ptr);
+  node->set_arg(0, dst_ptr);
+  node->set_arg(1, src1_ptr);
+  node->set_arg(2, src2_ptr);
 
-  Vec src1Vec = pc.newVec(vw, "src1Vec");
-  Vec src2Vec = pc.newVec(vw, "src2Vec");
+  Vec src1_vec = pc.new_vec(vw, "src1_vec");
+  Vec src2_vec = pc.new_vec(vw, "src2_vec");
 
   switch (variation.value) {
     default:
     case 0: {
       // There are some instructions that fill the high part of the register, so just zero the destination to make
       // sure that we can test this function (that the low part is actually zeroed and doesn't contain garbage).
-      Vec dstVec = pc.newVec(vw, "dstVec");
-      pc.v_zero_i(dstVec);
+      Vec dst_vec = pc.new_vec(vw, "dst_vec");
+      pc.v_zero_i(dst_vec);
 
-      pc.v_loaduvec(src1Vec, mem_ptr(src1Ptr));
-      pc.v_loaduvec(src2Vec, mem_ptr(src2Ptr));
-      pc.emit_3v(op, dstVec, src1Vec, src2Vec);
-      pc.v_storeuvec(mem_ptr(dstPtr), dstVec);
+      pc.v_loaduvec(src1_vec, mem_ptr(src1_ptr));
+      pc.v_loaduvec(src2_vec, mem_ptr(src2_ptr));
+      pc.emit_3v(op, dst_vec, src1_vec, src2_vec);
+      pc.v_storeuvec(mem_ptr(dst_ptr), dst_vec);
 
       break;
     }
 
     case 1: {
-      pc.v_loaduvec(src1Vec, mem_ptr(src1Ptr));
-      pc.v_loaduvec(src2Vec, mem_ptr(src2Ptr));
-      pc.emit_3v(op, src1Vec, src1Vec, src2Vec);
-      pc.v_storeuvec(mem_ptr(dstPtr), src1Vec);
+      pc.v_loaduvec(src1_vec, mem_ptr(src1_ptr));
+      pc.v_loaduvec(src2_vec, mem_ptr(src2_ptr));
+      pc.emit_3v(op, src1_vec, src1_vec, src2_vec);
+      pc.v_storeuvec(mem_ptr(dst_ptr), src1_vec);
 
       break;
     }
 
     case 2: {
-      pc.v_loaduvec(src1Vec, mem_ptr(src1Ptr));
-      pc.v_loaduvec(src2Vec, mem_ptr(src2Ptr));
-      pc.emit_3v(op, src2Vec, src1Vec, src2Vec);
-      pc.v_storeuvec(mem_ptr(dstPtr), src2Vec);
+      pc.v_loaduvec(src1_vec, mem_ptr(src1_ptr));
+      pc.v_loaduvec(src2_vec, mem_ptr(src2_ptr));
+      pc.emit_3v(op, src2_vec, src1_vec, src2_vec);
+      pc.v_storeuvec(mem_ptr(dst_ptr), src2_vec);
 
       break;
     }
 
     case 3: {
-      Vec dstVec = pc.newVec(vw, "dstVec");
-      pc.v_zero_i(dstVec);
+      Vec dst_vec = pc.new_vec(vw, "dst_vec");
+      pc.v_zero_i(dst_vec);
 
-      pc.v_loaduvec(src1Vec, mem_ptr(src1Ptr));
-      pc.emit_3v(op, dstVec, src1Vec, mem_ptr(src2Ptr));
-      pc.v_storeuvec(mem_ptr(dstPtr), dstVec);
+      pc.v_loaduvec(src1_vec, mem_ptr(src1_ptr));
+      pc.emit_3v(op, dst_vec, src1_vec, mem_ptr(src2_ptr));
+      pc.v_storeuvec(mem_ptr(dst_ptr), dst_vec);
 
       break;
     }
 
     case 4: {
-      pc.v_loaduvec(src1Vec, mem_ptr(src1Ptr));
-      pc.emit_3v(op, src1Vec, src1Vec, mem_ptr(src2Ptr));
-      pc.v_storeuvec(mem_ptr(dstPtr), src1Vec);
+      pc.v_loaduvec(src1_vec, mem_ptr(src1_ptr));
+      pc.emit_3v(op, src1_vec, src1_vec, mem_ptr(src2_ptr));
+      pc.v_storeuvec(mem_ptr(dst_ptr), src1_vec);
 
       break;
     }
   }
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestVVVFunc>();
 }
 
@@ -1363,80 +1363,80 @@ static constexpr uint32_t kNumVariationsVVVI = 5;
 
 static TestVVVFunc create_func_vvvi(JitContext& ctx, VecWidth vw, OpcodeVVVI op, uint32_t imm, Variation variation = Variation{0}) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<void, void*, const void*, const void*>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<void, void*, const void*, const void*>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(vw);
-  pc.initFunction(node);
+  pc.init_vec_width(vw);
+  pc.init_function(node);
 
-  Gp dstPtr = pc.newGpPtr("dstPtr");
-  Gp src1Ptr = pc.newGpPtr("src1Ptr");
-  Gp src2Ptr = pc.newGpPtr("src2Ptr");
+  Gp dst_ptr = pc.new_gp("dst_ptr");
+  Gp src1_ptr = pc.new_gp("src1_ptr");
+  Gp src2_ptr = pc.new_gp("src2_ptr");
 
-  node->setArg(0, dstPtr);
-  node->setArg(1, src1Ptr);
-  node->setArg(2, src2Ptr);
+  node->set_arg(0, dst_ptr);
+  node->set_arg(1, src1_ptr);
+  node->set_arg(2, src2_ptr);
 
-  Vec src1Vec = pc.newVec(vw, "src1Vec");
-  Vec src2Vec = pc.newVec(vw, "src2Vec");
+  Vec src1_vec = pc.new_vec(vw, "src1_vec");
+  Vec src2_vec = pc.new_vec(vw, "src2_vec");
 
   switch (variation.value) {
     default:
     case 0: {
       // There are some instructions that fill the high part of the register, so just zero the destination to make
       // sure that we can test this function (that the low part is actually zeroed and doesn't contain garbage).
-      Vec dstVec = pc.newVec(vw, "dstVec");
-      pc.v_zero_i(dstVec);
+      Vec dst_vec = pc.new_vec(vw, "dst_vec");
+      pc.v_zero_i(dst_vec);
 
-      pc.v_loaduvec(src1Vec, mem_ptr(src1Ptr));
-      pc.v_loaduvec(src2Vec, mem_ptr(src2Ptr));
-      pc.emit_3vi(op, dstVec, src1Vec, src2Vec, imm);
-      pc.v_storeuvec(mem_ptr(dstPtr), dstVec);
+      pc.v_loaduvec(src1_vec, mem_ptr(src1_ptr));
+      pc.v_loaduvec(src2_vec, mem_ptr(src2_ptr));
+      pc.emit_3vi(op, dst_vec, src1_vec, src2_vec, imm);
+      pc.v_storeuvec(mem_ptr(dst_ptr), dst_vec);
 
       break;
     }
 
     case 1: {
-      pc.v_loaduvec(src1Vec, mem_ptr(src1Ptr));
-      pc.v_loaduvec(src2Vec, mem_ptr(src2Ptr));
-      pc.emit_3vi(op, src1Vec, src1Vec, src2Vec, imm);
-      pc.v_storeuvec(mem_ptr(dstPtr), src1Vec);
+      pc.v_loaduvec(src1_vec, mem_ptr(src1_ptr));
+      pc.v_loaduvec(src2_vec, mem_ptr(src2_ptr));
+      pc.emit_3vi(op, src1_vec, src1_vec, src2_vec, imm);
+      pc.v_storeuvec(mem_ptr(dst_ptr), src1_vec);
 
       break;
     }
 
     case 2: {
-      pc.v_loaduvec(src1Vec, mem_ptr(src1Ptr));
-      pc.v_loaduvec(src2Vec, mem_ptr(src2Ptr));
-      pc.emit_3vi(op, src2Vec, src1Vec, src2Vec, imm);
-      pc.v_storeuvec(mem_ptr(dstPtr), src2Vec);
+      pc.v_loaduvec(src1_vec, mem_ptr(src1_ptr));
+      pc.v_loaduvec(src2_vec, mem_ptr(src2_ptr));
+      pc.emit_3vi(op, src2_vec, src1_vec, src2_vec, imm);
+      pc.v_storeuvec(mem_ptr(dst_ptr), src2_vec);
 
       break;
     }
 
     case 3: {
-      Vec dstVec = pc.newVec(vw, "dstVec");
-      pc.v_zero_i(dstVec);
+      Vec dst_vec = pc.new_vec(vw, "dst_vec");
+      pc.v_zero_i(dst_vec);
 
-      pc.v_loaduvec(src1Vec, mem_ptr(src1Ptr));
-      pc.emit_3vi(op, dstVec, src1Vec, mem_ptr(src2Ptr), imm);
-      pc.v_storeuvec(mem_ptr(dstPtr), dstVec);
+      pc.v_loaduvec(src1_vec, mem_ptr(src1_ptr));
+      pc.emit_3vi(op, dst_vec, src1_vec, mem_ptr(src2_ptr), imm);
+      pc.v_storeuvec(mem_ptr(dst_ptr), dst_vec);
 
       break;
     }
 
     case 4: {
-      pc.v_loaduvec(src1Vec, mem_ptr(src1Ptr));
-      pc.emit_3vi(op, src1Vec, src1Vec, mem_ptr(src2Ptr), imm);
-      pc.v_storeuvec(mem_ptr(dstPtr), src1Vec);
+      pc.v_loaduvec(src1_vec, mem_ptr(src1_ptr));
+      pc.emit_3vi(op, src1_vec, src1_vec, mem_ptr(src2_ptr), imm);
+      pc.v_storeuvec(mem_ptr(dst_ptr), src1_vec);
 
       break;
     }
   }
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestVVVFunc>();
 }
 
@@ -1449,69 +1449,69 @@ static constexpr uint32_t kNumVariationsVVVV = 4;
 
 static TestVVVVFunc create_func_vvvv(JitContext& ctx, VecWidth vw, OpcodeVVVV op, Variation variation = Variation{0}) noexcept {
   ctx.prepare();
-  PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+  PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-  asmjit::FuncNode* node = ctx.cc.newFunc(asmjit::FuncSignature::build<void, void*, const void*, const void*, const void*>());
+  asmjit::FuncNode* node = ctx.cc.new_func(asmjit::FuncSignature::build<void, void*, const void*, const void*, const void*>());
   EXPECT_NOT_NULL(node);
 
-  pc.initVecWidth(vw);
-  pc.initFunction(node);
+  pc.init_vec_width(vw);
+  pc.init_function(node);
 
-  Gp dstPtr = pc.newGpPtr("dstPtr");
-  Gp src1Ptr = pc.newGpPtr("src1Ptr");
-  Gp src2Ptr = pc.newGpPtr("src2Ptr");
-  Gp src3Ptr = pc.newGpPtr("src3Ptr");
+  Gp dst_ptr = pc.new_gp("dst_ptr");
+  Gp src1_ptr = pc.new_gp("src1_ptr");
+  Gp src2_ptr = pc.new_gp("src2_ptr");
+  Gp src3_ptr = pc.new_gp("src3_ptr");
 
-  node->setArg(0, dstPtr);
-  node->setArg(1, src1Ptr);
-  node->setArg(2, src2Ptr);
-  node->setArg(3, src3Ptr);
+  node->set_arg(0, dst_ptr);
+  node->set_arg(1, src1_ptr);
+  node->set_arg(2, src2_ptr);
+  node->set_arg(3, src3_ptr);
 
-  Vec src1Vec = pc.newVec(vw, "src1Vec");
-  Vec src2Vec = pc.newVec(vw, "src2Vec");
-  Vec src3Vec = pc.newVec(vw, "src3Vec");
+  Vec src1_vec = pc.new_vec(vw, "src1_vec");
+  Vec src2_vec = pc.new_vec(vw, "src2_vec");
+  Vec src3_vec = pc.new_vec(vw, "src3_vec");
 
-  pc.v_loaduvec(src1Vec, mem_ptr(src1Ptr));
-  pc.v_loaduvec(src2Vec, mem_ptr(src2Ptr));
-  pc.v_loaduvec(src3Vec, mem_ptr(src3Ptr));
+  pc.v_loaduvec(src1_vec, mem_ptr(src1_ptr));
+  pc.v_loaduvec(src2_vec, mem_ptr(src2_ptr));
+  pc.v_loaduvec(src3_vec, mem_ptr(src3_ptr));
 
   switch (variation.value) {
     default:
     case 0: {
       // There are some instructions that fill the high part of the register, so just zero the destination to make
       // sure that we can test this function (that the low part is actually zeroed and doesn't contain garbage).
-      Vec dstVec = pc.newVec(vw, "dstVec");
-      pc.v_zero_i(dstVec);
+      Vec dst_vec = pc.new_vec(vw, "dst_vec");
+      pc.v_zero_i(dst_vec);
 
-      pc.emit_4v(op, dstVec, src1Vec, src2Vec, src3Vec);
-      pc.v_storeuvec(mem_ptr(dstPtr), dstVec);
+      pc.emit_4v(op, dst_vec, src1_vec, src2_vec, src3_vec);
+      pc.v_storeuvec(mem_ptr(dst_ptr), dst_vec);
 
       break;
     }
 
     case 1: {
-      pc.emit_4v(op, src1Vec, src1Vec, src2Vec, src3Vec);
-      pc.v_storeuvec(mem_ptr(dstPtr), src1Vec);
+      pc.emit_4v(op, src1_vec, src1_vec, src2_vec, src3_vec);
+      pc.v_storeuvec(mem_ptr(dst_ptr), src1_vec);
 
       break;
     }
 
     case 2: {
-      pc.emit_4v(op, src2Vec, src1Vec, src2Vec, src3Vec);
-      pc.v_storeuvec(mem_ptr(dstPtr), src2Vec);
+      pc.emit_4v(op, src2_vec, src1_vec, src2_vec, src3_vec);
+      pc.v_storeuvec(mem_ptr(dst_ptr), src2_vec);
 
       break;
     }
 
     case 3: {
-      pc.emit_4v(op, src3Vec, src1Vec, src2Vec, src3Vec);
-      pc.v_storeuvec(mem_ptr(dstPtr), src3Vec);
+      pc.emit_4v(op, src3_vec, src1_vec, src2_vec, src3_vec);
+      pc.v_storeuvec(mem_ptr(dst_ptr), src3_vec);
 
       break;
     }
   }
 
-  ctx.cc.endFunc();
+  ctx.cc.end_func();
   return ctx.finish<TestVVVVFunc>();
 }
 // bl::Pipeline::JIT - Tests - SIMD - Vector Overlay
@@ -1587,7 +1587,7 @@ struct alignas(16) VecOverlay {
   BL_INLINE_NODEBUG void set(size_t index, const T& value) noexcept;
 
   template<uint32_t kOtherW>
-  BL_INLINE_NODEBUG void copy16bFrom(const VecOverlay<kOtherW>& other) noexcept {
+  BL_INLINE_NODEBUG void copy16b_from(const VecOverlay<kOtherW>& other) noexcept {
     data_u64[0] = other.data_u64[0];
     data_u64[1] = other.data_u64[1];
   }
@@ -1725,15 +1725,15 @@ static bool float_eq(const T& a, const T& b) noexcept {
 }
 
 template<uint32_t kW>
-static bool vec_eq(const VecOverlay<kW>& a, const VecOverlay<kW>& b, VecElementType elementType) noexcept {
-  if (elementType == VecElementType::kFloat32) {
+static bool vec_eq(const VecOverlay<kW>& a, const VecOverlay<kW>& b, VecElementType element_type) noexcept {
+  if (element_type == VecElementType::kFloat32) {
     size_t count = kW / sizeof(float);
     for (size_t i = 0; i < count; i++)
       if (!float_eq(a.data_f32[i], b.data_f32[i]))
         return false;
     return true;
   }
-  else if (elementType == VecElementType::kFloat64) {
+  else if (element_type == VecElementType::kFloat64) {
     size_t count = kW / sizeof(double);
     for (size_t i = 0; i < count; i++)
       if (!float_eq(a.data_f64[i], b.data_f64[i]))
@@ -1746,21 +1746,21 @@ static bool vec_eq(const VecOverlay<kW>& a, const VecOverlay<kW>& b, VecElementT
 }
 
 template<uint32_t kW>
-static BL_NOINLINE BLString vec_stringify(const VecOverlay<kW>& vec, VecElementType elementType) noexcept {
+static BL_NOINLINE BLString vec_stringify(const VecOverlay<kW>& vec, VecElementType element_type) noexcept {
   BLString s;
   s.append('{');
 
-  switch (elementType) {
-    case VecElementType::kInt8   : { for (uint32_t i = 0; i < kW    ; i++) s.appendFormat("%s%d"  , i == 0 ? "" : ", ", vec.data_i8[i]); break; }
-    case VecElementType::kInt16  : { for (uint32_t i = 0; i < kW / 2; i++) s.appendFormat("%s%d"  , i == 0 ? "" : ", ", vec.data_i16[i]); break; }
-    case VecElementType::kInt32  : { for (uint32_t i = 0; i < kW / 4; i++) s.appendFormat("%s%d"  , i == 0 ? "" : ", ", vec.data_i32[i]); break; }
-    case VecElementType::kInt64  : { for (uint32_t i = 0; i < kW / 8; i++) s.appendFormat("%s%lld", i == 0 ? "" : ", ", (long long)vec.data_i64[i]); break; }
-    case VecElementType::kUInt8  : { for (uint32_t i = 0; i < kW    ; i++) s.appendFormat("%s%u"  , i == 0 ? "" : ", ", vec.data_u8[i]); break; }
-    case VecElementType::kUInt16 : { for (uint32_t i = 0; i < kW / 2; i++) s.appendFormat("%s%u"  , i == 0 ? "" : ", ", vec.data_u16[i]); break; }
-    case VecElementType::kUInt32 : { for (uint32_t i = 0; i < kW / 4; i++) s.appendFormat("%s%u"  , i == 0 ? "" : ", ", vec.data_u32[i]); break; }
-    case VecElementType::kUInt64 : { for (uint32_t i = 0; i < kW / 8; i++) s.appendFormat("%s%llu", i == 0 ? "" : ", ", (unsigned long long)vec.data_u64[i]); break; }
-    case VecElementType::kFloat32: { for (uint32_t i = 0; i < kW / 4; i++) s.appendFormat("%s%.20f"  , i == 0 ? "" : ", ", vec.data_f32[i]); break; }
-    case VecElementType::kFloat64: { for (uint32_t i = 0; i < kW / 8; i++) s.appendFormat("%s%.20f"  , i == 0 ? "" : ", ", vec.data_f64[i]); break; }
+  switch (element_type) {
+    case VecElementType::kInt8   : { for (uint32_t i = 0; i < kW    ; i++) s.append_format("%s%d"  , i == 0 ? "" : ", ", vec.data_i8[i]); break; }
+    case VecElementType::kInt16  : { for (uint32_t i = 0; i < kW / 2; i++) s.append_format("%s%d"  , i == 0 ? "" : ", ", vec.data_i16[i]); break; }
+    case VecElementType::kInt32  : { for (uint32_t i = 0; i < kW / 4; i++) s.append_format("%s%d"  , i == 0 ? "" : ", ", vec.data_i32[i]); break; }
+    case VecElementType::kInt64  : { for (uint32_t i = 0; i < kW / 8; i++) s.append_format("%s%lld", i == 0 ? "" : ", ", (long long)vec.data_i64[i]); break; }
+    case VecElementType::kUInt8  : { for (uint32_t i = 0; i < kW    ; i++) s.append_format("%s%u"  , i == 0 ? "" : ", ", vec.data_u8[i]); break; }
+    case VecElementType::kUInt16 : { for (uint32_t i = 0; i < kW / 2; i++) s.append_format("%s%u"  , i == 0 ? "" : ", ", vec.data_u16[i]); break; }
+    case VecElementType::kUInt32 : { for (uint32_t i = 0; i < kW / 4; i++) s.append_format("%s%u"  , i == 0 ? "" : ", ", vec.data_u32[i]); break; }
+    case VecElementType::kUInt64 : { for (uint32_t i = 0; i < kW / 8; i++) s.append_format("%s%llu", i == 0 ? "" : ", ", (unsigned long long)vec.data_u64[i]); break; }
+    case VecElementType::kFloat32: { for (uint32_t i = 0; i < kW / 4; i++) s.append_format("%s%.20f"  , i == 0 ? "" : ", ", vec.data_f32[i]); break; }
+    case VecElementType::kFloat64: { for (uint32_t i = 0; i < kW / 8; i++) s.append_format("%s%.20f"  , i == 0 ? "" : ", ", vec.data_f64[i]); break; }
 
     default:
       BL_NOT_REACHED();
@@ -2630,7 +2630,7 @@ public:
     : rng(seed),
       step(0) {}
 
-  BL_NOINLINE uint64_t nextUInt64() noexcept {
+  BL_NOINLINE uint64_t next_uint64() noexcept {
     if (++step >= 256)
       step = 0;
 
@@ -2662,11 +2662,11 @@ public:
       case 143: return 0x7FFFu;
       case 144: return 0u;
       case 145: return 0x7FFFu;
-      default : return rng.nextUInt64();
+      default : return rng.next_uint64();
     }
   }
 
-  BL_NOINLINE float nextFloat32() noexcept {
+  BL_NOINLINE float next_float32() noexcept {
     if (++step >= 256)
       step = 0;
 
@@ -2699,12 +2699,12 @@ public:
       case 102:
       case 104:
       case 106:
-      case 108: return float(rng.nextDouble());
+      case 108: return float(rng.next_double());
       case 110:
       case 112:
       case 114:
       case 116:
-      case 118: return -float(rng.nextDouble());
+      case 118: return -float(rng.next_double());
       case 122: return 10.3f;
       case 123: return 20.3f;
       case 124: return -100.3f;
@@ -2721,13 +2721,13 @@ public:
       case 245: return 2.5f;
 
       default: {
-        float sign = rng.nextUInt32() < 0x7FFFFFF ? 1.0f : -1.0f;
-        return float(rng.nextDouble() * double(rng.nextUInt32() & 0xFFFFFFu)) * sign;
+        float sign = rng.next_uint32() < 0x7FFFFFF ? 1.0f : -1.0f;
+        return float(rng.next_double() * double(rng.next_uint32() & 0xFFFFFFu)) * sign;
       }
     }
   }
 
-  BL_NOINLINE double nextFloat64() noexcept {
+  BL_NOINLINE double next_float64() noexcept {
     if (++step >= 256)
       step = 0;
 
@@ -2760,12 +2760,12 @@ public:
       case 102:
       case 104:
       case 106:
-      case 108: return rng.nextDouble();
+      case 108: return rng.next_double();
       case 110:
       case 112:
       case 114:
       case 116:
-      case 118: return -rng.nextDouble();
+      case 118: return -rng.next_double();
       case 122: return 10.3;
       case 123: return 20.3;
       case 124: return -100.3;
@@ -2782,8 +2782,8 @@ public:
       case 245: return 2.5;
 
       default: {
-        double sign = rng.nextUInt32() < 0x7FFFFFF ? 1.0 : -1.0;
-        return double(rng.nextDouble() * double(rng.nextUInt32() & 0x3FFFFFFFu)) * sign;
+        double sign = rng.next_uint32() < 0x7FFFFFF ? 1.0 : -1.0;
+        return double(rng.next_double() * double(rng.next_uint32() & 0x3FFFFFFFu)) * sign;
       }
     }
   }
@@ -2794,7 +2794,7 @@ public:
 // Note that a constraint doesn't have to be always range based, it could be anything.
 struct ConstraintNone {
   template<uint32_t kW>
-  static BL_INLINE_NODEBUG void apply(VecOverlay<kW>& v) noexcept { blUnused(v); }
+  static BL_INLINE_NODEBUG void apply(VecOverlay<kW>& v) noexcept { bl_unused(v); }
 };
 
 template<typename ElementT, typename Derived>
@@ -2809,17 +2809,17 @@ struct ConstraintBase {
 
 template<uint8_t kMin, uint8_t kMax>
 struct ConstraintRangeU8 : public ConstraintBase<uint16_t, ConstraintRangeU8<kMin, kMax>> {
-  static BL_INLINE_NODEBUG uint8_t apply_one(uint8_t x) noexcept { return blClamp(x, kMin, kMax); }
+  static BL_INLINE_NODEBUG uint8_t apply_one(uint8_t x) noexcept { return bl_clamp(x, kMin, kMax); }
 };
 
 template<uint16_t kMin, uint16_t kMax>
 struct ConstraintRangeU16 : public ConstraintBase<uint16_t, ConstraintRangeU16<kMin, kMax>> {
-  static BL_INLINE_NODEBUG uint16_t apply_one(uint16_t x) noexcept { return blClamp(x, kMin, kMax); }
+  static BL_INLINE_NODEBUG uint16_t apply_one(uint16_t x) noexcept { return bl_clamp(x, kMin, kMax); }
 };
 
 template<uint32_t kMin, uint32_t kMax>
 struct ConstraintRangeU32 : public ConstraintBase<uint32_t, ConstraintRangeU32<kMin, kMax>> {
-  static BL_INLINE_NODEBUG uint32_t apply_one(uint32_t x) noexcept { return blClamp(x, kMin, kMax); }
+  static BL_INLINE_NODEBUG uint32_t apply_one(uint32_t x) noexcept { return bl_clamp(x, kMin, kMax); }
 };
 
 // bl::Pipeline::JIT - Tests - Generic Operations
@@ -2910,7 +2910,7 @@ template<ScalarOpBehavior kB, typename T, typename Derived> struct op_scalar_vv 
   static BL_INLINE VecOverlay<kW> apply(const VecOverlay<kW>& a) noexcept {
     VecOverlay<kW> out {};
     if (kB == ScalarOpBehavior::kPreservingVec128)
-      out.copy16bFrom(a);
+      out.copy16b_from(a);
     out.set(0, Derived::apply_one(a.template get<T>(0)));
     return out;
   }
@@ -2921,7 +2921,7 @@ template<ScalarOpBehavior kB, typename T, typename Derived> struct op_scalar_vvi
   static BL_INLINE VecOverlay<kW> apply(const VecOverlay<kW>& a, uint32_t imm) noexcept {
     VecOverlay<kW> out {};
     if (kB == ScalarOpBehavior::kPreservingVec128)
-      out.copy16bFrom(a);
+      out.copy16b_from(a);
     out.set(0, Derived::apply_one(a.template get<T>(0), imm));
     return out;
   }
@@ -2932,7 +2932,7 @@ template<ScalarOpBehavior kB, typename T, typename Derived> struct op_scalar_vvv
   static BL_INLINE VecOverlay<kW> apply(const VecOverlay<kW>& a, const VecOverlay<kW>& b) noexcept {
     VecOverlay<kW> out {};
     if (kB == ScalarOpBehavior::kPreservingVec128)
-      out.copy16bFrom(a);
+      out.copy16b_from(a);
     out.set(0, Derived::apply_one(a.template get<T>(0), b.template get<T>(0)));
     return out;
   }
@@ -2943,7 +2943,7 @@ template<ScalarOpBehavior kB, typename T, typename Derived> struct op_scalar_vvv
   static BL_INLINE VecOverlay<kW> apply(const VecOverlay<kW>& a, const VecOverlay<kW>& b, const VecOverlay<kW>& c) noexcept {
     VecOverlay<kW> out {};
     if (kB == ScalarOpBehavior::kPreservingVec128)
-      out.copy16bFrom(a);
+      out.copy16b_from(a);
     out.set(0, Derived::apply_one(a.template get<T>(0), b.template get<T>(0), c.template get<T>(0)));
     return out;
   }
@@ -3253,7 +3253,7 @@ struct vec_op_cvt_u32_hi_to_u64 {
 };
 
 template<typename T> struct vec_op_fabs : public op_each_vv<T, vec_op_fabs<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a) noexcept { return blAbs(a); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a) noexcept { return bl_abs(a); }
 };
 
 template<typename T> struct vec_op_trunc : public op_each_vv<T, vec_op_trunc<T>> {
@@ -3301,8 +3301,8 @@ struct vec_op_cvt_f32_to_f64_impl {
     VecOverlay<kW> out{};
     uint32_t adj = kHi ? kW / 8 : 0u;
     for (uint32_t off = 0; off < kW; off += 16) {
-      out.data_f64[off / 8 + 0] = a.data_f32[off / 8 + adj + 0];
-      out.data_f64[off / 8 + 1] = a.data_f32[off / 8 + adj + 1];
+      out.data_f64[off / 8 + 0] = double(a.data_f32[off / 8 + adj + 0]);
+      out.data_f64[off / 8 + 1] = double(a.data_f32[off / 8 + adj + 1]);
     }
     return out;
   }
@@ -3347,7 +3347,7 @@ struct vec_op_cvt_i32_hi_to_f64 : public vec_op_cvt_i32_to_f64_impl<true> {};
 
 struct vec_op_cvt_trunc_f32_to_i32 {
   static BL_INLINE int32_t cvt(float val) noexcept {
-    if (!Math::isFinite(val))
+    if (!Math::is_finite(val))
       return cvt_non_finite_f32_to_i32(val);
 
     if (val <= float(INT32_MIN))
@@ -3374,7 +3374,7 @@ struct vec_op_cvt_trunc_f32_to_i32 {
 template<bool kHi>
 struct vec_op_cvt_trunc_f64_to_i32_impl {
   static BL_INLINE int32_t cvt(double val) noexcept {
-    if (!Math::isFinite(val))
+    if (!Math::is_finite(val))
       return cvt_non_finite_f64_to_i32(val);
 
     if (val <= double(INT32_MIN))
@@ -3402,7 +3402,7 @@ struct vec_op_cvt_trunc_f64_to_i32_hi : vec_op_cvt_trunc_f64_to_i32_impl<true> {
 
 struct vec_op_cvt_round_f32_to_i32 {
   static BL_INLINE int32_t cvt(float val) noexcept {
-    if (!Math::isFinite(val))
+    if (!Math::is_finite(val))
       return cvt_non_finite_f32_to_i32(val);
 
     if (val <= float(INT32_MIN))
@@ -3410,7 +3410,7 @@ struct vec_op_cvt_round_f32_to_i32 {
     else if (val >= float(INT32_MAX))
       return INT32_MAX;
     else
-      return Math::nearbyToInt(val);
+      return Math::nearby_to_int(val);
   }
 
   template<uint32_t kW>
@@ -3429,7 +3429,7 @@ struct vec_op_cvt_round_f32_to_i32 {
 template<bool kHi>
 struct vec_op_cvt_round_f64_to_i32_impl {
   static BL_INLINE int32_t cvt(double val) noexcept {
-    if (!Math::isFinite(val))
+    if (!Math::is_finite(val))
       return cvt_non_finite_f64_to_i32(val);
 
     if (val <= double(INT32_MIN))
@@ -3437,7 +3437,7 @@ struct vec_op_cvt_round_f64_to_i32_impl {
     else if (val >= double(INT32_MAX))
       return INT32_MAX;
     else
-      return Math::nearbyToInt(val);
+      return Math::nearby_to_int(val);
   }
 
   template<uint32_t kW>
@@ -3668,15 +3668,15 @@ template<typename T> struct vec_op_add : public op_each_vvv<T, vec_op_add<T>> {
 template<typename T> struct vec_op_adds : public op_each_vvv<T, vec_op_adds<T>> {
   static BL_INLINE T apply_one(const T& a, const T& b) noexcept {
     bl::OverflowFlag of{};
-    T result = IntOps::addOverflow(a, b, &of);
+    T result = IntOps::add_overflow(a, b, &of);
 
     if (!of)
       return result;
 
     if (std::is_unsigned_v<T> || b > 0)
-      return Traits::maxValue<T>();
+      return Traits::max_value<T>();
     else
-      return Traits::minValue<T>();
+      return Traits::min_value<T>();
   }
 };
 
@@ -3687,15 +3687,15 @@ template<typename T> struct vec_op_sub : public op_each_vvv<T, vec_op_sub<T>> {
 template<typename T> struct vec_op_subs : public op_each_vvv<T, vec_op_subs<T>> {
   static BL_INLINE T apply_one(const T& a, const T& b) noexcept {
     bl::OverflowFlag of{};
-    T result = IntOps::subOverflow(a, b, &of);
+    T result = IntOps::sub_overflow(a, b, &of);
 
     if (!of)
       return result;
 
     if (std::is_unsigned_v<T> || b > 0)
-      return Traits::minValue<T>();
+      return Traits::min_value<T>();
     else
-      return Traits::maxValue<T>();
+      return Traits::max_value<T>();
   }
 };
 
@@ -3748,27 +3748,27 @@ template<typename T> struct vec_op_max : public op_each_vvv<T, vec_op_max<T>> {
 };
 
 template<typename T> struct vec_op_cmp_eq : public op_each_vvv<T, vec_op_cmp_eq<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a == b ? IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a == b ? IntOps::all_ones<T>() : T(0); }
 };
 
 template<typename T> struct vec_op_cmp_ne : public op_each_vvv<T, vec_op_cmp_ne<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a != b ? IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a != b ? IntOps::all_ones<T>() : T(0); }
 };
 
 template<typename T> struct vec_op_cmp_gt : public op_each_vvv<T, vec_op_cmp_gt<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >  b ? IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >  b ? IntOps::all_ones<T>() : T(0); }
 };
 
 template<typename T> struct vec_op_cmp_ge : public op_each_vvv<T, vec_op_cmp_ge<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >= b ? IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >= b ? IntOps::all_ones<T>() : T(0); }
 };
 
 template<typename T> struct vec_op_cmp_lt : public op_each_vvv<T, vec_op_cmp_lt<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <  b ? IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <  b ? IntOps::all_ones<T>() : T(0); }
 };
 
 template<typename T> struct vec_op_cmp_le : public op_each_vvv<T, vec_op_cmp_le<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <= b ? IntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <= b ? IntOps::all_ones<T>() : T(0); }
 };
 
 template<ScalarOpBehavior kB, typename T> struct scalar_op_fadd : public op_scalar_vvv<kB, T, scalar_op_fadd<kB, T>> {
@@ -3796,11 +3796,11 @@ template<ScalarOpBehavior kB, typename T> struct scalar_op_fmax_ternary : public
 };
 
 template<ScalarOpBehavior kB, typename T> struct scalar_op_fmin_finite : public op_scalar_vvv<kB, T, scalar_op_fmin_finite<kB, T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return Math::isNaN(a) ? b : Math::isNaN(b) ? a : blMin(a, b); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return Math::isNaN(a) ? b : Math::isNaN(b) ? a : bl_min(a, b); }
 };
 
 template<ScalarOpBehavior kB, typename T> struct scalar_op_fmax_finite : public op_scalar_vvv<kB, T, scalar_op_fmax_finite<kB, T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return Math::isNaN(a) ? b : Math::isNaN(b) ? a : blMax(a, b); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return Math::isNaN(a) ? b : Math::isNaN(b) ? a : bl_max(a, b); }
 };
 
 template<ScalarOpBehavior kB, typename T> struct scalar_op_fmadd_nofma : public op_scalar_vvvv<kB, T, scalar_op_fmadd_nofma<kB, T>> {
@@ -3860,11 +3860,11 @@ template<typename T> struct vec_op_fmax_ternary : public op_each_vvv<T, vec_op_f
 };
 
 template<typename T> struct vec_op_fmin_finite : public op_each_vvv<T, vec_op_fmin_finite<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return Math::isNaN(a) ? b : Math::isNaN(b) ? a : blMin(a, b); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return Math::isNaN(a) ? b : Math::isNaN(b) ? a : bl_min(a, b); }
 };
 
 template<typename T> struct vec_op_fmax_finite : public op_each_vvv<T, vec_op_fmax_finite<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return Math::isNaN(a) ? b : Math::isNaN(b) ? a : blMax(a, b); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return Math::isNaN(a) ? b : Math::isNaN(b) ? a : bl_max(a, b); }
 };
 
 template<typename T> struct vec_op_fmadd_nofma : public op_each_vvvv<T, vec_op_fmadd_nofma<T>> {
@@ -4275,24 +4275,24 @@ struct vec_op_div65535_u32 : public op_each_vv<uint32_t, vec_op_div65535_u32> {
 template<uint32_t kW>
 static void fill_random_bytes(DataGenInt& dg, VecOverlay<kW>& dst) noexcept {
   for (uint32_t i = 0; i < kW / 8u; i++)
-    dst.data_u64[i] = dg.nextUInt64();
+    dst.data_u64[i] = dg.next_uint64();
 }
 
 template<uint32_t kW>
 static void fill_random_f32(DataGenInt& dg, VecOverlay<kW>& dst) noexcept {
   for (uint32_t i = 0; i < kW / 4u; i++)
-    dst.data_f32[i] = dg.nextFloat32();
+    dst.data_f32[i] = dg.next_float32();
 }
 
 template<uint32_t kW>
 static void fill_random_f64(DataGenInt& dg, VecOverlay<kW>& dst) noexcept {
   for (uint32_t i = 0; i < kW / 8u; i++)
-    dst.data_f64[i] = dg.nextFloat64();
+    dst.data_f64[i] = dg.next_float64();
 }
 
 template<uint32_t kW>
-static void fill_random_data(DataGenInt& dg, VecOverlay<kW>& dst, VecElementType elementType) noexcept {
-  switch (elementType) {
+static void fill_random_data(DataGenInt& dg, VecOverlay<kW>& dst, VecElementType element_type) noexcept {
+  switch (element_type) {
     case VecElementType::kFloat32:
       fill_random_f32(dg, dst);
       break;
@@ -4312,10 +4312,10 @@ static void fill_random_data(DataGenInt& dg, VecOverlay<kW>& dst, VecElementType
 
 template<uint32_t kW>
 static BL_NOINLINE void test_vecop_vv_failed(OpcodeVV op, Variation variation, const VecOverlay<kW>& arg0, const VecOverlay<kW>& observed, const VecOverlay<kW>& expected, const char* assembly) noexcept {
-  VecOpInfo opInfo = vec_op_info_vv(op);
-  BLString arg0_str = vec_stringify(arg0, opInfo.arg(0));
-  BLString observed_str = vec_stringify(observed, opInfo.ret());
-  BLString expected_str = vec_stringify(expected, opInfo.ret());
+  VecOpInfo op_info = vec_op_info_vv(op);
+  BLString arg0_str = vec_stringify(arg0, op_info.arg(0));
+  BLString observed_str = vec_stringify(observed, op_info.ret());
+  BLString expected_str = vec_stringify(expected, op_info.ret());
 
   EXPECT(false)
     .message("Operation '%s' (variation %u) failed:\n"
@@ -4333,10 +4333,10 @@ static BL_NOINLINE void test_vecop_vv_failed(OpcodeVV op, Variation variation, c
 
 template<uint32_t kW>
 static BL_NOINLINE void test_vecop_vvi_failed(OpcodeVVI op, Variation variation, const VecOverlay<kW>& arg0, const VecOverlay<kW>& observed, const VecOverlay<kW>& expected, uint32_t imm, const char* assembly) noexcept {
-  VecOpInfo opInfo = vec_op_info_vvi(op);
-  BLString arg0_str = vec_stringify(arg0, opInfo.arg(0));
-  BLString observed_str = vec_stringify(observed, opInfo.ret());
-  BLString expected_str = vec_stringify(expected, opInfo.ret());
+  VecOpInfo op_info = vec_op_info_vvi(op);
+  BLString arg0_str = vec_stringify(arg0, op_info.arg(0));
+  BLString observed_str = vec_stringify(observed, op_info.ret());
+  BLString expected_str = vec_stringify(expected, op_info.ret());
 
   EXPECT(false)
     .message("Operation '%s' (variation %u) failed:\n"
@@ -4356,11 +4356,11 @@ static BL_NOINLINE void test_vecop_vvi_failed(OpcodeVVI op, Variation variation,
 
 template<uint32_t kW>
 static BL_NOINLINE void test_vecop_vvv_failed(OpcodeVVV op, Variation variation, const VecOverlay<kW>& arg0, const VecOverlay<kW>& arg1, const VecOverlay<kW>& observed, const VecOverlay<kW>& expected, const char* assembly) noexcept {
-  VecOpInfo opInfo = vec_op_info_vvv(op);
-  BLString arg0_str = vec_stringify(arg0, opInfo.arg(0));
-  BLString arg1_str = vec_stringify(arg1, opInfo.arg(1));
-  BLString observed_str = vec_stringify(observed, opInfo.ret());
-  BLString expected_str = vec_stringify(expected, opInfo.ret());
+  VecOpInfo op_info = vec_op_info_vvv(op);
+  BLString arg0_str = vec_stringify(arg0, op_info.arg(0));
+  BLString arg1_str = vec_stringify(arg1, op_info.arg(1));
+  BLString observed_str = vec_stringify(observed, op_info.ret());
+  BLString expected_str = vec_stringify(expected, op_info.ret());
 
   EXPECT(false)
     .message("Operation '%s' (variation %u) failed:\n"
@@ -4380,11 +4380,11 @@ static BL_NOINLINE void test_vecop_vvv_failed(OpcodeVVV op, Variation variation,
 
 template<uint32_t kW>
 static BL_NOINLINE void test_vecop_vvvi_failed(OpcodeVVVI op, Variation variation, const VecOverlay<kW>& arg0, const VecOverlay<kW>& arg1, const VecOverlay<kW>& observed, const VecOverlay<kW>& expected, uint32_t imm, const char* assembly) noexcept {
-  VecOpInfo opInfo = vec_op_info_vvvi(op);
-  BLString arg0_str = vec_stringify(arg0, opInfo.arg(0));
-  BLString arg1_str = vec_stringify(arg1, opInfo.arg(1));
-  BLString observed_str = vec_stringify(observed, opInfo.ret());
-  BLString expected_str = vec_stringify(expected, opInfo.ret());
+  VecOpInfo op_info = vec_op_info_vvvi(op);
+  BLString arg0_str = vec_stringify(arg0, op_info.arg(0));
+  BLString arg1_str = vec_stringify(arg1, op_info.arg(1));
+  BLString observed_str = vec_stringify(observed, op_info.ret());
+  BLString expected_str = vec_stringify(expected, op_info.ret());
 
   EXPECT(false)
     .message("Operation '%s' (variation %u) failed:\n"
@@ -4406,12 +4406,12 @@ static BL_NOINLINE void test_vecop_vvvi_failed(OpcodeVVVI op, Variation variatio
 
 template<uint32_t kW>
 static BL_NOINLINE void test_vecop_vvvv_failed(OpcodeVVVV op, Variation variation, const VecOverlay<kW>& arg0, const VecOverlay<kW>& arg1, const VecOverlay<kW>& arg2, const VecOverlay<kW>& observed, const VecOverlay<kW>& expected, const char* assembly) noexcept {
-  VecOpInfo opInfo = vec_op_info_vvvv(op);
-  BLString arg0_str = vec_stringify(arg0, opInfo.arg(0));
-  BLString arg1_str = vec_stringify(arg1, opInfo.arg(1));
-  BLString arg2_str = vec_stringify(arg2, opInfo.arg(2));
-  BLString observed_str = vec_stringify(observed, opInfo.ret());
-  BLString expected_str = vec_stringify(expected, opInfo.ret());
+  VecOpInfo op_info = vec_op_info_vvvv(op);
+  BLString arg0_str = vec_stringify(arg0, op_info.arg(0));
+  BLString arg1_str = vec_stringify(arg1, op_info.arg(1));
+  BLString arg2_str = vec_stringify(arg2, op_info.arg(2));
+  BLString observed_str = vec_stringify(observed, op_info.ret());
+  BLString expected_str = vec_stringify(expected, op_info.ret());
 
   EXPECT(false)
     .message("Operation '%s' (variation %u) failed\n"
@@ -4436,29 +4436,29 @@ static BL_NOINLINE void test_vecop_vvvv_failed(OpcodeVVVV op, Variation variatio
 
 template<VecWidth kVecWidth, OpcodeVV kOp, typename GenericOp, typename Constraint>
 static BL_NOINLINE void test_vecop_vv_constraint(JitContext& ctx, Variation variation = Variation{0}) noexcept {
-  constexpr uint32_t kW = byteWidthFromVecWidth(kVecWidth);
+  constexpr uint32_t kW = byte_width_from_vec_width(kVecWidth);
 
-  TestVVFunc compiledApply = create_func_vv(ctx, kVecWidth, kOp, variation);
+  TestVVFunc compiled_apply = create_func_vv(ctx, kVecWidth, kOp, variation);
   DataGenInt dg(kRandomSeed);
 
-  VecOpInfo opInfo = vec_op_info_vv(kOp);
+  VecOpInfo op_info = vec_op_info_vv(kOp);
 
   for (uint32_t iter = 0; iter < kTestIterCount; iter++) {
     VecOverlay<kW> a {};
     VecOverlay<kW> observed {};
     VecOverlay<kW> expected {};
 
-    fill_random_data(dg, a, opInfo.arg(0));
+    fill_random_data(dg, a, op_info.arg(0));
     Constraint::apply(a);
 
-    compiledApply(&observed, &a);
+    compiled_apply(&observed, &a);
     expected = GenericOp::apply(a);
 
-    if (!vec_eq(observed, expected, opInfo.ret()))
+    if (!vec_eq(observed, expected, op_info.ret()))
       test_vecop_vv_failed(kOp, variation, a, observed, expected, ctx.logger.data());
   }
 
-  ctx.rt.release(compiledApply);
+  ctx.rt.release(compiled_apply);
 }
 
 template<VecWidth kVecWidth, OpcodeVV kOp, typename GenericOp>
@@ -4471,29 +4471,29 @@ static void test_vecop_vv(JitContext& ctx, Variation variation = Variation{0}) n
 
 template<VecWidth kVecWidth, OpcodeVVI kOp, typename GenericOp, typename Constraint>
 static BL_NOINLINE void test_vecop_vvi_constraint(JitContext& ctx, uint32_t imm, Variation variation = Variation{0}) noexcept {
-  constexpr uint32_t kW = byteWidthFromVecWidth(kVecWidth);
+  constexpr uint32_t kW = byte_width_from_vec_width(kVecWidth);
 
-  TestVVFunc compiledApply = create_func_vvi(ctx, kVecWidth, kOp, imm, variation);
+  TestVVFunc compiled_apply = create_func_vvi(ctx, kVecWidth, kOp, imm, variation);
   DataGenInt dg(kRandomSeed);
 
-  VecOpInfo opInfo = vec_op_info_vvi(kOp);
+  VecOpInfo op_info = vec_op_info_vvi(kOp);
 
   for (uint32_t iter = 0; iter < kTestIterCount; iter++) {
     VecOverlay<kW> a {};
     VecOverlay<kW> observed {};
     VecOverlay<kW> expected {};
 
-    fill_random_data(dg, a, opInfo.arg(0));
+    fill_random_data(dg, a, op_info.arg(0));
     Constraint::apply(a);
 
-    compiledApply(&observed, &a);
+    compiled_apply(&observed, &a);
     expected = GenericOp::apply(a, imm);
 
-    if (!vec_eq(observed, expected, opInfo.ret()))
+    if (!vec_eq(observed, expected, op_info.ret()))
       test_vecop_vvi_failed(kOp, variation, a, observed, expected, imm, ctx.logger.data());
   }
 
-  ctx.rt.release(compiledApply);
+  ctx.rt.release(compiled_apply);
 }
 
 template<VecWidth kVecWidth, OpcodeVVI kOp, typename GenericOp>
@@ -4506,12 +4506,12 @@ static void test_vecop_vvi(JitContext& ctx, uint32_t imm, Variation variation = 
 
 template<VecWidth kVecWidth, OpcodeVVV kOp, typename GenericOp, typename Constraint>
 static BL_NOINLINE void test_vecop_vvv_constraint(JitContext& ctx, Variation variation = Variation{0}) noexcept {
-  constexpr uint32_t kW = byteWidthFromVecWidth(kVecWidth);
+  constexpr uint32_t kW = byte_width_from_vec_width(kVecWidth);
 
-  TestVVVFunc compiledApply = create_func_vvv(ctx, kVecWidth, kOp, variation);
+  TestVVVFunc compiled_apply = create_func_vvv(ctx, kVecWidth, kOp, variation);
   DataGenInt dg(kRandomSeed);
 
-  VecOpInfo opInfo = vec_op_info_vvv(kOp);
+  VecOpInfo op_info = vec_op_info_vvv(kOp);
 
   for (uint32_t iter = 0; iter < kTestIterCount; iter++) {
     VecOverlay<kW> a;
@@ -4519,19 +4519,19 @@ static BL_NOINLINE void test_vecop_vvv_constraint(JitContext& ctx, Variation var
     VecOverlay<kW> observed;
     VecOverlay<kW> expected;
 
-    fill_random_data(dg, a, opInfo.arg(0));
-    fill_random_data(dg, b, opInfo.arg(1));
+    fill_random_data(dg, a, op_info.arg(0));
+    fill_random_data(dg, b, op_info.arg(1));
     Constraint::apply(a);
     Constraint::apply(b);
 
-    compiledApply(&observed, &a, &b);
+    compiled_apply(&observed, &a, &b);
     expected = GenericOp::apply(a, b);
 
-    if (!vec_eq(observed, expected, opInfo.ret()))
+    if (!vec_eq(observed, expected, op_info.ret()))
       test_vecop_vvv_failed(kOp, variation, a, b, observed, expected, ctx.logger.data());
   }
 
-  ctx.rt.release(compiledApply);
+  ctx.rt.release(compiled_apply);
 }
 
 template<VecWidth kVecWidth, OpcodeVVV kOp, typename GenericOp>
@@ -4544,12 +4544,12 @@ static void test_vecop_vvv(JitContext& ctx, Variation variation = Variation{0}) 
 
 template<VecWidth kVecWidth, OpcodeVVVI kOp, typename GenericOp, typename Constraint>
 static BL_NOINLINE void test_vecop_vvvi_constraint(JitContext& ctx, uint32_t imm, Variation variation = Variation{0}) noexcept {
-  constexpr uint32_t kW = byteWidthFromVecWidth(kVecWidth);
+  constexpr uint32_t kW = byte_width_from_vec_width(kVecWidth);
 
-  TestVVVFunc compiledApply = create_func_vvvi(ctx, kVecWidth, kOp, imm, variation);
+  TestVVVFunc compiled_apply = create_func_vvvi(ctx, kVecWidth, kOp, imm, variation);
   DataGenInt dg(kRandomSeed);
 
-  VecOpInfo opInfo = vec_op_info_vvvi(kOp);
+  VecOpInfo op_info = vec_op_info_vvvi(kOp);
 
   for (uint32_t iter = 0; iter < kTestIterCount; iter++) {
     VecOverlay<kW> a;
@@ -4557,19 +4557,19 @@ static BL_NOINLINE void test_vecop_vvvi_constraint(JitContext& ctx, uint32_t imm
     VecOverlay<kW> observed;
     VecOverlay<kW> expected;
 
-    fill_random_data(dg, a, opInfo.arg(0));
-    fill_random_data(dg, b, opInfo.arg(1));
+    fill_random_data(dg, a, op_info.arg(0));
+    fill_random_data(dg, b, op_info.arg(1));
     Constraint::apply(a);
     Constraint::apply(b);
 
-    compiledApply(&observed, &a, &b);
+    compiled_apply(&observed, &a, &b);
     expected = GenericOp::apply(a, b, imm);
 
-    if (!vec_eq(observed, expected, opInfo.ret()))
+    if (!vec_eq(observed, expected, op_info.ret()))
       test_vecop_vvvi_failed(kOp, variation, a, b, observed, expected, imm, ctx.logger.data());
   }
 
-  ctx.rt.release(compiledApply);
+  ctx.rt.release(compiled_apply);
 }
 
 template<VecWidth kVecWidth, OpcodeVVVI kOp, typename GenericOp>
@@ -4582,12 +4582,12 @@ static void test_vecop_vvvi(JitContext& ctx, uint32_t imm, Variation variation =
 
 template<VecWidth kVecWidth, OpcodeVVVV kOp, typename GenericOp, typename Constraint>
 static BL_NOINLINE void test_vecop_vvvv_constraint(JitContext& ctx, Variation variation = Variation{0}) noexcept {
-  constexpr uint32_t kW = byteWidthFromVecWidth(kVecWidth);
+  constexpr uint32_t kW = byte_width_from_vec_width(kVecWidth);
 
-  TestVVVVFunc compiledApply = create_func_vvvv(ctx, kVecWidth, kOp, variation);
+  TestVVVVFunc compiled_apply = create_func_vvvv(ctx, kVecWidth, kOp, variation);
   DataGenInt dg(kRandomSeed);
 
-  VecOpInfo opInfo = vec_op_info_vvvv(kOp);
+  VecOpInfo op_info = vec_op_info_vvvv(kOp);
 
   for (uint32_t iter = 0; iter < kTestIterCount; iter++) {
     VecOverlay<kW> a;
@@ -4596,17 +4596,17 @@ static BL_NOINLINE void test_vecop_vvvv_constraint(JitContext& ctx, Variation va
     VecOverlay<kW> observed;
     VecOverlay<kW> expected;
 
-    fill_random_data(dg, a, opInfo.arg(0));
-    fill_random_data(dg, b, opInfo.arg(1));
-    fill_random_data(dg, c, opInfo.arg(2));
+    fill_random_data(dg, a, op_info.arg(0));
+    fill_random_data(dg, b, op_info.arg(1));
+    fill_random_data(dg, c, op_info.arg(2));
     Constraint::apply(a);
     Constraint::apply(b);
     Constraint::apply(c);
 
-    compiledApply(&observed, &a, &b, &c);
+    compiled_apply(&observed, &a, &b, &c);
     expected = GenericOp::apply(a, b, c);
 
-    if (!vec_eq(observed, expected, opInfo.ret()))
+    if (!vec_eq(observed, expected, op_info.ret()))
       test_vecop_vvvv_failed(kOp, variation, a, b, c, observed, expected, ctx.logger.data());
   }
 }
@@ -4623,25 +4623,25 @@ template<VecWidth kVecWidth>
 static BL_NOINLINE void test_simd_ops(JitContext& ctx) noexcept {
   // We need to know some behaviors in advance so we can select the right test function,
   // so create a dummy compiler and extract the necessary information from it.
-  ScalarOpBehavior scalarOpBehavior;
-  FMulAddOpBehavior fMulAddOpBehavior;
+  ScalarOpBehavior scalar_op_behavior;
+  FMAddOpBehavior fmadd_op_behavior;
 
   {
     ctx.prepare();
-    PipeCompiler pc(&ctx.cc, ctx.features, ctx.optFlags);
+    PipeCompiler pc(&ctx.cc, ctx.features, ctx.opt_flags);
 
-    scalarOpBehavior = pc.scalarOpBehavior();
-    fMulAddOpBehavior = pc.fMulAddOpBehavior();
+    scalar_op_behavior = pc.scalar_op_behavior();
+    fmadd_op_behavior = pc.fmadd_op_behavior();
   }
 
-  bool valgrindFmaBug = false;
+  bool valgrind_fma_bug = false;
 
 #if defined(BL_JIT_ARCH_X86)
   // When running under valgrind there is a bug in it's instrumentation of FMA SS/SD instructions.
   // Instead of keeping the unaffected elements in the destination register they are cleared instead,
   // which would cause test failures. So, detect whether we are running under Valgind that has this
   // bug and avoid scalar FMA tests in that case.
-  if (fMulAddOpBehavior != FMulAddOpBehavior::kNoFMA) {
+  if (fmadd_op_behavior != FMAddOpBehavior::kNoFMA) {
     float a[4] = { 1, 2, 3, 4 };
     float b[4] = { 2, 4, 8, 1 };
     float c[4] = { 4, 7, 3, 9 };
@@ -4649,7 +4649,7 @@ static BL_NOINLINE void test_simd_ops(JitContext& ctx) noexcept {
     float d[4] {};
     madd_fma_check_valgrind_bug(a, b, c, d);
 
-    valgrindFmaBug = d[1] == 0.0;
+    valgrind_fma_bug = d[1] == 0.0;
   }
 #endif // BL_JIT_ARCH_X86
 
@@ -4744,7 +4744,7 @@ static BL_NOINLINE void test_simd_ops(JitContext& ctx) noexcept {
   {
     for (uint32_t v = 0; v < kNumVariationsVV; v++) {
       // Variation 2 means that the source operand is memory, which would ALWAYS zero the rest of the register.
-      if (scalarOpBehavior == ScalarOpBehavior::kZeroing || v == 2u) {
+      if (scalar_op_behavior == ScalarOpBehavior::kZeroing || v == 2u) {
         test_vecop_vv<kVecWidth, OpcodeVV::kTruncF32S, scalar_op_trunc<ScalarOpBehavior::kZeroing, float>>(ctx, Variation{v});
         test_vecop_vv<kVecWidth, OpcodeVV::kTruncF64S, scalar_op_trunc<ScalarOpBehavior::kZeroing, double>>(ctx, Variation{v});
         test_vecop_vv<kVecWidth, OpcodeVV::kFloorF32S, scalar_op_floor<ScalarOpBehavior::kZeroing, float>>(ctx, Variation{v});
@@ -4786,7 +4786,7 @@ static BL_NOINLINE void test_simd_ops(JitContext& ctx) noexcept {
 
   INFO("  Testing sqrt (float)");
   {
-    if (scalarOpBehavior == ScalarOpBehavior::kZeroing) {
+    if (scalar_op_behavior == ScalarOpBehavior::kZeroing) {
       test_vecop_vv<kVecWidth, OpcodeVV::kSqrtF32S, scalar_op_sqrt<ScalarOpBehavior::kZeroing, float>>(ctx);
       test_vecop_vv<kVecWidth, OpcodeVV::kSqrtF64S, scalar_op_sqrt<ScalarOpBehavior::kZeroing, double>>(ctx);
     }
@@ -5067,7 +5067,7 @@ static BL_NOINLINE void test_simd_ops(JitContext& ctx) noexcept {
 
   INFO("  Testing arithmetic (float)");
   {
-    if (scalarOpBehavior == ScalarOpBehavior::kZeroing) {
+    if (scalar_op_behavior == ScalarOpBehavior::kZeroing) {
       test_vecop_vvv<kVecWidth, OpcodeVVV::kAddF32S, scalar_op_fadd<ScalarOpBehavior::kZeroing, float>>(ctx);
       test_vecop_vvv<kVecWidth, OpcodeVVV::kAddF64S, scalar_op_fadd<ScalarOpBehavior::kZeroing, double>>(ctx);
       test_vecop_vvv<kVecWidth, OpcodeVVV::kSubF32S, scalar_op_fsub<ScalarOpBehavior::kZeroing, float>>(ctx);
@@ -5100,10 +5100,10 @@ static BL_NOINLINE void test_simd_ops(JitContext& ctx) noexcept {
     }
   }
 
-  if (fMulAddOpBehavior == FMulAddOpBehavior::kNoFMA) {
+  if (fmadd_op_behavior == FMAddOpBehavior::kNoFMA) {
     INFO("  Testing madd (no-fma) (float)");
     {
-      if (scalarOpBehavior == ScalarOpBehavior::kZeroing) {
+      if (scalar_op_behavior == ScalarOpBehavior::kZeroing) {
         test_vecop_vvvv<kVecWidth, OpcodeVVVV::kMAddF32S, scalar_op_fmadd_nofma<ScalarOpBehavior::kZeroing, float>>(ctx, Variation{0});
         test_vecop_vvvv<kVecWidth, OpcodeVVVV::kMAddF64S, scalar_op_fmadd_nofma<ScalarOpBehavior::kZeroing, double>>(ctx, Variation{0});
         test_vecop_vvvv<kVecWidth, OpcodeVVVV::kMSubF32S, scalar_op_fmsub_nofma<ScalarOpBehavior::kZeroing, float>>(ctx, Variation{0});
@@ -5139,11 +5139,11 @@ static BL_NOINLINE void test_simd_ops(JitContext& ctx) noexcept {
   else {
     INFO("  Testing madd (fma) (float)");
     {
-      if (valgrindFmaBug) {
+      if (valgrind_fma_bug) {
         INFO("    (scalar FMA tests ignored due to a Valgrind bug!)");
       }
       else {
-        if (scalarOpBehavior == ScalarOpBehavior::kZeroing) {
+        if (scalar_op_behavior == ScalarOpBehavior::kZeroing) {
           test_vecop_vvvv<kVecWidth, OpcodeVVVV::kMAddF32S, scalar_op_fmadd_fma<ScalarOpBehavior::kZeroing, float>>(ctx, Variation{0});
           test_vecop_vvvv<kVecWidth, OpcodeVVVV::kMAddF64S, scalar_op_fmadd_fma<ScalarOpBehavior::kZeroing, double>>(ctx, Variation{0});
           test_vecop_vvvv<kVecWidth, OpcodeVVVV::kMSubF32S, scalar_op_fmsub_fma<ScalarOpBehavior::kZeroing, float>>(ctx, Variation{0});
@@ -5317,26 +5317,26 @@ static void test_gp_ops(JitContext& ctx) noexcept {
 }
 
 #if defined(BL_JIT_ARCH_X86)
-static void dumpFeatureList(asmjit::String& out, const asmjit::CpuFeatures& features) noexcept {
+static void dump_feature_list(asmjit::String& out, const asmjit::CpuFeatures& features) noexcept {
   asmjit::CpuFeatures::Iterator it = features.iterator();
 
   bool first = true;
-  while (it.hasNext()) {
-    size_t featureId = it.next();
+  while (it.has_next()) {
+    size_t feature_id = it.next();
     if (!first)
       out.append(' ');
-    asmjit::Formatter::formatFeature(out, asmjit::Arch::kHost, uint32_t(featureId));
+    asmjit::Formatter::format_feature(out, asmjit::Arch::kHost, uint32_t(feature_id));
     first = false;
   }
 }
 
-static void test_x86_ops(JitContext& ctx, const asmjit::CpuFeatures& hostFeatures) noexcept {
+static void test_x86_ops(JitContext& ctx, const asmjit::CpuFeatures& host_features) noexcept {
   using Ext = asmjit::CpuFeatures::X86;
   using CpuFeatures = asmjit::CpuFeatures;
 
   {
     asmjit::String s;
-    dumpFeatureList(s, hostFeatures);
+    dump_feature_list(s, host_features);
     INFO("Available CPU features: %s", s.data());
   }
 
@@ -5360,25 +5360,25 @@ static void test_x86_ops(JitContext& ctx, const asmjit::CpuFeatures& hostFeature
     profiles[2] = profiles[1];
     profiles[2].add(Ext::kBMI2, Ext::kLZCNT, Ext::kMOVBE, Ext::kPOPCNT);
 
-    profiles[3] = hostFeatures;
+    profiles[3] = host_features;
 
     bool first = true;
-    CpuFeatures lastFiltered;
+    CpuFeatures last_filtered;
 
     for (const CpuFeatures& profile : profiles) {
       CpuFeatures filtered = profile;
 
       for (uint32_t i = 0; i < CpuFeatures::kNumBitWords; i++)
-        filtered.data()._bits[i] &= hostFeatures.data()._bits[i];
+        filtered.data()._bits[i] &= host_features.data()._bits[i];
 
-      if (!first && filtered == lastFiltered)
+      if (!first && filtered == last_filtered)
         continue;
 
       asmjit::String s;
-      if (filtered == hostFeatures)
+      if (filtered == host_features)
         s.assign("[ALL]");
       else
-        dumpFeatureList(s, filtered);
+        dump_feature_list(s, filtered);
 
       ctx.features = filtered;
 
@@ -5386,7 +5386,7 @@ static void test_x86_ops(JitContext& ctx, const asmjit::CpuFeatures& hostFeature
       test_gp_ops(ctx);
 
       first = false;
-      lastFiltered = filtered;
+      last_filtered = filtered;
     }
   }
 
@@ -5436,51 +5436,51 @@ static void test_x86_ops(JitContext& ctx, const asmjit::CpuFeatures& hostFeature
     profiles[13] = profiles[12];
     profiles[13].add(Ext::kAVX512_BF16, Ext::kAVX512_FP16);
 
-    profiles[14] = hostFeatures;
+    profiles[14] = host_features;
 
     bool first = true;
-    CpuFeatures lastFiltered;
+    CpuFeatures last_filtered;
 
     for (const CpuFeatures& profile : profiles) {
       CpuFeatures filtered = profile;
 
       for (uint32_t i = 0; i < CpuFeatures::kNumBitWords; i++)
-        filtered.data()._bits[i] &= hostFeatures.data()._bits[i];
+        filtered.data()._bits[i] &= host_features.data()._bits[i];
 
-      if (!first && filtered == lastFiltered)
+      if (!first && filtered == last_filtered)
         continue;
 
       asmjit::String s;
-      if (filtered == hostFeatures)
+      if (filtered == host_features)
         s.assign("[ALL]");
       else
-        dumpFeatureList(s, filtered);
+        dump_feature_list(s, filtered);
 
       ctx.features = filtered;
 
       INFO("Testing JIT compiler 128-bit SIMD ops with [%s]", s.data());
       test_simd_ops<VecWidth::k128>(ctx);
 
-      if (filtered.x86().hasAVX2()) {
+      if (filtered.x86().has_avx2()) {
         INFO("Testing JIT compiler 256-bit SIMD ops with [%s]", s.data());
         test_simd_ops<VecWidth::k256>(ctx);
       }
 
-      if (filtered.x86().hasAVX512_F()) {
+      if (filtered.x86().has_avx512_f()) {
         INFO("Testing JIT compiler 512-bit SIMD ops with [%s]", s.data());
         test_simd_ops<VecWidth::k512>(ctx);
       }
 
       first = false;
-      lastFiltered = filtered;
+      last_filtered = filtered;
     }
   }
 }
 #endif // BL_JIT_ARCH_X86
 
 #if defined(BL_JIT_ARCH_A64)
-static void test_a64_ops(JitContext& ctx, const asmjit::CpuFeatures& hostFeatures) noexcept {
-  ctx.features = hostFeatures;
+static void test_a64_ops(JitContext& ctx, const asmjit::CpuFeatures& host_features) noexcept {
+  ctx.features = host_features;
 
   test_gp_ops(ctx);
   test_simd_ops<VecWidth::k128>(ctx);
@@ -5489,12 +5489,12 @@ static void test_a64_ops(JitContext& ctx, const asmjit::CpuFeatures& hostFeature
 
 UNIT(pipecompiler, BL_TEST_GROUP_PIPELINE_JIT_COMPILER) {
   JitContext ctx;
-  asmjit::CpuFeatures hostFeatures = asmjit::CpuInfo::host().features();
+  asmjit::CpuFeatures host_features = asmjit::CpuInfo::host().features();
 
 #if defined(BL_JIT_ARCH_X86)
-  test_x86_ops(ctx, hostFeatures);
+  test_x86_ops(ctx, host_features);
 #elif defined(BL_JIT_ARCH_A64)
-  test_a64_ops(ctx, hostFeatures);
+  test_a64_ops(ctx, host_features);
 #endif
 }
 

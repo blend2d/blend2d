@@ -30,29 +30,29 @@ static constexpr const double kMaximumTolerance = 0.50;
 //! \name BLContext - Private - State Construction & Destruction
 //! \{
 
-static BL_INLINE void initState(BLContextState* self) noexcept {
-  self->targetImage = nullptr;
-  self->targetSize.reset();
+static BL_INLINE void init_state(BLContextState* self) noexcept {
+  self->target_image = nullptr;
+  self->target_size.reset();
   self->hints.reset();
-  self->compOp = uint8_t(BL_COMP_OP_SRC_OVER);
-  self->fillRule = uint8_t(BL_FILL_RULE_NON_ZERO);
-  self->styleType[BL_CONTEXT_STYLE_SLOT_FILL] = uint8_t(BL_OBJECT_TYPE_NULL);
-  self->styleType[BL_CONTEXT_STYLE_SLOT_STROKE] = uint8_t(BL_OBJECT_TYPE_NULL);
-  self->savedStateCount = 0u;
+  self->comp_op = uint8_t(BL_COMP_OP_SRC_OVER);
+  self->fill_rule = uint8_t(BL_FILL_RULE_NON_ZERO);
+  self->style_type[BL_CONTEXT_STYLE_SLOT_FILL] = uint8_t(BL_OBJECT_TYPE_NULL);
+  self->style_type[BL_CONTEXT_STYLE_SLOT_STROKE] = uint8_t(BL_OBJECT_TYPE_NULL);
+  self->saved_state_count = 0u;
 
-  self->globalAlpha = 1.0;
-  self->styleAlpha[BL_CONTEXT_STYLE_SLOT_FILL] = 1.0;
-  self->styleAlpha[BL_CONTEXT_STYLE_SLOT_STROKE] = 1.0;
+  self->global_alpha = 1.0;
+  self->style_alpha[BL_CONTEXT_STYLE_SLOT_FILL] = 1.0;
+  self->style_alpha[BL_CONTEXT_STYLE_SLOT_STROKE] = 1.0;
 
-  blStrokeOptionsInit(&self->strokeOptions);
-  self->approximationOptions = PathInternal::makeDefaultApproximationOptions();
+  bl_stroke_options_init(&self->stroke_options);
+  self->approximation_options = PathInternal::make_default_approximation_options();
 
-  self->metaTransform.reset();
-  self->userTransform.reset();
+  self->meta_transform.reset();
+  self->user_transform.reset();
 }
 
-static BL_INLINE void destroyState(BLContextState* self) noexcept {
-  blArrayReset(&self->strokeOptions.dashArray);
+static BL_INLINE void destroy_state(BLContextState* self) noexcept {
+  bl_array_reset(&self->stroke_options.dash_array);
 }
 
 //! \}

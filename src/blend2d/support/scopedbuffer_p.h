@@ -66,7 +66,7 @@ public:
   }
 
   [[nodiscard]]
-  BL_NOINLINE void* allocZeroed(size_t size) noexcept {
+  BL_NOINLINE void* alloc_zeroed(size_t size) noexcept {
     void* p = alloc(size);
     if (p)
       memset(p, 0, size);

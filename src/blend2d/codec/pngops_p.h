@@ -23,20 +23,20 @@ namespace {
 
 //! Returns a simplified filter of the first PNG row, because no prior row exists at that point.
 //! This is the only function that can replace AVG filter with `AVG0`.
-BL_INLINE uint32_t simplifyFilterOfFirstRow(uint32_t filter) noexcept {
-  uint32_t kReplacement = (kFilterTypeNone <<  0) | // None  -> None
-                          (kFilterTypeSub  <<  4) | // Sub   -> Sub
-                          (kFilterTypeNone <<  8) | // Up    -> None
-                          (kFilterTypeAvg0 << 12) | // Avg   -> Avg0 (Special-Case)
-                          (kFilterTypeSub  << 16) ; // Paeth -> Sub
+BL_INLINE uint32_t simplify_filter_of_first_row(uint32_t filter) noexcept {
+  constexpr uint32_t kReplacement = (kFilterTypeNone <<  0) | // None  -> None
+                                    (kFilterTypeSub  <<  4) | // Sub   -> Sub
+                                    (kFilterTypeNone <<  8) | // Up    -> None
+                                    (kFilterTypeAvg0 << 12) | // Avg   -> Avg0 (Special-Case)
+                                    (kFilterTypeSub  << 16) ; // Paeth -> Sub
   return (kReplacement >> (filter * 4)) & 0xF;
 }
 
 // Performs PNG sum filter and casts to byte.
-BL_INLINE uint8_t applySumFilter(uint32_t a, uint32_t b) noexcept { return uint8_t((a + b) & 0xFFu); }
+BL_INLINE uint8_t apply_sum_filter(uint32_t a, uint32_t b) noexcept { return uint8_t((a + b) & 0xFFu); }
 
 // Performs PNG average filter.
-BL_INLINE uint32_t applyAvgFilter(uint32_t a, uint32_t b) noexcept { return (a + b) >> 1; }
+BL_INLINE uint32_t apply_avg_filter(uint32_t a, uint32_t b) noexcept { return (a + b) >> 1; }
 
 // This is an optimized implementation of PNG's Paeth reference filter. This optimization originally comes from
 // my previous implementation where I tried to simplify it to be more SIMD friendly. One interesting property of
@@ -55,13 +55,13 @@ BL_INLINE uint32_t applyAvgFilter(uint32_t a, uint32_t b) noexcept { return (a +
 //   return (x * 0xABu) >> 9;
 // }
 //
-// uint32_t applyPaethFilter(uint32_t a, uint32_t b, uint32_t c) noexcept {
-//   uint32_t minAB = min(a, b);
-//   uint32_t maxAB = max(a, b);
-//   uint32_t divAB = udiv3(maxAB - minAB);
+// uint32_t apply_paeth_filter(uint32_t a, uint32_t b, uint32_t c) noexcept {
+//   uint32_t min_ab = min(a, b);
+//   uint32_t max_ab = max(a, b);
+//   uint32_t divAB = udiv3(max_ab - min_ab);
 //
-//   if (c <= minAB + divAB) return maxAB;
-//   if (c >= maxAB - divAB) return minAB;
+//   if (c <= min_ab + divAB) return max_ab;
+//   if (c >= max_ab - divAB) return min_ab;
 //
 //   return c;
 // }
@@ -81,7 +81,7 @@ BL_INLINE uint32_t applyAvgFilter(uint32_t a, uint32_t b) noexcept { return (a +
 //   return (x * 0xABu) >> 9;
 // }
 //
-// uint32_t applyPaethFilter(uint32_t a, uint32_t b, uint32_t c) noexcept {
+// uint32_t apply_paeth_filter(uint32_t a, uint32_t b, uint32_t c) noexcept {
 //   uint32_t lo = min(a, b) - c;
 //   uint32_t hi = max(a, b) - c;
 //   uint32_t divAB = udiv3(hi - lo);
@@ -99,7 +99,7 @@ BL_INLINE uint32_t applyAvgFilter(uint32_t a, uint32_t b) noexcept { return (a +
 // to use LEA on x86 and shift with accumulation on ARM hardware. The following code is from stb_image library:
 //
 // ```
-// int32_t applyPaethFilter(int32_t a, int32_t b, int32_t c) noexcept {
+// int32_t apply_paeth_filter(int32_t a, int32_t b, int32_t c) noexcept {
 //    int32_t threshold = c*3 - (a + b);
 //    int32_t lo = min(a, b);
 //    int32_t hi = max(a, b);
@@ -108,14 +108,14 @@ BL_INLINE uint32_t applyAvgFilter(uint32_t a, uint32_t b) noexcept { return (a +
 //    return t1;
 // }
 // ```
-BL_INLINE uint32_t applyPaethFilter(uint32_t a, uint32_t b, uint32_t c) noexcept {
+BL_INLINE uint32_t apply_paeth_filter(uint32_t a, uint32_t b, uint32_t c) noexcept {
   int32_t threshold = int32_t(c * 3u) - int32_t(a + b);
 
-  uint32_t minAB = blMin(a, b);
-  uint32_t maxAB = blMax(a, b);
+  uint32_t min_ab = bl_min(a, b);
+  uint32_t max_ab = bl_max(a, b);
 
-  uint32_t t0 = int32_t(maxAB) > threshold ? c : minAB;
-  uint32_t t1 = threshold > int32_t(minAB) ? t0 : maxAB;
+  uint32_t t0 = int32_t(max_ab) > threshold ? c : min_ab;
+  uint32_t t1 = threshold > int32_t(min_ab) ? t0 : max_ab;
 
   return t1;
 }
@@ -129,23 +129,23 @@ BL_INLINE uint32_t applyPaethFilter(uint32_t a, uint32_t b, uint32_t c) noexcept
 struct FunctionTable {
   using InverseFilterFunc = BLResult (BL_CDECL*)(uint8_t* p, uint32_t bpp, uint32_t bpl, uint32_t h) noexcept;
 
-  InverseFilterFunc inverseFilter[9];
+  InverseFilterFunc inverse_filter[9];
 };
-extern FunctionTable funcTable;
+extern FunctionTable func_table;
 
-void initFuncTable(BLRuntimeContext* rt) noexcept;
-void initFuncTable_Ref(FunctionTable& ft) noexcept;
+void init_func_table(BLRuntimeContext* rt) noexcept;
+void init_func_table_ref(FunctionTable& ft) noexcept;
 
 #if defined(BL_BUILD_OPT_SSE2)
-void initFuncTable_SSE2(FunctionTable& ft) noexcept;
+void init_func_table_sse2(FunctionTable& ft) noexcept;
 #endif // BL_BUILD_OPT_SSE2
 
 #if defined(BL_BUILD_OPT_AVX)
-void initFuncTable_AVX(FunctionTable& ft) noexcept;
+void init_func_table_avx(FunctionTable& ft) noexcept;
 #endif // BL_BUILD_OPT_AVX
 
 #if defined(BL_BUILD_OPT_ASIMD)
-void initFuncTable_ASIMD(FunctionTable& ft) noexcept;
+void init_func_table_asimd(FunctionTable& ft) noexcept;
 #endif // BL_BUILD_OPT_ASIMD
 
 } // {bl::Png::Ops}

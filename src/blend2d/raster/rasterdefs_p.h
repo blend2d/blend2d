@@ -167,7 +167,7 @@ enum class ContextFlags : uint32_t {
   //! All states' flags.
   kWeakStateAllFlags = 0x0FF00000u,
 
-  //! Final translation matrix is just a scale of `fpScaleD()` and integral translation.
+  //! Final translation matrix is just a scale of `fp_scale_d()` and integral translation.
   kInfoIntegralTranslation = 0x10000000u,
 
   //! Shared fill-state has valid data.
@@ -204,7 +204,7 @@ static BL_INLINE_CONSTEXPR ContextFlags operator>>(ContextFlags a, const ShiftT&
 
 } // {bl::RasterEngine}
 
-//! Indexes to a `BLRasterContextImpl::solidFormatTable`, which describes pixel
+//! Indexes to a `BLRasterContextImpl::solid_format_table`, which describes pixel
 //! formats used by solid fills. There are in total 3 choices that are selected
 //! based on properties of the solid color.
 enum BLRasterContextSolidFormatId : uint32_t {

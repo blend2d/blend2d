@@ -22,7 +22,7 @@ UNIT(support_arenabitarray, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   uint32_t kMaxCount = 1000;
 
   ArenaBitArray<BLBitWord> ba;
-  EXPECT_TRUE(ba.empty());
+  EXPECT_TRUE(ba.is_empty());
   EXPECT_EQ(ba.size(), 0u);
 
   INFO("bl::ArenaBitArray::resize()");
@@ -33,17 +33,17 @@ UNIT(support_arenabitarray, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
     EXPECT_EQ(ba.size(), count);
 
     for (i = 0; i < count; i++)
-      EXPECT_FALSE(ba.bitAt(i));
+      EXPECT_FALSE(ba.bit_at(i));
 
     ba.clear();
     EXPECT_SUCCESS(ba.resize(&arena, count, true));
     EXPECT_EQ(ba.size(), count);
 
     for (i = 0; i < count; i++)
-      EXPECT_TRUE(ba.bitAt(i));
+      EXPECT_TRUE(ba.bit_at(i));
   }
 
-  INFO("bl::ArenaBitArray::fillBits() / clearBits()");
+  INFO("bl::ArenaBitArray::fill_bits() / clear_bits()");
   for (count = 1; count < kMaxCount; count += 2) {
     ba.clear();
 
@@ -53,13 +53,13 @@ UNIT(support_arenabitarray, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
     for (i = 0; i < (count + 1) / 2; i++) {
       bool value = bool(i & 1);
       if (value)
-        ba.fillBits(i, count - i * 2);
+        ba.fill_bits(i, count - i * 2);
       else
-        ba.clearBits(i, count - i * 2);
+        ba.clear_bits(i, count - i * 2);
     }
 
     for (i = 0; i < count; i++) {
-      EXPECT_EQ(ba.bitAt(i), bool(i & 1));
+      EXPECT_EQ(ba.bit_at(i), bool(i & 1));
     }
   }
 }

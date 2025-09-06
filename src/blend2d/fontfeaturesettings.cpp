@@ -21,21 +21,21 @@ namespace FontFeatureSettingsInternal {
 // bl::FontFeatureSettings - SSO Utilities
 // =======================================
 
-static BL_INLINE BLResult initSSO(BLFontFeatureSettingsCore* self, size_t size = 0) noexcept {
-  self->_d.initStatic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS) | BLObjectInfo::fromAbcp(uint32_t(size)));
+static BL_INLINE BLResult init_sso(BLFontFeatureSettingsCore* self, size_t size = 0) noexcept {
+  self->_d.init_static(BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS) | BLObjectInfo::from_abcp(uint32_t(size)));
   self->_d.u32_data[2] = kSSOInvalidFatFeaturePattern;
   return BL_SUCCESS;
 }
 
-static BL_INLINE size_t getSSOSize(const BLFontFeatureSettingsCore* self) noexcept {
-  return self->_d.info.aField();
+static BL_INLINE size_t get_sso_size(const BLFontFeatureSettingsCore* self) noexcept {
+  return self->_d.info.a_field();
 }
 
-static BL_INLINE void setSSOSize(BLFontFeatureSettingsCore* self, size_t size) noexcept {
-  self->_d.info.setAField(uint32_t(size));
+static BL_INLINE void set_sso_size(BLFontFeatureSettingsCore* self, size_t size) noexcept {
+  self->_d.info.set_a_field(uint32_t(size));
 }
 
-static BL_INLINE void addSSOBitTag(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t value) noexcept {
+static BL_INLINE void add_sso_bit_tag(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t value) noexcept {
   uint32_t bit = 1u << index;
 
   BL_ASSERT((self->_d.u32_data[0] & bit) == 0u);
@@ -46,7 +46,7 @@ static BL_INLINE void addSSOBitTag(BLFontFeatureSettingsCore* self, uint32_t ind
   self->_d.info.bits += 1u << BL_OBJECT_INFO_A_SHIFT;
 }
 
-static BL_INLINE void updateSSOBitValue(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t value) noexcept {
+static BL_INLINE void update_sso_bit_value(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t value) noexcept {
   uint32_t bit = 1u << index;
 
   BL_ASSERT((self->_d.u32_data[0] & bit) != 0u);
@@ -54,10 +54,10 @@ static BL_INLINE void updateSSOBitValue(BLFontFeatureSettingsCore* self, uint32_
   self->_d.u32_data[1] = (self->_d.u32_data[1] & ~bit) | (value << index);
 }
 
-static BL_INLINE void removeSSOBitTag(BLFontFeatureSettingsCore* self, uint32_t index) noexcept {
+static BL_INLINE void remove_sso_bit_tag(BLFontFeatureSettingsCore* self, uint32_t index) noexcept {
   uint32_t bit = 1u << index;
 
-  BL_ASSERT(self->_d.info.aField() > 0u);
+  BL_ASSERT(self->_d.info.a_field() > 0u);
   BL_ASSERT((self->_d.u32_data[0] & bit) != 0u);
 
   self->_d.u32_data[0] &= ~bit;
@@ -65,211 +65,211 @@ static BL_INLINE void removeSSOBitTag(BLFontFeatureSettingsCore* self, uint32_t 
   self->_d.info.bits -= 1u << BL_OBJECT_INFO_A_SHIFT;
 }
 
-static BL_INLINE void addSSOFatTag(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t featureId, uint32_t value) noexcept {
+static BL_INLINE void add_sso_fat_tag(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t feature_id, uint32_t value) noexcept {
   BL_ASSERT(index < kSSOFatFeatureCount);
-  BL_ASSERT(featureId < kSSOInvalidFatFeatureId);
+  BL_ASSERT(feature_id < kSSOInvalidFatFeatureId);
   BL_ASSERT(value <= kSSOFatFeatureValueBitMask);
 
   constexpr uint32_t kValueDataMask = (1u << (kSSOFatFeatureCount * kSSOFatFeatureValueBitCount)) - 1u;
 
-  uint32_t tagOffset = index * kSSOFatFeatureTagBitCount;
-  uint32_t valOffset = index * kSSOFatFeatureValueBitCount;
+  uint32_t tag_offset = index * kSSOFatFeatureTagBitCount;
+  uint32_t val_offset = index * kSSOFatFeatureValueBitCount;
 
   uint32_t tags = self->_d.u32_data[2];
   uint32_t vals = self->_d.info.bits & kValueDataMask;
 
-  uint32_t tagsLsbMask = ((1u << tagOffset) - 1u);
-  uint32_t valsLsbMask = ((1u << valOffset) - 1u);
+  uint32_t tags_lsb_mask = ((1u << tag_offset) - 1u);
+  uint32_t vals_lsb_mask = ((1u << val_offset) - 1u);
 
-  tags = (tags & tagsLsbMask) | ((tags & ~tagsLsbMask) << kSSOFatFeatureTagBitCount) | (featureId << tagOffset);
-  vals = (vals & valsLsbMask) | ((vals & ~valsLsbMask) << kSSOFatFeatureValueBitCount) | (value << valOffset);
+  tags = (tags & tags_lsb_mask) | ((tags & ~tags_lsb_mask) << kSSOFatFeatureTagBitCount) | (feature_id << tag_offset);
+  vals = (vals & vals_lsb_mask) | ((vals & ~vals_lsb_mask) << kSSOFatFeatureValueBitCount) | (value << val_offset);
 
   self->_d.u32_data[2] = tags;
   self->_d.info.bits = ((self->_d.info.bits & ~kValueDataMask) + (1u << BL_OBJECT_INFO_A_SHIFT)) | (vals & kValueDataMask);
 }
 
-static BL_INLINE void updateSSOFatValue(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t value) noexcept {
+static BL_INLINE void update_sso_fat_value(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t value) noexcept {
   BL_ASSERT(index < kSSOFatFeatureCount);
   BL_ASSERT(value <= kSSOFatFeatureValueBitMask);
 
-  uint32_t valueOffset = index * kSSOFatFeatureValueBitCount;
-  uint32_t mask = kSSOFatFeatureValueBitMask << valueOffset;
+  uint32_t value_offset = index * kSSOFatFeatureValueBitCount;
+  uint32_t mask = kSSOFatFeatureValueBitMask << value_offset;
 
-  self->_d.info.bits = (self->_d.info.bits & ~mask) | value << valueOffset;
+  self->_d.info.bits = (self->_d.info.bits & ~mask) | value << value_offset;
 }
 
-static BL_INLINE void removeSSOFatTag(BLFontFeatureSettingsCore* self, uint32_t index) noexcept {
-  BL_ASSERT(self->_d.info.aField() > 0u);
+static BL_INLINE void remove_sso_fat_tag(BLFontFeatureSettingsCore* self, uint32_t index) noexcept {
+  BL_ASSERT(self->_d.info.a_field() > 0u);
   BL_ASSERT(index < kSSOFatFeatureCount);
 
   constexpr uint32_t kValueDataMask = (1u << (kSSOFatFeatureCount * kSSOFatFeatureValueBitCount)) - 1u;
 
-  uint32_t tagOffset = index * kSSOFatFeatureTagBitCount;
-  uint32_t valOffset = index * kSSOFatFeatureValueBitCount;
+  uint32_t tag_offset = index * kSSOFatFeatureTagBitCount;
+  uint32_t val_offset = index * kSSOFatFeatureValueBitCount;
 
   uint32_t tags = self->_d.u32_data[2];
   uint32_t vals = self->_d.info.bits & kValueDataMask;
 
-  uint32_t tagsLsbMask = ((1u << tagOffset) - 1u);
-  uint32_t valsLsbMask = ((1u << valOffset) - 1u);
+  uint32_t tags_lsb_mask = ((1u << tag_offset) - 1u);
+  uint32_t vals_lsb_mask = ((1u << val_offset) - 1u);
 
-  tags = (tags & tagsLsbMask) | ((tags >> kSSOFatFeatureTagBitCount) & ~tagsLsbMask) | (kSSOInvalidFatFeatureId << ((kSSOFatFeatureCount - 1) * kSSOFatFeatureTagBitCount));
-  vals = (vals & valsLsbMask) | ((vals >> kSSOFatFeatureValueBitCount) & ~tagsLsbMask);
+  tags = (tags & tags_lsb_mask) | ((tags >> kSSOFatFeatureTagBitCount) & ~tags_lsb_mask) | (kSSOInvalidFatFeatureId << ((kSSOFatFeatureCount - 1) * kSSOFatFeatureTagBitCount));
+  vals = (vals & vals_lsb_mask) | ((vals >> kSSOFatFeatureValueBitCount) & ~tags_lsb_mask);
 
   self->_d.u32_data[2] = tags;
   self->_d.info.bits = ((self->_d.info.bits & ~kValueDataMask) - (1u << BL_OBJECT_INFO_A_SHIFT)) | (vals & kValueDataMask);
 }
 
-static BL_INLINE bool canInsertSSOFatTag(const BLFontFeatureSettingsCore* self) noexcept {
-  uint32_t lastId = self->_d.u32_data[2] >> ((kSSOFatFeatureCount - 1u) * kSSOFatFeatureTagBitCount);
-  return lastId == kSSOInvalidFatFeatureId;
+static BL_INLINE bool can_insert_sso_fat_tag(const BLFontFeatureSettingsCore* self) noexcept {
+  uint32_t last_id = self->_d.u32_data[2] >> ((kSSOFatFeatureCount - 1u) * kSSOFatFeatureTagBitCount);
+  return last_id == kSSOInvalidFatFeatureId;
 }
 
-static bool convertItemsToSSO(BLFontFeatureSettingsCore* self, const BLFontFeatureItem* items, size_t size) noexcept {
+static bool convert_items_to_sso(BLFontFeatureSettingsCore* self, const BLFontFeatureItem* items, size_t size) noexcept {
   BL_ASSERT(size <= BLFontFeatureSettings::kSSOCapacity);
 
-  uint32_t infoBits = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS) | BLObjectInfo::packAbcp(uint32_t(size));
+  uint32_t info_bits = BLObjectInfo::pack_type_with_marker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS) | BLObjectInfo::pack_abcp(uint32_t(size));
 
-  uint32_t bitTagIds = 0;
-  uint32_t bitValues = 0;
+  uint32_t bit_tag_ids = 0;
+  uint32_t bit_values = 0;
 
-  uint32_t fatIndex = 0;
-  uint32_t fatTagIds = kSSOInvalidFatFeaturePattern;
-  uint32_t fatValues = infoBits;
+  uint32_t fat_index = 0;
+  uint32_t fat_tag_ids = kSSOInvalidFatFeaturePattern;
+  uint32_t fat_values = info_bits;
 
   for (size_t i = 0; i < size; i++) {
-    uint32_t id = FontTagData::featureTagToId(items[i].tag);
+    uint32_t id = FontTagData::feature_tag_to_id(items[i].tag);
     uint32_t value = items[i].value;
 
     if (id == FontTagData::kInvalidId)
       return false;
 
-    FeatureInfo featureInfo = FontTagData::featureInfoTable[id];
-    if (featureInfo.hasBitId()) {
+    FeatureInfo feature_info = FontTagData::feature_info_table[id];
+    if (feature_info.has_bit_id()) {
       if (value > 1u)
         return false;
 
-      uint32_t bitId = featureInfo.bitId;
-      bitTagIds |= uint32_t(1) << bitId;
-      bitValues |= uint32_t(value) << bitId;
+      uint32_t bit_id = feature_info.bit_id;
+      bit_tag_ids |= uint32_t(1) << bit_id;
+      bit_values |= uint32_t(value) << bit_id;
     }
     else {
-      if (value > kSSOFatFeatureValueBitMask || fatIndex >= kSSOFatFeatureCount)
+      if (value > kSSOFatFeatureValueBitMask || fat_index >= kSSOFatFeatureCount)
         return false;
 
-      fatTagIds ^= (id ^ kSSOInvalidFatFeatureId) << (fatIndex * kSSOFatFeatureTagBitCount);
-      fatValues |= value << (fatIndex * kSSOFatFeatureValueBitCount);
-      fatIndex++;
+      fat_tag_ids ^= (id ^ kSSOInvalidFatFeatureId) << (fat_index * kSSOFatFeatureTagBitCount);
+      fat_values |= value << (fat_index * kSSOFatFeatureValueBitCount);
+      fat_index++;
     }
   }
 
-  self->_d.u32_data[0] = bitTagIds;
-  self->_d.u32_data[1] = bitValues;
-  self->_d.u32_data[2] = fatTagIds;
-  self->_d.u32_data[3] = fatValues;
+  self->_d.u32_data[0] = bit_tag_ids;
+  self->_d.u32_data[1] = bit_values;
+  self->_d.u32_data[2] = fat_tag_ids;
+  self->_d.u32_data[3] = fat_values;
 
   return true;
 }
 
-static void convertSSOToItems(const BLFontFeatureSettingsCore* self, BLFontFeatureItem* items) noexcept {
+static void convert_sso_to_items(const BLFontFeatureSettingsCore* self, BLFontFeatureItem* items) noexcept {
   constexpr uint32_t kDummyFatTagId = 0xFFFFFFFFu;
 
-  uint32_t bitTagIds = self->_d.u32_data[0];
-  uint32_t bitValues = self->_d.u32_data[1];
-  uint32_t fatTagIds = self->_d.u32_data[2];
-  uint32_t fatValues = self->_d.info.bits;
-  uint32_t fatFeatureTagId = fatTagIds & kSSOFatFeatureTagBitMask;
+  uint32_t bit_tag_ids = self->_d.u32_data[0];
+  uint32_t bit_values = self->_d.u32_data[1];
+  uint32_t fat_tag_ids = self->_d.u32_data[2];
+  uint32_t fat_values = self->_d.info.bits;
+  uint32_t fat_feature_tag_id = fat_tag_ids & kSSOFatFeatureTagBitMask;
 
   // Marks the end of fat tags (since we have removed one we don't have to check for the end, this is the end).
-  fatTagIds >>= kSSOFatFeatureTagBitCount;
-  fatTagIds |= kSSOInvalidFatFeatureId << ((kSSOFatFeatureCount - 1u) * kSSOFatFeatureTagBitCount);
+  fat_tag_ids >>= kSSOFatFeatureTagBitCount;
+  fat_tag_ids |= kSSOInvalidFatFeatureId << ((kSSOFatFeatureCount - 1u) * kSSOFatFeatureTagBitCount);
 
-  if (fatFeatureTagId == kSSOInvalidFatFeatureId)
-    fatFeatureTagId = kDummyFatTagId;
+  if (fat_feature_tag_id == kSSOInvalidFatFeatureId)
+    fat_feature_tag_id = kDummyFatTagId;
 
-  ParametrizedBitOps<BitOrder::kLSB, uint32_t>::BitIterator bitIterator(bitTagIds);
-  while (bitIterator.hasNext()) {
-    uint32_t bitIndex = bitIterator.next();
-    uint32_t bitFeatureTagId = uint32_t(FontTagData::featureBitIdToFeatureId(bitIndex));
-    while (bitFeatureTagId > fatFeatureTagId) {
-      *items++ = BLFontFeatureItem{FontTagData::featureIdToTagTable[fatFeatureTagId], fatValues & kSSOFatFeatureValueBitMask};
+  ParametrizedBitOps<BitOrder::kLSB, uint32_t>::BitIterator bit_iterator(bit_tag_ids);
+  while (bit_iterator.has_next()) {
+    uint32_t bit_index = bit_iterator.next();
+    uint32_t bit_feature_tag_id = uint32_t(FontTagData::feature_bit_id_to_feature_id(bit_index));
+    while (bit_feature_tag_id > fat_feature_tag_id) {
+      *items++ = BLFontFeatureItem{FontTagData::feature_id_to_tag_table[fat_feature_tag_id], fat_values & kSSOFatFeatureValueBitMask};
 
-      fatFeatureTagId = fatTagIds & kSSOFatFeatureTagBitMask;
-      if (fatFeatureTagId == kSSOInvalidFatFeatureId)
-        fatFeatureTagId = kDummyFatTagId;
+      fat_feature_tag_id = fat_tag_ids & kSSOFatFeatureTagBitMask;
+      if (fat_feature_tag_id == kSSOInvalidFatFeatureId)
+        fat_feature_tag_id = kDummyFatTagId;
 
-      fatTagIds >>= kSSOFatFeatureTagBitCount;
-      fatValues >>= kSSOFatFeatureValueBitCount;
+      fat_tag_ids >>= kSSOFatFeatureTagBitCount;
+      fat_values >>= kSSOFatFeatureValueBitCount;
     }
 
-    *items++ = BLFontFeatureItem{FontTagData::featureIdToTagTable[bitFeatureTagId], (bitValues >> bitIndex) & 0x1u};
+    *items++ = BLFontFeatureItem{FontTagData::feature_id_to_tag_table[bit_feature_tag_id], (bit_values >> bit_index) & 0x1u};
   }
 
-  if (fatFeatureTagId == kDummyFatTagId)
+  if (fat_feature_tag_id == kDummyFatTagId)
     return;
 
   do {
-    *items++ = BLFontFeatureItem{FontTagData::featureIdToTagTable[fatFeatureTagId], fatValues & kSSOFatFeatureValueBitMask};
-    fatFeatureTagId = fatTagIds & kSSOFatFeatureTagBitMask;
-    fatTagIds >>= kSSOFatFeatureTagBitCount;
-    fatValues >>= kSSOFatFeatureValueBitCount;
-  } while (fatFeatureTagId != kSSOInvalidFatFeatureId);
+    *items++ = BLFontFeatureItem{FontTagData::feature_id_to_tag_table[fat_feature_tag_id], fat_values & kSSOFatFeatureValueBitMask};
+    fat_feature_tag_id = fat_tag_ids & kSSOFatFeatureTagBitMask;
+    fat_tag_ids >>= kSSOFatFeatureTagBitCount;
+    fat_values >>= kSSOFatFeatureValueBitCount;
+  } while (fat_feature_tag_id != kSSOInvalidFatFeatureId);
 }
 
 // bl::FontFeatureSettings - Impl Utilities
 // ========================================
 
-static BL_INLINE constexpr size_t getMaximumSize() noexcept {
+static BL_INLINE constexpr size_t get_maximum_size() noexcept {
   return FontTagData::kUniqueTagCount;
 }
 
-static BL_INLINE BLObjectImplSize expandImplSize(BLObjectImplSize implSize) noexcept {
-  return blObjectExpandImplSize(implSize);
+static BL_INLINE BLObjectImplSize expand_impl_size(BLObjectImplSize impl_size) noexcept {
+  return bl_object_expand_impl_size(impl_size);
 }
 
-static BL_INLINE BLResult initDynamic(BLFontFeatureSettingsCore* self, BLObjectImplSize implSize, size_t size = 0u) noexcept {
-  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
-  BL_PROPAGATE(ObjectInternal::allocImplT<BLFontFeatureSettingsImpl>(self, info, implSize));
+static BL_INLINE BLResult init_dynamic(BLFontFeatureSettingsCore* self, BLObjectImplSize impl_size, size_t size = 0u) noexcept {
+  BLObjectInfo info = BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
+  BL_PROPAGATE(ObjectInternal::alloc_impl_t<BLFontFeatureSettingsImpl>(self, info, impl_size));
 
-  BLFontFeatureSettingsImpl* impl = getImpl(self);
+  BLFontFeatureSettingsImpl* impl = get_impl(self);
   BLFontFeatureItem* items = PtrOps::offset<BLFontFeatureItem>(impl, sizeof(BLFontFeatureSettingsImpl));
 
   impl->data = items;
   impl->size = size;
-  impl->capacity = capacityFromImplSize(implSize);
+  impl->capacity = capacity_from_impl_size(impl_size);
 
   BL_ASSERT(size <= impl->capacity);
   return BL_SUCCESS;
 }
 
-static BL_NOINLINE BLResult initDynamicFromSSO(BLFontFeatureSettingsCore* self, BLObjectImplSize implSize, const BLFontFeatureSettingsCore* ssoMap) noexcept {
-  size_t size = getSSOSize(ssoMap);
-  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
-  BL_PROPAGATE(ObjectInternal::allocImplT<BLFontFeatureSettingsImpl>(self, info, implSize));
+static BL_NOINLINE BLResult init_dynamic_from_sso(BLFontFeatureSettingsCore* self, BLObjectImplSize impl_size, const BLFontFeatureSettingsCore* sso_map) noexcept {
+  size_t size = get_sso_size(sso_map);
+  BLObjectInfo info = BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
+  BL_PROPAGATE(ObjectInternal::alloc_impl_t<BLFontFeatureSettingsImpl>(self, info, impl_size));
 
-  BLFontFeatureSettingsImpl* impl = getImpl(self);
+  BLFontFeatureSettingsImpl* impl = get_impl(self);
   BLFontFeatureItem* items = PtrOps::offset<BLFontFeatureItem>(impl, sizeof(BLFontFeatureSettingsImpl));
 
   impl->data = items;
   impl->size = size;
-  impl->capacity = capacityFromImplSize(implSize);
+  impl->capacity = capacity_from_impl_size(impl_size);
 
   BL_ASSERT(size <= impl->capacity);
-  convertSSOToItems(ssoMap, items);
+  convert_sso_to_items(sso_map, items);
 
   return BL_SUCCESS;
 }
 
-static BL_NOINLINE BLResult initDynamicFromData(BLFontFeatureSettingsCore* self, BLObjectImplSize implSize, const BLFontFeatureItem* src, size_t size) noexcept {
-  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
-  BL_PROPAGATE(ObjectInternal::allocImplT<BLFontFeatureSettingsImpl>(self, info, implSize));
+static BL_NOINLINE BLResult init_dynamic_from_data(BLFontFeatureSettingsCore* self, BLObjectImplSize impl_size, const BLFontFeatureItem* src, size_t size) noexcept {
+  BLObjectInfo info = BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
+  BL_PROPAGATE(ObjectInternal::alloc_impl_t<BLFontFeatureSettingsImpl>(self, info, impl_size));
 
-  BLFontFeatureSettingsImpl* impl = getImpl(self);
+  BLFontFeatureSettingsImpl* impl = get_impl(self);
   BLFontFeatureItem* items = PtrOps::offset<BLFontFeatureItem>(impl, sizeof(BLFontFeatureSettingsImpl));
 
   impl->data = items;
   impl->size = size;
-  impl->capacity = capacityFromImplSize(implSize);
+  impl->capacity = capacity_from_impl_size(impl_size);
 
   BL_ASSERT(size <= impl->capacity);
   memcpy(items, src, size * sizeof(BLFontFeatureItem));
@@ -283,152 +283,152 @@ static BL_NOINLINE BLResult initDynamicFromData(BLFontFeatureSettingsCore* self,
 // bl::FontFeatureSettings - API - Init & Destroy
 // ==============================================
 
-BL_API_IMPL BLResult blFontFeatureSettingsInit(BLFontFeatureSettingsCore* self) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_init(BLFontFeatureSettingsCore* self) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  return initSSO(self);
+  return init_sso(self);
 }
 
-BL_API_IMPL BLResult blFontFeatureSettingsInitMove(BLFontFeatureSettingsCore* self, BLFontFeatureSettingsCore* other) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_init_move(BLFontFeatureSettingsCore* self, BLFontFeatureSettingsCore* other) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
 
   BL_ASSERT(self != other);
-  BL_ASSERT(other->_d.isFontFeatureSettings());
+  BL_ASSERT(other->_d.is_font_feature_settings());
 
   self->_d = other->_d;
-  return initSSO(other);
+  return init_sso(other);
 }
 
-BL_API_IMPL BLResult blFontFeatureSettingsInitWeak(BLFontFeatureSettingsCore* self, const BLFontFeatureSettingsCore* other) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_init_weak(BLFontFeatureSettingsCore* self, const BLFontFeatureSettingsCore* other) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
 
   BL_ASSERT(self != other);
-  BL_ASSERT(other->_d.isFontFeatureSettings());
+  BL_ASSERT(other->_d.is_font_feature_settings());
 
   self->_d = other->_d;
-  return retainInstance(self);
+  return retain_instance(self);
 }
 
-BL_API_IMPL BLResult blFontFeatureSettingsDestroy(BLFontFeatureSettingsCore* self) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_destroy(BLFontFeatureSettingsCore* self) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  BL_ASSERT(self->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
 
-  return releaseInstance(self);
+  return release_instance(self);
 }
 
 // bl::FontFeatureSettings - API - Reset & Clear
 // =============================================
 
-BL_API_IMPL BLResult blFontFeatureSettingsReset(BLFontFeatureSettingsCore* self) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_reset(BLFontFeatureSettingsCore* self) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  BL_ASSERT(self->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
 
-  releaseInstance(self);
-  return initSSO(self);
+  release_instance(self);
+  return init_sso(self);
 }
 
-BL_API_IMPL BLResult blFontFeatureSettingsClear(BLFontFeatureSettingsCore* self) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_clear(BLFontFeatureSettingsCore* self) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  BL_ASSERT(self->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
 
   if (self->_d.sso())
-    return initSSO(self);
+    return init_sso(self);
 
-  BLFontFeatureSettingsImpl* selfI = getImpl(self);
-  if (isImplMutable(selfI)) {
-    selfI->size = 0;
+  BLFontFeatureSettingsImpl* self_impl = get_impl(self);
+  if (is_impl_mutable(self_impl)) {
+    self_impl->size = 0;
     return BL_SUCCESS;
   }
   else {
-    releaseInstance(self);
-    return initSSO(self);
+    release_instance(self);
+    return init_sso(self);
   }
 }
 
 // bl::FontFeatureSettings - API - Shrink
 // ======================================
 
-BL_API_IMPL BLResult blFontFeatureSettingsShrink(BLFontFeatureSettingsCore* self) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_shrink(BLFontFeatureSettingsCore* self) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  BL_ASSERT(self->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
 
   if (self->_d.sso())
     return BL_SUCCESS;
 
-  BLFontFeatureSettingsImpl* selfI = getImpl(self);
-  BLFontFeatureItem* items = selfI->data;
-  size_t size = selfI->size;
+  BLFontFeatureSettingsImpl* self_impl = get_impl(self);
+  BLFontFeatureItem* items = self_impl->data;
+  size_t size = self_impl->size;
 
   BLFontFeatureSettingsCore tmp;
-  if (size <= BLFontFeatureSettings::kSSOCapacity && convertItemsToSSO(&tmp, items, size))
-    return replaceInstance(self, &tmp);
+  if (size <= BLFontFeatureSettings::kSSOCapacity && convert_items_to_sso(&tmp, items, size))
+    return replace_instance(self, &tmp);
 
-  BLObjectImplSize currentSize = implSizeFromCapacity(selfI->capacity);
-  BLObjectImplSize shrunkSize = implSizeFromCapacity(selfI->size);
+  BLObjectImplSize current_size = impl_size_from_capacity(self_impl->capacity);
+  BLObjectImplSize shrunk_size = impl_size_from_capacity(self_impl->size);
 
-  if (shrunkSize + BL_OBJECT_IMPL_ALIGNMENT > currentSize)
+  if (shrunk_size + BL_OBJECT_IMPL_ALIGNMENT > current_size)
     return BL_SUCCESS;
 
-  BL_PROPAGATE(initDynamicFromData(&tmp, shrunkSize, items, size));
-  return replaceInstance(self, &tmp);
+  BL_PROPAGATE(init_dynamic_from_data(&tmp, shrunk_size, items, size));
+  return replace_instance(self, &tmp);
 }
 
 // bl::FontFeatureSettings - API - Assign
 // ======================================
 
-BL_API_IMPL BLResult blFontFeatureSettingsAssignMove(BLFontFeatureSettingsCore* self, BLFontFeatureSettingsCore* other) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_assign_move(BLFontFeatureSettingsCore* self, BLFontFeatureSettingsCore* other) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
 
-  BL_ASSERT(self->_d.isFontFeatureSettings());
-  BL_ASSERT(other->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
+  BL_ASSERT(other->_d.is_font_feature_settings());
 
   BLFontFeatureSettingsCore tmp = *other;
-  other->_d = blObjectDefaults[BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS]._d;
-  return replaceInstance(self, &tmp);
+  other->_d = bl_object_defaults[BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS]._d;
+  return replace_instance(self, &tmp);
 }
 
-BL_API_IMPL BLResult blFontFeatureSettingsAssignWeak(BLFontFeatureSettingsCore* self, const BLFontFeatureSettingsCore* other) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_assign_weak(BLFontFeatureSettingsCore* self, const BLFontFeatureSettingsCore* other) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
 
-  BL_ASSERT(self->_d.isFontFeatureSettings());
-  BL_ASSERT(other->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
+  BL_ASSERT(other->_d.is_font_feature_settings());
 
-  retainInstance(other);
-  return replaceInstance(self, other);
+  retain_instance(other);
+  return replace_instance(self, other);
 }
 
 // bl::FontFeatureSettings - API - Accessors
 // =========================================
 
-BL_API_IMPL size_t blFontFeatureSettingsGetSize(const BLFontFeatureSettingsCore* self) noexcept {
+BL_API_IMPL size_t bl_font_feature_settings_get_size(const BLFontFeatureSettingsCore* self) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  BL_ASSERT(self->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
 
   if (self->_d.sso())
-    return getSSOSize(self);
+    return get_sso_size(self);
   else
-    return getImpl(self)->size;
+    return get_impl(self)->size;
 }
 
-BL_API_IMPL size_t blFontFeatureSettingsGetCapacity(const BLFontFeatureSettingsCore* self) noexcept {
+BL_API_IMPL size_t bl_font_feature_settings_get_capacity(const BLFontFeatureSettingsCore* self) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  BL_ASSERT(self->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
 
   if (self->_d.sso())
     return BLFontFeatureSettings::kSSOCapacity;
   else
-    return getImpl(self)->capacity;
+    return get_impl(self)->capacity;
 }
 
-BL_API_IMPL BLResult blFontFeatureSettingsGetView(const BLFontFeatureSettingsCore* self, BLFontFeatureSettingsView* out) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_get_view(const BLFontFeatureSettingsCore* self, BLFontFeatureSettingsView* out) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  BL_ASSERT(self->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
 
   // SSO Mode
   // --------
 
   if (self->_d.sso()) {
-    BLFontFeatureItem* items = out->ssoData;
-    size_t size = getSSOSize(self);
+    BLFontFeatureItem* items = out->sso_data;
+    size_t size = get_sso_size(self);
 
     out->data = items;
     out->size = size;
@@ -436,207 +436,207 @@ BL_API_IMPL BLResult blFontFeatureSettingsGetView(const BLFontFeatureSettingsCor
     if (!size)
       return BL_SUCCESS;
 
-    convertSSOToItems(self, items);
+    convert_sso_to_items(self, items);
     return BL_SUCCESS;
   }
 
   // Dynamic Mode
   // ------------
 
-  const BLFontFeatureSettingsImpl* selfI = getImpl(self);
-  out->data = selfI->data;
-  out->size = selfI->size;
+  const BLFontFeatureSettingsImpl* self_impl = get_impl(self);
+  out->data = self_impl->data;
+  out->size = self_impl->size;
   return BL_SUCCESS;
 }
 
-BL_API_IMPL bool blFontFeatureSettingsHasValue(const BLFontFeatureSettingsCore* self, BLTag featureTag) noexcept {
+BL_API_IMPL bool bl_font_feature_settings_has_value(const BLFontFeatureSettingsCore* self, BLTag feature_tag) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  BL_ASSERT(self->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
 
   // SSO Mode
   // --------
 
   if (self->_d.sso()) {
-    uint32_t id = bl::FontTagData::featureTagToId(featureTag);
+    uint32_t id = bl::FontTagData::feature_tag_to_id(feature_tag);
     if (id == bl::FontTagData::kInvalidId)
       return false;
 
-    FeatureInfo featureInfo = bl::FontTagData::featureInfoTable[id];
-    if (featureInfo.hasBitId()) {
-      return hasSSOBitTag(self, featureInfo.bitId);
+    FeatureInfo feature_info = bl::FontTagData::feature_info_table[id];
+    if (feature_info.has_bit_id()) {
+      return has_sso_bit_tag(self, feature_info.bit_id);
     }
     else {
-      uint32_t dummyIndex;
-      return findSSOFatTag(self, featureInfo.bitId, &dummyIndex);
+      uint32_t dummy_index;
+      return find_sso_fat_tag(self, feature_info.bit_id, &dummy_index);
     }
   }
 
   // Dynamic Mode
   // ------------
 
-  const BLFontFeatureSettingsImpl* selfI = getImpl(self);
-  const BLFontFeatureItem* data = selfI->data;
+  const BLFontFeatureSettingsImpl* self_impl = get_impl(self);
+  const BLFontFeatureItem* data = self_impl->data;
 
-  size_t size = selfI->size;
-  size_t index = bl::lowerBound(data, selfI->size, featureTag, [](const BLFontFeatureItem& item, uint32_t tag) noexcept { return item.tag < tag; });
+  size_t size = self_impl->size;
+  size_t index = bl::lower_bound(data, self_impl->size, feature_tag, [](const BLFontFeatureItem& item, uint32_t tag) noexcept { return item.tag < tag; });
 
-  return index < size && data[index].tag == featureTag;
+  return index < size && data[index].tag == feature_tag;
 }
 
-BL_API_IMPL uint32_t blFontFeatureSettingsGetValue(const BLFontFeatureSettingsCore* self, BLTag featureTag) noexcept {
+BL_API_IMPL uint32_t bl_font_feature_settings_get_value(const BLFontFeatureSettingsCore* self, BLTag feature_tag) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  BL_ASSERT(self->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
 
   if (self->_d.sso())
-    return getSSOTagValue(self, featureTag);
+    return get_sso_tag_value(self, feature_tag);
   else
-    return getDynamicTagValue(self, featureTag);
+    return get_dynamic_tag_value(self, feature_tag);
 }
 
-BL_API_IMPL BLResult blFontFeatureSettingsSetValue(BLFontFeatureSettingsCore* self, BLTag featureTag, uint32_t value) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_set_value(BLFontFeatureSettingsCore* self, BLTag feature_tag, uint32_t value) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  BL_ASSERT(self->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
 
   if (BL_UNLIKELY(value > 65535u))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  uint32_t featureId = bl::FontTagData::featureTagToId(featureTag);
-  bool canModify = true;
+  uint32_t feature_id = bl::FontTagData::feature_tag_to_id(feature_tag);
+  bool can_modify = true;
 
   // SSO Mode
   // --------
 
   if (self->_d.sso()) {
-    size_t size = getSSOSize(self);
+    size_t size = get_sso_size(self);
 
-    if (featureId != bl::FontTagData::kInvalidId) {
-      FeatureInfo featureInfo = bl::FontTagData::featureInfoTable[featureId];
-      if (featureInfo.hasBitId()) {
+    if (feature_id != bl::FontTagData::kInvalidId) {
+      FeatureInfo feature_info = bl::FontTagData::feature_info_table[feature_id];
+      if (feature_info.has_bit_id()) {
         if (value > 1u)
-          return blTraceError(BL_ERROR_INVALID_VALUE);
+          return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-        uint32_t featureBitId = featureInfo.bitId;
-        if (hasSSOBitTag(self, featureBitId)) {
-          updateSSOBitValue(self, featureBitId, value);
+        uint32_t feature_bit_id = feature_info.bit_id;
+        if (has_sso_bit_tag(self, feature_bit_id)) {
+          update_sso_bit_value(self, feature_bit_id, value);
           return BL_SUCCESS;
         }
         else {
-          addSSOBitTag(self, featureBitId, value);
+          add_sso_bit_tag(self, feature_bit_id, value);
           return BL_SUCCESS;
         }
       }
       else if (value <= kSSOFatFeatureTagBitMask) {
         uint32_t index;
-        if (findSSOFatTag(self, featureId, &index)) {
-          updateSSOFatValue(self, index, value);
+        if (find_sso_fat_tag(self, feature_id, &index)) {
+          update_sso_fat_value(self, index, value);
           return BL_SUCCESS;
         }
-        else if (canInsertSSOFatTag(self)) {
-          addSSOFatTag(self, index, featureId, value);
+        else if (can_insert_sso_fat_tag(self)) {
+          add_sso_fat_tag(self, index, feature_id, value);
           return BL_SUCCESS;
         }
       }
     }
     else {
-      if (BL_UNLIKELY(!bl::FontTagData::isValidTag(featureTag)))
-        return blTraceError(BL_ERROR_INVALID_VALUE);
+      if (BL_UNLIKELY(!bl::FontTagData::is_valid_tag(feature_tag)))
+        return bl_trace_error(BL_ERROR_INVALID_VALUE);
     }
 
     // Turn the SSO settings to dynamic settings, because some (or multiple) cases below are true:
-    //   a) The `featureTag` doesn't have a corresponding feature id, thus it cannot be used in SSO mode.
+    //   a) The `feature_tag` doesn't have a corresponding feature id, thus it cannot be used in SSO mode.
     //   b) The `value` is not either 0 or 1.
     //   c) There is no room in SSO storage to insert another tag/value pair.
-    BLObjectImplSize implSize = blObjectAlignImplSize(implSizeFromCapacity(blMax<size_t>(size + 1, 4u)));
+    BLObjectImplSize impl_size = bl_object_align_impl_size(impl_size_from_capacity(bl_max<size_t>(size + 1, 4u)));
     BLFontFeatureSettingsCore tmp;
 
     // NOTE: This will turn the SSO settings into dynamic settings - it's guaranteed that all further operations will succeed.
-    BL_PROPAGATE(initDynamicFromSSO(&tmp, implSize, self));
+    BL_PROPAGATE(init_dynamic_from_sso(&tmp, impl_size, self));
     *self = tmp;
   }
   else {
-    if (BL_UNLIKELY(!bl::FontTagData::isValidTag(featureTag)))
-      return blTraceError(BL_ERROR_INVALID_VALUE);
+    if (BL_UNLIKELY(!bl::FontTagData::is_valid_tag(feature_tag)))
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-    canModify = isImplMutable(getImpl(self));
+    can_modify = is_impl_mutable(get_impl(self));
   }
 
   // Dynamic Mode
   // ------------
 
-  BLFontFeatureSettingsImpl* selfI = getImpl(self);
-  BLFontFeatureItem* items = selfI->data;
+  BLFontFeatureSettingsImpl* self_impl = get_impl(self);
+  BLFontFeatureItem* items = self_impl->data;
 
-  size_t size = selfI->size;
-  size_t index = bl::lowerBound(items, size, featureTag, [](const BLFontFeatureItem& item, uint32_t tag) noexcept { return item.tag < tag; });
+  size_t size = self_impl->size;
+  size_t index = bl::lower_bound(items, size, feature_tag, [](const BLFontFeatureItem& item, uint32_t tag) noexcept { return item.tag < tag; });
 
-  // Overwrite the value if `featureTag` is already in the settings.
-  if (index < size && items[index].tag == featureTag) {
+  // Overwrite the value if `feature_tag` is already in the settings.
+  if (index < size && items[index].tag == feature_tag) {
     if (items[index].value == value)
       return BL_SUCCESS;
 
-    if (canModify) {
+    if (can_modify) {
       items[index].value = value;
       return BL_SUCCESS;
     }
     else {
       BLFontFeatureSettingsCore tmp;
-      BL_PROPAGATE(initDynamicFromData(&tmp, implSizeFromCapacity(size), items, size));
-      getImpl(&tmp)->data[index].value = value;
-      return replaceInstance(self, &tmp);
+      BL_PROPAGATE(init_dynamic_from_data(&tmp, impl_size_from_capacity(size), items, size));
+      get_impl(&tmp)->data[index].value = value;
+      return replace_instance(self, &tmp);
     }
   }
 
-  if (BL_UNLIKELY(!bl::FontTagData::isValidTag(featureTag)))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(!bl::FontTagData::is_valid_tag(feature_tag)))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  // Insert a new tag/value pair if `featureTag` is not in the settings.
+  // Insert a new tag/value pair if `feature_tag` is not in the settings.
   size_t nTagsAfterIndex = size - index;
-  if (canModify && selfI->capacity > size) {
-    bl::MemOps::copyBackwardInlineT(items + index + 1, items + index, nTagsAfterIndex);
-    items[index] = BLFontFeatureItem{featureTag, value};
-    selfI->size = size + 1;
+  if (can_modify && self_impl->capacity > size) {
+    bl::MemOps::copy_backward_inline_t(items + index + 1, items + index, nTagsAfterIndex);
+    items[index] = BLFontFeatureItem{feature_tag, value};
+    self_impl->size = size + 1;
     return BL_SUCCESS;
   }
   else {
     BLFontFeatureSettingsCore tmp;
-    BL_PROPAGATE(initDynamic(&tmp, expandImplSize(implSizeFromCapacity(size + 1)), size + 1));
+    BL_PROPAGATE(init_dynamic(&tmp, expand_impl_size(impl_size_from_capacity(size + 1)), size + 1));
 
-    BLFontFeatureItem* dst = getImpl(&tmp)->data;
-    bl::MemOps::copyForwardInlineT(dst, items, index);
-    dst[index] = BLFontFeatureItem{featureTag, value};
-    bl::MemOps::copyForwardInlineT(dst + index + 1, items + index, nTagsAfterIndex);
+    BLFontFeatureItem* dst = get_impl(&tmp)->data;
+    bl::MemOps::copy_forward_inline_t(dst, items, index);
+    dst[index] = BLFontFeatureItem{feature_tag, value};
+    bl::MemOps::copy_forward_inline_t(dst + index + 1, items + index, nTagsAfterIndex);
 
-    return replaceInstance(self, &tmp);
+    return replace_instance(self, &tmp);
   }
 }
 
-BL_API_IMPL BLResult blFontFeatureSettingsRemoveValue(BLFontFeatureSettingsCore* self, BLTag featureTag) noexcept {
+BL_API_IMPL BLResult bl_font_feature_settings_remove_value(BLFontFeatureSettingsCore* self, BLTag feature_tag) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
-  BL_ASSERT(self->_d.isFontFeatureSettings());
+  BL_ASSERT(self->_d.is_font_feature_settings());
 
   // SSO Mode
   // --------
 
   if (self->_d.sso()) {
-    uint32_t featureId = bl::FontTagData::featureTagToId(featureTag);
-    if (featureId == bl::FontTagData::kInvalidId)
+    uint32_t feature_id = bl::FontTagData::feature_tag_to_id(feature_tag);
+    if (feature_id == bl::FontTagData::kInvalidId)
       return BL_SUCCESS;
 
-    FeatureInfo featureInfo = bl::FontTagData::featureInfoTable[featureId];
-    if (featureInfo.hasBitId()) {
-      uint32_t featureBitId = featureInfo.bitId;
-      if (!hasSSOBitTag(self, featureBitId))
+    FeatureInfo feature_info = bl::FontTagData::feature_info_table[feature_id];
+    if (feature_info.has_bit_id()) {
+      uint32_t feature_bit_id = feature_info.bit_id;
+      if (!has_sso_bit_tag(self, feature_bit_id))
         return BL_SUCCESS;
 
-      removeSSOBitTag(self, featureBitId);
+      remove_sso_bit_tag(self, feature_bit_id);
       return BL_SUCCESS;
     }
     else {
       uint32_t index;
-      if (!findSSOFatTag(self, featureId, &index))
+      if (!find_sso_fat_tag(self, feature_id, &index))
         return BL_SUCCESS;
 
-      removeSSOFatTag(self, index);
+      remove_sso_fat_tag(self, index);
       return BL_SUCCESS;
     }
   }
@@ -644,40 +644,40 @@ BL_API_IMPL BLResult blFontFeatureSettingsRemoveValue(BLFontFeatureSettingsCore*
   // Dynamic Mode
   // ------------
 
-  BLFontFeatureSettingsImpl* selfI = getImpl(self);
-  BLFontFeatureItem* items = selfI->data;
+  BLFontFeatureSettingsImpl* self_impl = get_impl(self);
+  BLFontFeatureItem* items = self_impl->data;
 
-  size_t size = selfI->size;
-  size_t index = bl::lowerBound(items, selfI->size, featureTag, [](const BLFontFeatureItem& item, uint32_t tag) noexcept { return item.tag < tag; });
+  size_t size = self_impl->size;
+  size_t index = bl::lower_bound(items, self_impl->size, feature_tag, [](const BLFontFeatureItem& item, uint32_t tag) noexcept { return item.tag < tag; });
 
-  if (index >= size || items[index].tag != featureTag)
+  if (index >= size || items[index].tag != feature_tag)
     return BL_SUCCESS;
 
-  if (isImplMutable(selfI)) {
-    selfI->size = size - 1;
-    bl::MemOps::copyForwardInlineT(items + index, items + index + 1, size - index - 1);
+  if (is_impl_mutable(self_impl)) {
+    self_impl->size = size - 1;
+    bl::MemOps::copy_forward_inline_t(items + index, items + index + 1, size - index - 1);
     return BL_SUCCESS;
   }
   else {
     BLFontFeatureSettingsCore tmp;
-    BL_PROPAGATE(initDynamic(&tmp, expandImplSize(implSizeFromCapacity(size - 1)), size - 1));
+    BL_PROPAGATE(init_dynamic(&tmp, expand_impl_size(impl_size_from_capacity(size - 1)), size - 1));
 
-    BLFontFeatureItem* dst = getImpl(&tmp)->data;
-    bl::MemOps::copyForwardInlineT(dst, items, index);
-    bl::MemOps::copyForwardInlineT(dst + index, items + index + 1, size - index - 1);
+    BLFontFeatureItem* dst = get_impl(&tmp)->data;
+    bl::MemOps::copy_forward_inline_t(dst, items, index);
+    bl::MemOps::copy_forward_inline_t(dst + index, items + index + 1, size - index - 1);
 
-    return replaceInstance(self, &tmp);
+    return replace_instance(self, &tmp);
   }
 }
 
 // bl::FontFeatureSettings - API - Equals
 // ======================================
 
-BL_API_IMPL bool blFontFeatureSettingsEquals(const BLFontFeatureSettingsCore* a, const BLFontFeatureSettingsCore* b) noexcept {
+BL_API_IMPL bool bl_font_feature_settings_equals(const BLFontFeatureSettingsCore* a, const BLFontFeatureSettingsCore* b) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
 
-  BL_ASSERT(a->_d.isFontFeatureSettings());
-  BL_ASSERT(b->_d.isFontFeatureSettings());
+  BL_ASSERT(a->_d.is_font_feature_settings());
+  BL_ASSERT(b->_d.is_font_feature_settings());
 
   if (a->_d == b->_d)
     return true;
@@ -688,33 +688,33 @@ BL_API_IMPL bool blFontFeatureSettingsEquals(const BLFontFeatureSettingsCore* a,
       return false;
 
     // Both are dynamic.
-    const BLFontFeatureSettingsImpl* aImpl = getImpl(a);
-    const BLFontFeatureSettingsImpl* bImpl = getImpl(b);
+    const BLFontFeatureSettingsImpl* a_impl = get_impl(a);
+    const BLFontFeatureSettingsImpl* b_impl = get_impl(b);
 
-    size_t size = aImpl->size;
-    if (size != bImpl->size)
+    size_t size = a_impl->size;
+    if (size != b_impl->size)
       return false;
 
-    return memcmp(aImpl->data, bImpl->data, size * sizeof(BLFontFeatureItem)) == 0;
+    return memcmp(a_impl->data, b_impl->data, size * sizeof(BLFontFeatureItem)) == 0;
   }
   else {
     // One is SSO and one is dynamic, make `a` the SSO one.
     if (b->_d.sso())
       BLInternal::swap(a, b);
 
-    const BLFontFeatureSettingsImpl* bImpl = getImpl(b);
-    size_t size = getSSOSize(a);
+    const BLFontFeatureSettingsImpl* b_impl = get_impl(b);
+    size_t size = get_sso_size(a);
 
-    if (size != bImpl->size)
+    if (size != b_impl->size)
       return false;
 
     // NOTE: Since SSO representation is not that trivial, just try to convert B impl to SSO representation
     // and then try binary equality of two SSO instances. If B is not convertible, then A and B are not equal.
     BLFontFeatureSettingsCore bSSO;
-    const BLFontFeatureItem* bItems = bImpl->data;
+    const BLFontFeatureItem* b_items = b_impl->data;
 
     BL_ASSERT(size <= BLFontFeatureSettings::kSSOCapacity);
-    if (!convertItemsToSSO(&bSSO, bItems, size))
+    if (!convert_items_to_sso(&bSSO, b_items, size))
       return false;
 
     return a->_d == bSSO._d;
@@ -724,11 +724,11 @@ BL_API_IMPL bool blFontFeatureSettingsEquals(const BLFontFeatureSettingsCore* a,
 // bl::FontFeatureSettings - Runtime Registration
 // ==============================================
 
-void blFontFeatureSettingsRtInit(BLRuntimeContext* rt) noexcept {
+void bl_font_feature_settings_rt_init(BLRuntimeContext* rt) noexcept {
   using namespace bl::FontFeatureSettingsInternal;
 
-  blUnused(rt);
+  bl_unused(rt);
 
   // Initialize BLFontFeatureSettings.
-  initSSO(static_cast<BLFontFeatureSettingsCore*>(&blObjectDefaults[BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS]));
+  init_sso(static_cast<BLFontFeatureSettingsCore*>(&bl_object_defaults[BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS]));
 }

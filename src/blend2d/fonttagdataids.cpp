@@ -12,7 +12,7 @@ namespace FontTagData {
 // bl::FontTagData - Table IDs
 // ===========================
 
-const BLTag tableIdToTagTable[] = {
+const BLTag table_id_to_tag_table[] = {
   BL_MAKE_TAG('B', 'A', 'S', 'E'), // kBASE - Baseline data                      (OpenType advanced typography)
   BL_MAKE_TAG('C', 'B', 'D', 'T'), // kCBDT - Color bitmap data                  (Color fonts)
   BL_MAKE_TAG('C', 'B', 'L', 'C'), // kCBLC - Color bitmap location data         (Color fonts)
@@ -90,7 +90,7 @@ const BLTag tableIdToTagTable[] = {
 // bl::FontTagData - Script IDs
 // ============================
 
-const BLTag scriptIdToTagTable[] = {
+const BLTag script_id_to_tag_table[] = {
   BL_MAKE_TAG('D', 'F', 'L', 'T'), // kDFLT - Default.
 
   BL_MAKE_TAG('a', 'd', 'l', 'm'), // kADLM - Adlam.
@@ -270,7 +270,7 @@ const BLTag scriptIdToTagTable[] = {
 // bl::FontTagData - Language IDs
 // ==============================
 
-const BLTag languageIdToTagTable[] = {
+const BLTag language_id_to_tag_table[] = {
   BL_MAKE_TAG('A', 'B', 'A', ' '), // kABA  - Abaza.
   BL_MAKE_TAG('A', 'B', 'K', ' '), // kABK  - Abkhazian.
   BL_MAKE_TAG('A', 'C', 'H', ' '), // kACH  - Acholi.
@@ -910,7 +910,7 @@ const BLTag languageIdToTagTable[] = {
 // bl::FontTagData - Feature IDs
 // =============================
 
-const BLTag featureIdToTagTable[] = {
+const BLTag feature_id_to_tag_table[] = {
   BL_MAKE_TAG('a', 'a', 'l', 't'), // kAALT - Access All Alternates.
   BL_MAKE_TAG('a', 'b', 'v', 'f'), // kABVF - Above-base Forms.
   BL_MAKE_TAG('a', 'b', 'v', 'm'), // kABVM - Above-base Mark Positioning.
@@ -1157,7 +1157,7 @@ const BLTag featureIdToTagTable[] = {
 // bl::FontTagData - Baseline IDs
 // ==============================
 
-const BLTag baselineIdToTagTable[] = {
+const BLTag baseline_id_to_tag_table[] = {
   BL_MAKE_TAG('I', 'c', 'f', 'c'), // kICFC - Ideographic face center.
   BL_MAKE_TAG('I', 'd', 'c', 'e'), // kIDCE - Ideographics em-box center.
   BL_MAKE_TAG('h', 'a', 'n', 'g'), // kHANG - The hanging baseline.
@@ -1172,7 +1172,7 @@ const BLTag baselineIdToTagTable[] = {
 // bl::FontTagData - Variation IDs
 // ===============================
 
-const BLTag variationIdToTagTable[] = {
+const BLTag variation_id_to_tag_table[] = {
   BL_MAKE_TAG('i', 't', 'a', 'l'), // kITAL - Italic.
   BL_MAKE_TAG('o', 'p', 's', 'z'), // kOPSZ - Optical size.
   BL_MAKE_TAG('s', 'l', 'n', 't'), // kSLNT - Slant.

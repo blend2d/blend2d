@@ -17,7 +17,7 @@ namespace Tests {
 UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
   constexpr uint32_t kSize = 256;
 
-  INFO("Testing BLImage::create() and BLImage::makeMutable()");
+  INFO("Testing BLImage::create() and BLImage::make_mutable()");
   {
     BLImage img0;
     BLImage img1;
@@ -36,8 +36,8 @@ UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
     BLImageData imgData0;
     BLImageData imgData1;
 
-    EXPECT_SUCCESS(img0.makeMutable(&imgData0));
-    EXPECT_SUCCESS(img1.makeMutable(&imgData1));
+    EXPECT_SUCCESS(img0.make_mutable(&imgData0));
+    EXPECT_SUCCESS(img1.make_mutable(&imgData1));
 
     EXPECT_EQ(imgData0.size.w, int(kSize));
     EXPECT_EQ(imgData0.size.h, int(kSize));
@@ -49,8 +49,8 @@ UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
 
     // Direct memory manipulation.
     for (size_t y = 0; y < kSize; y++) {
-      memset(static_cast<uint8_t*>(imgData0.pixelData) + intptr_t(y) * imgData0.stride, int(y & 0xFF), kSize * 4);
-      memset(static_cast<uint8_t*>(imgData1.pixelData) + intptr_t(y) * imgData1.stride, int(y & 0xFF), kSize * 4);
+      memset(static_cast<uint8_t*>(imgData0.pixel_data) + intptr_t(y) * imgData0.stride, int(y & 0xFF), kSize * 4);
+      memset(static_cast<uint8_t*>(imgData1.pixel_data) + intptr_t(y) * imgData1.stride, int(y & 0xFF), kSize * 4);
     }
 
     EXPECT_TRUE(img0.equals(img1));
@@ -75,12 +75,12 @@ UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
     BLImageData imgData0;
     BLImageData imgData1;
 
-    EXPECT_SUCCESS(img0.makeMutable(&imgData0));
-    EXPECT_SUCCESS(img1.makeMutable(&imgData1));
+    EXPECT_SUCCESS(img0.make_mutable(&imgData0));
+    EXPECT_SUCCESS(img1.make_mutable(&imgData1));
 
     for (size_t y = 0; y < kSize; y++) {
-      uint32_t* line0 = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(imgData0.pixelData) + intptr_t(y) * imgData0.stride);
-      uint8_t* line1 = static_cast<uint8_t*>(imgData1.pixelData) + intptr_t(y) * imgData1.stride;
+      uint32_t* line0 = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(imgData0.pixel_data) + intptr_t(y) * imgData0.stride);
+      uint8_t* line1 = static_cast<uint8_t*>(imgData1.pixel_data) + intptr_t(y) * imgData1.stride;
 
       for (uint32_t x = 0; x < kSize; x++) {
         line0[x] = uint32_t((x + y) & 0xFF) << 24;
@@ -92,67 +92,67 @@ UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
     EXPECT_TRUE(img0.equals(img1));
   }
 
-  INFO("Testing BLImage::createFromData()");
+  INFO("Testing BLImage::create_from_data()");
   {
     struct ExternalDataInfo {
-      void* externalData;
-      size_t destroyCount;
+      void* external_data;
+      size_t destroy_count;
     };
 
-    void* externalDataPtr = malloc(kSize * kSize * 4);
-    EXPECT_NE(externalDataPtr, nullptr);
+    void* external_data_ptr = malloc(kSize * kSize * 4);
+    EXPECT_NE(external_data_ptr, nullptr);
 
     BLImage img;
-    BLImageData imgData;
+    BLImageData img_data;
 
-    // Test createFromData() without a destroy handler.
-    EXPECT_SUCCESS(img.createFromData(kSize, kSize, BL_FORMAT_PRGB32, externalDataPtr, kSize * 4, BL_DATA_ACCESS_RW));
+    // Test create_from_data() without a destroy handler.
+    EXPECT_SUCCESS(img.create_from_data(kSize, kSize, BL_FORMAT_PRGB32, external_data_ptr, kSize * 4, BL_DATA_ACCESS_RW));
     EXPECT_EQ(img.width(), int(kSize));
     EXPECT_EQ(img.height(), int(kSize));
     EXPECT_EQ(img.format(), BL_FORMAT_PRGB32);
 
-    EXPECT_SUCCESS(img.makeMutable(&imgData));
-    EXPECT_EQ(imgData.size.w, int(kSize));
-    EXPECT_EQ(imgData.size.h, int(kSize));
-    EXPECT_EQ(imgData.format, BL_FORMAT_PRGB32);
-    EXPECT_EQ(imgData.pixelData, externalDataPtr);
+    EXPECT_SUCCESS(img.make_mutable(&img_data));
+    EXPECT_EQ(img_data.size.w, int(kSize));
+    EXPECT_EQ(img_data.size.h, int(kSize));
+    EXPECT_EQ(img_data.format, BL_FORMAT_PRGB32);
+    EXPECT_EQ(img_data.pixel_data, external_data_ptr);
 
     EXPECT_SUCCESS(img.reset());
 
-    // Test createFromData() with a destroy handler.
-    ExternalDataInfo externalDataInfo {};
+    // Test create_from_data() with a destroy handler.
+    ExternalDataInfo external_data_info {};
 
-    auto destroyFunc = [](void* impl, void* externalData, void* userData) noexcept -> void {
-      blUnused(impl);
+    auto destroy_func = [](void* impl, void* external_data, void* user_data) noexcept -> void {
+      bl_unused(impl);
 
-      ExternalDataInfo* info = static_cast<ExternalDataInfo*>(userData);
-      info->destroyCount++;
-      info->externalData = externalData;
+      ExternalDataInfo* info = static_cast<ExternalDataInfo*>(user_data);
+      info->destroy_count++;
+      info->external_data = external_data;
     };
 
-    EXPECT_SUCCESS(img.createFromData(kSize, kSize, BL_FORMAT_PRGB32, externalDataPtr, kSize * 4, BL_DATA_ACCESS_RW, destroyFunc, &externalDataInfo));
+    EXPECT_SUCCESS(img.create_from_data(kSize, kSize, BL_FORMAT_PRGB32, external_data_ptr, kSize * 4, BL_DATA_ACCESS_RW, destroy_func, &external_data_info));
     EXPECT_EQ(img.width(), int(kSize));
     EXPECT_EQ(img.height(), int(kSize));
     EXPECT_EQ(img.format(), BL_FORMAT_PRGB32);
 
-    EXPECT_SUCCESS(img.makeMutable(&imgData));
-    EXPECT_EQ(imgData.size.w, int(kSize));
-    EXPECT_EQ(imgData.size.h, int(kSize));
-    EXPECT_EQ(imgData.format, BL_FORMAT_PRGB32);
-    EXPECT_EQ(imgData.pixelData, externalDataPtr);
+    EXPECT_SUCCESS(img.make_mutable(&img_data));
+    EXPECT_EQ(img_data.size.w, int(kSize));
+    EXPECT_EQ(img_data.size.h, int(kSize));
+    EXPECT_EQ(img_data.format, BL_FORMAT_PRGB32);
+    EXPECT_EQ(img_data.pixel_data, external_data_ptr);
 
     // Verify our info is zero initialized.
-    EXPECT_EQ(externalDataInfo.externalData, nullptr);
-    EXPECT_EQ(externalDataInfo.destroyCount, 0u);
+    EXPECT_EQ(external_data_info.external_data, nullptr);
+    EXPECT_EQ(external_data_info.destroy_count, 0u);
 
     // Destroy the image, should call the destroy handler.
     EXPECT_SUCCESS(img.reset());
 
     // Verify the destroy handler was called once.
-    EXPECT_EQ(externalDataInfo.externalData, externalDataPtr);
-    EXPECT_EQ(externalDataInfo.destroyCount, 1u);
+    EXPECT_EQ(external_data_info.external_data, external_data_ptr);
+    EXPECT_EQ(external_data_info.destroy_count, 1u);
 
-    free(externalDataPtr);
+    free(external_data_ptr);
   }
 
   INFO("Testing BLImage reference counting");
@@ -161,10 +161,10 @@ UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
     BLImageData imgData0;
 
     EXPECT_SUCCESS(img0.create(kSize, kSize, BL_FORMAT_PRGB32));
-    EXPECT_SUCCESS(img0.makeMutable(&imgData0));
+    EXPECT_SUCCESS(img0.make_mutable(&imgData0));
 
     for (size_t y = 0; y < kSize; y++) {
-      uint32_t* line = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(imgData0.pixelData) + intptr_t(y) * imgData0.stride);
+      uint32_t* line = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(imgData0.pixel_data) + intptr_t(y) * imgData0.stride);
       for (uint32_t x = 0; x < kSize; x++) {
         line[x] = uint32_t((x + y) & 0xFF) << 24;
       }
@@ -174,10 +174,10 @@ UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
     EXPECT_EQ(img0, img1);
 
     BLImageData imgData1;
-    EXPECT_SUCCESS(img0.makeMutable(&imgData0));
-    EXPECT_SUCCESS(img1.makeMutable(&imgData1));
+    EXPECT_SUCCESS(img0.make_mutable(&imgData0));
+    EXPECT_SUCCESS(img1.make_mutable(&imgData1));
 
-    EXPECT_NE(imgData0.pixelData, imgData1.pixelData);
+    EXPECT_NE(imgData0.pixel_data, imgData1.pixel_data);
     EXPECT_EQ(img0, img1);
   }
 }

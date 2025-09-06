@@ -24,10 +24,10 @@ namespace bl::Qoi {
 // bl::Qoi::Codec - Globals
 // ========================
 
-static BLObjectEternalVirtualImpl<BLQoiCodecImpl, BLImageCodecVirt> qoiCodec;
-static BLImageCodecCore qoiCodecInstance;
-static BLImageDecoderVirt qoiDecoderVirt;
-static BLImageEncoderVirt qoiEncoderVirt;
+static BLObjectEternalVirtualImpl<BLQoiCodecImpl, BLImageCodecVirt> qoi_codec;
+static BLImageCodecCore qoi_codec_instance;
+static BLImageDecoderVirt qoi_decoder_virt;
+static BLImageEncoderVirt qoi_encoder_virt;
 
 // bl::Qoi::Codec - Constants
 // ==========================
@@ -49,17 +49,17 @@ static constexpr uint32_t kQoiHashB = 7u;
 static constexpr uint32_t kQoiHashA = 11u;
 static constexpr uint32_t kQoiHashMask = 0x3Fu;
 
-static constexpr uint8_t qoiMagic[kQoiMagicSize] = { 'q', 'o', 'i', 'f' };
-static constexpr uint8_t qoiEndMarker[kQoiEndMarkerSize] = { 0, 0, 0, 0, 0, 0, 0, 1 };
+static constexpr uint8_t qoi_magic[kQoiMagicSize] = { 'q', 'o', 'i', 'f' };
+static constexpr uint8_t qoi_end_marker[kQoiEndMarkerSize] = { 0, 0, 0, 0, 0, 0, 0, 1 };
 
 // Lookup table generator that generates delta values for QOI_OP_DIFF and the first byte of QOI_OP_LUMA.
 // Additionally, it provides values for a RLE run of a single pixel for a possible experimentation.
 struct IndexDiffLumaTableGen {
-  static constexpr uint32_t rgb(uint32_t r, uint32_t g, uint32_t b, uint32_t lumaMask) noexcept {
+  static constexpr uint32_t rgb(uint32_t r, uint32_t g, uint32_t b, uint32_t luma_mask) noexcept {
     return ((r & 0xFFu) << 24) |
            ((g & 0xFFu) << 16) |
            ((b & 0xFFu) <<  8) |
-           ((lumaMask ) <<  0) ;
+           ((luma_mask ) <<  0) ;
   }
 
   static constexpr uint32_t diff(uint32_t b0) noexcept {
@@ -76,7 +76,7 @@ struct IndexDiffLumaTableGen {
   }
 };
 
-static constexpr LookupTable<uint32_t, 129> qoiIndexDiffLumaLUT = makeLookupTable<uint32_t, 129, IndexDiffLumaTableGen>();
+static constexpr LookupTable<uint32_t, 129> qoiIndexDiffLumaLUT = make_lookup_table<uint32_t, 129, IndexDiffLumaTableGen>();
 
 // bl::Qoi::Codec - Hashing
 // ========================
@@ -201,68 +201,68 @@ static BL_INLINE uint32_t* fillRgba32(uint32_t* dst, uint32_t value, size_t coun
 //   uint8_t colorspace; // 0 = sRGB with linear alpha, 1 = all channels linear
 // };
 
-static BLResult decoderReadInfoInternal(BLQoiDecoderImpl* decoderI, const uint8_t* data, size_t size) noexcept {
+static BLResult decoder_read_info_internal(BLQoiDecoderImpl* decoder_impl, const uint8_t* data, size_t size) noexcept {
   if (size < kQoiHeaderSize) {
-    return blTraceError(BL_ERROR_DATA_TRUNCATED);
+    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
   }
 
-  if (memcmp(qoiMagic, data, kQoiMagicSize) != 0) {
-    return blTraceError(BL_ERROR_INVALID_SIGNATURE);
+  if (memcmp(qoi_magic, data, kQoiMagicSize) != 0) {
+    return bl_trace_error(BL_ERROR_INVALID_SIGNATURE);
   }
 
   uint32_t w = bl::MemOps::readU32uBE(data + 4);
   uint32_t h = bl::MemOps::readU32uBE(data + 8);
 
   if (w == 0 || h == 0) {
-    return blTraceError(BL_ERROR_INVALID_DATA);
+    return bl_trace_error(BL_ERROR_INVALID_DATA);
   }
 
   uint8_t channels = data[12];
   uint8_t colorspace = data[13];
 
   if (channels != 3u && channels != 4u) {
-    return blTraceError(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
   }
 
   if (colorspace > 1u) {
-    return blTraceError(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
   }
 
   if (w > BL_RUNTIME_MAX_IMAGE_SIZE || h > BL_RUNTIME_MAX_IMAGE_SIZE) {
-    return blTraceError(BL_ERROR_IMAGE_TOO_LARGE);
+    return bl_trace_error(BL_ERROR_IMAGE_TOO_LARGE);
   }
 
-  decoderI->bufferIndex = 14u;
-  decoderI->imageInfo.reset();
-  decoderI->imageInfo.size.reset(int32_t(w), int32_t(h));
-  decoderI->imageInfo.depth = uint16_t(channels * 8);
-  decoderI->imageInfo.planeCount = 1;
-  decoderI->imageInfo.frameCount = 1;
+  decoder_impl->buffer_index = 14u;
+  decoder_impl->image_info.reset();
+  decoder_impl->image_info.size.reset(int32_t(w), int32_t(h));
+  decoder_impl->image_info.depth = uint16_t(channels * 8);
+  decoder_impl->image_info.plane_count = 1;
+  decoder_impl->image_info.frame_count = 1;
 
-  memcpy(decoderI->imageInfo.format, "QOI", 4);
-  memcpy(decoderI->imageInfo.compression, "RLE", 4);
+  memcpy(decoder_impl->image_info.format, "QOI", 4);
+  memcpy(decoder_impl->image_info.compression, "RLE", 4);
 
   return BL_SUCCESS;
 }
 
 template<bool kHasAlpha>
-static BL_INLINE BLResult decodeQoiData(
-  uint8_t* dstRow,
-  intptr_t dstStride,
+static BL_INLINE BLResult decode_qoi_data(
+  uint8_t* dst_row,
+  intptr_t dst_stride,
   uint32_t w,
   uint32_t h,
-  uint32_t packedTable[64],
-  UnpackedPixel unpackedTable[64],
+  uint32_t packed_table[64],
+  UnpackedPixel unpacked_table[64],
   const uint8_t* src,
   const uint8_t* end) noexcept {
 
   constexpr size_t kMinRemainingBytesOfNextChunk = kQoiEndMarkerSize + 1u;
 
-  uint32_t* dstPtr = reinterpret_cast<uint32_t*>(dstRow);
-  uint32_t* dstEnd = dstPtr + w;
+  uint32_t* dst_ptr = reinterpret_cast<uint32_t*>(dst_row);
+  uint32_t* dst_end = dst_ptr + w;
 
-  uint32_t packedPixel = 0xFF000000;
-  UnpackedPixel unpackedPixel = UnpackedPixel::unpack(packedPixel);
+  uint32_t packed_pixel = 0xFF000000;
+  UnpackedPixel unpacked_pixel = UnpackedPixel::unpack(packed_pixel);
 
   // Edge case: If the image starts with QOI_OP_RUN, the repeated pixel must be
   // added to the pixel table, otherwise the decoder may produce incorrect result.
@@ -270,16 +270,16 @@ static BL_INLINE BLResult decodeQoiData(
     uint32_t hbyte0 = src[0];
 
     if (hbyte0 >= kQoiOpRun && hbyte0 < kQoiOpRun + 62u) {
-      uint32_t hash = unpackedPixel.hash();
-      packedTable[hash] = packedPixel;
-      unpackedTable[hash] = unpackedPixel;
+      uint32_t hash = unpacked_pixel.hash();
+      packed_table[hash] = packed_pixel;
+      unpacked_table[hash] = unpacked_pixel;
     }
   }
 
   for (;;) {
-    size_t remaining = PtrOps::bytesUntil(src, end);
+    size_t remaining = PtrOps::bytes_until(src, end);
     if (BL_UNLIKELY(remaining < kMinRemainingBytesOfNextChunk)) {
-      return blTraceError(BL_ERROR_DATA_TRUNCATED);
+      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
     }
 
     uint32_t hbyte0 = src[0];
@@ -292,21 +292,21 @@ static BL_INLINE BLResult decodeQoiData(
 
       if (hbyte0 < 64u) {
         // Handle QOI_OP_INDEX - 6-bit index to a pixel table (hbyte0 = 0b00xxxxxx).
-        packedPixel = packedTable[hbyte0];
-        unpackedPixel = unpackedTable[hbyte0];
+        packed_pixel = packed_table[hbyte0];
+        unpacked_pixel = unpacked_table[hbyte0];
 
-        *dstPtr = packedPixel;
-        if (BL_LIKELY(++dstPtr != dstEnd)) {
+        *dst_ptr = packed_pixel;
+        if (BL_LIKELY(++dst_ptr != dst_end)) {
           if (!(hbyte1 < 64u)) {
             continue;
           }
 
-          packedPixel = packedTable[hbyte1];
-          unpackedPixel = unpackedTable[hbyte1];
+          packed_pixel = packed_table[hbyte1];
+          unpacked_pixel = unpacked_table[hbyte1];
           src++;
 
-          *dstPtr = packedPixel;
-          if (++dstPtr != dstEnd) {
+          *dst_ptr = packed_pixel;
+          if (++dst_ptr != dst_end) {
             continue;
           }
         }
@@ -317,25 +317,25 @@ static BL_INLINE BLResult decodeQoiData(
         {
           src += hbyte0 >> 7;
 
-          uint32_t packedDelta = qoiIndexDiffLumaLUT[hbyte0 - 64u];
-          hbyte1 &= packedDelta;
-          packedDelta >>= 8;
+          uint32_t packed_delta = qoiIndexDiffLumaLUT[hbyte0 - 64u];
+          hbyte1 &= packed_delta;
+          packed_delta >>= 8;
 
-          unpackedPixel.addRB((hbyte1 | (hbyte1 << 12)) & 0x000F000Fu);
-          unpackedPixel.add(UnpackedPixel::unpack(packedDelta));
-          unpackedPixel.mask();
+          unpacked_pixel.addRB((hbyte1 | (hbyte1 << 12)) & 0x000F000Fu);
+          unpacked_pixel.add(UnpackedPixel::unpack(packed_delta));
+          unpacked_pixel.mask();
         }
 
 store_pixel:
-        hbyte0 = unpackedPixel.hash();
+        hbyte0 = unpacked_pixel.hash();
 
-        packedPixel = unpackedPixel.pack<kHasAlpha>();
-        unpackedTable[hbyte0] = unpackedPixel;
+        packed_pixel = unpacked_pixel.pack<kHasAlpha>();
+        unpacked_table[hbyte0] = unpacked_pixel;
 
-        *dstPtr = packedPixel;
-        packedTable[hbyte0] = packedPixel;
+        *dst_ptr = packed_pixel;
+        packed_table[hbyte0] = packed_pixel;
 
-        if (++dstPtr != dstEnd)
+        if (++dst_ptr != dst_end)
           continue;
 
         hbyte0 = 0;
@@ -347,7 +347,7 @@ store_pixel:
 
       if (hbyte0 >= kQoiOpRgb) {
         // Handle both QOI_OP_RGB and QOI_OP_RGBA at the same time.
-        unpackedPixel.opRGBX(hbyte0, UnpackedPixel::unpackRGBA(hbyte1, src[1], src[2], src[3]));
+        unpacked_pixel.opRGBX(hbyte0, UnpackedPixel::unpackRGBA(hbyte1, src[1], src[2], src[3]));
 
         // Advance by either 3 (RGB) or 4 (RGBA) bytes.
         src += hbyte0 - 251u;
@@ -359,13 +359,13 @@ store_pixel:
 
 store_rle:
         {
-          size_t limit = (size_t)(dstEnd - dstPtr);
-          size_t fill = blMin<size_t>(hbyte0, limit);
+          size_t limit = (size_t)(dst_end - dst_ptr);
+          size_t fill = bl_min<size_t>(hbyte0, limit);
 
           hbyte0 -= uint32_t(fill);
-          dstPtr = fillRgba32(dstPtr, packedPixel, fill);
+          dst_ptr = fillRgba32(dst_ptr, packed_pixel, fill);
 
-          if (dstPtr != dstEnd) {
+          if (dst_ptr != dst_end) {
             continue;
           }
         }
@@ -376,9 +376,9 @@ store_rle:
       return BL_SUCCESS;
     }
 
-    dstRow += dstStride;
-    dstPtr = reinterpret_cast<uint32_t*>(dstRow);
-    dstEnd = dstPtr + w;
+    dst_row += dst_stride;
+    dst_ptr = reinterpret_cast<uint32_t*>(dst_row);
+    dst_end = dst_ptr + w;
 
     // True if we are inside an unfinished QOI_OP_RUN that spans across two or more rows.
     if (hbyte0 != 0) {
@@ -387,42 +387,42 @@ store_rle:
   }
 }
 
-static BLResult decoderReadFrameInternal(BLQoiDecoderImpl* decoderI, BLImage* imageOut, const uint8_t* data, size_t size) noexcept {
+static BLResult decoder_read_frame_internal(BLQoiDecoderImpl* decoder_impl, BLImage* image_out, const uint8_t* data, size_t size) noexcept {
   if (size < kQoiHeaderSize)
-    return blTraceError(BL_ERROR_DATA_TRUNCATED);
+    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
 
   const uint8_t* start = data;
   const uint8_t* end = data + size;
 
-  uint32_t w = uint32_t(decoderI->imageInfo.size.w);
-  uint32_t h = uint32_t(decoderI->imageInfo.size.h);
+  uint32_t w = uint32_t(decoder_impl->image_info.size.w);
+  uint32_t h = uint32_t(decoder_impl->image_info.size.h);
 
-  uint32_t depth = decoderI->imageInfo.depth;
+  uint32_t depth = decoder_impl->image_info.depth;
   BLFormat format = depth == 32 ? BL_FORMAT_PRGB32 : BL_FORMAT_XRGB32;
 
   data += kQoiHeaderSize;
   if (data >= end)
-    return blTraceError(BL_ERROR_DATA_TRUNCATED);
+    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
 
-  BLImageData imageData;
-  BL_PROPAGATE(imageOut->create(int(w), int(h), format));
-  BL_PROPAGATE(imageOut->makeMutable(&imageData));
+  BLImageData image_data;
+  BL_PROPAGATE(image_out->create(int(w), int(h), format));
+  BL_PROPAGATE(image_out->make_mutable(&image_data));
 
-  uint8_t* dstRow = static_cast<uint8_t*>(imageData.pixelData);
-  intptr_t dstStride = imageData.stride;
+  uint8_t* dst_row = static_cast<uint8_t*>(image_data.pixel_data);
+  intptr_t dst_stride = image_data.stride;
 
-  uint32_t packedTable[64];
-  fillRgba32(packedTable, depth == 32 ? 0u : 0xFF000000u, 64);
+  uint32_t packed_table[64];
+  fillRgba32(packed_table, depth == 32 ? 0u : 0xFF000000u, 64);
 
-  UnpackedPixel unpackedTable[64] {};
+  UnpackedPixel unpacked_table[64] {};
 
   if (depth == 32)
-    BL_PROPAGATE(decodeQoiData<true>(dstRow, dstStride, w, h, packedTable, unpackedTable, data, end));
+    BL_PROPAGATE(decode_qoi_data<true>(dst_row, dst_stride, w, h, packed_table, unpacked_table, data, end));
   else
-    BL_PROPAGATE(decodeQoiData<false>(dstRow, dstStride, w, h, packedTable, unpackedTable, data, end));
+    BL_PROPAGATE(decode_qoi_data<false>(dst_row, dst_stride, w, h, packed_table, unpacked_table, data, end));
 
-  decoderI->bufferIndex = PtrOps::byteOffset(start, data);
-  decoderI->frameIndex++;
+  decoder_impl->buffer_index = PtrOps::byte_offset(start, data);
+  decoder_impl->frame_index++;
 
   return BL_SUCCESS;
 }
@@ -430,82 +430,82 @@ static BLResult decoderReadFrameInternal(BLQoiDecoderImpl* decoderI, BLImage* im
 // bl::Qoi::Decoder - Interface
 // ============================
 
-static BLResult BL_CDECL decoderRestartImpl(BLImageDecoderImpl* impl) noexcept {
-  BLQoiDecoderImpl* decoderI = static_cast<BLQoiDecoderImpl*>(impl);
+static BLResult BL_CDECL decoder_restart_impl(BLImageDecoderImpl* impl) noexcept {
+  BLQoiDecoderImpl* decoder_impl = static_cast<BLQoiDecoderImpl*>(impl);
 
-  decoderI->lastResult = BL_SUCCESS;
-  decoderI->frameIndex = 0;
-  decoderI->bufferIndex = 0;
-  decoderI->imageInfo.reset();
+  decoder_impl->last_result = BL_SUCCESS;
+  decoder_impl->frame_index = 0;
+  decoder_impl->buffer_index = 0;
+  decoder_impl->image_info.reset();
 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL decoderReadInfoImpl(BLImageDecoderImpl* impl, BLImageInfo* infoOut, const uint8_t* data, size_t size) noexcept {
-  BLQoiDecoderImpl* decoderI = static_cast<BLQoiDecoderImpl*>(impl);
-  BLResult result = decoderI->lastResult;
+static BLResult BL_CDECL decoder_read_info_impl(BLImageDecoderImpl* impl, BLImageInfo* info_out, const uint8_t* data, size_t size) noexcept {
+  BLQoiDecoderImpl* decoder_impl = static_cast<BLQoiDecoderImpl*>(impl);
+  BLResult result = decoder_impl->last_result;
 
-  if (decoderI->bufferIndex == 0 && result == BL_SUCCESS) {
-    result = decoderReadInfoInternal(decoderI, data, size);
+  if (decoder_impl->buffer_index == 0 && result == BL_SUCCESS) {
+    result = decoder_read_info_internal(decoder_impl, data, size);
     if (result != BL_SUCCESS)
-      decoderI->lastResult = result;
+      decoder_impl->last_result = result;
   }
 
-  if (infoOut)
-    memcpy(infoOut, &decoderI->imageInfo, sizeof(BLImageInfo));
+  if (info_out)
+    memcpy(info_out, &decoder_impl->image_info, sizeof(BLImageInfo));
 
   return result;
 }
 
-static BLResult BL_CDECL decoderReadFrameImpl(BLImageDecoderImpl* impl, BLImageCore* imageOut, const uint8_t* data, size_t size) noexcept {
-  BLQoiDecoderImpl* decoderI = static_cast<BLQoiDecoderImpl*>(impl);
-  BL_PROPAGATE(decoderReadInfoImpl(decoderI, nullptr, data, size));
+static BLResult BL_CDECL decoder_read_frame_impl(BLImageDecoderImpl* impl, BLImageCore* image_out, const uint8_t* data, size_t size) noexcept {
+  BLQoiDecoderImpl* decoder_impl = static_cast<BLQoiDecoderImpl*>(impl);
+  BL_PROPAGATE(decoder_read_info_impl(decoder_impl, nullptr, data, size));
 
-  if (decoderI->frameIndex)
-    return blTraceError(BL_ERROR_NO_MORE_DATA);
+  if (decoder_impl->frame_index)
+    return bl_trace_error(BL_ERROR_NO_MORE_DATA);
 
-  BLResult result = decoderReadFrameInternal(decoderI, static_cast<BLImage*>(imageOut), data, size);
+  BLResult result = decoder_read_frame_internal(decoder_impl, static_cast<BLImage*>(image_out), data, size);
   if (result != BL_SUCCESS)
-    decoderI->lastResult = result;
+    decoder_impl->last_result = result;
   return result;
 }
 
-static BLResult BL_CDECL decoderCreateImpl(BLImageDecoderCore* self) noexcept {
-  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_DECODER);
-  BL_PROPAGATE(ObjectInternal::allocImplT<BLQoiDecoderImpl>(self, info));
+static BLResult BL_CDECL decoder_create_impl(BLImageDecoderCore* self) noexcept {
+  BLObjectInfo info = BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_IMAGE_DECODER);
+  BL_PROPAGATE(ObjectInternal::alloc_impl_t<BLQoiDecoderImpl>(self, info));
 
-  BLQoiDecoderImpl* decoderI = static_cast<BLQoiDecoderImpl*>(self->_d.impl);
-  decoderI->ctor(&qoiDecoderVirt, &qoiCodecInstance);
-  return decoderRestartImpl(decoderI);
+  BLQoiDecoderImpl* decoder_impl = static_cast<BLQoiDecoderImpl*>(self->_d.impl);
+  decoder_impl->ctor(&qoi_decoder_virt, &qoi_codec_instance);
+  return decoder_restart_impl(decoder_impl);
 }
 
-static BLResult BL_CDECL decoderDestroyImpl(BLObjectImpl* impl) noexcept {
-  BLQoiDecoderImpl* decoderI = static_cast<BLQoiDecoderImpl*>(impl);
+static BLResult BL_CDECL decoder_destroy_impl(BLObjectImpl* impl) noexcept {
+  BLQoiDecoderImpl* decoder_impl = static_cast<BLQoiDecoderImpl*>(impl);
 
-  decoderI->dtor();
-  return blObjectFreeImpl(decoderI);
+  decoder_impl->dtor();
+  return bl_object_free_impl(decoder_impl);
 }
 
 // bl::Qoi::Encoder - Interface
 // ============================
 
 // QOI isn't good for compressing alpha-only images - we can optimize the encoder's performance, but not the final size.
-static uint8_t* encodeQoiDataA8(uint8_t* dstData, uint32_t w, uint32_t h, const uint8_t* srcData, intptr_t srcStride) noexcept {
+static uint8_t* encodeQoiDataA8(uint8_t* dst_data, uint32_t w, uint32_t h, const uint8_t* src_data, intptr_t src_stride) noexcept {
   // NOTE: Use an initial value which is not representable, because the encoder/decoder starts with RGB==0,
   // which would decode badly into RGBA formats (the components would be zero and thus it would not be the
   // same as when used by Blend2D, which defaults to having RGB components the same as 0xFF premultiplied).
   uint32_t pixel = 0xFFFFFFFFu;
-  uint16_t pixelTable[64];
+  uint16_t pixel_table[64];
 
   for (size_t i = 0; i < 64; i++) {
-    pixelTable[i] = 0xFFFFu;
+    pixel_table[i] = 0xFFFFu;
   }
 
-  srcStride -= intptr_t(w);
+  src_stride -= intptr_t(w);
   uint32_t x = w;
 
   for (;;) {
-    uint32_t p = *srcData++;
+    uint32_t p = *src_data++;
 
     // Run length encoding.
     if (p == pixel) {
@@ -516,7 +516,7 @@ static uint8_t* encodeQoiDataA8(uint8_t* dstData, uint32_t w, uint32_t h, const 
         uint32_t prevX = x;
 
         while (x) {
-          p = *srcData++;
+          p = *src_data++;
           if (p != pixel)
             break;
           x--;
@@ -525,7 +525,7 @@ static uint8_t* encodeQoiDataA8(uint8_t* dstData, uint32_t w, uint32_t h, const 
         n += size_t(prevX - x);
 
         if (x == 0 && --h != 0) {
-          srcData += srcStride;
+          src_data += src_stride;
           x = w;
         }
         else {
@@ -534,30 +534,30 @@ static uint8_t* encodeQoiDataA8(uint8_t* dstData, uint32_t w, uint32_t h, const 
       }
 
       do {
-        size_t run = blMin<size_t>(n, 62u);
-        *dstData++ = uint8_t(run + (kQoiOpRun - 1u));
+        size_t run = bl_min<size_t>(n, 62u);
+        *dst_data++ = uint8_t(run + (kQoiOpRun - 1u));
         n -= run;
       } while (n);
 
       if (!x) {
-        return dstData;
+        return dst_data;
       }
     }
 
     uint32_t hash = hashPixelA8(p);
 
-    if (pixelTable[hash] == p) {
-      *dstData++ = uint8_t(kQoiOpIndex | hash);
+    if (pixel_table[hash] == p) {
+      *dst_data++ = uint8_t(kQoiOpIndex | hash);
     }
     else {
-      pixelTable[hash] = uint16_t(p);
+      pixel_table[hash] = uint16_t(p);
 
-      dstData[0] = kQoiOpRgba;
-      dstData[1] = uint8_t(0xFFu);
-      dstData[2] = uint8_t(0xFFu);
-      dstData[3] = uint8_t(0xFFu);
-      dstData[4] = uint8_t(p);
-      dstData += 5;
+      dst_data[0] = kQoiOpRgba;
+      dst_data[1] = uint8_t(0xFFu);
+      dst_data[2] = uint8_t(0xFFu);
+      dst_data[3] = uint8_t(0xFFu);
+      dst_data[4] = uint8_t(p);
+      dst_data += 5;
     }
 
     pixel = p;
@@ -566,23 +566,23 @@ static uint8_t* encodeQoiDataA8(uint8_t* dstData, uint32_t w, uint32_t h, const 
       continue;
 
     if (--h == 0u)
-      return dstData;
+      return dst_data;
 
-    srcData += srcStride;
+    src_data += src_stride;
     x = w;
   }
 }
 
-static uint8_t* encodeQoiDataXRGB32(uint8_t* dstData, uint32_t w, uint32_t h, const uint8_t* srcData, intptr_t srcStride) noexcept {
+static uint8_t* encodeQoiDataXRGB32(uint8_t* dst_data, uint32_t w, uint32_t h, const uint8_t* src_data, intptr_t src_stride) noexcept {
   BLRgba32 pixel = BLRgba32(0xFF000000u);
-  uint32_t pixelTable[64] {};
+  uint32_t pixel_table[64] {};
 
   uint32_t x = w;
-  srcStride -= intptr_t(w) * 4;
+  src_stride -= intptr_t(w) * 4;
 
   for (;;) {
-    BLRgba32 p = BLRgba32(MemOps::readU32a(srcData) | 0xFF000000u);
-    srcData += 4;
+    BLRgba32 p = BLRgba32(MemOps::readU32a(src_data) | 0xFF000000u);
+    src_data += 4;
 
     // Run length encoding.
     if (p == pixel) {
@@ -593,8 +593,8 @@ static uint8_t* encodeQoiDataXRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
         uint32_t prevX = x;
 
         while (x) {
-          p = BLRgba32(MemOps::readU32a(srcData) | 0xFF000000u);
-          srcData += 4;
+          p = BLRgba32(MemOps::readU32a(src_data) | 0xFF000000u);
+          src_data += 4;
           if (p != pixel)
             break;
           x--;
@@ -603,7 +603,7 @@ static uint8_t* encodeQoiDataXRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
         n += size_t(prevX - x);
 
         if (x == 0 && --h != 0) {
-          srcData += srcStride;
+          src_data += src_stride;
           x = w;
         }
         else {
@@ -612,23 +612,23 @@ static uint8_t* encodeQoiDataXRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
       }
 
       do {
-        size_t run = blMin<size_t>(n, 62u);
-        *dstData++ = uint8_t(run + (kQoiOpRun - 1u));
+        size_t run = bl_min<size_t>(n, 62u);
+        *dst_data++ = uint8_t(run + (kQoiOpRun - 1u));
         n -= run;
       } while (n);
 
       if (!x) {
-        return dstData;
+        return dst_data;
       }
     }
 
     uint32_t hash = hashPixelRGBA32(p.value);
 
-    if (pixelTable[hash] == p.value) {
-      *dstData++ = uint8_t(kQoiOpIndex | hash);
+    if (pixel_table[hash] == p.value) {
+      *dst_data++ = uint8_t(kQoiOpIndex | hash);
     }
     else {
-      pixelTable[hash] = p.value;
+      pixel_table[hash] = p.value;
 
       uint32_t dr = uint32_t(p.r()) - uint32_t(pixel.r());
       uint32_t dg = uint32_t(p.g()) - uint32_t(pixel.g());
@@ -639,7 +639,7 @@ static uint8_t* encodeQoiDataXRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
       uint32_t xb = uint32_t(db + 2u) & 0xFFu;
 
       if ((xr | xg | xb) <= 0x3u) {
-        *dstData++ = uint8_t(kQoiOpDiff | (xr << 4) | (xg << 2) | xb);
+        *dst_data++ = uint8_t(kQoiOpDiff | (xr << 4) | (xg << 2) | xb);
       }
       else {
         uint32_t dg_r = dr - dg;
@@ -650,16 +650,16 @@ static uint8_t* encodeQoiDataXRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
         xb = (dg_b + 8u) & 0xFFu;
 
         if ((xr | xb) <= 0xFu && xg <= 0x3F) {
-          dstData[0] = uint8_t(kQoiOpLuma | xg);
-          dstData[1] = uint8_t((xr << 4) | xb);
-          dstData += 2;
+          dst_data[0] = uint8_t(kQoiOpLuma | xg);
+          dst_data[1] = uint8_t((xr << 4) | xb);
+          dst_data += 2;
         }
         else {
-          dstData[0] = kQoiOpRgb;
-          dstData[1] = uint8_t(p.r());
-          dstData[2] = uint8_t(p.g());
-          dstData[3] = uint8_t(p.b());
-          dstData += 4;
+          dst_data[0] = kQoiOpRgb;
+          dst_data[1] = uint8_t(p.r());
+          dst_data[2] = uint8_t(p.g());
+          dst_data[3] = uint8_t(p.b());
+          dst_data += 4;
         }
       }
     }
@@ -670,24 +670,24 @@ static uint8_t* encodeQoiDataXRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
       continue;
 
     if (--h == 0u)
-      return dstData;
+      return dst_data;
 
-    srcData += srcStride;
+    src_data += src_stride;
     x = w;
   }
 }
 
-static uint8_t* encodeQoiDataPRGB32(uint8_t* dstData, uint32_t w, uint32_t h, const uint8_t* srcData, intptr_t srcStride) noexcept {
+static uint8_t* encodeQoiDataPRGB32(uint8_t* dst_data, uint32_t w, uint32_t h, const uint8_t* src_data, intptr_t src_stride) noexcept {
   BLRgba32 pixelPM = BLRgba32(0xFF000000u);
   BLRgba32 pixelNP = BLRgba32(0xFF000000u);
-  uint32_t pixelTable[64] {};
+  uint32_t pixel_table[64] {};
 
   uint32_t x = w;
-  srcStride -= intptr_t(w) * 4;
+  src_stride -= intptr_t(w) * 4;
 
   for (;;) {
-    BLRgba32 pm = BLRgba32(MemOps::readU32a(srcData));
-    srcData += 4;
+    BLRgba32 pm = BLRgba32(MemOps::readU32a(src_data));
+    src_data += 4;
 
     // Run length encoding.
     if (pm == pixelPM) {
@@ -698,8 +698,8 @@ static uint8_t* encodeQoiDataPRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
         uint32_t prevX = x;
 
         while (x) {
-          pm = BLRgba32(MemOps::readU32a(srcData));
-          srcData += 4;
+          pm = BLRgba32(MemOps::readU32a(src_data));
+          src_data += 4;
           if (pm != pixelPM)
             break;
           x--;
@@ -708,7 +708,7 @@ static uint8_t* encodeQoiDataPRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
         n += size_t(prevX - x);
 
         if (x == 0 && --h != 0) {
-          srcData += srcStride;
+          src_data += src_stride;
           x = w;
         }
         else {
@@ -717,24 +717,24 @@ static uint8_t* encodeQoiDataPRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
       }
 
       do {
-        size_t run = blMin<size_t>(n, 62u);
-        *dstData++ = uint8_t(run + (kQoiOpRun - 1u));
+        size_t run = bl_min<size_t>(n, 62u);
+        *dst_data++ = uint8_t(run + (kQoiOpRun - 1u));
         n -= run;
       } while (n);
 
       if (!x) {
-        return dstData;
+        return dst_data;
       }
     }
 
     BLRgba32 np = BLRgba32(PixelOps::Scalar::cvt_argb32_8888_from_prgb32_8888(pm.value));
     uint32_t hash = hashPixelRGBA32(np.value);
 
-    if (pixelTable[hash] == np.value) {
-      *dstData++ = uint8_t(kQoiOpIndex | hash);
+    if (pixel_table[hash] == np.value) {
+      *dst_data++ = uint8_t(kQoiOpIndex | hash);
     }
     else {
-      pixelTable[hash] = np.value;
+      pixel_table[hash] = np.value;
 
       // To use delta, the previous pixel needs to have the same alpha value unfortunately.
       if (pixelNP.a() == np.a()) {
@@ -747,7 +747,7 @@ static uint8_t* encodeQoiDataPRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
         uint32_t xb = (db + 2u) & 0xFFu;
 
         if ((xr | xg | xb) <= 0x3u) {
-          *dstData++ = uint8_t(kQoiOpDiff | (xr << 4) | (xg << 2) | xb);
+          *dst_data++ = uint8_t(kQoiOpDiff | (xr << 4) | (xg << 2) | xb);
         }
         else {
           uint32_t dg_r = dr - dg;
@@ -758,26 +758,26 @@ static uint8_t* encodeQoiDataPRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
           xb = (dg_b + 8) & 0xFFu;
 
           if ((xr | xb) <= 0xFu && xg <= 0x3Fu) {
-            dstData[0] = uint8_t(kQoiOpLuma | xg);
-            dstData[1] = uint8_t((xr << 4) | xb);
-            dstData += 2;
+            dst_data[0] = uint8_t(kQoiOpLuma | xg);
+            dst_data[1] = uint8_t((xr << 4) | xb);
+            dst_data += 2;
           }
           else {
-            dstData[0] = kQoiOpRgb;
-            dstData[1] = uint8_t(np.r());
-            dstData[2] = uint8_t(np.g());
-            dstData[3] = uint8_t(np.b());
-            dstData += 4;
+            dst_data[0] = kQoiOpRgb;
+            dst_data[1] = uint8_t(np.r());
+            dst_data[2] = uint8_t(np.g());
+            dst_data[3] = uint8_t(np.b());
+            dst_data += 4;
           }
         }
       }
       else {
-        dstData[0] = kQoiOpRgba;
-        dstData[1] = uint8_t(np.r());
-        dstData[2] = uint8_t(np.g());
-        dstData[3] = uint8_t(np.b());
-        dstData[4] = uint8_t(np.a());
-        dstData += 5;
+        dst_data[0] = kQoiOpRgba;
+        dst_data[1] = uint8_t(np.r());
+        dst_data[2] = uint8_t(np.g());
+        dst_data[3] = uint8_t(np.b());
+        dst_data[4] = uint8_t(np.a());
+        dst_data += 5;
       }
     }
 
@@ -788,122 +788,122 @@ static uint8_t* encodeQoiDataPRGB32(uint8_t* dstData, uint32_t w, uint32_t h, co
       continue;
 
     if (--h == 0u)
-      return dstData;
+      return dst_data;
 
-    srcData += srcStride;
+    src_data += src_stride;
     x = w;
   }
 }
 
-static BLResult BL_CDECL encoderRestartImpl(BLImageEncoderImpl* impl) noexcept {
-  BLQoiEncoderImpl* encoderI = static_cast<BLQoiEncoderImpl*>(impl);
-  encoderI->lastResult = BL_SUCCESS;
-  encoderI->frameIndex = 0;
-  encoderI->bufferIndex = 0;
+static BLResult BL_CDECL encoder_restart_impl(BLImageEncoderImpl* impl) noexcept {
+  BLQoiEncoderImpl* encoder_impl = static_cast<BLQoiEncoderImpl*>(impl);
+  encoder_impl->last_result = BL_SUCCESS;
+  encoder_impl->frame_index = 0;
+  encoder_impl->buffer_index = 0;
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL encoderWriteFrameImpl(BLImageEncoderImpl* impl, BLArrayCore* dst, const BLImageCore* image) noexcept {
-  BLQoiEncoderImpl* encoderI = static_cast<BLQoiEncoderImpl*>(impl);
-  BL_PROPAGATE(encoderI->lastResult);
+static BLResult BL_CDECL encoder_write_frame_impl(BLImageEncoderImpl* impl, BLArrayCore* dst, const BLImageCore* image) noexcept {
+  BLQoiEncoderImpl* encoder_impl = static_cast<BLQoiEncoderImpl*>(impl);
+  BL_PROPAGATE(encoder_impl->last_result);
 
   BLArray<uint8_t>& buf = *static_cast<BLArray<uint8_t>*>(dst);
   const BLImage& img = *static_cast<const BLImage*>(image);
 
-  if (img.empty())
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (img.is_empty())
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  BLImageData imageData;
-  BL_PROPAGATE(img.getData(&imageData));
+  BLImageData image_data;
+  BL_PROPAGATE(img.get_data(&image_data));
 
-  uint32_t w = uint32_t(imageData.size.w);
-  uint32_t h = uint32_t(imageData.size.h);
-  uint32_t format = imageData.format;
+  uint32_t w = uint32_t(image_data.size.w);
+  uint32_t h = uint32_t(image_data.size.h);
+  uint32_t format = image_data.format;
 
   uint32_t channels = format == BL_FORMAT_XRGB32 ? 3u : 4u;
-  uint32_t maxBytesPerEncodedPixel = channels + 1u;
+  uint32_t max_bytes_per_encoded_pixel = channels + 1u;
 
   // NOTE: This should never overflow.
-  uint64_t maxSize = uint64_t(w) * uint64_t(h) * uint64_t(maxBytesPerEncodedPixel) + kQoiHeaderSize + kQoiEndMarkerSize;
+  uint64_t max_size = uint64_t(w) * uint64_t(h) * uint64_t(max_bytes_per_encoded_pixel) + kQoiHeaderSize + kQoiEndMarkerSize;
 
-  if (BL_UNLIKELY(maxSize >= uint64_t(SIZE_MAX)))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+  if (BL_UNLIKELY(max_size >= uint64_t(SIZE_MAX)))
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-  uint8_t* dstData;
-  BL_PROPAGATE(buf.modifyOp(BL_MODIFY_OP_ASSIGN_FIT, size_t(maxSize), &dstData));
+  uint8_t* dst_data;
+  BL_PROPAGATE(buf.modify_op(BL_MODIFY_OP_ASSIGN_FIT, size_t(max_size), &dst_data));
 
-  uint8_t* dstPtr = dstData;
-  memcpy(dstPtr, qoiMagic, kQoiMagicSize);
-  MemOps::writeU32uBE(dstPtr + 4, w);
-  MemOps::writeU32uBE(dstPtr + 8, h);
-  dstPtr[12] = uint8_t(channels);
-  dstPtr[13] = 0;
-  dstPtr += 14;
+  uint8_t* dst_ptr = dst_data;
+  memcpy(dst_ptr, qoi_magic, kQoiMagicSize);
+  MemOps::writeU32uBE(dst_ptr + 4, w);
+  MemOps::writeU32uBE(dst_ptr + 8, h);
+  dst_ptr[12] = uint8_t(channels);
+  dst_ptr[13] = 0;
+  dst_ptr += 14;
 
-  const uint8_t* srcLine = static_cast<const uint8_t*>(imageData.pixelData);
+  const uint8_t* src_line = static_cast<const uint8_t*>(image_data.pixel_data);
 
   switch (format) {
     case BL_FORMAT_A8:
-      dstPtr = encodeQoiDataA8(dstPtr, w, h, srcLine, imageData.stride);
+      dst_ptr = encodeQoiDataA8(dst_ptr, w, h, src_line, image_data.stride);
       break;
 
     case BL_FORMAT_XRGB32:
-      dstPtr = encodeQoiDataXRGB32(dstPtr, w, h, srcLine, imageData.stride);
+      dst_ptr = encodeQoiDataXRGB32(dst_ptr, w, h, src_line, image_data.stride);
       break;
 
     case BL_FORMAT_PRGB32:
-      dstPtr = encodeQoiDataPRGB32(dstPtr, w, h, srcLine, imageData.stride);
+      dst_ptr = encodeQoiDataPRGB32(dst_ptr, w, h, src_line, image_data.stride);
       break;
 
     default:
-      ArrayInternal::setSize(dst, 0);
-      return blTraceError(BL_ERROR_INVALID_STATE);
+      ArrayInternal::set_size(dst, 0);
+      return bl_trace_error(BL_ERROR_INVALID_STATE);
   }
 
-  memcpy(dstPtr, qoiEndMarker, kQoiEndMarkerSize);
-  dstPtr += kQoiEndMarkerSize;
+  memcpy(dst_ptr, qoi_end_marker, kQoiEndMarkerSize);
+  dst_ptr += kQoiEndMarkerSize;
 
-  ArrayInternal::setSize(dst, PtrOps::byteOffset(dstData, dstPtr));
+  ArrayInternal::set_size(dst, PtrOps::byte_offset(dst_data, dst_ptr));
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL encoderCreateImpl(BLImageEncoderCore* self) noexcept {
-  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_ENCODER);
-  BL_PROPAGATE(ObjectInternal::allocImplT<BLQoiEncoderImpl>(self, info));
+static BLResult BL_CDECL encoder_create_impl(BLImageEncoderCore* self) noexcept {
+  BLObjectInfo info = BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_IMAGE_ENCODER);
+  BL_PROPAGATE(ObjectInternal::alloc_impl_t<BLQoiEncoderImpl>(self, info));
 
-  BLQoiEncoderImpl* encoderI = static_cast<BLQoiEncoderImpl*>(self->_d.impl);
-  encoderI->ctor(&qoiEncoderVirt, &qoiCodecInstance);
-  return encoderRestartImpl(encoderI);
+  BLQoiEncoderImpl* encoder_impl = static_cast<BLQoiEncoderImpl*>(self->_d.impl);
+  encoder_impl->ctor(&qoi_encoder_virt, &qoi_codec_instance);
+  return encoder_restart_impl(encoder_impl);
 }
 
-static BLResult BL_CDECL encoderDestroyImpl(BLObjectImpl* impl) noexcept {
-  BLQoiEncoderImpl* encoderI = static_cast<BLQoiEncoderImpl*>(impl);
+static BLResult BL_CDECL encoder_destroy_impl(BLObjectImpl* impl) noexcept {
+  BLQoiEncoderImpl* encoder_impl = static_cast<BLQoiEncoderImpl*>(impl);
 
-  encoderI->dtor();
-  return blObjectFreeImpl(encoderI);
+  encoder_impl->dtor();
+  return bl_object_free_impl(encoder_impl);
 }
 
 // bl::Qoi::Codec - Interface
 // ==========================
 
-static BLResult BL_CDECL codecDestroyImpl(BLObjectImpl* impl) noexcept {
+static BLResult BL_CDECL codec_destroy_impl(BLObjectImpl* impl) noexcept {
   // Built-in codecs are never destroyed.
-  blUnused(impl);
+  bl_unused(impl);
   return BL_SUCCESS;
 };
 
-static uint32_t BL_CDECL codecInspectDataImpl(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept {
-  blUnused(impl);
+static uint32_t BL_CDECL codec_inspect_data_impl(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept {
+  bl_unused(impl);
 
   if (size == 0)
     return 0;
 
-  size_t magicSize = blMin<size_t>(size, kQoiMagicSize);
-  if (memcmp(qoiMagic, data, magicSize) != 0)
+  size_t magic_size = bl_min<size_t>(size, kQoiMagicSize);
+  if (memcmp(qoi_magic, data, magic_size) != 0)
     return 0;
 
   if (size < 12)
-    return uint32_t(magicSize);
+    return uint32_t(magic_size);
 
   uint32_t w = bl::MemOps::readU32uBE(data + 4);
   uint32_t h = bl::MemOps::readU32uBE(data + 8);
@@ -912,7 +912,7 @@ static uint32_t BL_CDECL codecInspectDataImpl(const BLImageCodecImpl* impl, cons
     return 0;
 
   if (size < 14)
-    return uint32_t(magicSize + 1u);
+    return uint32_t(magic_size + 1u);
 
   uint8_t channels = data[12];
   uint8_t colorspace = data[13];
@@ -927,65 +927,65 @@ static uint32_t BL_CDECL codecInspectDataImpl(const BLImageCodecImpl* impl, cons
   return 100;
 }
 
-static BLResult BL_CDECL codecCreateDecoderImpl(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept {
-  blUnused(impl);
+static BLResult BL_CDECL codec_create_decoder_impl(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept {
+  bl_unused(impl);
 
   BLImageDecoderCore tmp;
-  BL_PROPAGATE(decoderCreateImpl(&tmp));
-  return blImageDecoderAssignMove(dst, &tmp);
+  BL_PROPAGATE(decoder_create_impl(&tmp));
+  return bl_image_decoder_assign_move(dst, &tmp);
 }
 
-static BLResult BL_CDECL codecCreateEncoderImpl(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
-  blUnused(impl);
+static BLResult BL_CDECL codec_create_encoder_impl(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
+  bl_unused(impl);
 
   BLImageEncoderCore tmp;
-  BL_PROPAGATE(encoderCreateImpl(&tmp));
-  return blImageEncoderAssignMove(dst, &tmp);
+  BL_PROPAGATE(encoder_create_impl(&tmp));
+  return bl_image_encoder_assign_move(dst, &tmp);
 }
 
 // bl::Qoi::Codec - Runtime Registration
 // =====================================
 
-void qoiCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept {
+void qoi_codec_on_init(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept {
   using namespace bl::Qoi;
 
-  blUnused(rt);
+  bl_unused(rt);
 
   // Initialize QOI codec.
-  qoiCodec.virt.base.destroy = codecDestroyImpl;
-  qoiCodec.virt.base.getProperty = blObjectImplGetProperty;
-  qoiCodec.virt.base.setProperty = blObjectImplSetProperty;
-  qoiCodec.virt.inspectData = codecInspectDataImpl;
-  qoiCodec.virt.createDecoder = codecCreateDecoderImpl;
-  qoiCodec.virt.createEncoder = codecCreateEncoderImpl;
+  qoi_codec.virt.base.destroy = codec_destroy_impl;
+  qoi_codec.virt.base.get_property = bl_object_impl_get_property;
+  qoi_codec.virt.base.set_property = bl_object_impl_set_property;
+  qoi_codec.virt.inspect_data = codec_inspect_data_impl;
+  qoi_codec.virt.create_decoder = codec_create_decoder_impl;
+  qoi_codec.virt.create_encoder = codec_create_encoder_impl;
 
-  qoiCodec.impl->ctor(&qoiCodec.virt);
-  qoiCodec.impl->features = BLImageCodecFeatures(BL_IMAGE_CODEC_FEATURE_READ     |
+  qoi_codec.impl->ctor(&qoi_codec.virt);
+  qoi_codec.impl->features = BLImageCodecFeatures(BL_IMAGE_CODEC_FEATURE_READ     |
                                                  BL_IMAGE_CODEC_FEATURE_WRITE    |
                                                  BL_IMAGE_CODEC_FEATURE_LOSSLESS);
-  qoiCodec.impl->name.dcast().assign("QOI");
-  qoiCodec.impl->vendor.dcast().assign("Blend2D");
-  qoiCodec.impl->mimeType.dcast().assign("image/qoi");
-  qoiCodec.impl->extensions.dcast().assign("qoi");
+  qoi_codec.impl->name.dcast().assign("QOI");
+  qoi_codec.impl->vendor.dcast().assign("Blend2D");
+  qoi_codec.impl->mime_type.dcast().assign("image/qoi");
+  qoi_codec.impl->extensions.dcast().assign("qoi");
 
-  qoiCodecInstance._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_CODEC), &qoiCodec.impl);
+  qoi_codec_instance._d.init_dynamic(BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_IMAGE_CODEC), &qoi_codec.impl);
 
   // Initialize QOI decoder virtual functions.
-  qoiDecoderVirt.base.destroy = decoderDestroyImpl;
-  qoiDecoderVirt.base.getProperty = blObjectImplGetProperty;
-  qoiDecoderVirt.base.setProperty = blObjectImplSetProperty;
-  qoiDecoderVirt.restart = decoderRestartImpl;
-  qoiDecoderVirt.readInfo = decoderReadInfoImpl;
-  qoiDecoderVirt.readFrame = decoderReadFrameImpl;
+  qoi_decoder_virt.base.destroy = decoder_destroy_impl;
+  qoi_decoder_virt.base.get_property = bl_object_impl_get_property;
+  qoi_decoder_virt.base.set_property = bl_object_impl_set_property;
+  qoi_decoder_virt.restart = decoder_restart_impl;
+  qoi_decoder_virt.read_info = decoder_read_info_impl;
+  qoi_decoder_virt.read_frame = decoder_read_frame_impl;
 
   // Initialize QOI encoder virtual functions.
-  qoiEncoderVirt.base.destroy = encoderDestroyImpl;
-  qoiEncoderVirt.base.getProperty = blObjectImplGetProperty;
-  qoiEncoderVirt.base.setProperty = blObjectImplSetProperty;
-  qoiEncoderVirt.restart = encoderRestartImpl;
-  qoiEncoderVirt.writeFrame = encoderWriteFrameImpl;
+  qoi_encoder_virt.base.destroy = encoder_destroy_impl;
+  qoi_encoder_virt.base.get_property = bl_object_impl_get_property;
+  qoi_encoder_virt.base.set_property = bl_object_impl_set_property;
+  qoi_encoder_virt.restart = encoder_restart_impl;
+  qoi_encoder_virt.write_frame = encoder_write_frame_impl;
 
-  codecs->append(qoiCodecInstance.dcast());
+  codecs->append(qoi_codec_instance.dcast());
 }
 
 } // {bl::Qoi}

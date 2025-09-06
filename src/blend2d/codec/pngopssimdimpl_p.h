@@ -53,11 +53,11 @@ static BL_INLINE SIMD::Vec16xU8 v_sllb_addb(const SIMD::Vec16xU8& a) noexcept {
 }
 
 template<uint32_t BPP>
-BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint32_t h) noexcept {
+BLResult BL_CDECL inverse_filter_simd_impl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint32_t h) noexcept {
   using namespace SIMD;
 
   // Only used by asserts, unused in release mode.
-  blUnused(bpp);
+  bl_unused(bpp);
 
   BL_ASSERT(bpp == BPP);
   BL_ASSERT(bpl > 1u);
@@ -71,15 +71,15 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
 
   // First row uses a special filter that doesn't access the previous row,
   // which is assumed to contain all zeros.
-  uint32_t filterType = *p++;
+  uint32_t filter_type = *p++;
 
-  if (filterType >= kFilterTypeCount)
-    filterType = kFilterTypeNone;
+  if (filter_type >= kFilterTypeCount)
+    filter_type = kFilterTypeNone;
 
-  filterType = simplifyFilterOfFirstRow(filterType);
+  filter_type = simplify_filter_of_first_row(filter_type);
 
   for (;;) {
-    switch (filterType) {
+    switch (filter_type) {
       // This is one of the easiest filters to parallelize. Although it looks like the data dependency
       // is too high, it's simply additions, which are really easy to parallelize. The following formula:
       //
@@ -103,9 +103,9 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
 
         if (i >= 32) {
           // Align to 16-BYTE boundary.
-          uint32_t j = uint32_t(IntOps::alignUpDiff(uintptr_t(p + BPP), 16));
+          uint32_t j = uint32_t(IntOps::align_up_diff(uintptr_t(p + BPP), 16));
           for (i -= j; j != 0; j--, p++)
-            p[BPP] = applySumFilter(p[BPP], p[0]);
+            p[BPP] = apply_sum_filter(p[BPP], p[0]);
 
           if constexpr (BPP == 1) {
             Vec16xU8 p0, p1, p2, p3;
@@ -488,7 +488,7 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
         }
 
         for (; i != 0; i--, p++)
-          p[BPP] = applySumFilter(p[BPP], p[0]);
+          p[BPP] = apply_sum_filter(p[BPP], p[0]);
 
         p += BPP;
         break;
@@ -502,9 +502,9 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
 
         if (i >= 24) {
           // Align to 16-BYTE boundary.
-          uint32_t j = uint32_t(IntOps::alignUpDiff(uintptr_t(p), 16));
+          uint32_t j = uint32_t(IntOps::align_up_diff(uintptr_t(p), 16));
           for (i -= j; j != 0; j--, p++, u++)
-            p[0] = applySumFilter(p[0], u[0]);
+            p[0] = apply_sum_filter(p[0], u[0]);
 
           // Process 64 BYTEs at a time.
           while (i >= 64) {
@@ -542,7 +542,7 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
         }
 
         for (; i != 0; i--, p++, u++)
-          p[0] = applySumFilter(p[0], u[0]);
+          p[0] = apply_sum_filter(p[0], u[0]);
         break;
       }
 
@@ -570,17 +570,17 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
         BL_ASSERT(u != nullptr);
 
         for (uint32_t i = 0; i < BPP; i++)
-          p[i] = applySumFilter(p[i], u[i] >> 1);
+          p[i] = apply_sum_filter(p[i], u[i] >> 1);
 
         u += BPP;
 
         uint32_t i = bpl - BPP;
         if (i >= 32) {
           // Align to 16-BYTE boundary.
-          uint32_t j = uint32_t(IntOps::alignUpDiff(uintptr_t(p + BPP), 16));
+          uint32_t j = uint32_t(IntOps::align_up_diff(uintptr_t(p + BPP), 16));
 
           for (i -= j; j != 0; j--, p++, u++)
-            p[BPP] = applySumFilter(p[BPP], applyAvgFilter(p[0], u[0]));
+            p[BPP] = apply_sum_filter(p[BPP], apply_avg_filter(p[0], u[0]));
 
           if constexpr (BPP == 1) {
             // This is one of the most difficult AVG filters. 1-BPP has a huge sequential dependency, which is
@@ -787,7 +787,7 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
         }
 
         for (; i != 0; i--, p++, u++)
-          p[BPP] = applySumFilter(p[BPP], applyAvgFilter(p[0], u[0]));
+          p[BPP] = apply_sum_filter(p[BPP], apply_avg_filter(p[0], u[0]));
 
         p += BPP;
         break;
@@ -811,7 +811,7 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
 
           for (uint32_t i = 0; i < bpl; i++) {
             uint32_t sb0 = u[i];
-            sa0 = (uint32_t(p[i]) + applyPaethFilter(sa0, sb0, sc0)) & 0xFFu;
+            sa0 = (uint32_t(p[i]) + apply_paeth_filter(sa0, sb0, sc0)) & 0xFFu;
             sc0 = sb0;
             p[i] = uint8_t(sa0);
           }
@@ -832,8 +832,8 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
             uint32_t sb0 = u[0];
             uint32_t sb1 = u[1];
 
-            sa0 = (uint32_t(p[0]) + applyPaethFilter(sa0, sb0, sc0)) & 0xFFu;
-            sa1 = (uint32_t(p[1]) + applyPaethFilter(sa1, sb1, sc1)) & 0xFFu;
+            sa0 = (uint32_t(p[0]) + apply_paeth_filter(sa0, sb0, sc0)) & 0xFFu;
+            sa1 = (uint32_t(p[1]) + apply_paeth_filter(sa1, sb1, sc1)) & 0xFFu;
 
             sc0 = sb0;
             sc1 = sb1;
@@ -1073,7 +1073,7 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
       // This filter is artificial and only possible for the very first row, so there is no need to have it optimized.
       case kFilterTypeAvg0: {
         for (uint32_t i = bpl - BPP; i != 0; i--, p++)
-          p[BPP] = applySumFilter(p[BPP], p[0] >> 1);
+          p[BPP] = apply_sum_filter(p[BPP], p[0] >> 1);
 
         p += BPP;
         break;
@@ -1089,22 +1089,22 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
       break;
 
     u = p - bpl;
-    filterType = *p++;
+    filter_type = *p++;
 
-    if (filterType >= kFilterTypeCount)
-      filterType = kFilterTypeNone;
+    if (filter_type >= kFilterTypeCount)
+      filter_type = kFilterTypeNone;
   }
 
   return BL_SUCCESS;
 }
 
-void initSimdFunctions(FunctionTable& ft) noexcept {
-  ft.inverseFilter[1] = inverseFilterSimdImpl<1>;
-  ft.inverseFilter[2] = inverseFilterSimdImpl<2>;
-  ft.inverseFilter[3] = inverseFilterSimdImpl<3>;
-  ft.inverseFilter[4] = inverseFilterSimdImpl<4>;
-  ft.inverseFilter[6] = inverseFilterSimdImpl<6>;
-  ft.inverseFilter[8] = inverseFilterSimdImpl<8>;
+void init_simd_functions(FunctionTable& ft) noexcept {
+  ft.inverse_filter[1] = inverse_filter_simd_impl<1>;
+  ft.inverse_filter[2] = inverse_filter_simd_impl<2>;
+  ft.inverse_filter[3] = inverse_filter_simd_impl<3>;
+  ft.inverse_filter[4] = inverse_filter_simd_impl<4>;
+  ft.inverse_filter[6] = inverse_filter_simd_impl<6>;
+  ft.inverse_filter[8] = inverse_filter_simd_impl<8>;
 }
 
 } // {anonymous}

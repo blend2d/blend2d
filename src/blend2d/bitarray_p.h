@@ -32,17 +32,17 @@ namespace BitArrayInternal {
 //! \name BLBitArray - Internals - Common Functionality (Impl)
 //! \{
 
-static BL_INLINE bool isImplMutable(BLBitArrayImpl* impl) noexcept {
-  return ObjectInternal::isImplMutable(impl);
+static BL_INLINE bool is_impl_mutable(BLBitArrayImpl* impl) noexcept {
+  return ObjectInternal::is_impl_mutable(impl);
 }
 
-static BL_INLINE_NODEBUG BLResult freeImpl(BLBitArrayImpl* impl) noexcept {
-  return ObjectInternal::freeImpl(impl);
+static BL_INLINE_NODEBUG BLResult free_impl(BLBitArrayImpl* impl) noexcept {
+  return ObjectInternal::free_impl(impl);
 }
 
 template<RCMode kRCMode>
-static BL_INLINE BLResult releaseImpl(BLBitArrayImpl* impl) noexcept {
-  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+static BL_INLINE BLResult release_impl(BLBitArrayImpl* impl) noexcept {
+  return ObjectInternal::deref_impl_and_test<kRCMode>(impl) ? free_impl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -50,25 +50,25 @@ static BL_INLINE BLResult releaseImpl(BLBitArrayImpl* impl) noexcept {
 //! \name BLBitArray - Internals - Common Functionality (Instance)
 //! \{
 
-static BL_INLINE_NODEBUG BLBitArrayImpl* getImpl(const BLBitArrayCore* self) noexcept {
+static BL_INLINE_NODEBUG BLBitArrayImpl* get_impl(const BLBitArrayCore* self) noexcept {
   return static_cast<BLBitArrayImpl*>(self->_d.impl);
 }
 
-static BL_INLINE BLResult retainInstance(const BLBitArrayCore* self, size_t n = 1) noexcept {
-  return ObjectInternal::retainInstance(self, n);
+static BL_INLINE BLResult retain_instance(const BLBitArrayCore* self, size_t n = 1) noexcept {
+  return ObjectInternal::retain_instance(self, n);
 }
 
-static BL_INLINE BLResult releaseInstance(BLBitArrayCore* self) noexcept {
-  return self->_d.isRefCountedObject() ? releaseImpl<RCMode::kForce>(getImpl(self)) : BLResult(BL_SUCCESS);
+static BL_INLINE BLResult release_instance(BLBitArrayCore* self) noexcept {
+  return self->_d.is_ref_counted_object() ? release_impl<RCMode::kForce>(get_impl(self)) : BLResult(BL_SUCCESS);
 }
 
-static BL_INLINE BLResult replaceInstance(BLBitArrayCore* self, const BLBitArrayCore* other) noexcept {
+static BL_INLINE BLResult replace_instance(BLBitArrayCore* self, const BLBitArrayCore* other) noexcept {
   // NOTE: UBSAN doesn't like casting the impl in case the BitArray is in SSO mode, so wait with the cast.
   void* impl = static_cast<void*>(self->_d.impl);
   BLObjectInfo info = self->_d.info;
 
   self->_d = other->_d;
-  return info.isRefCountedObject() ? releaseImpl<RCMode::kForce>(static_cast<BLBitArrayImpl*>(impl)) : BLResult(BL_SUCCESS);
+  return info.is_ref_counted_object() ? release_impl<RCMode::kForce>(static_cast<BLBitArrayImpl*>(impl)) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -81,42 +81,42 @@ struct BitData {
   size_t size;
 };
 
-static BL_INLINE_NODEBUG size_t getSSOSize(const BLBitArrayCore* self) noexcept { return self->_d.pField(); }
-static BL_INLINE_NODEBUG uint32_t* getSSOData(BLBitArrayCore* self) noexcept { return self->_d.u32_data; }
-static BL_INLINE_NODEBUG const uint32_t* getSSOData(const BLBitArrayCore* self) noexcept { return self->_d.u32_data; }
+static BL_INLINE_NODEBUG size_t get_sso_size(const BLBitArrayCore* self) noexcept { return self->_d.p_field(); }
+static BL_INLINE_NODEBUG uint32_t* get_sso_data(BLBitArrayCore* self) noexcept { return self->_d.u32_data; }
+static BL_INLINE_NODEBUG const uint32_t* get_sso_data(const BLBitArrayCore* self) noexcept { return self->_d.u32_data; }
 
 static BL_INLINE BitData unpack(const BLBitArrayCore* self) noexcept {
   if (self->_d.sso()) {
-    return BitData{const_cast<uint32_t*>(self->_d.u32_data), self->_d.pField()};
+    return BitData{const_cast<uint32_t*>(self->_d.u32_data), self->_d.p_field()};
   }
   else {
-    BLBitArrayImpl* impl = getImpl(self);
+    BLBitArrayImpl* impl = get_impl(self);
     return BitData{impl->data(), impl->size};
   }
 }
 
-static BL_INLINE_NODEBUG uint32_t* getData(BLBitArrayCore* self) noexcept {
-  return self->_d.sso() ? self->_d.u32_data : getImpl(self)->data();
+static BL_INLINE_NODEBUG uint32_t* get_data(BLBitArrayCore* self) noexcept {
+  return self->_d.sso() ? self->_d.u32_data : get_impl(self)->data();
 }
 
-static BL_INLINE_NODEBUG const uint32_t* getData(const BLBitArrayCore* self) noexcept {
-  return self->_d.sso() ? self->_d.u32_data : getImpl(self)->data();
+static BL_INLINE_NODEBUG const uint32_t* get_data(const BLBitArrayCore* self) noexcept {
+  return self->_d.sso() ? self->_d.u32_data : get_impl(self)->data();
 }
 
-static BL_INLINE_NODEBUG size_t getSize(const BLBitArrayCore* self) noexcept {
-  return self->_d.sso() ? self->_d.pField() : getImpl(self)->size;
+static BL_INLINE_NODEBUG size_t get_size(const BLBitArrayCore* self) noexcept {
+  return self->_d.sso() ? self->_d.p_field() : get_impl(self)->size;
 }
 
-static BL_INLINE_NODEBUG size_t getCapacity(const BLBitArrayCore* self) noexcept {
-  return self->_d.sso() ? size_t(BLBitArray::kSSOWordCount * 32u) : getImpl(self)->capacity;
+static BL_INLINE_NODEBUG size_t get_capacity(const BLBitArrayCore* self) noexcept {
+  return self->_d.sso() ? size_t(BLBitArray::kSSOWordCount * 32u) : get_impl(self)->capacity;
 }
 
-static BL_INLINE void setSize(BLBitArrayCore* self, size_t newSize) noexcept {
-  BL_ASSERT(newSize <= getCapacity(self));
+static BL_INLINE void set_size(BLBitArrayCore* self, size_t new_size) noexcept {
+  BL_ASSERT(new_size <= get_capacity(self));
   if (self->_d.sso())
-    self->_d.info.setPField(uint32_t(newSize));
+    self->_d.info.set_p_field(uint32_t(new_size));
   else
-    getImpl(self)->size = uint32_t(newSize);
+    get_impl(self)->size = uint32_t(new_size);
 }
 
 //! \}

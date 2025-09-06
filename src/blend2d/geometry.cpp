@@ -29,8 +29,8 @@ struct GeometryTypeSizeTableGen {
   }
 };
 
-static constexpr auto geometryTypeSizeTable_ = makeLookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1, GeometryTypeSizeTableGen>();
-const LookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1> geometryTypeSizeTable = geometryTypeSizeTable_;
+static constexpr auto geometry_type_size_table_ = make_lookup_table<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1, GeometryTypeSizeTableGen>();
+const LookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1> geometry_type_size_table = geometry_type_size_table_;
 
 } // {Geometry}
 } // {bl}

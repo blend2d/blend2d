@@ -23,7 +23,7 @@ namespace bl::Pipeline::JIT {
 class FetchPadRoRContext {
 public:
   PipeCompiler* pc {};
-  FetchSimplePatternPart* _fetchPart {};
+  FetchSimplePatternPart* _fetch_part {};
 
   //! Whether the pattern fetcher has fractional X.
   bool _hasFracX {};
@@ -34,93 +34,93 @@ public:
   ExtendMode _extendX {};
 
   //! Describes the current pixel index.
-  uint32_t _fetchIndex {};
+  uint32_t _fetch_index {};
 
   //! Describes the current index related to advancing.
   //!
   //! \note Fetch index and advance index could be different. In Fx and FxFy case, the fetcher needs to advance before
   //! a next index is calculated, because the current index was already either pre-fetched or fetched by previous loop
   //! iteration, which implies that we never want to fetch the current index again. The reason we use two counters is
-  //! actually simplicity - `nextIndex()` uses `_fetchIndex` and `_advancePadX()` uses `_advanceIndex`.
-  uint32_t _advanceIndex {};
+  //! actually simplicity - `next_index()` uses `_fetch_index` and `_advancePadX()` uses `_advance_index`.
+  uint32_t _advance_index {};
 
   //! Index extractor used to extract indexes from a vector so we can use them in regular [base + index] address.
-  FetchUtils::IndexExtractor _indexExtractor;
+  FetchUtils::IndexExtractor _index_extractor;
 
   Gp _x;
   Gp _w;
   Gp _idx;
-  Gp _predicateCount;
+  Gp _predicate_count;
 
-  BL_NOINLINE explicit FetchPadRoRContext(FetchSimplePatternPart* fetchPart, PixelPredicate& predicate) noexcept
-    : pc(fetchPart->pc),
-      _fetchPart(fetchPart),
-      _hasFracX(fetchPart->hasFracX()),
-      _hasFracY(fetchPart->hasFracY()),
-      _extendX(fetchPart->extendX()),
-      _fetchIndex(0),
-      _advanceIndex(0),
-      _indexExtractor(fetchPart->pc) {
+  BL_NOINLINE explicit FetchPadRoRContext(FetchSimplePatternPart* fetch_part, PixelPredicate& predicate) noexcept
+    : pc(fetch_part->pc),
+      _fetch_part(fetch_part),
+      _hasFracX(fetch_part->hasFracX()),
+      _hasFracY(fetch_part->hasFracY()),
+      _extendX(fetch_part->extendX()),
+      _fetch_index(0),
+      _advance_index(0),
+      _index_extractor(fetch_part->pc) {
 
-    if (!predicate.empty()) {
-      _predicateCount = predicate.count();
+    if (!predicate.is_empty()) {
+      _predicate_count = predicate.count();
     }
 
-    FetchSimplePatternPart::SimpleRegs* f = &_fetchPart->f;
+    FetchSimplePatternPart::SimpleRegs* f = &_fetch_part->f;
 
     if (_extendX == ExtendMode::kPad) {
       _x = f->x;
       _w = f->w;
-      _idx = f->xPadded;
+      _idx = f->x_padded;
     }
     else {
-      _idx = pc->newGpPtr("@idx");
+      _idx = pc->new_gp("@idx");
     }
   }
 
-  BL_INLINE_NODEBUG bool hasPredicate() const noexcept { return _predicateCount.isValid(); }
+  BL_INLINE_NODEBUG bool has_predicate() const noexcept { return _predicate_count.is_valid(); }
 
   BL_NOINLINE void begin() noexcept {
     if (_extendX == ExtendMode::kPad) {
-      // Nothing to setup here as each index is calculated by advancing `x` and then padding to `xPadded`.
+      // Nothing to setup here as each index is calculated by advancing `x` and then padding to `x_padded`.
     }
     else {
-      FetchSimplePatternPart::SimpleRegs* f = &_fetchPart->f;
-      Vec vIdx = pc->newV128("@vIdx");
-      Vec vSrc = f->xVec4;
+      FetchSimplePatternPart::SimpleRegs* f = &_fetch_part->f;
+      Vec v_idx = pc->new_vec128("@v_idx");
+      Vec v_src = f->xVec4;
 
-      if (hasPredicate()) {
-        Gp gpOff = pc->gpz(_predicateCount);
-        Vec vOff = pc->newV128("@vOff");
+      if (has_predicate()) {
+        Gp gp_off = pc->gpz(_predicate_count);
+        Vec v_off = pc->new_vec128("@v_off");
 
-        Mem m = pc->tmpStack(PipeCompiler::StackId::kCustom, 16);
-        vSrc = pc->newV128("@vSrc");
+        Mem m = pc->tmp_stack(PipeCompiler::StackId::kCustom, 16);
+        v_src = pc->new_vec128("@v_src");
 
         pc->v_storea128(m, f->xSet4);
 
 #if defined(BL_JIT_ARCH_X86)
-        m.setIndex(gpOff, 2);
+        m.set_index(gp_off, 2);
 #else
-        Gp gpBase = pc->newGpPtr("@base");
-        pc->cc->loadAddressOf(gpBase, m);
-        m = mem_ptr(gpBase, gpOff, 2);
+        Gp gp_base = pc->new_gp("@base");
+        pc->cc->load_address_of(gp_base, m);
+        m = mem_ptr(gp_base, gp_off, 2);
 #endif
-        pc->v_broadcast_u32(vOff, m);
+        pc->v_broadcast_u32(v_off, m);
 
-        pc->shiftOrRotateLeft(vSrc, f->xVec4, 4);
-        pc->v_add_i32(f->xVec4, f->xVec4, vOff);
+        pc->shift_or_rotate_left(v_src, f->xVec4, 4);
+        pc->v_add_i32(f->xVec4, f->xVec4, v_off);
         _fixupReflectedX();
-        pc->v_alignr_u128(vSrc, f->xVec4, vSrc, 4);
+        pc->v_alignr_u128(v_src, f->xVec4, v_src, 4);
       }
 
-      pc->v_srai_i32(vIdx, vSrc, 31);
-      pc->v_xor_i32(vIdx, vIdx, vSrc);
+      pc->v_srai_i32(v_idx, v_src, 31);
+      pc->v_xor_i32(v_idx, v_idx, v_src);
 
-      if (!hasPredicate()) {
+      if (!has_predicate()) {
         pc->v_add_i32(f->xVec4, f->xVec4, f->xInc4);
       }
 
-      _indexExtractor.begin(FetchUtils::IndexExtractor::kTypeUInt32, vIdx);
+      _index_extractor.begin(FetchUtils::IndexExtractor::kTypeUInt32, v_idx);
     }
   }
 
@@ -131,34 +131,34 @@ public:
       }
     }
     else {
-      if (!hasPredicate()) {
+      if (!has_predicate()) {
         _fixupReflectedX();
       }
     }
   }
 
-  BL_NOINLINE Gp nextIndex() noexcept {
+  BL_NOINLINE Gp next_index() noexcept {
     if (_extendX == ExtendMode::kPad) {
-      if (_hasFracX || _fetchIndex != 0) {
+      if (_hasFracX || _fetch_index != 0) {
         _advancePadX();
       }
 
-      _fetchIndex++;
+      _fetch_index++;
       return _idx;
     }
     else {
-      _indexExtractor.extract(_idx.r32(), _fetchIndex);
+      _index_extractor.extract(_idx.r32(), _fetch_index);
 
-      _fetchIndex++;
+      _fetch_index++;
       return _idx;
     }
   }
 
   BL_NOINLINE void _advancePadX() noexcept {
-    if (hasPredicate() && _advanceIndex >= 2u) {
+    if (has_predicate() && _advance_index >= 2u) {
       // Make the last fetch point to the last predicated value, which would be correct if the pattern gets advanced.
-      if (_advanceIndex == 2) {
-        pc->add_ext(_x, _x, _predicateCount.cloneAs(_x), 1, -2);
+      if (_advance_index == 2) {
+        pc->add_ext(_x, _x, _predicate_count.clone_as(_x), 1, -2);
         pc->cmov(_idx.r32(), _x.r32(), ucmp_le(_x, _w));
       }
     }
@@ -167,58 +167,58 @@ public:
       pc->cmov(_idx.r32(), _x.r32(), ucmp_le(_x, _w));
     }
 
-    _advanceIndex++;
+    _advance_index++;
   }
 
   BL_NOINLINE void _fixupReflectedX() noexcept {
-    FetchSimplePatternPart::SimpleRegs* f = &_fetchPart->f;
-    Vec vTmp = pc->newV128("vTmp");
+    FetchSimplePatternPart::SimpleRegs* f = &_fetch_part->f;
+    Vec v_tmp = pc->new_vec128("v_tmp");
 
-    pc->v_cmp_gt_i32(vTmp, f->xVec4, f->xMax4);
-    pc->v_and_i32(vTmp, vTmp, f->xNrm4);
-    pc->v_sub_i32(f->xVec4, f->xVec4, vTmp);
+    pc->v_cmp_gt_i32(v_tmp, f->xVec4, f->xMax4);
+    pc->v_and_i32(v_tmp, v_tmp, f->xNrm4);
+    pc->v_sub_i32(f->xVec4, f->xVec4, v_tmp);
   }
 };
 
 // bl::Pipeline::JIT::FetchPatternPart - Construction & Destruction
 // ================================================================
 
-FetchPatternPart::FetchPatternPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
-  : FetchPart(pc, fetchType, format) {}
+FetchPatternPart::FetchPatternPart(PipeCompiler* pc, FetchType fetch_type, FormatExt format) noexcept
+  : FetchPart(pc, fetch_type, format) {}
 
 // bl::Pipeline::JIT::FetchSimplePatternPart - Construction & Destruction
 // ======================================================================
 
-FetchSimplePatternPart::FetchSimplePatternPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
-  : FetchPatternPart(pc, fetchType, format) {
+FetchSimplePatternPart::FetchSimplePatternPart(PipeCompiler* pc, FetchType fetch_type, FormatExt format) noexcept
+  : FetchPatternPart(pc, fetch_type, format) {
 
   static constexpr ExtendMode fExtendTable[] = { ExtendMode::kPad, ExtendMode::kRoR };
 
-  _partFlags |= PipePartFlags::kAdvanceXNeedsDiff;
-  _idxShift = 0;
-  _maxPixels = 4;
+  _part_flags |= PipePartFlags::kAdvanceXNeedsDiff;
+  _idx_shift = 0;
+  _max_pixels = 4;
 
   // Setup registers, extend mode, and the maximum number of pixels that can be fetched at once.
-  switch (fetchType) {
+  switch (fetch_type) {
     case FetchType::kPatternAlignedBlit:
-      _partFlags |= PipePartFlags::kAdvanceXIsSimple;
-      _maxVecWidthSupported = VecWidth::kMaxPlatformWidth;
-      _maxPixels = kUnlimitedMaxPixels;
+      _part_flags |= PipePartFlags::kAdvanceXIsSimple;
+      _max_vec_width_supported = VecWidth::kMaxPlatformWidth;
+      _max_pixels = kUnlimitedMaxPixels;
 
-      if (pc->hasMaskedAccessOf(bpp()))
-        _partFlags |= PipePartFlags::kMaskedAccess;
+      if (pc->has_masked_access_of(bpp()))
+        _part_flags |= PipePartFlags::kMaskedAccess;
       break;
 
     case FetchType::kPatternAlignedPad:
-      // TODO: [JIT] OPTIMIZATION: We have removed fetch2x4, so `_maxPixels` cannot be raised to 8.
-      // _maxPixels = 8;
+      // TODO: [JIT] OPTIMIZATION: We have removed fetch2x4, so `_max_pixels` cannot be raised to 8.
+      // _max_pixels = 8;
       _extendX = ExtendMode::kPad;
       break;
 
     case FetchType::kPatternAlignedRepeat:
       _extendX = ExtendMode::kRepeat;
 #if defined(BL_JIT_ARCH_X86)
-      _maxVecWidthSupported = VecWidth::k256;
+      _max_vec_width_supported = VecWidth::k256;
 #endif // BL_JIT_ARCH_X86
       break;
 
@@ -228,18 +228,18 @@ FetchSimplePatternPart::FetchSimplePatternPart(PipeCompiler* pc, FetchType fetch
 
     case FetchType::kPatternFxPad:
     case FetchType::kPatternFxRoR:
-      _extendX = fExtendTable[uint32_t(fetchType) - uint32_t(FetchType::kPatternFxPad)];
+      _extendX = fExtendTable[uint32_t(fetch_type) - uint32_t(FetchType::kPatternFxPad)];
       break;
 
     case FetchType::kPatternFyPad:
     case FetchType::kPatternFyRoR:
-      _extendX = fExtendTable[uint32_t(fetchType) - uint32_t(FetchType::kPatternFyPad)];
+      _extendX = fExtendTable[uint32_t(fetch_type) - uint32_t(FetchType::kPatternFyPad)];
       break;
 
     case FetchType::kPatternFxFyPad:
     case FetchType::kPatternFxFyRoR:
-      _extendX = fExtendTable[uint32_t(fetchType) - uint32_t(FetchType::kPatternFxFyPad)];
-      addPartFlags(PipePartFlags::kExpensive);
+      _extendX = fExtendTable[uint32_t(fetch_type) - uint32_t(FetchType::kPatternFxFyPad)];
+      add_part_flags(PipePartFlags::kExpensive);
       break;
 
     default:
@@ -247,66 +247,66 @@ FetchSimplePatternPart::FetchSimplePatternPart(PipeCompiler* pc, FetchType fetch
   }
 
   if (extendX() == ExtendMode::kPad || extendX() == ExtendMode::kRoR) {
-    if (IntOps::isPowerOf2(_bpp))
-      _idxShift = uint8_t(IntOps::ctz(_bpp));
+    if (IntOps::is_power_of_2(_bpp))
+      _idx_shift = uint8_t(IntOps::ctz(_bpp));
   }
 
-  JitUtils::resetVarStruct(&f, sizeof(f));
+  JitUtils::reset_var_struct(&f, sizeof(f));
 }
 
 // bl::Pipeline::JIT::FetchSimplePatternPart - Init & Fini
 // =======================================================
 
-void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept {
-  if (isAlignedBlit()) {
+void FetchSimplePatternPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) noexcept {
+  if (is_aligned_blit()) {
     // This is a special-case designed only for rectangular blits that never
     // go out of image bounds (this implies that no extend mode is applied).
-    BL_ASSERT(isRectFill());
+    BL_ASSERT(is_rect_fill());
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    f->stride       = pc->newGpPtr("f.stride");       // Mem.
-    f->srcp1        = pc->newGpPtr("f.srcp1");        // Reg.
+    f->stride       = pc->new_gp("f.stride");       // Mem.
+    f->srcp1        = pc->new_gp("f.srcp1");        // Reg.
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    pc->load(f->stride, mem_ptr(fn.fetchData(), REL_PATTERN(src.stride)));
-    pc->sub(f->srcp1.r32(), y.r32(), mem_ptr(fn.fetchData(), REL_PATTERN(simple.ty)));
+    pc->load(f->stride, mem_ptr(fn.fetch_data(), REL_PATTERN(src.stride)));
+    pc->sub(f->srcp1.r32(), y.r32(), mem_ptr(fn.fetch_data(), REL_PATTERN(simple.ty)));
     pc->mul(f->srcp1, f->srcp1, f->stride);
 
-    pc->add(f->srcp1, f->srcp1, mem_ptr(fn.fetchData(), REL_PATTERN(src.pixelData)));
+    pc->add(f->srcp1, f->srcp1, mem_ptr(fn.fetch_data(), REL_PATTERN(src.pixel_data)));
     pc->i_prefetch(mem_ptr(f->srcp1));
 
-    Gp cut = pc->newGpPtr("@stride_cut");
-    pc->mul(cut.r32(), mem_ptr(fn.fetchData(), REL_PATTERN(src.size.w)), int(bpp()));
+    Gp cut = pc->new_gp("@stride_cut");
+    pc->mul(cut.r32(), mem_ptr(fn.fetch_data(), REL_PATTERN(src.size.w)), int(bpp()));
     pc->sub(f->stride, f->stride, cut);
   }
   else {
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    f->srcp0        = pc->newGpPtr("f.srcp0");        // Reg.
-    f->srcp1        = pc->newGpPtr("f.srcp1");        // Reg (Fy|FxFy).
-    f->w            = pc->newGp32("f.w");             // Mem.
-    f->h            = pc->newGp32("f.h");             // Mem.
-    f->y            = pc->newGp32("f.y");             // Reg.
+    f->srcp0        = pc->new_gp("f.srcp0");        // Reg.
+    f->srcp1        = pc->new_gp("f.srcp1");        // Reg (Fy|FxFy).
+    f->w            = pc->new_gp32("f.w");             // Mem.
+    f->h            = pc->new_gp32("f.h");             // Mem.
+    f->y            = pc->new_gp32("f.y");             // Reg.
 
-    f->stride       = pc->newGpPtr("f.stride");       // Init only.
-    f->ry           = pc->newGp32("f.ry");            // Init only.
-    f->vExtendData  = cc->newStack(sizeof(FetchData::Pattern::VertExtendData), 16, "f.vExtendData");
+    f->stride       = pc->new_gp("f.stride");       // Init only.
+    f->ry           = pc->new_gp32("f.ry");            // Init only.
+    f->v_extend_data  = cc->new_stack(sizeof(FetchData::Pattern::VertExtendData), 16, "f.v_extend_data");
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // Apply alpha offset to source pointers.
-    if (_alphaFetch && extendX() != ExtendMode::kRepeat) {
-      _fetchInfo.applyAlphaOffset();
+    if (_alpha_fetch && extendX() != ExtendMode::kRepeat) {
+      _fetch_info.apply_alpha_offset();
     }
 
-    pc->add(f->y, y, mem_ptr(fn.fetchData(), REL_PATTERN(simple.ty)));
+    pc->add(f->y, y, mem_ptr(fn.fetch_data(), REL_PATTERN(simple.ty)));
 
     // The idea is that both Fx and Fy are compatible with FxFy so we increment Y if this is Fx only fetch.
-    if (isPatternFx()) {
+    if (is_pattern_fx()) {
       pc->inc(f->y);
     }
 
-    pc->load_u32(f->h, mem_ptr(fn.fetchData(), REL_PATTERN(src.size.h)));
-    pc->load_u32(f->ry, mem_ptr(fn.fetchData(), REL_PATTERN(simple.ry)));
-    pc->load(f->stride, mem_ptr(fn.fetchData(), REL_PATTERN(src.stride)));
+    pc->load_u32(f->h, mem_ptr(fn.fetch_data(), REL_PATTERN(src.size.h)));
+    pc->load_u32(f->ry, mem_ptr(fn.fetch_data(), REL_PATTERN(simple.ry)));
+    pc->load(f->stride, mem_ptr(fn.fetch_data(), REL_PATTERN(src.stride)));
 
     // Vertical Extend
     // ---------------
@@ -319,84 +319,84 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
       // Vertical Extend - Prepare
       // -------------------------
 
-      Label L_VertRoR = pc->newLabel();
-      Label L_VertSwap = pc->newLabel();
-      Label L_VertDone = pc->newLabel();
+      Label L_VertRoR = pc->new_label();
+      Label L_VertSwap = pc->new_label();
+      Label L_VertDone = pc->new_label();
 
-      Gp yMod = pc->newGpPtr("f.yMod").r32();
-      Gp hMinus1 = pc->newGpPtr("f.hMinus1").r32();
-      Gp yModReg = yMod.cloneAs(f->stride);
+      Gp y_mod = pc->new_gp("f.y_mod").r32();
+      Gp hMinus1 = pc->new_gp("f.hMinus1").r32();
+      Gp yModReg = y_mod.clone_as(f->stride);
 
       VecArray vStrideStopVec;
-      Vec vRewindDataVec = pc->newV128("f.vRewindData");
+      Vec vRewindDataVec = pc->new_vec128("f.vRewindData");
 
-      if (pc->is32Bit()) {
-        pc->newVecArray(vStrideStopVec, 1, VecWidth::k128, "f.vStrideStopVec");
+      if (pc->is_32bit()) {
+        pc->new_vec_array(vStrideStopVec, 1, VecWidth::k128, "f.vStrideStopVec");
 
         constexpr int kRewindDataOffset = 16;
-        pc->v_loadu64(vRewindDataVec, mem_ptr(fn.fetchData(), REL_PATTERN(simple.vExtendData) + kRewindDataOffset));
-        pc->v_storeu64(f->vExtendData.cloneAdjusted(kRewindDataOffset), vRewindDataVec);
+        pc->v_loadu64(vRewindDataVec, mem_ptr(fn.fetch_data(), REL_PATTERN(simple.v_extend_data) + kRewindDataOffset));
+        pc->v_storeu64(f->v_extend_data.clone_adjusted(kRewindDataOffset), vRewindDataVec);
       }
       else {
         constexpr int kRewindDataOffset = 32;
 
 #if defined(BL_JIT_ARCH_X86)
-        if (pc->hasAVX2())
+        if (pc->has_avx2())
         {
-          pc->newVecArray(vStrideStopVec, 1, VecWidth::k256, "f.vStrideStopVec");
+          pc->new_vec_array(vStrideStopVec, 1, VecWidth::k256, "f.vStrideStopVec");
         }
         else
 #endif // BL_JIT_ARCH_X86
         {
-          pc->newVecArray(vStrideStopVec, 2, VecWidth::k128, "f.vStrideStopVec");
+          pc->new_vec_array(vStrideStopVec, 2, VecWidth::k128, "f.vStrideStopVec");
         }
 
-        pc->v_loadu128(vRewindDataVec, mem_ptr(fn.fetchData(), REL_PATTERN(simple.vExtendData) + kRewindDataOffset));
-        pc->v_storea128(f->vExtendData.cloneAdjusted(kRewindDataOffset), vRewindDataVec);
+        pc->v_loadu128(vRewindDataVec, mem_ptr(fn.fetch_data(), REL_PATTERN(simple.v_extend_data) + kRewindDataOffset));
+        pc->v_storea128(f->v_extend_data.clone_adjusted(kRewindDataOffset), vRewindDataVec);
       }
 
-      pc->v_loadavec(vStrideStopVec, mem_ptr(fn.fetchData(), REL_PATTERN(simple.vExtendData)), Alignment(8));
+      pc->v_loadavec(vStrideStopVec, mem_ptr(fn.fetch_data(), REL_PATTERN(simple.v_extend_data)), Alignment(8));
 
-      // Don't do anything if we are within bounds as this is the case vExtendData was prepared for.
-      pc->mov(yMod, f->y);
+      // Don't do anything if we are within bounds as this is the case v_extend_data was prepared for.
+      pc->mov(y_mod, f->y);
       pc->j(L_VertDone, ucmp_lt(f->y, f->h));
 
       // Decide between PAD and RoR.
       pc->j(L_VertRoR, test_nz(f->ry));
 
-      // Handle PAD - we know that we are outside of bounds, so yMod would become either 0 or h-1.
-      pc->sar(yMod, yMod, 31);
+      // Handle PAD - we know that we are outside of bounds, so y_mod would become either 0 or h-1.
+      pc->sar(y_mod, y_mod, 31);
       pc->sub(hMinus1, f->h, 1);
 
-      pc->bic(yMod, hMinus1, yMod);
+      pc->bic(y_mod, hMinus1, y_mod);
       pc->j(L_VertSwap);
 
       // Handle RoR - we have to repeat to `ry`, which is double the height in reflect case.
       pc->bind(L_VertRoR);
       pc->umod(f->y, f->y, f->ry);
-      pc->mov(yMod, f->y);
+      pc->mov(y_mod, f->y);
 
       // If we are within bounds already it means this is either repeat or reflection, which is in repeat part.
       pc->j(L_VertDone, ucmp_lt(f->y, f->h));
 
-      // We are reflecting at the moment, `yMod` has to be updated.
-      pc->sub(yMod, yMod, f->ry);
+      // We are reflecting at the moment, `y_mod` has to be updated.
+      pc->sub(y_mod, y_mod, f->ry);
       pc->sub(f->y, f->y, f->h);
-      pc->not_(yMod, yMod);
+      pc->not_(y_mod, y_mod);
 
       // Vertical Extend - Done
       // ----------------------
 
       pc->bind(L_VertSwap);
-      swapStrideStopData(vStrideStopVec);
+      swap_stride_stop_data(vStrideStopVec);
 
       pc->bind(L_VertDone);
       pc->mul(yModReg, yModReg, f->stride);
-      pc->v_storeavec(f->vExtendData, vStrideStopVec, Alignment(16));
-      pc->add(f->srcp1, yMod.cloneAs(f->srcp1), mem_ptr(fn.fetchData(), REL_PATTERN(src.pixelData)));
+      pc->v_storeavec(f->v_extend_data, vStrideStopVec, Alignment(16));
+      pc->add(f->srcp1, y_mod.clone_as(f->srcp1), mem_ptr(fn.fetch_data(), REL_PATTERN(src.pixel_data)));
 
-      if (_fetchInfo.appliedOffset()) {
-        pc->add(f->srcp1, f->srcp1, _fetchInfo.appliedOffset());
+      if (_fetch_info.applied_offset()) {
+        pc->add(f->srcp1, f->srcp1, _fetch_info.applied_offset());
       }
     }
 
@@ -411,28 +411,28 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
       // --------------
       //
       // There is not much to invent to clamp horizontally. The `f->x` is a raw coordinate that is clamped each
-      // time it's used as an index. To make it fast we use two variables `x` and `xPadded`, which always contains
+      // time it's used as an index. To make it fast we use two variables `x` and `x_padded`, which always contains
       // `x` clamped to `[x, w]` range. The advantage of this approach is that every time we increment `1` to `x` we
-      // need only 2 instructions to calculate new `xPadded` value as it was already padded to the previous index,
+      // need only 2 instructions to calculate new `x_padded` value as it was already padded to the previous index,
       // and it could only get greater by `1` or stay where it was in a case we already reached the width `w`.
 
       // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      f->x          = pc->newGp32("f.x");             // Reg.
-      f->xPadded    = pc->newGpPtr("f.xPadded");      // Reg.
-      f->xOrigin    = pc->newGp32("f.xOrigin");       // Mem.
+      f->x          = pc->new_gp32("f.x");             // Reg.
+      f->x_padded    = pc->new_gp("f.x_padded");      // Reg.
+      f->x_origin    = pc->new_gp32("f.x_origin");       // Mem.
       // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-      pc->load_u32(f->w, mem_ptr(fn.fetchData(), REL_PATTERN(src.size.w)));
-      pc->load_u32(f->xOrigin, mem_ptr(fn.fetchData(), REL_PATTERN(simple.tx)));
+      pc->load_u32(f->w, mem_ptr(fn.fetch_data(), REL_PATTERN(src.size.w)));
+      pc->load_u32(f->x_origin, mem_ptr(fn.fetch_data(), REL_PATTERN(simple.tx)));
 
       // Fy pattern falls to Fx/Fy/FxFy category, which means that it's compatible with FxFy, we must increment the
       // X origin in that case as we know that weights for the first pixel are all zeros (compatibility with FxFy).
-      if (isPatternFy()) {
-        pc->inc(f->xOrigin);
+      if (is_pattern_fy()) {
+        pc->inc(f->x_origin);
       }
 
-      if (isRectFill()) {
-        pc->add(f->xOrigin, f->xOrigin, x);
+      if (is_rect_fill()) {
+        pc->add(f->x_origin, f->x_origin, x);
       }
 
       pc->dec(f->w);
@@ -461,28 +461,28 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
       // use of the sign (when f->x is used as an index it's always negative).
 
       // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      f->x          = pc->newGpPtr("f.x");           // Reg.
-      f->xOrigin    = pc->newGpPtr("f.xOrigin");     // Mem.
-      f->xRestart   = pc->newGpPtr("f.xRestart");    // Mem.
+      f->x          = pc->new_gp("f.x");           // Reg.
+      f->x_origin    = pc->new_gp("f.x_origin");     // Mem.
+      f->x_restart   = pc->new_gp("f.x_restart");    // Mem.
       // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-      pc->load_u32(f->w, mem_ptr(fn.fetchData(), REL_PATTERN(src.size.w)));
-      pc->load_u32(f->xOrigin.r32(), mem_ptr(fn.fetchData(), REL_PATTERN(simple.tx)));
+      pc->load_u32(f->w, mem_ptr(fn.fetch_data(), REL_PATTERN(src.size.w)));
+      pc->load_u32(f->x_origin.r32(), mem_ptr(fn.fetch_data(), REL_PATTERN(simple.tx)));
 
-      if (isPatternFy())
-        pc->inc(f->xOrigin.r32());
+      if (is_pattern_fy())
+        pc->inc(f->x_origin.r32());
 
-      if (isRectFill()) {
-        pc->add(f->xOrigin.r32(), f->xOrigin.r32(), x);
-        pc->umod(f->xOrigin.r32(), f->xOrigin.r32(), f->w);
+      if (is_rect_fill()) {
+        pc->add(f->x_origin.r32(), f->x_origin.r32(), x);
+        pc->umod(f->x_origin.r32(), f->x_origin.r32(), f->w);
       }
 
       pc->mul(f->w      , f->w      , int(bpp()));
-      pc->mul(f->xOrigin, f->xOrigin, int(bpp()));
+      pc->mul(f->x_origin, f->x_origin, int(bpp()));
 
-      pc->sub(f->xOrigin, f->xOrigin, f->w.cloneAs(f->xOrigin));
-      pc->add(f->srcp1, f->srcp1, f->w.cloneAs(f->srcp1));
-      pc->neg(f->xRestart, f->w.cloneAs(f->xRestart));
+      pc->sub(f->x_origin, f->x_origin, f->w.clone_as(f->x_origin));
+      pc->add(f->srcp1, f->srcp1, f->w.clone_as(f->srcp1));
+      pc->neg(f->x_restart, f->w.clone_as(f->x_restart));
     }
 
     if (extendX() == ExtendMode::kRoR) {
@@ -506,25 +506,25 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
       //      so it goes negative.
 
       // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      f->x          = pc->newGp32("f.x");              // Reg.
-      f->xOrigin    = pc->newGp32("f.xOrigin");        // Mem.
-      f->xRestart   = pc->newGp32("f.xRestart");       // Mem.
-      f->rx         = pc->newGp32("f.rx");             // Mem.
+      f->x          = pc->new_gp32("f.x");              // Reg.
+      f->x_origin    = pc->new_gp32("f.x_origin");        // Mem.
+      f->x_restart   = pc->new_gp32("f.x_restart");       // Mem.
+      f->rx         = pc->new_gp32("f.rx");             // Mem.
 
-      if (maxPixels() >= 4) {
-        f->xVec4    = pc->newV128("f.xVec4");          // Reg (fetchN).
-        f->xSet4    = pc->newV128("f.xSet4");          // Mem (fetchN).
-        f->xInc4    = pc->newV128("f.xInc4");          // Mem (fetchN).
-        f->xNrm4    = pc->newV128("f.xNrm4");          // Mem (fetchN).
-        f->xMax4    = pc->newV128("f.xMax4");          // Mem (fetchN).
+      if (max_pixels() >= 4) {
+        f->xVec4    = pc->new_vec128("f.xVec4");          // Reg (fetchN).
+        f->xSet4    = pc->new_vec128("f.xSet4");          // Mem (fetchN).
+        f->xInc4    = pc->new_vec128("f.xInc4");          // Mem (fetchN).
+        f->xNrm4    = pc->new_vec128("f.xNrm4");          // Mem (fetchN).
+        f->xMax4    = pc->new_vec128("f.xMax4");          // Mem (fetchN).
       }
       // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-      pc->load_u32(f->w , mem_ptr(fn.fetchData(), REL_PATTERN(src.size.w)));
-      pc->load_u32(f->rx, mem_ptr(fn.fetchData(), REL_PATTERN(simple.rx)));
+      pc->load_u32(f->w , mem_ptr(fn.fetch_data(), REL_PATTERN(src.size.w)));
+      pc->load_u32(f->rx, mem_ptr(fn.fetch_data(), REL_PATTERN(simple.rx)));
 
-      if (maxPixels() >= 4) {
-        pc->v_cvt_u8_to_u32(f->xSet4, mem_ptr(fn.fetchData(), REL_PATTERN(simple.ix)));
+      if (max_pixels() >= 4) {
+        pc->v_cvt_u8_to_u32(f->xSet4, mem_ptr(fn.fetch_data(), REL_PATTERN(simple.ix)));
         pc->v_swizzle_u32x4(f->xInc4, f->xSet4, swizzle(3, 3, 3, 3));
 
         if (!hasFracX()) {
@@ -532,73 +532,73 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
         }
       }
 
-      pc->sub(f->xRestart, f->w, f->rx);
+      pc->sub(f->x_restart, f->w, f->rx);
       pc->dec(f->w);
 
-      if (maxPixels() >= 4) {
+      if (max_pixels() >= 4) {
         pc->v_broadcast_u32(f->xMax4, f->w);
         pc->v_broadcast_u32(f->xNrm4, f->rx);
       }
 
-      pc->load_u32(f->xOrigin, mem_ptr(fn.fetchData(), REL_PATTERN(simple.tx)));
+      pc->load_u32(f->x_origin, mem_ptr(fn.fetch_data(), REL_PATTERN(simple.tx)));
 
-      if (isPatternFy()) {
-        pc->inc(f->xOrigin);
+      if (is_pattern_fy()) {
+        pc->inc(f->x_origin);
       }
 
-      if (isRectFill()) {
-        Gp norm = pc->newGp32("@norm");
+      if (is_rect_fill()) {
+        Gp norm = pc->new_gp32("@norm");
 
-        pc->add(f->xOrigin, f->xOrigin, x);
-        pc->umod(f->xOrigin, f->xOrigin, f->rx);
+        pc->add(f->x_origin, f->x_origin, x);
+        pc->umod(f->x_origin, f->x_origin, f->rx);
 
-        pc->select(norm, Imm(0), f->rx, ucmp_le(f->xOrigin, f->w));
-        pc->sub(f->xOrigin, f->xOrigin, norm);
+        pc->select(norm, Imm(0), f->rx, ucmp_le(f->x_origin, f->w));
+        pc->sub(f->x_origin, f->x_origin, norm);
       }
     }
 
     // Fractional - Fx|Fy|FxFy
     // -----------------------
 
-    if (isPatternUnaligned()) {
+    if (is_pattern_unaligned()) {
       // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      f->pixL       = pc->newV128("f.pixL");           // Reg (Fx|FxFy).
+      f->pixL       = pc->new_vec128("f.pixL");           // Reg (Fx|FxFy).
 
-      f->wa         = pc->newV128("f.wa");             // Reg/Mem (RGBA mode).
-      f->wb         = pc->newV128("f.wb");             // Reg/Mem (RGBA mode).
-      f->wc         = pc->newV128("f.wc");             // Reg/Mem (RGBA mode).
-      f->wd         = pc->newV128("f.wd");             // Reg/Mem (RGBA mode).
+      f->wa         = pc->new_vec128("f.wa");             // Reg/Mem (RGBA mode).
+      f->wb         = pc->new_vec128("f.wb");             // Reg/Mem (RGBA mode).
+      f->wc         = pc->new_vec128("f.wc");             // Reg/Mem (RGBA mode).
+      f->wd         = pc->new_vec128("f.wd");             // Reg/Mem (RGBA mode).
 
-      f->wc_wd      = pc->newV128("f.wc_wd");          // Reg/Mem (RGBA mode).
-      f->wa_wb      = pc->newV128("f.wa_wb");          // Reg/Mem (RGBA mode).
+      f->wc_wd      = pc->new_vec128("f.wc_wd");          // Reg/Mem (RGBA mode).
+      f->wa_wb      = pc->new_vec128("f.wa_wb");          // Reg/Mem (RGBA mode).
 
-      f->wd_wb      = pc->newV128("f.wd_wb");          // Reg/Mem (Alpha mode).
-      f->wa_wc      = pc->newV128("f.wa_wc");          // Reg/Mem (Alpha mode).
-      f->wb_wd      = pc->newV128("f.wb_wd");          // Reg/Mem (Alpha mode).
+      f->wd_wb      = pc->new_vec128("f.wd_wb");          // Reg/Mem (Alpha mode).
+      f->wa_wc      = pc->new_vec128("f.wa_wc");          // Reg/Mem (Alpha mode).
+      f->wb_wd      = pc->new_vec128("f.wb_wd");          // Reg/Mem (Alpha mode).
       // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-      Vec weights = pc->newV128("weights");
-      Mem wPtr = mem_ptr(fn.fetchData(), REL_PATTERN(simple.wa));
+      Vec weights = pc->new_vec128("weights");
+      Mem wPtr = mem_ptr(fn.fetch_data(), REL_PATTERN(simple.wa));
 
       // [00 Wd 00 Wc 00 Wb 00 Wa]
       pc->v_loadu128(weights, wPtr);
       // [Wd Wc Wb Wa Wd Wc Wb Wa]
       pc->v_packs_i32_i16(weights, weights, weights);
 
-      if (isAlphaFetch()) {
-        if (isPatternFy()) {
+      if (is_alpha_fetch()) {
+        if (is_pattern_fy()) {
           pc->v_swizzle_lo_u16x4(f->wd_wb, weights, swizzle(3, 1, 3, 1));
-          if (maxPixels() >= 4) {
+          if (max_pixels() >= 4) {
             pc->v_swizzle_u32x4(f->wd_wb, f->wd_wb, swizzle(1, 0, 1, 0));
           }
         }
-        else if (isPatternFx()) {
+        else if (is_pattern_fx()) {
           pc->v_swizzle_u32x4(f->wc_wd, weights, swizzle(3, 3, 3, 3));
         }
         else {
           pc->v_swizzle_lo_u16x4(f->wa_wc, weights, swizzle(2, 0, 2, 0));
           pc->v_swizzle_lo_u16x4(f->wb_wd, weights, swizzle(3, 1, 3, 1));
-          if (maxPixels() >= 4) {
+          if (max_pixels() >= 4) {
             pc->v_swizzle_u32x4(f->wa_wc, f->wa_wc, swizzle(1, 0, 1, 0));
             pc->v_swizzle_u32x4(f->wb_wd, f->wb_wd, swizzle(1, 0, 1, 0));
           }
@@ -608,13 +608,13 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
         // [Wd Wd Wc Wc Wb Wb Wa Wa]
         pc->v_interleave_lo_u16(weights, weights, weights);
 
-        if (isPatternFy()) {
+        if (is_pattern_fy()) {
           pc->v_swizzle_u32x4(f->wb, weights, swizzle(1, 1, 1, 1));
           pc->v_swizzle_u32x4(f->wd, weights, swizzle(3, 3, 3, 3));
         }
-        else if (isPatternFx()) {
+        else if (is_pattern_fx()) {
           pc->v_swizzle_u32x4(f->wc_wd, weights, swizzle(3, 3, 2, 2));
-          if (maxPixels() >= 4) {
+          if (max_pixels() >= 4) {
             pc->v_swizzle_u32x4(f->wc, weights, swizzle(2, 2, 2, 2));
             pc->v_swizzle_u32x4(f->wd, weights, swizzle(3, 3, 3, 3));
           }
@@ -623,7 +623,7 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
           pc->v_swizzle_u32x4(f->wa_wc, weights, swizzle(0, 0, 2, 2));
           pc->v_swizzle_u32x4(f->wb_wd, weights, swizzle(1, 1, 3, 3));
 
-          if (maxPixels() >= 4) {
+          if (max_pixels() >= 4) {
             pc->v_swizzle_u32x4(f->wa, weights, swizzle(0, 0, 0, 0));
             pc->v_swizzle_u32x4(f->wb, weights, swizzle(1, 1, 1, 1));
             pc->v_swizzle_u32x4(f->wc, weights, swizzle(2, 2, 2, 2));
@@ -642,13 +642,13 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
   }
 }
 
-void FetchSimplePatternPart::_finiPart() noexcept {}
+void FetchSimplePatternPart::_fini_part() noexcept {}
 
 // bl::Pipeline::JIT::FetchSimplePatternPart - Utilities
 // =====================================================
 
-void FetchSimplePatternPart::swapStrideStopData(VecArray& v) noexcept {
-  if (pc->is32Bit())
+void FetchSimplePatternPart::swap_stride_stop_data(VecArray& v) noexcept {
+  if (pc->is_32bit())
     pc->v_swap_u32(v, v);
   else
     pc->v_swap_u64(v, v);
@@ -658,7 +658,7 @@ void FetchSimplePatternPart::swapStrideStopData(VecArray& v) noexcept {
 // ===================================================
 
 void FetchSimplePatternPart::advanceY() noexcept {
-  if (isAlignedBlit()) {
+  if (is_aligned_blit()) {
     // Blit AA
     // -------
 
@@ -670,12 +670,12 @@ void FetchSimplePatternPart::advanceY() noexcept {
     // -----------------------------
 
     int kStrideArrayOffset = 0;
-    int kYStopArrayOffset = int(pc->registerSize()) * 2;
-    int kYRewindOffset = int(pc->registerSize()) * 4;
-    int kPixelPtrRewindOffset = int(pc->registerSize()) * 5;
+    int kYStopArrayOffset = int(pc->register_size()) * 2;
+    int kYRewindOffset = int(pc->register_size()) * 4;
+    int kPixelPtrRewindOffset = int(pc->register_size()) * 5;
 
-    Label L_Done = pc->newLabel();
-    Label L_YStop = pc->newLabel();
+    Label L_Done = pc->new_label();
+    Label L_YStop = pc->new_label();
 
     pc->inc(f->y);
 
@@ -686,83 +686,83 @@ void FetchSimplePatternPart::advanceY() noexcept {
       pc->mov(f->srcp0, f->srcp1);
     }
 
-    pc->j(L_YStop, cmp_eq(f->y, f->vExtendData.cloneAdjusted(kYStopArrayOffset)));
-    pc->add(f->srcp1, f->srcp1, f->vExtendData.cloneAdjusted(kStrideArrayOffset));
+    pc->j(L_YStop, cmp_eq(f->y, f->v_extend_data.clone_adjusted(kYStopArrayOffset)));
+    pc->add(f->srcp1, f->srcp1, f->v_extend_data.clone_adjusted(kStrideArrayOffset));
     pc->bind(L_Done);
 
     PipeInjectAtTheEnd injected(pc);
     pc->bind(L_YStop);
 
-    // Swap stride and yStop pairs.
-    if (pc->is64Bit()) {
+    // Swap stride and y_stop pairs.
+    if (pc->is_64bit()) {
 #if defined(BL_JIT_ARCH_X86)
-      if (pc->hasAVX2()) {
-        Vec v = pc->newV256("f.vTmp");
-        pc->v_swap_u64(v, f->vExtendData);
-        pc->v_storeu256(f->vExtendData, v);
+      if (pc->has_avx2()) {
+        Vec v = pc->new_vec256("f.v_tmp");
+        pc->v_swap_u64(v, f->v_extend_data);
+        pc->v_storeu256(f->v_extend_data, v);
       }
       else
 #endif // BL_JIT_ARCH_X86
       {
-        Vec v = pc->newV128("f.vTmp");
-        Mem strideArray = f->vExtendData.cloneAdjusted(kStrideArrayOffset);
-        Mem yStopArray = f->vExtendData.cloneAdjusted(kYStopArrayOffset);
-        pc->v_swap_u64(v, strideArray);
-        pc->v_storea128(strideArray, v);
+        Vec v = pc->new_vec128("f.v_tmp");
+        Mem stride_array = f->v_extend_data.clone_adjusted(kStrideArrayOffset);
+        Mem yStopArray = f->v_extend_data.clone_adjusted(kYStopArrayOffset);
+        pc->v_swap_u64(v, stride_array);
+        pc->v_storea128(stride_array, v);
         pc->v_swap_u64(v, yStopArray);
         pc->v_storea128(yStopArray, v);
       }
     }
     else {
-      Vec v0 = pc->newV128("f.vTmp");
-      pc->v_swap_u32(v0, f->vExtendData);
-      pc->v_storea128(f->vExtendData, v0);
+      Vec v0 = pc->new_vec128("f.v_tmp");
+      pc->v_swap_u32(v0, f->v_extend_data);
+      pc->v_storea128(f->v_extend_data, v0);
     }
 
     // Rewind y and pixel-ptr.
-    pc->sub(f->y, f->y, f->vExtendData.cloneAdjusted(kYRewindOffset));
-    pc->sub(f->srcp1, f->srcp1, f->vExtendData.cloneAdjusted(kPixelPtrRewindOffset));
+    pc->sub(f->y, f->y, f->v_extend_data.clone_adjusted(kYRewindOffset));
+    pc->sub(f->srcp1, f->srcp1, f->v_extend_data.clone_adjusted(kPixelPtrRewindOffset));
     pc->j(L_Done);
   }
 }
 
 void FetchSimplePatternPart::startAtX(const Gp& x) noexcept {
-  if (isAlignedBlit()) {
+  if (is_aligned_blit()) {
     // Blit AA
     // -------
 
     // TODO: [JIT] OPTIMIZATION: Relax this constraint.
     // Rectangular blits only.
-    BL_ASSERT(isRectFill());
+    BL_ASSERT(is_rect_fill());
   }
   else if (extendX() == ExtendMode::kPad) {
     // Horizontal Pad
     // --------------
 
-    if (!isRectFill())
-      pc->add(f->x, f->xOrigin, x);                      // f->x = f->xOrigin + x;
+    if (!is_rect_fill())
+      pc->add(f->x, f->x_origin, x);                      // f->x = f->x_origin + x;
     else
-      pc->mov(f->x, f->xOrigin);                         // f->x = f->xOrigin;
-    pc->sbound(f->xPadded.r32(), f->x, f->w);            // f->xPadded = signed_bound(f->x, f->w)
+      pc->mov(f->x, f->x_origin);                         // f->x = f->x_origin;
+    pc->sbound(f->x_padded.r32(), f->x, f->w);            // f->x_padded = signed_bound(f->x, f->w)
   }
   else if (extendX() == ExtendMode::kRepeat) {
     // Horizontal Repeat - AA-Only, Large Fills
     // ----------------------------------------
 
-    pc->mov(f->x, f->xOrigin);                           // f->x = f->xOrigin;
-    if (!isRectFill()) {                                 // if (!RectFill) {
-      pc->add_scaled(f->x, x.cloneAs(f->x), int(bpp())); //   f->x += x * pattern.bpp;
-      repeatOrReflectX();                                //   f->x = repeatLarge(f->x);
+    pc->mov(f->x, f->x_origin);                           // f->x = f->x_origin;
+    if (!is_rect_fill()) {                                 // if (!RectFill) {
+      pc->add_scaled(f->x, x.clone_as(f->x), int(bpp())); //   f->x += x * pattern.bpp;
+      repeatOrReflectX();                                //   f->x = repeat_large(f->x);
     }                                                    // }
   }
   else if (extendX() == ExtendMode::kRoR) {
     // Horizontal RoR [Repeat or Reflect]
     // ----------------------------------
 
-    pc->mov(f->x, f->xOrigin);                           // f->x = f->xOrigin;
-    if (!isRectFill()) {                                 // if (!RectFill) {
+    pc->mov(f->x, f->x_origin);                           // f->x = f->x_origin;
+    if (!is_rect_fill()) {                                 // if (!RectFill) {
       pc->add(f->x, f->x, x);                            //   f->x += x;
-      repeatOrReflectX();                                //   f->x = repeatOrReflect(f->x);
+      repeatOrReflectX();                                //   f->x = repeat_or_reflect(f->x);
     }                                                    // }
   }
   else {
@@ -771,55 +771,55 @@ void FetchSimplePatternPart::startAtX(const Gp& x) noexcept {
 
   prefetchAccX();
 
-  if (pixelGranularity() > 1)
+  if (pixel_granularity() > 1)
     enterN();
 }
 
 void FetchSimplePatternPart::advanceX(const Gp& x, const Gp& diff) noexcept {
-  blUnused(x);
+  bl_unused(x);
   Gp fx32 = f->x.r32();
 
-  if (pixelGranularity() > 1) {
+  if (pixel_granularity() > 1) {
     leaveN();
   }
 
-  if (isAlignedBlit()) {
+  if (is_aligned_blit()) {
     // Blit AA
     // -------
 
-    pc->add_scaled(f->srcp1, diff.cloneAs(f->srcp1), int(bpp()));
+    pc->add_scaled(f->srcp1, diff.clone_as(f->srcp1), int(bpp()));
   }
   else if (extendX() == ExtendMode::kPad) {
     // Horizontal Pad
     // --------------
 
     pc->add(fx32, fx32, diff);                             // f->x += diff;
-    pc->sbound(f->xPadded.r32(), f->x, f->w);              // f->xPadded = signed_bound(f->x, f->w)
+    pc->sbound(f->x_padded.r32(), f->x, f->w);              // f->x_padded = signed_bound(f->x, f->w)
   }
   else if (extendX() == ExtendMode::kRepeat) {
     // Horizontal Repeat - AA-Only, Large Fills
     // ----------------------------------------
 
-    pc->add_scaled(f->x, diff.cloneAs(f->x), int(bpp()));  // f->x += diff * pattern.bpp;
-    repeatOrReflectX();                                    // f->x = repeatLarge(f->x);
+    pc->add_scaled(f->x, diff.clone_as(f->x), int(bpp()));  // f->x += diff * pattern.bpp;
+    repeatOrReflectX();                                    // f->x = repeat_large(f->x);
   }
   else if (extendX() == ExtendMode::kRoR) {
     // Horizontal RoR [Repeat or Reflect]
     // ----------------------------------
 
     pc->add(fx32, fx32, diff);                             // f->x += diff;
-    repeatOrReflectX();                                    // f->x = repeatOrReflect(f->x);
+    repeatOrReflectX();                                    // f->x = repeat_or_reflect(f->x);
   }
 
   prefetchAccX();
 
-  if (pixelGranularity() > 1) {
+  if (pixel_granularity() > 1) {
     enterN();
   }
 }
 
 void FetchSimplePatternPart::advanceXByOne() noexcept {
-  if (isAlignedBlit()) {
+  if (is_aligned_blit()) {
     // Blit AA
     // -------
 
@@ -830,25 +830,25 @@ void FetchSimplePatternPart::advanceXByOne() noexcept {
     // --------------
 
     pc->inc(f->x);
-    pc->cmov(f->xPadded.r32(), f->x, ucmp_le(f->x, f->w));
+    pc->cmov(f->x_padded.r32(), f->x, ucmp_le(f->x, f->w));
   }
   else if (extendX() == ExtendMode::kRepeat) {
     // Horizontal Repeat - AA-Only, Large Fills
     // ----------------------------------------
 
-    pc->cmov(f->x, f->xRestart, add_z(f->x, int(bpp())));
+    pc->cmov(f->x, f->x_restart, add_z(f->x, int(bpp())));
   }
   else if (extendX() == ExtendMode::kRoR) {
     // Horizontal RoR [Repeat or Reflect]
     // ----------------------------------
 
     pc->inc(f->x);
-    pc->cmov(f->x, f->xRestart, scmp_gt(f->x, f->w));
+    pc->cmov(f->x, f->x_restart, scmp_gt(f->x, f->w));
   }
 }
 
 void FetchSimplePatternPart::repeatOrReflectX() noexcept {
-  if (isAlignedBlit()) {
+  if (is_aligned_blit()) {
     // Blit AA
     // -------
 
@@ -858,21 +858,21 @@ void FetchSimplePatternPart::repeatOrReflectX() noexcept {
     // Horizontal Repeat - AA-Only, Large Fills
     // ----------------------------------------
 
-    Label L_HorzSkip = pc->newLabel();
+    Label L_HorzSkip = pc->new_label();
 
     pc->j(L_HorzSkip, scmp_lt(f->x, 0));                   // if (f->x >= 0 &&
-    pc->j(L_HorzSkip, add_s(f->x, f->xRestart));           //     f->x -= f->w >= 0) {
+    pc->j(L_HorzSkip, add_s(f->x, f->x_restart));           //     f->x -= f->w >= 0) {
     // `f->x` too large to be corrected by `f->w`, so do it the slow way:
     pc->umod(f->x.r32(), f->x.r32(), f->w.r32());          //   f->x %= f->w;
-    pc->add(f->x, f->x, f->xRestart);                      //   f->x -= f->w;
+    pc->add(f->x, f->x, f->x_restart);                      //   f->x -= f->w;
     pc->bind(L_HorzSkip);                                  // }
   }
   else if (extendX() == ExtendMode::kRoR) {
     // Horizontal RoR [Repeat or Reflect]
     // ----------------------------------
 
-    Label L_HorzSkip = pc->newLabel();
-    Gp norm = pc->newGp32("@norm");
+    Label L_HorzSkip = pc->new_label();
+    Gp norm = pc->new_gp32("@norm");
 
     pc->j(L_HorzSkip, scmp_lt(f->x, f->rx));               // if (f->x >= f->rx) {
     pc->umod(f->x, f->x, f->rx);                           //   f->x %= f->rx;
@@ -892,7 +892,7 @@ void FetchSimplePatternPart::prefetchAccX() noexcept {
   // --------------
 
   if (extendX() == ExtendMode::kPad) {
-    idx = f->xPadded;
+    idx = f->x_padded;
   }
 
   // Horizontal Repeat - AA-Only, Large Fills
@@ -906,26 +906,26 @@ void FetchSimplePatternPart::prefetchAccX() noexcept {
   // ----------------------------------
 
   if (extendX() == ExtendMode::kRoR) {
-    idx = pc->newGpPtr("@idx");
+    idx = pc->new_gp("@idx");
     pc->reflect(idx.r32(), f->x);
   }
 
-  if (isAlphaFetch()) {
-    if (isPatternFx()) {
-      pc->v_load8(f->pixL, mem_ptr(f->srcp1, idx, _idxShift));
+  if (is_alpha_fetch()) {
+    if (is_pattern_fx()) {
+      pc->v_load8(f->pixL, mem_ptr(f->srcp1, idx, _idx_shift));
     }
     else {
-      pc->v_load8(f->pixL, mem_ptr(f->srcp0, idx, _idxShift));
-      pc->x_insert_word_or_byte(f->pixL, mem_ptr(f->srcp1, idx, _idxShift), 1);
+      pc->v_load8(f->pixL, mem_ptr(f->srcp0, idx, _idx_shift));
+      pc->x_insert_word_or_byte(f->pixL, mem_ptr(f->srcp1, idx, _idx_shift), 1);
     }
   }
   else {
-    if (isPatternFx()) {
-      pc->v_broadcast_u32(f->pixL, mem_ptr(f->srcp1, idx, _idxShift));
+    if (is_pattern_fx()) {
+      pc->v_broadcast_u32(f->pixL, mem_ptr(f->srcp1, idx, _idx_shift));
     }
     else {
-      pc->v_loadu32(f->pixL, mem_ptr(f->srcp1, idx, _idxShift));
-      FetchUtils::fetchSecond32BitElement(pc, f->pixL, mem_ptr(f->srcp0, idx, _idxShift));
+      pc->v_loadu32(f->pixL, mem_ptr(f->srcp1, idx, _idx_shift));
+      FetchUtils::fetchSecond32BitElement(pc, f->pixL, mem_ptr(f->srcp0, idx, _idx_shift));
     }
   }
 }
@@ -934,7 +934,7 @@ void FetchSimplePatternPart::prefetchAccX() noexcept {
 // =================================================
 
 void FetchSimplePatternPart::enterN() noexcept {
-  if (isAlignedBlit()) {
+  if (is_aligned_blit()) {
     // Blit AA
     // -------
 
@@ -950,7 +950,7 @@ void FetchSimplePatternPart::enterN() noexcept {
     // Horizontal RoR [Repeat or Reflect]
     // ----------------------------------
 
-    Vec xFix4 = pc->newV128("@xFix4");
+    Vec xFix4 = pc->new_vec128("@xFix4");
     pc->v_broadcast_u32(f->xVec4, f->x.r32());
     pc->v_add_i32(f->xVec4, f->xVec4, f->xSet4);
 
@@ -961,7 +961,7 @@ void FetchSimplePatternPart::enterN() noexcept {
 }
 
 void FetchSimplePatternPart::leaveN() noexcept {
-  if (isAlignedBlit()) {
+  if (is_aligned_blit()) {
     // Blit AA
     // -------
 
@@ -981,7 +981,7 @@ void FetchSimplePatternPart::leaveN() noexcept {
 
     if (hasFracX()) {
       pc->dec(f->x);
-      pc->cmov(f->x, f->w, scmp_lt(f->x, f->xRestart));
+      pc->cmov(f->x, f->w, scmp_lt(f->x, f->x_restart));
     }
   }
 }
@@ -990,29 +990,29 @@ void FetchSimplePatternPart::prefetchN() noexcept {}
 void FetchSimplePatternPart::postfetchN() noexcept {}
 
 void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
-  p.setCount(n);
+  p.set_count(n);
 
-  if (!blTestFlag(flags, PixelFlags::kPA_PI_UA_UI | PixelFlags::kPC_UC)) {
+  if (!bl_test_flag(flags, PixelFlags::kPA_PI_UA_UI | PixelFlags::kPC_UC)) {
     if (p.isRGBA32())
       flags |= PixelFlags::kPC;
     else
       flags |= PixelFlags::kPA;
   }
 
-  if (isAlignedBlit()) {
-    FetchUtils::fetchPixels(pc, p, n, flags, fetchInfo(), f->srcp1, Alignment(1), AdvanceMode::kAdvance, predicate);
+  if (is_aligned_blit()) {
+    FetchUtils::fetch_pixels(pc, p, n, flags, fetch_info(), f->srcp1, Alignment(1), AdvanceMode::kAdvance, predicate);
     return;
   }
 
-  if (!predicate.empty()) {
+  if (!predicate.is_empty()) {
     flags |= PixelFlags::kLastPartial;
   }
 
-  GatherMode gatherMode = predicate.gatherMode();
+  GatherMode gather_mode = predicate.gather_mode();
 
   switch (n.value()) {
     case 1: {
-      BL_ASSERT(predicate.empty());
+      BL_ASSERT(predicate.is_empty());
 
       Gp idx;
 
@@ -1024,39 +1024,39 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
       }
 
       if (extendX() == ExtendMode::kPad) {
-        idx = f->xPadded;
+        idx = f->x_padded;
       }
       else if (extendX() == ExtendMode::kRepeat) {
         idx = f->x;
       }
       else if (extendX() == ExtendMode::kRoR) {
-        idx = pc->newGpPtr("@idx");
+        idx = pc->new_gp("@idx");
         pc->reflect(idx.r32(), f->x);
       }
 
-      if (isPatternAligned()) {
-        FetchUtils::fetchPixel(pc, p, flags, fetchInfo(), mem_ptr(f->srcp1, idx, _idxShift));
+      if (is_pattern_aligned()) {
+        FetchUtils::fetch_pixel(pc, p, flags, fetch_info(), mem_ptr(f->srcp1, idx, _idx_shift));
         advanceXByOne();
       }
-      else if (isPatternFy()) {
-        if (isAlphaFetch()) {
-          Vec pixA = pc->newV128("@pixA");
+      else if (is_pattern_fy()) {
+        if (is_alpha_fetch()) {
+          Vec pixA = pc->new_vec128("@pixA");
 
-          FetchUtils::x_fetch_unpacked_a8_2x(pc, pixA, fetchInfo(), mem_ptr(f->srcp1, idx, _idxShift), mem_ptr(f->srcp0, idx, _idxShift));
+          FetchUtils::x_fetch_unpacked_a8_2x(pc, pixA, fetch_info(), mem_ptr(f->srcp1, idx, _idx_shift), mem_ptr(f->srcp0, idx, _idx_shift));
           pc->v_mhadd_i16_to_i32(pixA, pixA, f->wd_wb);
           pc->v_srli_u16(pixA, pixA, 8);
 
           advanceXByOne();
 
           FetchUtils::x_assign_unpacked_alpha_values(pc, p, flags, pixA);
-          FetchUtils::satisfyPixels(pc, p, flags);
+          FetchUtils::satisfy_pixels(pc, p, flags);
         }
         else if (p.isRGBA32()) {
-          Vec pix0 = pc->newV128("@pix0");
-          Vec pix1 = pc->newV128("@pix1");
+          Vec pix0 = pc->new_vec128("@pix0");
+          Vec pix1 = pc->new_vec128("@pix1");
 
-          pc->v_loadu32(pix0, mem_ptr(f->srcp0, idx, _idxShift));
-          pc->v_loadu32(pix1, mem_ptr(f->srcp1, idx, _idxShift));
+          pc->v_loadu32(pix0, mem_ptr(f->srcp0, idx, _idx_shift));
+          pc->v_loadu32(pix1, mem_ptr(f->srcp1, idx, _idx_shift));
 
           pc->v_cvt_u8_lo_to_u16(pix0, pix0);
           pc->v_cvt_u8_lo_to_u16(pix1, pix1);
@@ -1070,28 +1070,28 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           pc->v_srli_u16(pix0, pix0, 8);
 
           p.uc.init(pix0);
-          FetchUtils::satisfyPixels(pc, p, flags);
+          FetchUtils::satisfy_pixels(pc, p, flags);
         }
       }
-      else if (isPatternFx()) {
-        if (isAlphaFetch()) {
+      else if (is_pattern_fx()) {
+        if (is_alpha_fetch()) {
           Vec pixL = f->pixL;
-          Vec pixA = pc->newV128("@pixA");
+          Vec pixA = pc->new_vec128("@pixA");
 
-          pc->x_insert_word_or_byte(pixL, mem_ptr(f->srcp1, idx, _idxShift), 1);
+          pc->x_insert_word_or_byte(pixL, mem_ptr(f->srcp1, idx, _idx_shift), 1);
           pc->v_mhadd_i16_to_i32(pixA, pixL, f->wc_wd);
           pc->v_srli_u32(pixL, pixL, 16);
           pc->v_srli_u16(pixA, pixA, 8);
 
           FetchUtils::x_assign_unpacked_alpha_values(pc, p, flags, pixA);
-          FetchUtils::satisfyPixels(pc, p, flags);
+          FetchUtils::satisfy_pixels(pc, p, flags);
         }
         else if (p.isRGBA32()) {
           Vec pixL = f->pixL;
-          Vec pix0 = pc->newV128("@pix0");
-          Vec pix1 = pc->newV128("@pix1");
+          Vec pix0 = pc->new_vec128("@pix0");
+          Vec pix1 = pc->new_vec128("@pix1");
 
-          pc->v_insert_u32(pixL, mem_ptr(f->srcp1, idx, _idxShift), 1);
+          pc->v_insert_u32(pixL, mem_ptr(f->srcp1, idx, _idx_shift), 1);
           pc->v_cvt_u8_lo_to_u16(pix0, pixL);
           pc->v_mul_u16(pix0, pix0, f->wc_wd);
           pc->v_swizzle_u32x4(pixL, pixL, swizzle(1, 1, 1, 1));
@@ -1101,16 +1101,16 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           pc->v_srli_u16(pix0, pix0, 8);
 
           p.uc.init(pix0);
-          FetchUtils::satisfyPixels(pc, p, flags);
+          FetchUtils::satisfy_pixels(pc, p, flags);
         }
       }
-      else if (isPatternFxFy()) {
-        if (isAlphaFetch()) {
+      else if (is_pattern_fx_fy()) {
+        if (is_alpha_fetch()) {
           Vec pixL = f->pixL;
-          Vec pixA = pc->newV128("@pixA");
-          Vec pixB = pc->newV128("@pixB");
+          Vec pixA = pc->new_vec128("@pixA");
+          Vec pixB = pc->new_vec128("@pixB");
 
-          pc->v_load_u8_u16_2x(pixB, mem_ptr(f->srcp0, idx, _idxShift), mem_ptr(f->srcp1, idx, _idxShift));
+          pc->v_load_u8_u16_2x(pixB, mem_ptr(f->srcp0, idx, _idx_shift), mem_ptr(f->srcp1, idx, _idx_shift));
           pc->v_mhadd_i16_to_i32(pixA, pixL, f->wa_wc);
           pc->v_mov(pixL, pixB);
           pc->v_mhadd_i16_to_i32(pixB, pixB, f->wb_wd);
@@ -1118,16 +1118,16 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           pc->v_srli_u16(pixA, pixA, 8);
 
           FetchUtils::x_assign_unpacked_alpha_values(pc, p, flags, pixA);
-          FetchUtils::satisfyPixels(pc, p, flags);
+          FetchUtils::satisfy_pixels(pc, p, flags);
         }
         else if (p.isRGBA32()) {
           Vec pixL = f->pixL;
-          Vec pix0 = pc->newV128("@pix0");
-          Vec pix1 = pc->newV128("@pix1");
+          Vec pix0 = pc->new_vec128("@pix0");
+          Vec pix1 = pc->new_vec128("@pix1");
 
           pc->v_cvt_u8_lo_to_u16(pix0, pixL);
-          pc->v_loadu32(pixL, mem_ptr(f->srcp1, idx, _idxShift));
-          FetchUtils::fetchSecond32BitElement(pc, pixL, mem_ptr(f->srcp0, idx, _idxShift));
+          pc->v_loadu32(pixL, mem_ptr(f->srcp1, idx, _idx_shift));
+          FetchUtils::fetchSecond32BitElement(pc, pixL, mem_ptr(f->srcp0, idx, _idx_shift));
           pc->v_cvt_u8_lo_to_u16(pix1, pixL);
 
           pc->v_mul_u16(pix0, pix0, f->wa_wc);
@@ -1138,15 +1138,15 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           pc->v_srli_u16(pix0, pix0, 8);
 
           p.uc.init(pix0);
-          FetchUtils::satisfyPixels(pc, p, flags);
+          FetchUtils::satisfy_pixels(pc, p, flags);
         }
       }
       break;
     }
 
     case 4: {
-      PixelType intermediateType = isAlphaFetch() ? PixelType::kA8 : PixelType::kRGBA32;
-      PixelFlags intermediateFlags = isAlphaFetch() ? PixelFlags::kUA : PixelFlags::kUC;
+      PixelType intermediate_type = is_alpha_fetch() ? PixelType::kA8 : PixelType::kRGBA32;
+      PixelFlags intermediate_flags = is_alpha_fetch() ? PixelFlags::kUA : PixelFlags::kUC;
 
       // Horizontal Pad | RoR
       // --------------------
@@ -1158,48 +1158,48 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
         // Horizontal Pad | RoR - Aligned
         // ------------------------------
 
-        if (isPatternAligned()) {
-          FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), flags, fetchInfo(), gatherMode);
+        if (is_pattern_aligned()) {
+          FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), flags, fetch_info(), gather_mode);
 
-          fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
-          fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
-          fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
+          fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
+          fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
+          fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
 
-          if (predicate.empty()) {
-            fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
+          if (predicate.is_empty()) {
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
           }
 
           pCtx.end();
           fCtx.end();
 
-          FetchUtils::satisfyPixels(pc, p, flags);
+          FetchUtils::satisfy_pixels(pc, p, flags);
         }
 
         // Horizontal Pad | RoR - Fy
         // -------------------------
 
-        if (isPatternFy()) {
+        if (is_pattern_fy()) {
           Gp idx;
 
-          if (isAlphaFetch()) {
-            Pixel fPix("fPix", intermediateType);
-            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(8), intermediateFlags, fetchInfo(), GatherMode::kFetchAll);
+          if (is_alpha_fetch()) {
+            Pixel fPix("fPix", intermediate_type);
+            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(8), intermediate_flags, fetch_info(), GatherMode::kFetchAll);
 
-            idx = pCtx.nextIndex();
-            fCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            fCtx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            idx = pCtx.nextIndex();
-            fCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            fCtx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            idx = pCtx.nextIndex();
-            fCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            fCtx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            idx = pCtx.nextIndex();
-            fCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            fCtx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
             fCtx.end();
             pCtx.end();
@@ -1211,35 +1211,35 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
 
             pc->v_packs_i32_i16(pix0, pix0, pix0);
             FetchUtils::x_assign_unpacked_alpha_values(pc, p, flags, pix0);
-            FetchUtils::satisfyPixels(pc, p, flags);
+            FetchUtils::satisfy_pixels(pc, p, flags);
           }
           else if (p.isRGBA32()) {
-            Pixel pix0("pix0", intermediateType);
-            Pixel pix1("pix1", intermediateType);
+            Pixel pix0("pix0", intermediate_type);
+            Pixel pix1("pix1", intermediate_type);
 
-            FetchUtils::FetchContext aCtx(pc, &pix0, PixelCount(4), intermediateFlags, fetchInfo(), gatherMode);
-            FetchUtils::FetchContext bCtx(pc, &pix1, PixelCount(4), intermediateFlags, fetchInfo(), gatherMode);
+            FetchUtils::FetchContext a_ctx(pc, &pix0, PixelCount(4), intermediate_flags, fetch_info(), gather_mode);
+            FetchUtils::FetchContext b_ctx(pc, &pix1, PixelCount(4), intermediate_flags, fetch_info(), gather_mode);
 
-            idx = pCtx.nextIndex();
-            aCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            bCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            a_ctx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            b_ctx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            idx = pCtx.nextIndex();
-            aCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            bCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            a_ctx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            b_ctx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            idx = pCtx.nextIndex();
-            aCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            bCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            a_ctx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            b_ctx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            if (predicate.empty()) {
-              idx = pCtx.nextIndex();
-              aCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-              bCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            if (predicate.is_empty()) {
+              idx = pCtx.next_index();
+              a_ctx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+              b_ctx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
             }
 
-            aCtx.end();
-            bCtx.end();
+            a_ctx.end();
+            b_ctx.end();
             pCtx.end();
 
             pc->v_mul_u16(pix0.uc, pix0.uc, f->wb);
@@ -1249,25 +1249,25 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             pc->v_srli_u16(pix0.uc, pix0.uc, 8);
 
             p.uc.init(pix0.uc[0], pix0.uc[1]);
-            FetchUtils::satisfyPixels(pc, p, flags);
+            FetchUtils::satisfy_pixels(pc, p, flags);
           }
         }
 
         // Horizontal Pad | RoR - Fx
         // -------------------------
 
-        if (isPatternFx()) {
-          if (isAlphaFetch()) {
-            Pixel fPix("fPix", intermediateType);
-            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(4), intermediateFlags, fetchInfo(), GatherMode::kFetchAll);
+        if (is_pattern_fx()) {
+          if (is_alpha_fetch()) {
+            Pixel fPix("fPix", intermediate_type);
+            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(4), intermediate_flags, fetch_info(), GatherMode::kFetchAll);
 
             Vec& pixA = fPix.ua[0];
             Vec& pixL = f->pixL;
 
-            fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
 
             fCtx.end();
             pCtx.end();
@@ -1283,25 +1283,25 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             pc->v_packs_i32_i16(pixA, pixA, pixA);
 
             FetchUtils::x_assign_unpacked_alpha_values(pc, p, flags, pixA);
-            FetchUtils::satisfyPixels(pc, p, flags);
+            FetchUtils::satisfy_pixels(pc, p, flags);
           }
           else if (p.isRGBA32()) {
-            Pixel fPix("fPix", intermediateType);
-            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(4), PixelFlags::kPC, fetchInfo(), GatherMode::kFetchAll);
+            Pixel fPix("fPix", intermediate_type);
+            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(4), PixelFlags::kPC, fetch_info(), GatherMode::kFetchAll);
 
-            fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, pCtx.next_index(), _idx_shift));
 
             fCtx.end();
             pCtx.end();
 
             Vec pixL = f->pixL;
-            Vec pix0 = pc->newV128("@pix0");
-            Vec pix1 = pc->newV128("@pix1");
+            Vec pix0 = pc->new_vec128("@pix0");
+            Vec pix1 = pc->new_vec128("@pix1");
             Vec pix2 = fPix.pc[0];
-            Vec pix3 = pc->newV128("@pix3");
+            Vec pix3 = pc->new_vec128("@pix3");
 
             pc->v_alignr_u128(pix0, pix2, pixL, 12);
             pc->v_swizzle_u32x4(pixL, pix2, swizzle(3, 3, 3, 3));
@@ -1322,42 +1322,42 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             pc->v_srli_u16(pix0, pix0, 8);
 
             p.uc.init(pix0, pix1);
-            FetchUtils::satisfyPixels(pc, p, flags);
+            FetchUtils::satisfy_pixels(pc, p, flags);
           }
         }
 
         // Horizontal Pad | RoR - FxFy
         // ---------------------------
 
-        if (isPatternFxFy()) {
+        if (is_pattern_fx_fy()) {
           Gp idx;
 
-          if (isAlphaFetch()) {
-            Pixel fPix("fPix", intermediateType);
-            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(8), intermediateFlags, fetchInfo(), GatherMode::kFetchAll);
+          if (is_alpha_fetch()) {
+            Pixel fPix("fPix", intermediate_type);
+            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(8), intermediate_flags, fetch_info(), GatherMode::kFetchAll);
 
-            idx = pCtx.nextIndex();
-            fCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            fCtx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            idx = pCtx.nextIndex();
-            fCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            fCtx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            idx = pCtx.nextIndex();
-            fCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            fCtx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            idx = pCtx.nextIndex();
-            fCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            fCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            fCtx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            fCtx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
             fCtx.end();
             pCtx.end();
 
             Vec pixL = f->pixL;
             Vec pixA = fPix.ua[0];
-            Vec pixB = pc->newV128("pixB");
+            Vec pixB = pc->new_vec128("pixB");
 
             pc->v_sllb_u128(pixB, pixA, 4);
             pc->v_or_i32(pixB, pixB, pixL);
@@ -1371,43 +1371,43 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             pc->v_packs_i32_i16(pixA, pixA, pixA);
 
             FetchUtils::x_assign_unpacked_alpha_values(pc, p, flags, pixA);
-            FetchUtils::satisfyPixels(pc, p, flags);
+            FetchUtils::satisfy_pixels(pc, p, flags);
           }
           else if (p.isRGBA32()) {
-            Pixel aPix("aPix", intermediateType);
-            Pixel bPix("bPix", intermediateType);
+            Pixel a_pix("a_pix", intermediate_type);
+            Pixel b_pix("b_pix", intermediate_type);
 
-            FetchUtils::FetchContext aCtx(pc, &aPix, PixelCount(4), PixelFlags::kPC, fetchInfo(), GatherMode::kFetchAll);
-            FetchUtils::FetchContext bCtx(pc, &bPix, PixelCount(4), PixelFlags::kPC, fetchInfo(), GatherMode::kFetchAll);
+            FetchUtils::FetchContext a_ctx(pc, &a_pix, PixelCount(4), PixelFlags::kPC, fetch_info(), GatherMode::kFetchAll);
+            FetchUtils::FetchContext b_ctx(pc, &b_pix, PixelCount(4), PixelFlags::kPC, fetch_info(), GatherMode::kFetchAll);
 
-            idx = pCtx.nextIndex();
-            aCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            bCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            a_ctx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            b_ctx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            idx = pCtx.nextIndex();
-            aCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            bCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            a_ctx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            b_ctx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            idx = pCtx.nextIndex();
-            aCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            bCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            a_ctx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            b_ctx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            idx = pCtx.nextIndex();
-            aCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
-            bCtx.fetchPixel(mem_ptr(f->srcp1, idx, _idxShift));
+            idx = pCtx.next_index();
+            a_ctx.fetch_pixel(mem_ptr(f->srcp0, idx, _idx_shift));
+            b_ctx.fetch_pixel(mem_ptr(f->srcp1, idx, _idx_shift));
 
-            aCtx.end();
-            bCtx.end();
+            a_ctx.end();
+            b_ctx.end();
             pCtx.end();
 
             Vec pixL = f->pixL;
-            Vec pix0 = pc->newV128("@pix0");
-            Vec pix1 = pc->newV128("@pix1");
-            Vec pix2 = pc->newV128("@pix2");
-            Vec pix3 = pc->newV128("@pix3");
+            Vec pix0 = pc->new_vec128("@pix0");
+            Vec pix1 = pc->new_vec128("@pix1");
+            Vec pix2 = pc->new_vec128("@pix2");
+            Vec pix3 = pc->new_vec128("@pix3");
 
-            Vec pixP = aPix.pc[0];
-            Vec pixQ = bPix.pc[0];
+            Vec pixP = a_pix.pc[0];
+            Vec pixQ = b_pix.pc[0];
 
             pc->v_cvt_u8_lo_to_u16(pix0, pixP);
             pc->v_mul_u16(pix0, pix0, f->wb);
@@ -1427,7 +1427,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             pc->v_alignr_u128(pixP, pixP, pix2, 12);
             pc->v_swizzle_u32x4(pix2, pix2, swizzle(2, 2, 2, 2));
 
-            pc->shiftOrRotateRight(pixL, pixL, 4);
+            pc->shift_or_rotate_right(pixL, pixL, 4);
             pc->v_alignr_u128(pixQ, pixQ, pix2, 12);
 
             pc->v_cvt_u8_lo_to_u16(pix2, pixP);
@@ -1450,7 +1450,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             pc->v_srli_u16(pix1, pix1, 8);
 
             p.uc.init(pix0, pix1);
-            FetchUtils::satisfyPixels(pc, p, flags);
+            FetchUtils::satisfy_pixels(pc, p, flags);
           }
         }
       }
@@ -1460,19 +1460,19 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
 
       if (extendX() == ExtendMode::kRepeat) {
         // Only generated for AA patterns.
-        BL_ASSERT(isPatternAligned());
+        BL_ASSERT(is_pattern_aligned());
 
-        PixelFlags overriddenFlags = flags;
-        if (pc->use256BitSimd() && p.isRGBA32()) {
-          overriddenFlags = PixelFlags::kPC;
+        PixelFlags overridden_flags = flags;
+        if (pc->use_256bit_simd() && p.isRGBA32()) {
+          overridden_flags = PixelFlags::kPC;
         }
 
-        FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), overriddenFlags, fetchInfo(), gatherMode);
+        FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), overridden_flags, fetch_info(), gather_mode);
         Gp x = f->x;
 
-        if (predicate.empty()) {
-          Label L_Done = pc->newLabel();
-          Label L_Repeat = pc->newLabel();
+        if (predicate.is_empty()) {
+          Label L_Done = pc->new_label();
+          Label L_Repeat = pc->new_label();
 
           int offset = int(4 * bpp());
 
@@ -1485,20 +1485,20 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
 #else
           // AArch64 addressing is more restricted than x86 one, so we can form either a [base + index]
           // or [base + offset] address.
-          Gp srcBase = pc->newSimilarReg(f->srcp1, "srcBase");
-          pc->sub(srcBase, f->srcp1, offset);
-          Mem mem = mem_ptr(srcBase, x);
+          Gp src_base = pc->new_similar_reg(f->srcp1, "src_base");
+          pc->sub(src_base, f->srcp1, offset);
+          Mem mem = mem_ptr(src_base, x);
 #endif
           pc->j(L_Repeat, add_c(x, offset));
 
-          // TODO: [JIT] This should use FetchUtils::fetchPixels() instead - it's identical.
+          // TODO: [JIT] This should use FetchUtils::fetch_pixels() instead - it's identical.
           //
           // The problem here is only that we want the same registers where the pixels are fetched, where
-          // pixels are allocated by FetchUtils::FetchContext. However, if we tweak fetchPixels() and add
+          // pixels are allocated by FetchUtils::FetchContext. However, if we tweak fetch_pixels() and add
           // a parameter to reuse the existing vector registers (or simply fetch to existing ones, if
           // provided) then this code could be removed.
           if (p.isRGBA32()) {
-            if (blTestFlag(overriddenFlags, PixelFlags::kPC)) {
+            if (bl_test_flag(overridden_flags, PixelFlags::kPC)) {
               const Vec& reg = p.pc[0];
 
               switch (format()) {
@@ -1527,7 +1527,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
                 case FormatExt::kPRGB32:
                 case FormatExt::kXRGB32: {
                   pc->v_cvt_u8_lo_to_u16(uc0, mem);
-                  pc->v_cvt_u8_lo_to_u16(uc1, mem.cloneAdjusted(8));
+                  pc->v_cvt_u8_lo_to_u16(uc1, mem.clone_adjusted(8));
                   break;
                 }
 
@@ -1546,7 +1546,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             }
           }
           else {
-            if (blTestFlag(overriddenFlags, PixelFlags::kPA)) {
+            if (bl_test_flag(overridden_flags, PixelFlags::kPA)) {
               const Vec& reg = p.pa[0];
               switch (format()) {
                 case FormatExt::kPRGB32:
@@ -1554,7 +1554,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
                   pc->v_loadu128(reg, mem);
 
   #if defined(BL_JIT_ARCH_X86)
-                  if (!pc->hasSSSE3()) {
+                  if (!pc->has_ssse3()) {
                     pc->v_srli_u32(reg, reg, 24);
                     pc->v_packs_i32_i16(reg, reg, reg);
                     pc->v_packs_i16_u8(reg, reg, reg);
@@ -1562,7 +1562,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
                   else
   #endif // BL_JIT_ARCH_X86
                   {
-                    pc->v_swizzlev_u8(reg, reg, pc->simdConst(&ct.swizu8_3xxx2xxx1xxx0xxx_to_zzzzzzzzzzzz3210, Bcst::kNA, reg));
+                    pc->v_swizzlev_u8(reg, reg, pc->simd_const(&ct.swizu8_3xxx2xxx1xxx0xxx_to_zzzzzzzzzzzz3210, Bcst::kNA, reg));
                   }
                   break;
                 }
@@ -1605,24 +1605,24 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             PipeInjectAtTheEnd injected(pc);
             pc->bind(L_Repeat);
 
-            fCtx.fetchPixel(mem);
+            fCtx.fetch_pixel(mem);
 
 #if defined(BL_JIT_ARCH_X86)
-            mem.addOffsetLo32(offset);
+            mem.add_offset_lo32(offset);
 #else
             mem = mem_ptr(f->srcp1, x);
 #endif
 
-            pc->cmov(x, f->xRestart, sub_z(x, offset - int(bpp())));
-            fCtx.fetchPixel(mem);
+            pc->cmov(x, f->x_restart, sub_z(x, offset - int(bpp())));
+            fCtx.fetch_pixel(mem);
 
-            pc->cmov(x, f->xRestart, add_z(x, bpp()));
-            fCtx.fetchPixel(mem);
+            pc->cmov(x, f->x_restart, add_z(x, bpp()));
+            fCtx.fetch_pixel(mem);
 
-            pc->cmov(x, f->xRestart, add_z(x, bpp()));
-            fCtx.fetchPixel(mem);
+            pc->cmov(x, f->x_restart, add_z(x, bpp()));
+            fCtx.fetch_pixel(mem);
 
-            pc->cmov(x, f->xRestart, add_z(x, bpp()));
+            pc->cmov(x, f->x_restart, add_z(x, bpp()));
             fCtx.end();
 
             pc->j(L_Done);
@@ -1632,31 +1632,31 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           uint32_t kMsk = ((bpp()        ) << 16) | // `predicate.count == 2` => always fetch 1, then 1 next.
                           ((bpp() * 0x11u) << 24) ; // `predicate.count == 3` => always fetch 1, then 2 next.
 
-          Gp t0 = pc->newGpPtr("@t0");
-          Gp t1 = pc->newGpPtr("@t1");
+          Gp t0 = pc->new_gp("@t0");
+          Gp t1 = pc->new_gp("@t1");
 
           pc->mov(t0.r32(), kMsk);
           pc->shl(t1.r32(), predicate.count().r32(), 3);
           pc->shr(t0.r32(), t0.r32(), t1.r32());
 
           Mem mem = mem_ptr(f->srcp1, x);
-          fCtx.fetchPixel(mem);
+          fCtx.fetch_pixel(mem);
           pc->mov(t1.r32(), 0x0F);
-          pc->cmov(x, f->xRestart, add_z(x, bpp()));
+          pc->cmov(x, f->x_restart, add_z(x, bpp()));
           pc->and_(t1.r32(), t1.r32(), t0.r32());
 
-          fCtx.fetchPixel(mem);
+          fCtx.fetch_pixel(mem);
           pc->shr(t0.r32(), t0.r32(), 4);
-          pc->cmov(x, f->xRestart, add_z(x, t1));
+          pc->cmov(x, f->x_restart, add_z(x, t1));
           pc->and_(t1.r32(), t1.r32(), t0.r32());
 
-          fCtx.fetchPixel(mem);
-          pc->cmov(x, f->xRestart, add_z(x, t1));
+          fCtx.fetch_pixel(mem);
+          pc->cmov(x, f->x_restart, add_z(x, t1));
 
           fCtx.end();
         }
 
-        FetchUtils::satisfyPixels(pc, p, flags);
+        FetchUtils::satisfy_pixels(pc, p, flags);
       }
       break;
     }
@@ -1669,98 +1669,98 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
 // bl::Pipeline::JIT::FetchAffinePatternPart - Construction & Destruction
 // ======================================================================
 
-FetchAffinePatternPart::FetchAffinePatternPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
-  : FetchPatternPart(pc, fetchType, format) {
+FetchAffinePatternPart::FetchAffinePatternPart(PipeCompiler* pc, FetchType fetch_type, FormatExt format) noexcept
+  : FetchPatternPart(pc, fetch_type, format) {
 
-  _partFlags |= PipePartFlags::kAdvanceXNeedsDiff;
-  _maxPixels = 4;
+  _part_flags |= PipePartFlags::kAdvanceXNeedsDiff;
+  _max_pixels = 4;
 
-  switch (fetchType) {
+  switch (fetch_type) {
     case FetchType::kPatternAffineNNAny:
     case FetchType::kPatternAffineNNOpt:
-      addPartFlags(PipePartFlags::kExpensive);
+      add_part_flags(PipePartFlags::kExpensive);
       break;
 
     case FetchType::kPatternAffineBIAny:
     case FetchType::kPatternAffineBIOpt:
       // TODO: [JIT] OPTIMIZATION: Implement fetch4.
-      _maxPixels = 1;
-      addPartFlags(PipePartFlags::kExpensive);
+      _max_pixels = 1;
+      add_part_flags(PipePartFlags::kExpensive);
       break;
 
     default:
       BL_NOT_REACHED();
   }
 
-  JitUtils::resetVarStruct(&f, sizeof(f));
+  JitUtils::reset_var_struct(&f, sizeof(f));
 
-  if (IntOps::isPowerOf2(_bpp))
-    _idxShift = uint8_t(IntOps::ctz(_bpp));
+  if (IntOps::is_power_of_2(_bpp))
+    _idx_shift = uint8_t(IntOps::ctz(_bpp));
 }
 
 // bl::Pipeline::JIT::FetchAffinePatternPart - Init & Fini
 // =======================================================
 
-void FetchAffinePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept {
+void FetchAffinePatternPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) noexcept {
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  f->srctop         = pc->newGpPtr("f.srctop");        // Mem.
-  f->stride         = pc->newGpPtr("f.stride");        // Mem.
+  f->srctop         = pc->new_gp("f.srctop");        // Mem.
+  f->stride         = pc->new_gp("f.stride");        // Mem.
 
-  f->xx_xy          = pc->newV128("f.xx_xy");          // Reg.
-  f->yx_yy          = pc->newV128("f.yx_yy");          // Reg/Mem.
-  f->tx_ty          = pc->newV128("f.tx_ty");          // Reg/Mem.
-  f->px_py          = pc->newV128("f.px_py");          // Reg.
-  f->ox_oy          = pc->newV128("f.ox_oy");          // Reg/Mem.
-  f->rx_ry          = pc->newV128("f.rx_ry");          // Reg/Mem.
-  f->qx_qy          = pc->newV128("f.qx_qy");          // Reg     [fetch4].
-  f->xx2_xy2        = pc->newV128("f.xx2_xy2");        // Reg/Mem [fetch4].
-  f->minx_miny      = pc->newV128("f.minx_miny");      // Reg/Mem.
-  f->maxx_maxy      = pc->newV128("f.maxx_maxy");      // Reg/Mem.
-  f->corx_cory      = pc->newV128("f.corx_cory");      // Reg/Mem.
-  f->tw_th          = pc->newV128("f.tw_th");          // Reg/Mem.
+  f->xx_xy          = pc->new_vec128("f.xx_xy");          // Reg.
+  f->yx_yy          = pc->new_vec128("f.yx_yy");          // Reg/Mem.
+  f->tx_ty          = pc->new_vec128("f.tx_ty");          // Reg/Mem.
+  f->px_py          = pc->new_vec128("f.px_py");          // Reg.
+  f->ox_oy          = pc->new_vec128("f.ox_oy");          // Reg/Mem.
+  f->rx_ry          = pc->new_vec128("f.rx_ry");          // Reg/Mem.
+  f->qx_qy          = pc->new_vec128("f.qx_qy");          // Reg     [fetch4].
+  f->xx2_xy2        = pc->new_vec128("f.xx2_xy2");        // Reg/Mem [fetch4].
+  f->minx_miny      = pc->new_vec128("f.minx_miny");      // Reg/Mem.
+  f->maxx_maxy      = pc->new_vec128("f.maxx_maxy");      // Reg/Mem.
+  f->corx_cory      = pc->new_vec128("f.corx_cory");      // Reg/Mem.
+  f->tw_th          = pc->new_vec128("f.tw_th");          // Reg/Mem.
 
-  f->vIdx           = pc->newV128("f.vIdx");           // Reg/Tmp.
-  f->vAddrMul       = pc->newV128("f.vAddrMul");       // Reg/Tmp.
+  f->v_idx           = pc->new_vec128("f.v_idx");           // Reg/Tmp.
+  f->vAddrMul       = pc->new_vec128("f.vAddrMul");       // Reg/Tmp.
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  pc->load(f->srctop, mem_ptr(fn.fetchData(), REL_PATTERN(src.pixelData)));
-  pc->load(f->stride, mem_ptr(fn.fetchData(), REL_PATTERN(src.stride)));
+  pc->load(f->srctop, mem_ptr(fn.fetch_data(), REL_PATTERN(src.pixel_data)));
+  pc->load(f->stride, mem_ptr(fn.fetch_data(), REL_PATTERN(src.stride)));
 
 #if defined(BL_JIT_ARCH_A64)
   // Apply alpha offset to source pointers when on AArch64 as we cannot use offsets together with indexes.
-  if (_alphaFetch) {
-    _fetchInfo.applyAlphaOffset();
-    if (_fetchInfo.appliedOffset()) {
-      pc->add(f->srctop, f->srctop, _fetchInfo.appliedOffset());
+  if (_alpha_fetch) {
+    _fetch_info.apply_alpha_offset();
+    if (_fetch_info.applied_offset()) {
+      pc->add(f->srctop, f->srctop, _fetch_info.applied_offset());
     }
   }
 #endif // BL_JIT_ARCH_A64
 
-  pc->v_loadu128(f->xx_xy, mem_ptr(fn.fetchData(), REL_PATTERN(affine.xx)));
-  pc->v_loadu128(f->yx_yy, mem_ptr(fn.fetchData(), REL_PATTERN(affine.yx)));
+  pc->v_loadu128(f->xx_xy, mem_ptr(fn.fetch_data(), REL_PATTERN(affine.xx)));
+  pc->v_loadu128(f->yx_yy, mem_ptr(fn.fetch_data(), REL_PATTERN(affine.yx)));
 
   pc->s_mov_u32(f->tx_ty, y);
   pc->v_swizzle_u32x4(f->tx_ty, f->tx_ty, swizzle(1, 0, 1, 0));
   pc->v_mul_u64_lo_u32(f->tx_ty, f->yx_yy, f->tx_ty);
-  pc->v_add_i64(f->tx_ty, f->tx_ty, mem_ptr(fn.fetchData(), REL_PATTERN(affine.tx)));
+  pc->v_add_i64(f->tx_ty, f->tx_ty, mem_ptr(fn.fetch_data(), REL_PATTERN(affine.tx)));
 
   // RoR: `tw_th` and `rx_ry` are only used by repeated or reflected patterns.
-  pc->v_loadu128(f->rx_ry, mem_ptr(fn.fetchData(), REL_PATTERN(affine.rx)));
-  pc->v_loadu128(f->tw_th, mem_ptr(fn.fetchData(), REL_PATTERN(affine.tw)));
+  pc->v_loadu128(f->rx_ry, mem_ptr(fn.fetch_data(), REL_PATTERN(affine.rx)));
+  pc->v_loadu128(f->tw_th, mem_ptr(fn.fetch_data(), REL_PATTERN(affine.tw)));
 
-  pc->v_loadu128(f->ox_oy, mem_ptr(fn.fetchData(), REL_PATTERN(affine.ox)));
-  pc->v_loadu128(f->xx2_xy2, mem_ptr(fn.fetchData(), REL_PATTERN(affine.xx2)));
+  pc->v_loadu128(f->ox_oy, mem_ptr(fn.fetch_data(), REL_PATTERN(affine.ox)));
+  pc->v_loadu128(f->xx2_xy2, mem_ptr(fn.fetch_data(), REL_PATTERN(affine.xx2)));
 
   // Pad: [MaxY | MaxX | MinY | MinX]
-  pc->v_loadu128(f->minx_miny, mem_ptr(fn.fetchData(), REL_PATTERN(affine.minX)));
-  pc->v_loadu64(f->corx_cory, mem_ptr(fn.fetchData(), REL_PATTERN(affine.corX)));
+  pc->v_loadu128(f->minx_miny, mem_ptr(fn.fetch_data(), REL_PATTERN(affine.min_x)));
+  pc->v_loadu64(f->corx_cory, mem_ptr(fn.fetch_data(), REL_PATTERN(affine.cor_x)));
 
-  if (isOptimized()) {
+  if (is_optimized()) {
     pc->v_packs_i32_i16(f->minx_miny, f->minx_miny, f->minx_miny);        // [MaxY|MaxX|MinY|MinX|MaxY|MaxX|MinY|MinX]
     pc->v_swizzle_u32x4(f->maxx_maxy, f->minx_miny, swizzle(1, 1, 1, 1)); // [MaxY|MaxX|MaxY|MaxX|MaxY|MaxX|MaxY|MaxX]
     pc->v_swizzle_u32x4(f->minx_miny, f->minx_miny, swizzle(0, 0, 0, 0)); // [MinY|MinX|MinY|MinX|MinY|MinX|MinY|MinX]
   }
-  else if (fetchType() == FetchType::kPatternAffineNNAny) {
+  else if (fetch_type() == FetchType::kPatternAffineNNAny) {
     // NOTE: This is a slightly different layout than others to match [V]PMADDWD instruction on X86.
     pc->v_swizzle_u32x4(f->maxx_maxy, f->minx_miny, swizzle(3, 2, 3, 2)); // [MaxY|MaxX|MaxY|MaxX]
     pc->v_swizzle_u32x4(f->minx_miny, f->minx_miny, swizzle(1, 0, 1, 0)); // [MinY|MinX|MinY|MinX]
@@ -1772,18 +1772,18 @@ void FetchAffinePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
     pc->v_swizzle_u32x4(f->corx_cory, f->corx_cory, swizzle(1, 1, 0, 0)); // [CorY|CorY|CorX|CorX]
   }
 
-  if (isOptimized())
-    pc->v_broadcast_u32(f->vAddrMul, mem_ptr(fn.fetchData(), REL_PATTERN(affine.addrMul16)));
+  if (is_optimized())
+    pc->v_broadcast_u32(f->vAddrMul, mem_ptr(fn.fetch_data(), REL_PATTERN(affine.addr_mul16)));
   else
-    pc->v_broadcast_u64(f->vAddrMul, mem_ptr(fn.fetchData(), REL_PATTERN(affine.addrMul32)));
+    pc->v_broadcast_u64(f->vAddrMul, mem_ptr(fn.fetch_data(), REL_PATTERN(affine.addr_mul32)));
 
-  if (isRectFill()) {
-    advancePxPy(f->tx_ty, x);
-    normalizePxPy(f->tx_ty);
+  if (is_rect_fill()) {
+    advance_px_py(f->tx_ty, x);
+    normalize_px_py(f->tx_ty);
   }
 }
 
-void FetchAffinePatternPart::_finiPart() noexcept {}
+void FetchAffinePatternPart::_fini_part() noexcept {}
 
 // bl::Pipeline::JIT::FetchAffinePatternPart - Advance
 // ===================================================
@@ -1791,44 +1791,44 @@ void FetchAffinePatternPart::_finiPart() noexcept {}
 void FetchAffinePatternPart::advanceY() noexcept {
   pc->v_add_i64(f->tx_ty, f->tx_ty, f->yx_yy);
 
-  if (isRectFill())
-    normalizePxPy(f->tx_ty);
+  if (is_rect_fill())
+    normalize_px_py(f->tx_ty);
 }
 
 void FetchAffinePatternPart::startAtX(const Gp& x) noexcept {
-  if (isRectFill()) {
+  if (is_rect_fill()) {
     pc->v_mov(f->px_py, f->tx_ty);
   }
   else {
-    // Similar to `advancePxPy()`, however, we don't need a temporary here...
+    // Similar to `advance_px_py()`, however, we don't need a temporary here...
     pc->s_mov_u32(f->px_py, x.r32());
     pc->v_swizzle_u32x4(f->px_py, f->px_py, swizzle(1, 0, 1, 0));
     pc->v_mul_u64_lo_u32(f->px_py, f->xx_xy, f->px_py);
     pc->v_add_i64(f->px_py, f->px_py, f->tx_ty);
 
-    normalizePxPy(f->px_py);
+    normalize_px_py(f->px_py);
   }
 
-  if (pixelGranularity() > 1)
+  if (pixel_granularity() > 1)
     enterN();
 }
 
 void FetchAffinePatternPart::advanceX(const Gp& x, const Gp& diff) noexcept {
-  blUnused(x);
-  BL_ASSERT(!isRectFill());
+  bl_unused(x);
+  BL_ASSERT(!is_rect_fill());
 
-  if (pixelGranularity() > 1)
+  if (pixel_granularity() > 1)
     leaveN();
 
-  advancePxPy(f->px_py, diff);
-  normalizePxPy(f->px_py);
+  advance_px_py(f->px_py, diff);
+  normalize_px_py(f->px_py);
 
-  if (pixelGranularity() > 1)
+  if (pixel_granularity() > 1)
     enterN();
 }
 
-void FetchAffinePatternPart::advancePxPy(Vec& px_py, const Gp& i) noexcept {
-  Vec t = pc->newV128("@t");
+void FetchAffinePatternPart::advance_px_py(Vec& px_py, const Gp& i) noexcept {
+  Vec t = pc->new_vec128("@t");
 
   pc->s_mov_u32(t, i.r32());
   pc->v_swizzle_u32x4(t, t, swizzle(1, 0, 1, 0));
@@ -1836,8 +1836,8 @@ void FetchAffinePatternPart::advancePxPy(Vec& px_py, const Gp& i) noexcept {
   pc->v_add_i64(px_py, px_py, t);
 }
 
-void FetchAffinePatternPart::normalizePxPy(Vec& px_py) noexcept {
-  Vec v0 = pc->newV128("v0");
+void FetchAffinePatternPart::normalize_px_py(Vec& px_py) noexcept {
+  Vec v0 = pc->new_vec128("v0");
 
   pc->v_zero_i(v0);
   pc->xModI64HIxDouble(px_py, px_py, f->tw_th);
@@ -1866,9 +1866,9 @@ void FetchAffinePatternPart::clampVIdx32(Vec& dst, const Vec& src, ClampStep ste
     case kClampStepA_NN:
     case kClampStepA_BI: {
 #if defined(BL_JIT_ARCH_X86)
-      if (!pc->hasSSE4_1()) {
+      if (!pc->has_sse4_1()) {
         if (dst.id() == src.id()) {
-          Vec tmp = pc->newV128("f.vIdxPad");
+          Vec tmp = pc->new_vec128("f.vIdxPad");
           pc->v_mov(tmp, src);
           pc->v_cmp_gt_i32(dst, dst, f->minx_miny); // `-1` if `src` is greater than `minx_miny`.
           pc->v_and_i32(dst, dst, tmp);             // Changes `dst` to `0` if clamped.
@@ -1894,16 +1894,16 @@ void FetchAffinePatternPart::clampVIdx32(Vec& dst, const Vec& src, ClampStep ste
 
 #if defined(BL_JIT_ARCH_X86)
       // TODO: [JIT] OPTIMIZATION: AVX-512 masking seems slower than AVX2.
-      // if (pc->hasAVX512()) {
-      //   x86::KReg k = cc->newKw("f.kTmp");
+      // if (pc->has_avx512()) {
+      //   x86::KReg k = cc->new_kw("f.kTmp");
       //   cc->vpcmpgtd(k, dst, f->maxx_maxy);
       //   cc->k(k).vmovdqa32(dst, f->corx_cory);
       // }
 
-      if (!pc->hasSSE4_1()) {
+      if (!pc->has_sse4_1()) {
         // Blend(a, b, cond) == a ^ ((a ^ b) &  cond)
         //                   == b ^ ((a ^ b) & ~cond)
-        Vec tmp = pc->newV128("f.vTmp");
+        Vec tmp = pc->new_vec128("f.v_tmp");
         pc->v_xor_i32(tmp, dst, f->corx_cory);
         pc->v_cmp_gt_i32(dst, dst, f->maxx_maxy);
         pc->v_andn_i32(dst, dst, tmp);
@@ -1912,7 +1912,7 @@ void FetchAffinePatternPart::clampVIdx32(Vec& dst, const Vec& src, ClampStep ste
       }
 #endif // BL_JIT_ARCH_X86
 
-      Vec tmp = pc->newV128("f.vTmp");
+      Vec tmp = pc->new_vec128("f.v_tmp");
       pc->v_cmp_gt_i32(tmp, dst, f->maxx_maxy);
       pc->v_blendv_u8(dst, dst, f->corx_cory, tmp);
       break;
@@ -1924,7 +1924,7 @@ void FetchAffinePatternPart::clampVIdx32(Vec& dst, const Vec& src, ClampStep ste
       // Always performed on the same register.
       BL_ASSERT(dst.id() == src.id());
 
-      Vec tmp = pc->newV128("f.vIdxRoR");
+      Vec tmp = pc->new_vec128("f.vIdxRoR");
       pc->v_srai_i32(tmp, dst, 31);
       pc->v_xor_i32(dst, dst, tmp);
       break;
@@ -1939,7 +1939,7 @@ void FetchAffinePatternPart::clampVIdx32(Vec& dst, const Vec& src, ClampStep ste
 // =================================================
 
 void FetchAffinePatternPart::enterN() noexcept {
-  Vec vMsk0 = pc->newV128("vMsk0");
+  Vec vMsk0 = pc->new_vec128("vMsk0");
 
   pc->v_add_i64(f->qx_qy, f->px_py, f->xx_xy);
   pc->v_cmp_gt_i32(vMsk0, f->qx_qy, f->ox_oy);
@@ -1953,137 +1953,137 @@ void FetchAffinePatternPart::prefetchN() noexcept {}
 void FetchAffinePatternPart::postfetchN() noexcept {}
 
 void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
-  p.setCount(n);
+  p.set_count(n);
 
-  GatherMode gatherMode = predicate.gatherMode();
+  GatherMode gather_mode = predicate.gather_mode();
 
   switch (n.value()) {
     case 1: {
-      BL_ASSERT(predicate.empty());
+      BL_ASSERT(predicate.is_empty());
 
-      switch (fetchType()) {
+      switch (fetch_type()) {
         case FetchType::kPatternAffineNNAny: {
-          Gp texPtr = pc->newGpPtr("texPtr");
-          Gp texOff = pc->newGpPtr("texOff");
+          Gp tex_ptr = pc->new_gp("tex_ptr");
+          Gp tex_off = pc->new_gp("tex_off");
 
-          Vec vIdx = f->vIdx;
-          Vec vMsk = pc->newV128("vMsk");
+          Vec v_idx = f->v_idx;
+          Vec v_msk = pc->new_vec128("v_msk");
 
-          clampVIdx32(vIdx, f->px_py, kClampStepA_NN);
-          clampVIdx32(vIdx, vIdx, kClampStepB_NN);
-          clampVIdx32(vIdx, vIdx, kClampStepC_NN);
+          clampVIdx32(v_idx, f->px_py, kClampStepA_NN);
+          clampVIdx32(v_idx, v_idx, kClampStepB_NN);
+          clampVIdx32(v_idx, v_idx, kClampStepC_NN);
           pc->v_add_i64(f->px_py, f->px_py, f->xx_xy);
 
           FetchUtils::IndexExtractor iExt(pc);
-          iExt.begin(FetchUtils::IndexExtractor::kTypeUInt32, vIdx);
-          iExt.extract(texPtr, 3);
-          iExt.extract(texOff, 1);
+          iExt.begin(FetchUtils::IndexExtractor::kTypeUInt32, v_idx);
+          iExt.extract(tex_ptr, 3);
+          iExt.extract(tex_off, 1);
 
-          pc->v_cmp_gt_i32(vMsk, f->px_py, f->ox_oy);
-          pc->mul(texPtr, texPtr, f->stride);
-          pc->v_and_i32(vMsk, vMsk, f->rx_ry);
-          pc->v_sub_i32(f->px_py, f->px_py, vMsk);
-          pc->add(texPtr, texPtr, f->srctop);
+          pc->v_cmp_gt_i32(v_msk, f->px_py, f->ox_oy);
+          pc->mul(tex_ptr, tex_ptr, f->stride);
+          pc->v_and_i32(v_msk, v_msk, f->rx_ry);
+          pc->v_sub_i32(f->px_py, f->px_py, v_msk);
+          pc->add(tex_ptr, tex_ptr, f->srctop);
 
-          FetchUtils::fetchPixel(pc, p, flags, fetchInfo(), mem_ptr(texPtr, texOff, _idxShift));
-          FetchUtils::satisfyPixels(pc, p, flags);
+          FetchUtils::fetch_pixel(pc, p, flags, fetch_info(), mem_ptr(tex_ptr, tex_off, _idx_shift));
+          FetchUtils::satisfy_pixels(pc, p, flags);
           break;
         }
 
         case FetchType::kPatternAffineNNOpt: {
-          Gp texPtr = pc->newGpPtr("texPtr");
-          Vec vIdx = f->vIdx;
-          Vec vMsk = pc->newV128("vMsk");
+          Gp tex_ptr = pc->new_gp("tex_ptr");
+          Vec v_idx = f->v_idx;
+          Vec v_msk = pc->new_vec128("v_msk");
 
-          pc->v_swizzle_u32x4(vIdx, f->px_py, swizzle(3, 1, 3, 1));
-          pc->v_packs_i32_i16(vIdx, vIdx, vIdx);
-          pc->v_max_i16(vIdx, vIdx, f->minx_miny);
-          pc->v_min_i16(vIdx, vIdx, f->maxx_maxy);
+          pc->v_swizzle_u32x4(v_idx, f->px_py, swizzle(3, 1, 3, 1));
+          pc->v_packs_i32_i16(v_idx, v_idx, v_idx);
+          pc->v_max_i16(v_idx, v_idx, f->minx_miny);
+          pc->v_min_i16(v_idx, v_idx, f->maxx_maxy);
 
-          pc->v_srai_i16(vMsk, vIdx, 15);
-          pc->v_xor_i32(vIdx, vIdx, vMsk);
+          pc->v_srai_i16(v_msk, v_idx, 15);
+          pc->v_xor_i32(v_idx, v_idx, v_msk);
 
           pc->v_add_i64(f->px_py, f->px_py, f->xx_xy);
-          pc->v_mhadd_i16_to_i32(vIdx, vIdx, f->vAddrMul);
+          pc->v_mhadd_i16_to_i32(v_idx, v_idx, f->vAddrMul);
 
-          pc->v_cmp_gt_i32(vMsk, f->px_py, f->ox_oy);
-          pc->v_and_i32(vMsk, vMsk, f->rx_ry);
-          pc->v_sub_i32(f->px_py, f->px_py, vMsk);
-          pc->s_mov_u32(texPtr.r32(), vIdx);
-          pc->add(texPtr, texPtr, f->srctop);
+          pc->v_cmp_gt_i32(v_msk, f->px_py, f->ox_oy);
+          pc->v_and_i32(v_msk, v_msk, f->rx_ry);
+          pc->v_sub_i32(f->px_py, f->px_py, v_msk);
+          pc->s_mov_u32(tex_ptr.r32(), v_idx);
+          pc->add(tex_ptr, tex_ptr, f->srctop);
 
-          FetchUtils::fetchPixel(pc, p, flags, fetchInfo(), mem_ptr(texPtr));
-          FetchUtils::satisfyPixels(pc, p, flags);
+          FetchUtils::fetch_pixel(pc, p, flags, fetch_info(), mem_ptr(tex_ptr));
+          FetchUtils::satisfy_pixels(pc, p, flags);
           break;
         }
 
         case FetchType::kPatternAffineBIAny: {
-          if (isAlphaFetch()) {
-            Vec vIdx = pc->newV128("vIdx");
-            Vec vMsk = pc->newV128("vMsk");
-            Vec vWeights = pc->newV128("vWeights");
+          if (is_alpha_fetch()) {
+            Vec v_idx = pc->new_vec128("v_idx");
+            Vec v_msk = pc->new_vec128("v_msk");
+            Vec v_weights = pc->new_vec128("v_weights");
 
-            pc->v_swizzle_u32x4(vIdx, f->px_py, swizzle(3, 3, 1, 1));
-            pc->v_sub_i32(vIdx, vIdx, pc->simdConst(&ct.i_FFFFFFFF00000000, Bcst::kNA, vIdx));
+            pc->v_swizzle_u32x4(v_idx, f->px_py, swizzle(3, 3, 1, 1));
+            pc->v_sub_i32(v_idx, v_idx, pc->simd_const(&ct.i_FFFFFFFF00000000, Bcst::kNA, v_idx));
 
-            pc->v_swizzle_lo_u16x4(vWeights, f->px_py, swizzle(1, 1, 1, 1));
-            clampVIdx32(vIdx, vIdx, kClampStepA_BI);
+            pc->v_swizzle_lo_u16x4(v_weights, f->px_py, swizzle(1, 1, 1, 1));
+            clampVIdx32(v_idx, v_idx, kClampStepA_BI);
 
             pc->v_add_i64(f->px_py, f->px_py, f->xx_xy);
-            clampVIdx32(vIdx, vIdx, kClampStepB_BI);
+            clampVIdx32(v_idx, v_idx, kClampStepB_BI);
 
-            pc->v_cmp_gt_i32(vMsk, f->px_py, f->ox_oy);
-            pc->v_swizzle_hi_u16x4(vWeights, vWeights, swizzle(1, 1, 1, 1));
+            pc->v_cmp_gt_i32(v_msk, f->px_py, f->ox_oy);
+            pc->v_swizzle_hi_u16x4(v_weights, v_weights, swizzle(1, 1, 1, 1));
 
-            pc->v_and_i32(vMsk, vMsk, f->rx_ry);
-            pc->v_srli_u16(vWeights, vWeights, 8);
+            pc->v_and_i32(v_msk, v_msk, f->rx_ry);
+            pc->v_srli_u16(v_weights, v_weights, 8);
 
-            pc->v_sub_i32(f->px_py, f->px_py, vMsk);
-            pc->v_xor_i32(vWeights, vWeights, pc->simdConst(&ct.i_FFFF0000FFFF0000, Bcst::k32, vWeights));
+            pc->v_sub_i32(f->px_py, f->px_py, v_msk);
+            pc->v_xor_i32(v_weights, v_weights, pc->simd_const(&ct.i_FFFF0000FFFF0000, Bcst::k32, v_weights));
 
-            clampVIdx32(vIdx, vIdx, kClampStepC_BI);
-            pc->v_add_u16(vWeights, vWeights, pc->simdConst(&ct.i_0101000001010000, Bcst::kNA, vWeights));
+            clampVIdx32(v_idx, v_idx, kClampStepC_BI);
+            pc->v_add_u16(v_weights, v_weights, pc->simd_const(&ct.i_0101000001010000, Bcst::kNA, v_weights));
 
-            Vec pixA = pc->newV128("pixA");
-            FetchUtils::xFilterBilinearA8_1x(pc, pixA, f->srctop, f->stride, fetchInfo(), _idxShift, vIdx, vWeights);
+            Vec pixA = pc->new_vec128("pixA");
+            FetchUtils::xFilterBilinearA8_1x(pc, pixA, f->srctop, f->stride, fetch_info(), _idx_shift, v_idx, v_weights);
 
             FetchUtils::x_assign_unpacked_alpha_values(pc, p, flags, pixA);
-            FetchUtils::satisfyPixels(pc, p, flags);
+            FetchUtils::satisfy_pixels(pc, p, flags);
           }
           else if (p.isRGBA32()) {
-            Vec vIdx = pc->newV128("vIdx");
-            Vec vMsk = pc->newV128("vMsk");
-            Vec vWeights = pc->newV128("vWeights");
+            Vec v_idx = pc->new_vec128("v_idx");
+            Vec v_msk = pc->new_vec128("v_msk");
+            Vec v_weights = pc->new_vec128("v_weights");
 
-            pc->v_swizzle_u32x4(vIdx, f->px_py, swizzle(3, 3, 1, 1));
-            pc->v_sub_i32(vIdx, vIdx, pc->simdConst(&ct.i_FFFFFFFF00000000, Bcst::kNA, vIdx));
+            pc->v_swizzle_u32x4(v_idx, f->px_py, swizzle(3, 3, 1, 1));
+            pc->v_sub_i32(v_idx, v_idx, pc->simd_const(&ct.i_FFFFFFFF00000000, Bcst::kNA, v_idx));
 
 #if defined(BL_JIT_ARCH_X86)
-            if (!pc->hasSSSE3()) {
-              pc->v_swizzle_u16x4(vWeights, f->px_py, swizzle(1, 1, 1, 1));
-              pc->v_srli_u16(vWeights, vWeights, 8);
+            if (!pc->has_ssse3()) {
+              pc->v_swizzle_u16x4(v_weights, f->px_py, swizzle(1, 1, 1, 1));
+              pc->v_srli_u16(v_weights, v_weights, 8);
             }
             else
 #endif
             {
-              pc->v_swizzlev_u8(vWeights, f->px_py, pc->simdConst(&ct.swizu8_xxxx1xxxxxxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, vWeights));
+              pc->v_swizzlev_u8(v_weights, f->px_py, pc->simd_const(&ct.swizu8_xxxx1xxxxxxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, v_weights));
             }
 
             pc->v_add_i64(f->px_py, f->px_py, f->xx_xy);
-            clampVIdx32(vIdx, vIdx, kClampStepA_BI);
-            pc->v_xor_i64(vWeights, vWeights, pc->simdConst(&ct.i_FFFFFFFF00000000, Bcst::k64, vWeights));
-            pc->v_cmp_gt_i32(vMsk, f->px_py, f->ox_oy);
+            clampVIdx32(v_idx, v_idx, kClampStepA_BI);
+            pc->v_xor_i64(v_weights, v_weights, pc->simd_const(&ct.i_FFFFFFFF00000000, Bcst::k64, v_weights));
+            pc->v_cmp_gt_i32(v_msk, f->px_py, f->ox_oy);
 
-            clampVIdx32(vIdx, vIdx, kClampStepB_BI);
-            pc->v_and_i32(vMsk, vMsk, f->rx_ry);
+            clampVIdx32(v_idx, v_idx, kClampStepB_BI);
+            pc->v_and_i32(v_msk, v_msk, f->rx_ry);
 
-            pc->v_add_u16(vWeights, vWeights, pc->simdConst(&ct.i_0101010100000000, Bcst::kNA, vWeights));
-            pc->v_sub_i32(f->px_py, f->px_py, vMsk);
-            clampVIdx32(vIdx, vIdx, kClampStepC_BI);
+            pc->v_add_u16(v_weights, v_weights, pc->simd_const(&ct.i_0101010100000000, Bcst::kNA, v_weights));
+            pc->v_sub_i32(f->px_py, f->px_py, v_msk);
+            clampVIdx32(v_idx, v_idx, kClampStepC_BI);
 
-            p.uc.init(pc->newV128("pix0"));
-            FetchUtils::xFilterBilinearARGB32_1x(pc, p.uc[0], f->srctop, f->stride, vIdx, vWeights);
-            FetchUtils::satisfyPixels(pc, p, flags);
+            p.uc.init(pc->new_vec128("pix0"));
+            FetchUtils::xFilterBilinearARGB32_1x(pc, p.uc[0], f->srctop, f->stride, v_idx, v_weights);
+            FetchUtils::satisfy_pixels(pc, p, flags);
           }
           break;
         }
@@ -2101,20 +2101,20 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
     }
 
     case 4: {
-      switch (fetchType()) {
+      switch (fetch_type()) {
         case FetchType::kPatternAffineNNAny: {
-          FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), flags, fetchInfo());
+          FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), flags, fetch_info());
           FetchUtils::IndexExtractor iExt(pc);
 
-          Gp texPtr0 = pc->newGpPtr("texPtr0");
-          Gp texOff0 = pc->newGpPtr("texOff0");
-          Gp texPtr1 = pc->newGpPtr("texPtr1");
-          Gp texOff1 = pc->newGpPtr("texOff1");
+          Gp texPtr0 = pc->new_gp("texPtr0");
+          Gp texOff0 = pc->new_gp("texOff0");
+          Gp texPtr1 = pc->new_gp("texPtr1");
+          Gp texOff1 = pc->new_gp("texOff1");
 
-          Vec vIdx0 = pc->newV128("vIdx0");
-          Vec vIdx1 = pc->newV128("vIdx1");
-          Vec vMsk0 = pc->newV128("vMsk0");
-          Vec vMsk1 = pc->newV128("vMsk1");
+          Vec vIdx0 = pc->new_vec128("vIdx0");
+          Vec vIdx1 = pc->new_vec128("vIdx1");
+          Vec vMsk0 = pc->new_vec128("vMsk0");
+          Vec vMsk1 = pc->new_vec128("vMsk1");
 
           pc->v_interleave_shuffle_u32x4(vIdx0, f->px_py, f->qx_qy, swizzle(3, 1, 3, 1));
           pc->v_add_i64(f->px_py, f->px_py, f->xx2_xy2);
@@ -2154,14 +2154,14 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           pc->add(texPtr1, texPtr1, f->srctop);
           iExt.begin(FetchUtils::IndexExtractor::kTypeUInt32, vIdx1);
 
-          fCtx.fetchPixel(mem_ptr(texPtr0, texOff0, _idxShift));
+          fCtx.fetch_pixel(mem_ptr(texPtr0, texOff0, _idx_shift));
           iExt.extract(texPtr0, 1);
           iExt.extract(texOff0, 0);
 
           pc->v_cmp_gt_i32(vMsk0, f->px_py, f->ox_oy);
           pc->v_cmp_gt_i32(vMsk1, f->qx_qy, f->ox_oy);
 
-          fCtx.fetchPixel(mem_ptr(texPtr1, texOff1, _idxShift));
+          fCtx.fetch_pixel(mem_ptr(texPtr1, texOff1, _idx_shift));
           iExt.extract(texPtr1, 3);
           iExt.extract(texOff1, 2);
           pc->mul(texPtr0, texPtr0, f->stride);
@@ -2174,22 +2174,22 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
 
           pc->add(texPtr0, texPtr0, f->srctop);
           pc->add(texPtr1, texPtr1, f->srctop);
-          fCtx.fetchPixel(mem_ptr(texPtr0, texOff0, _idxShift));
+          fCtx.fetch_pixel(mem_ptr(texPtr0, texOff0, _idx_shift));
 
           pc->v_sub_i32(f->qx_qy, f->qx_qy, vMsk1);
-          fCtx.fetchPixel(mem_ptr(texPtr1, texOff1, _idxShift));
+          fCtx.fetch_pixel(mem_ptr(texPtr1, texOff1, _idx_shift));
           fCtx.end();
 
-          FetchUtils::satisfyPixels(pc, p, flags);
+          FetchUtils::satisfy_pixels(pc, p, flags);
           break;
         }
 
         case FetchType::kPatternAffineNNOpt: {
-          Vec vIdx = f->vIdx;
-          Vec vMsk0 = pc->newV128("vMsk0");
-          Vec vMsk1 = pc->newV128("vMsk1");
+          Vec v_idx = f->v_idx;
+          Vec vMsk0 = pc->new_vec128("vMsk0");
+          Vec vMsk1 = pc->new_vec128("vMsk1");
 
-          pc->v_interleave_shuffle_u32x4(vIdx, f->px_py, f->qx_qy, swizzle(3, 1, 3, 1));
+          pc->v_interleave_shuffle_u32x4(v_idx, f->px_py, f->qx_qy, swizzle(3, 1, 3, 1));
           pc->v_add_i64(f->px_py, f->px_py, f->xx2_xy2);
           pc->v_add_i64(f->qx_qy, f->qx_qy, f->xx2_xy2);
 
@@ -2203,16 +2203,16 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           pc->v_sub_i32(f->qx_qy, f->qx_qy, vMsk1);
 
           pc->v_interleave_shuffle_u32x4(vMsk0, f->px_py, f->qx_qy, swizzle(3, 1, 3, 1));
-          pc->v_packs_i32_i16(vIdx, vIdx, vMsk0);
+          pc->v_packs_i32_i16(v_idx, v_idx, vMsk0);
 
-          pc->v_max_i16(vIdx, vIdx, f->minx_miny);
-          pc->v_min_i16(vIdx, vIdx, f->maxx_maxy);
+          pc->v_max_i16(v_idx, v_idx, f->minx_miny);
+          pc->v_min_i16(v_idx, v_idx, f->maxx_maxy);
 
-          pc->v_srai_i16(vMsk0, vIdx, 15);
-          pc->v_xor_i32(vIdx, vIdx, vMsk0);
+          pc->v_srai_i16(vMsk0, v_idx, 15);
+          pc->v_xor_i32(v_idx, v_idx, vMsk0);
 
-          pc->v_mhadd_i16_to_i32(vIdx, vIdx, f->vAddrMul);
-          FetchUtils::gatherPixels(pc, p, PixelCount(4), flags, fetchInfo(), mem_ptr(f->srctop), vIdx, 0, FetchUtils::IndexLayout::kUInt32, gatherMode, [&](uint32_t step) noexcept {
+          pc->v_mhadd_i16_to_i32(v_idx, v_idx, f->vAddrMul);
+          FetchUtils::gather_pixels(pc, p, PixelCount(4), flags, fetch_info(), mem_ptr(f->srctop), v_idx, 0, FetchUtils::IndexLayout::kUInt32, gather_mode, [&](uint32_t step) noexcept {
             switch (step) {
               case 0:
                 pc->v_add_i64(f->px_py, f->px_py, f->xx2_xy2);
@@ -2235,7 +2235,7 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             }
           });
 
-          FetchUtils::satisfyPixels(pc, p, flags);
+          FetchUtils::satisfy_pixels(pc, p, flags);
           break;
         }
 

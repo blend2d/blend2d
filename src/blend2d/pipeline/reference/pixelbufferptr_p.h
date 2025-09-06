@@ -32,11 +32,11 @@ public:
   BL_INLINE uint8_t* ptr() const noexcept { return _ptr; }
   BL_INLINE intptr_t stride() const noexcept { return _stride; }
 
-  BL_INLINE void setPtr(uint8_t* ptr) noexcept { _ptr = ptr; }
-  BL_INLINE void setStride(intptr_t stride) noexcept { _stride = stride; }
+  BL_INLINE void set_ptr(uint8_t* ptr) noexcept { _ptr = ptr; }
+  BL_INLINE void set_stride(intptr_t stride) noexcept { _stride = stride; }
 
   template<typename T>
-  BL_INLINE void initRect(const T& x, const T& y, const T& width) noexcept {
+  BL_INLINE void init_rect(const T& x, const T& y, const T& width) noexcept {
     advanceY(y);
     advanceX(x);
 
@@ -47,7 +47,7 @@ public:
   }
 
   template<typename T>
-  BL_INLINE void initGeneric(const T& y) noexcept {
+  BL_INLINE void init_generic(const T& y) noexcept {
     advanceY(y);
   }
 

@@ -29,7 +29,7 @@ public:
   //! \{
 
   PipeCompiler& _pc;
-  asmjit::Zone& _zone;
+  asmjit::Arena& _arena;
 
   //! \}
 
@@ -44,24 +44,24 @@ public:
   //! \{
 
   template<typename T>
-  BL_INLINE T* newPartT() noexcept {
-    void* p = _zone.alloc(asmjit::Zone::alignedSizeOf<T>());
+  BL_INLINE T* new_part_t() noexcept {
+    void* p = _arena.alloc_oneshot(asmjit::Arena::aligned_size_of<T>());
     if (BL_UNLIKELY(!p))
       return nullptr;
     return new(BLInternal::PlacementNew{p}) T(&_pc);
   }
 
   template<typename T, typename... Args>
-  BL_INLINE T* newPartT(Args&&... args) noexcept {
-    void* p = _zone.alloc(asmjit::Zone::alignedSizeOf<T>());
+  BL_INLINE T* new_part_t(Args&&... args) noexcept {
+    void* p = _arena.alloc_oneshot(asmjit::Arena::aligned_size_of<T>());
     if (BL_UNLIKELY(!p))
       return nullptr;
     return new(BLInternal::PlacementNew{p}) T(&_pc, BLInternal::forward<Args>(args)...);
   }
 
-  FillPart* newFillPart(FillType fillType, FetchPart* dstPart, CompOpPart* compOpPart) noexcept;
-  FetchPart* newFetchPart(FetchType fetchType, FormatExt format) noexcept;
-  CompOpPart* newCompOpPart(CompOpExt compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept;
+  FillPart* new_fill_part(FillType fill_type, FetchPart* dst_part, CompOpPart* comp_op_part) noexcept;
+  FetchPart* new_fetch_part(FetchType fetch_type, FormatExt format) noexcept;
+  CompOpPart* new_comp_op_part(CompOpExt comp_op, FetchPart* dst_part, FetchPart* src_part) noexcept;
 
   //! \}
 };

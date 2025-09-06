@@ -42,23 +42,23 @@ BL_NOINLINE void xFilterBilinearA8_1x(
   const Pixels& pixels,
   const Stride& stride,
   PixelFetchInfo fInfo,
-  uint32_t indexShift,
+  uint32_t index_shift,
   const Vec& indexes,
   const Vec& weights) noexcept {
 
   IndexExtractor extractor(pc);
 
-  Gp pixSrcRow0 = pc->newGpPtr("pixSrcRow0");
-  Gp pixSrcRow1 = pc->newGpPtr("pixSrcRow1");
-  Gp pixSrcOff = pc->newGpPtr("pixSrcOff");
-  Gp pixAcc = pc->newGp32("pixAcc");
-  Vec wTmp = pc->newV128("wTmp");
+  Gp pixSrcRow0 = pc->new_gp("pixSrcRow0");
+  Gp pixSrcRow1 = pc->new_gp("pixSrcRow1");
+  Gp pix_src_off = pc->new_gp("pix_src_off");
+  Gp pix_acc = pc->new_gp32("pix_acc");
+  Vec wTmp = pc->new_vec128("wTmp");
 
   extractor.begin(IndexExtractor::kTypeUInt32, indexes);
   extractor.extract(pixSrcRow0, 2);
   extractor.extract(pixSrcRow1, 3);
 
-  int32_t fetchAlphaOffset = fInfo.fetchAlphaOffset();
+  int32_t fetch_alpha_offset = fInfo.fetch_alpha_offset();
 
   pc->mul(pixSrcRow0, pixSrcRow0, stride);
   pc->mul(pixSrcRow1, pixSrcRow1, stride);
@@ -66,37 +66,37 @@ BL_NOINLINE void xFilterBilinearA8_1x(
   pc->add(pixSrcRow1, pixSrcRow1, pixels);
 
 #if defined(BL_JIT_ARCH_X86)
-  Mem row0m = mem_ptr(pixSrcRow0, pixSrcOff, indexShift, fetchAlphaOffset);
-  Mem row1m = mem_ptr(pixSrcRow1, pixSrcOff, indexShift, fetchAlphaOffset);
+  Mem row0m = mem_ptr(pixSrcRow0, pix_src_off, index_shift, fetch_alpha_offset);
+  Mem row1m = mem_ptr(pixSrcRow1, pix_src_off, index_shift, fetch_alpha_offset);
 #else
   Mem row0m;
   Mem row1m;
 
-  if (fetchAlphaOffset != 0) {
-    Gp pixSrcRow0a = pc->newSimilarReg(pixSrcRow0, "@row0_alpha");
-    Gp pixSrcRow1a = pc->newSimilarReg(pixSrcRow1, "@row1_alpha");
+  if (fetch_alpha_offset != 0) {
+    Gp pixSrcRow0a = pc->new_similar_reg(pixSrcRow0, "@row0_alpha");
+    Gp pixSrcRow1a = pc->new_similar_reg(pixSrcRow1, "@row1_alpha");
 
-    pc->add(pixSrcRow0a, pixSrcRow0, fetchAlphaOffset);
-    pc->add(pixSrcRow1a, pixSrcRow1, fetchAlphaOffset);
+    pc->add(pixSrcRow0a, pixSrcRow0, fetch_alpha_offset);
+    pc->add(pixSrcRow1a, pixSrcRow1, fetch_alpha_offset);
 
-    row0m = mem_ptr(pixSrcRow0a, pixSrcOff, indexShift);
-    row1m = mem_ptr(pixSrcRow1a, pixSrcOff, indexShift);
+    row0m = mem_ptr(pixSrcRow0a, pix_src_off, index_shift);
+    row1m = mem_ptr(pixSrcRow1a, pix_src_off, index_shift);
   }
   else {
-    row0m = mem_ptr(pixSrcRow0, pixSrcOff, indexShift);
-    row1m = mem_ptr(pixSrcRow1, pixSrcOff, indexShift);
+    row0m = mem_ptr(pixSrcRow0, pix_src_off, index_shift);
+    row1m = mem_ptr(pixSrcRow1, pix_src_off, index_shift);
   }
 #endif
 
-  extractor.extract(pixSrcOff, 0);
-  pc->load_u8(pixAcc, row0m);       // [0    , 0    , 0    , Px0y0]
-  pc->load_shift_u8(pixAcc, row1m); // [0    , 0    , Px0y0, Px0y1]
+  extractor.extract(pix_src_off, 0);
+  pc->load_u8(pix_acc, row0m);       // [0    , 0    , 0    , Px0y0]
+  pc->load_shift_u8(pix_acc, row1m); // [0    , 0    , Px0y0, Px0y1]
 
-  extractor.extract(pixSrcOff, 1);
-  pc->load_shift_u8(pixAcc, row0m); // [0    , Px0y0, Px0y1, Px1y0]
-  pc->load_shift_u8(pixAcc, row1m); // [Px0y0, Px0y1, Px1y0, Px1y1]
+  extractor.extract(pix_src_off, 1);
+  pc->load_shift_u8(pix_acc, row0m); // [0    , Px0y0, Px0y1, Px1y0]
+  pc->load_shift_u8(pix_acc, row1m); // [Px0y0, Px0y1, Px1y0, Px1y1]
 
-  pc->s_mov_u32(out, pixAcc);
+  pc->s_mov_u32(out, pix_acc);
   pc->v_swizzle_u32x4(wTmp, weights, swizzle(3, 3, 2, 2));
 
   pc->v_cvt_u8_lo_to_u16(out, out);
@@ -121,15 +121,15 @@ BL_NOINLINE void xFilterBilinearARGB32_1x(
 
   IndexExtractor extractor(pc);
 
-  Gp pixSrcRow0 = pc->newGpPtr("pixSrcRow0");
-  Gp pixSrcRow1 = pc->newGpPtr("pixSrcRow1");
-  Gp pixSrcOff = pc->newGpPtr("pixSrcOff");
+  Gp pixSrcRow0 = pc->new_gp("pixSrcRow0");
+  Gp pixSrcRow1 = pc->new_gp("pixSrcRow1");
+  Gp pix_src_off = pc->new_gp("pix_src_off");
 
-  Vec pixTop = pc->newV128("pixTop");
-  Vec pixBot = pc->newV128("pixBot");
+  Vec pix_top = pc->new_vec128("pix_top");
+  Vec pix_bot = pc->new_vec128("pix_bot");
 
   Vec pixTmp0 = out;
-  Vec pixTmp1 = pc->newV128("pixTmp1");
+  Vec pixTmp1 = pc->new_vec128("pixTmp1");
 
   extractor.begin(IndexExtractor::kTypeUInt32, indexes);
   extractor.extract(pixSrcRow0, 2);
@@ -140,31 +140,31 @@ BL_NOINLINE void xFilterBilinearARGB32_1x(
   pc->add(pixSrcRow0, pixSrcRow0, pixels);
   pc->add(pixSrcRow1, pixSrcRow1, pixels);
 
-  extractor.extract(pixSrcOff, 0);
-  pc->v_loada32(pixTop, mem_ptr(pixSrcRow0, pixSrcOff, 2));
-  pc->v_loada32(pixBot, mem_ptr(pixSrcRow1, pixSrcOff, 2));
-  extractor.extract(pixSrcOff, 1);
+  extractor.extract(pix_src_off, 0);
+  pc->v_loada32(pix_top, mem_ptr(pixSrcRow0, pix_src_off, 2));
+  pc->v_loada32(pix_bot, mem_ptr(pixSrcRow1, pix_src_off, 2));
+  extractor.extract(pix_src_off, 1);
 
-  FetchUtils::fetchSecond32BitElement(pc, pixTop, mem_ptr(pixSrcRow0, pixSrcOff, 2));
-  FetchUtils::fetchSecond32BitElement(pc, pixBot, mem_ptr(pixSrcRow1, pixSrcOff, 2));
+  FetchUtils::fetchSecond32BitElement(pc, pix_top, mem_ptr(pixSrcRow0, pix_src_off, 2));
+  FetchUtils::fetchSecond32BitElement(pc, pix_bot, mem_ptr(pixSrcRow1, pix_src_off, 2));
 
   pc->v_swizzle_u32x4(pixTmp0, weights, swizzle(3, 3, 3, 3));
-  pc->v_cvt_u8_lo_to_u16(pixTop, pixTop);
+  pc->v_cvt_u8_lo_to_u16(pix_top, pix_top);
 
   pc->v_swizzle_u32x4(pixTmp1, weights, swizzle(2, 2, 2, 2));
-  pc->v_cvt_u8_lo_to_u16(pixBot, pixBot);
+  pc->v_cvt_u8_lo_to_u16(pix_bot, pix_bot);
 
-  pc->v_mul_u16(pixTop, pixTop, pixTmp0);
-  pc->v_mul_u16(pixBot, pixBot, pixTmp1);
+  pc->v_mul_u16(pix_top, pix_top, pixTmp0);
+  pc->v_mul_u16(pix_bot, pix_bot, pixTmp1);
 
-  pc->v_add_i16(pixBot, pixBot, pixTop);
-  pc->v_srli_u16(pixBot, pixBot, 8);
+  pc->v_add_i16(pix_bot, pix_bot, pix_top);
+  pc->v_srli_u16(pix_bot, pix_bot, 8);
 
-  pc->v_swizzle_u32x4(pixTop, weights, swizzle(0, 0, 1, 1));
-  pc->v_mul_u16(pixTop, pixTop, pixBot);
+  pc->v_swizzle_u32x4(pix_top, weights, swizzle(0, 0, 1, 1));
+  pc->v_mul_u16(pix_top, pix_top, pix_bot);
 
-  pc->v_swizzle_u32x4(pixTmp0, pixTop, swizzle(1, 0, 3, 2));
-  pc->v_add_i16(pixTmp0, pixTmp0, pixTop);
+  pc->v_swizzle_u32x4(pixTmp0, pix_top, swizzle(1, 0, 3, 2));
+  pc->v_add_i16(pixTmp0, pixTmp0, pix_top);
   pc->v_srli_u16(pixTmp0, pixTmp0, 8);
 }
 

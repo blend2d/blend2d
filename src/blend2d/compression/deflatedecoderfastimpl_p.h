@@ -3,6 +3,9 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
+#ifndef BLEND2D_COMPRESSION_DEFLATEDECODERFASTIMPL_P_H_INCLUDED
+#define BLEND2D_COMPRESSION_DEFLATEDECODERFASTIMPL_P_H_INCLUDED
+
 #include "../runtime_p.h"
 #include "../compression/deflatedecoder_p.h"
 #include "../compression/deflatedecoderfast_p.h"
@@ -11,224 +14,230 @@
 #include "../support/intops_p.h"
 #include "../support/ptrops_p.h"
 
+//! \cond INTERNAL
+
 namespace bl::Compression::Deflate::Fast {
 namespace {
 
-DecoderFastResult decodeImpl(
+DecoderFastResult decode_impl(
   Decoder* ctx,
-  uint8_t* dstStart,
-  uint8_t* dstPtr,
-  uint8_t* dstEnd,
-  const uint8_t* srcPtr,
-  const uint8_t* srcEnd
+  uint8_t* dst_start,
+  uint8_t* dst_ptr,
+  uint8_t* dst_end,
+  const uint8_t* src_ptr,
+  const uint8_t* src_end
 ) noexcept {
   constexpr size_t kCopyRegSize = sizeof(CopyContext::Register);
 
   DecoderBits bits;
-  bits.loadState(ctx);
+  bits.load_state(ctx);
 
   const DecodeTables& tables = ctx->tables;
 
-  DecoderTableMask litlenTableMask(ctx->_litlenFastTableBits);
-  DecoderTableMask offsetTableMask(ctx->_offsetTableInfo.tableBits);
+  DecoderTableMask litlen_table_mask(ctx->_litlen_fast_table_bits);
+  DecoderTableMask offset_table_mask(ctx->_offset_table_info.table_bits);
 
   for (;;) {
     // Destination and source pointer conditions:
     //  - at least one full refill and 8 additional bytes must be available to enter the fast loop.
     //  - at least one full match must be possible for decoding one entry (thus `kMaxMatchLen + kDstBytesPerIter`).
-    intptr_t srcRemainingIters = intptr_t(PtrOps::bytesUntil(srcPtr, srcEnd) >> kSrcBytesPerIterShift);
-    intptr_t dstRemainingIters = intptr_t(PtrOps::bytesUntil(dstPtr, dstEnd) >> kDstBytesPerIterShift);
+    intptr_t src_remaining_iters = intptr_t(PtrOps::bytes_until(src_ptr, src_end) >> kSrcBytesPerIterShift);
+    intptr_t dst_remaining_iters = intptr_t(PtrOps::bytes_until(dst_ptr, dst_end) >> kDstBytesPerIterShift);
 
     // We can write up to kDstBytesPerIter bytes + one full match each iteration - if more bytes are written,
-    // safeIters is recalculated.
-    intptr_t safeIters = blMin(srcRemainingIters - intptr_t(kSrcMinScratchShifted),
-                               dstRemainingIters - intptr_t(kDstMinScratchShifted));
+    // safe_iters is recalculated.
+    intptr_t safe_iters = bl_min(src_remaining_iters - intptr_t(kSrcMinScratchShifted),
+                               dst_remaining_iters - intptr_t(kDstMinScratchShifted));
 
-    // NOTE: If safeIters is low it will keep jumping to FastLoop_Restart too often, sometimes even after each
+    // NOTE: If safe_iters is low it will keep jumping to FastLoop_Restart too often, sometimes even after each
     // iteration, so we really want a reasonable number of iterations to execute before recalculating.
-    if (safeIters <= intptr_t(kMinimumFastIterationCount)) {
+    if (safe_iters <= intptr_t(kMinimumFastIterationCount)) {
       break;
     }
 
-    BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.numRestarts++);
-    srcPtr += bits.refillBitWord(MemOps::loadu_le<BLBitWord>(srcPtr));
+    BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.num_restarts++);
+    src_ptr += bits.refill_bit_word(MemOps::loadu_le<BLBitWord>(src_ptr));
 
     // Decode one entry ahead here.
-    DecodeEntry entry = tables.litlen_decode_table[bits.extract(litlenTableMask)];
+    DecodeEntry entry = tables.litlen_decode_table[bits.extract(litlen_table_mask)];
 
-    while (safeIters > 0) {
+    while (safe_iters > 0) {
       // Make sure that the safe loop assumption is not breached - if any of the following assertion fails
       // it means that there is a bug, which must be fixed. The possible bug will be in the offset handler.
-      BL_ASSERT(PtrOps::bytesUntil(dstPtr, dstEnd) >= kDstBytesPerIter + kMaxMatchLen);
-      BL_ASSERT(PtrOps::bytesUntil(srcPtr, srcEnd) >= kSrcBytesPerIter);
+      BL_ASSERT(PtrOps::bytes_until(dst_ptr, dst_end) >= kDstBytesPerIter + kMaxMatchLen);
+      BL_ASSERT(PtrOps::bytes_until(src_ptr, src_end) >= kSrcBytesPerIter);
 
-      BLBitWord refillData = MemOps::loadu_le<BLBitWord>(srcPtr);
+      BLBitWord refill_data = MemOps::loadu_le<BLBitWord>(src_ptr);
 
-      srcPtr += bits.refillBitWord(refillData);
-      uint32_t payload = DecoderUtils::rawPayload(entry);
+      src_ptr += bits.refill_bit_word(refill_data);
+      uint32_t payload = DecoderUtils::raw_payload(entry);
 
-      if (DecoderUtils::isLiteral(entry)) {
+      if (DecoderUtils::is_literal(entry)) {
         bits.consumed(entry);
-        size_t entryIndex = bits.extract(litlenTableMask);
+        size_t entry_index = bits.extract(litlen_table_mask);
 
-        uint32_t litBits = entry.value & 0xFFu;
-        uint32_t litCount = litBits >> 6;
+        uint32_t lit_bits = entry.value & 0xFFu;
+        uint32_t lit_count = lit_bits >> 6;
 
-        entry = tables.litlen_decode_table[entryIndex];
+        entry = tables.litlen_decode_table[entry_index];
 
-        if (BL_LIKELY(DecoderUtils::isLiteral(entry))) {
+        if (BL_LIKELY(DecoderUtils::is_literal(entry))) {
           bits.consumed(entry);
-          entryIndex = bits.extract(litlenTableMask);
+          entry_index = bits.extract(litlen_table_mask);
 
-          payload += (entry.value >> 8) << (litCount * 8u);
-          litCount += (entry.value & 0xFFu) >> 6;
-          entry = tables.litlen_decode_table[entryIndex];
+          payload += (entry.value >> 8) << (lit_count * 8u);
+          lit_count += (entry.value & 0xFFu) >> 6;
+          entry = tables.litlen_decode_table[entry_index];
 
-          MemOps::storeu_le(dstPtr, payload);
-          dstPtr += litCount;
+          MemOps::storeu_le(dst_ptr, payload);
+          dst_ptr += lit_count;
 
-          safeIters--;
+          safe_iters--;
           continue;
         }
         else {
-          MemOps::storeu_le(dstPtr, uint16_t(payload));
-          dstPtr += litCount;
-          payload = DecoderUtils::rawPayload(entry);
+          MemOps::storeu_le(dst_ptr, uint16_t(payload));
+          dst_ptr += lit_count;
+          payload = DecoderUtils::raw_payload(entry);
         }
       }
 
-      uint32_t length = payload + DecoderUtils::extractExtra(bits.bitWord, entry);
+      uint32_t length = payload + DecoderUtils::extract_extra(bits.bit_word, entry);
 
-      if (BL_UNLIKELY(!DecoderUtils::isOffOrLen(entry))) {
-        BLBitWord prevBits = bits.bitWord;
+      if (BL_UNLIKELY(!DecoderUtils::is_off_or_len(entry))) {
+        BLBitWord prev_bits = bits.bit_word;
         entry = tables.litlen_decode_table[length & 0x7FFFu];
 
-        payload = DecoderUtils::rawPayload(entry);
-        refillData = MemOps::loadu_le<BLBitWord>(srcPtr);
+        payload = DecoderUtils::raw_payload(entry);
+        refill_data = MemOps::loadu_le<BLBitWord>(src_ptr);
 
         bits.consumed(entry);
-        srcPtr += bits.refillBitWord(refillData);
+        src_ptr += bits.refill_bit_word(refill_data);
 
-        if (DecoderUtils::isLiteral(entry)) {
-          entry = tables.litlen_decode_table[bits.extract(litlenTableMask)];
-          *dstPtr++ = uint8_t(payload & 0xFFu);
+        if (DecoderUtils::is_literal(entry)) {
+          entry = tables.litlen_decode_table[bits.extract(litlen_table_mask)];
+          *dst_ptr++ = uint8_t(payload & 0xFFu);
 
-          safeIters--;
+          safe_iters--;
           continue;
         }
 
-        if (BL_UNLIKELY(DecoderUtils::isEndOfBlock(entry))) {
-          if (BL_LIKELY(!DecoderUtils::isEndOfBlockInvalid(entry)))
+        if (BL_UNLIKELY(DecoderUtils::is_end_of_block(entry))) {
+          if (BL_LIKELY(!DecoderUtils::is_end_of_block_invalid(entry)))
             goto BlockDone;
           else
             goto ErrorInvalidData;
         }
 
-        length = payload + DecoderUtils::extractExtra(prevBits, entry);
+        length = payload + DecoderUtils::extract_extra(prev_bits, entry);
       }
       else {
         bits.consumed(entry);
       }
 
       // There must be space for the whole copy - if not it's a bug in the fast loop!
-      BL_ASSERT(PtrOps::bytesUntil(dstPtr, dstEnd) >= length + kDstBytesPerIter);
+      BL_ASSERT(PtrOps::bytes_until(dst_ptr, dst_end) >= length + kDstBytesPerIter);
 
-      entry = tables.offset_decode_table[bits.extract(offsetTableMask)];
-      uint32_t offset = DecoderUtils::rawPayload(entry) + DecoderUtils::extractExtra(bits.bitWord, entry);
+      entry = tables.offset_decode_table[bits.extract(offset_table_mask)];
+      uint32_t offset = DecoderUtils::raw_payload(entry) + DecoderUtils::extract_extra(bits.bit_word, entry);
 
-      if (BL_UNLIKELY(!DecoderUtils::isOffOrLen(entry))) {
+      if (BL_UNLIKELY(!DecoderUtils::is_off_or_len(entry))) {
         entry = tables.offset_decode_table[offset];
-        offset = DecoderUtils::rawPayload(entry) + DecoderUtils::extractExtra(bits.bitWord, entry);
+        offset = DecoderUtils::raw_payload(entry) + DecoderUtils::extract_extra(bits.bit_word, entry);
 
-        if (BL_UNLIKELY(DecoderUtils::isEndOfBlock(entry))) {
+        if (BL_UNLIKELY(DecoderUtils::is_end_of_block(entry))) {
           goto ErrorInvalidData;
         }
       }
 
-      size_t dstSize = PtrOps::byteOffset(dstStart, dstPtr);
+      size_t dst_size = PtrOps::byte_offset(dst_start, dst_ptr);
       bits.consumed(entry);
 
-      if (BL_UNLIKELY(offset > dstSize)) {
+      if (BL_UNLIKELY(offset > dst_size)) {
         goto ErrorInvalidData;
       }
 
-      const uint8_t* matchPtr = dstPtr - offset;
-      CopyContext::Register r0 = CopyContext::load(matchPtr);
+      const uint8_t* match_ptr = dst_ptr - offset;
+      CopyContext::Register r0 = CopyContext::load(match_ptr);
 
-      uint8_t* copyPtr = dstPtr;
-      dstPtr += length;
+      uint8_t* copy_ptr = dst_ptr;
+      dst_ptr += length;
 
-      safeIters -= intptr_t((length + (kDstBytesPerIter - 1)) / kDstBytesPerIter);
+      safe_iters -= intptr_t((length + (kDstBytesPerIter - 1)) / kDstBytesPerIter);
 
-      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.matchUpTo8 += unsigned(length <= 8));
-      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.matchUpTo16 += unsigned(length <= 16));
-      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.matchUpTo32 += unsigned(length <= 32));
-      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.matchUpTo64 += unsigned(length <= 64));
+      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.match_up_to_8 += unsigned(length <= 8));
+      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.match_up_to_16 += unsigned(length <= 16));
+      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.match_up_to_32 += unsigned(length <= 32));
+      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.match_up_to_64 += unsigned(length <= 64));
 
-      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.matchMoreThan8 += unsigned(length > 8));
-      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.matchMoreThan16 += unsigned(length > 16));
-      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.matchMoreThan32 += unsigned(length > 32));
-      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.matchMoreThan64 += unsigned(length > 64));
+      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.match_more_than_8 += unsigned(length > 8));
+      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.match_more_than_16 += unsigned(length > 16));
+      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.match_more_than_32 += unsigned(length > 32));
+      BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.match_more_than_64 += unsigned(length > 64));
 
       if (BL_LIKELY(offset >= kCopyRegSize)) {
-        BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.matchNear++);
-        CopyContext::store(copyPtr, r0);
+        BL_DECODER_UPDATE_STATISTICS(ctx->statistics.fast.match_near++);
+        CopyContext::store(copy_ptr, r0);
 
-        r0 = CopyContext::load_raw(matchPtr + kCopyRegSize);
-        entry = tables.litlen_decode_table[bits.extract(litlenTableMask)];
-        matchPtr += kCopyRegSize * 2u;
+        r0 = CopyContext::load_raw(match_ptr + kCopyRegSize);
+        entry = tables.litlen_decode_table[bits.extract(litlen_table_mask)];
+        match_ptr += kCopyRegSize * 2u;
 
-        CopyContext::store_raw(copyPtr + kCopyRegSize, r0);
-        copyPtr += kCopyRegSize * 2u;
+        CopyContext::store_raw(copy_ptr + kCopyRegSize, r0);
+        copy_ptr += kCopyRegSize * 2u;
 
         BL_NOUNROLL
-        while (copyPtr < dstPtr) {
-          r0 = CopyContext::load_raw(matchPtr);
-          CopyContext::store_raw(copyPtr, r0);
+        while (copy_ptr < dst_ptr) {
+          r0 = CopyContext::load_raw(match_ptr);
+          CopyContext::store_raw(copy_ptr, r0);
 
-          r0 = CopyContext::load_raw(matchPtr + kCopyRegSize);
-          matchPtr += kCopyRegSize * 2u;
+          r0 = CopyContext::load_raw(match_ptr + kCopyRegSize);
+          match_ptr += kCopyRegSize * 2u;
 
-          CopyContext::store_raw(copyPtr + kCopyRegSize, r0);
-          copyPtr += kCopyRegSize * 2u;
+          CopyContext::store_raw(copy_ptr + kCopyRegSize, r0);
+          copy_ptr += kCopyRegSize * 2u;
         }
       }
       else {
-        CopyContext matchCtx;
+        CopyContext match_ctx;
 
-        matchCtx.initRepeat(offset);
-        r0 = matchCtx.repeat(r0);
+        match_ctx.init_repeat(offset);
+        r0 = match_ctx.repeat(r0);
 
-        matchCtx.initRotate(offset);
-        entry = tables.litlen_decode_table[bits.extract(litlenTableMask)];
+        match_ctx.init_rotate(offset);
+        entry = tables.litlen_decode_table[bits.extract(litlen_table_mask)];
 
-        CopyContext::store(copyPtr, r0);
-        copyPtr += kCopyRegSize;
+        CopyContext::store(copy_ptr, r0);
+        copy_ptr += kCopyRegSize;
 
         BL_NOUNROLL
-        while (copyPtr < dstPtr) {
-          r0 = matchCtx.rotate(r0);
-          CopyContext::store(copyPtr, r0);
-          copyPtr += kCopyRegSize;
+        while (copy_ptr < dst_ptr) {
+          r0 = match_ctx.rotate(r0);
+          CopyContext::store(copy_ptr, r0);
+          copy_ptr += kCopyRegSize;
         }
       }
     }
   }
 
-  bits.fixLengthAfterFastLoop();
-  bits.storeState(ctx);
-  return DecoderFastResult{DecoderFastStatus::kOk, dstPtr, srcPtr};
+  bits.fix_length_after_fast_loop();
+  bits.store_state(ctx);
+  return DecoderFastResult{DecoderFastStatus::kOk, dst_ptr, src_ptr};
 
 BlockDone:
-  bits.fixLengthAfterFastLoop();
-  bits.storeState(ctx);
-  return DecoderFastResult{DecoderFastStatus::kBlockDone, dstPtr, srcPtr};
+  bits.fix_length_after_fast_loop();
+  bits.store_state(ctx);
+  return DecoderFastResult{DecoderFastStatus::kBlockDone, dst_ptr, src_ptr};
 
 ErrorInvalidData:
-  bits.fixLengthAfterFastLoop();
-  bits.storeState(ctx);
-  return DecoderFastResult{DecoderFastStatus::kInvalidData, dstPtr, srcPtr};
+  bits.fix_length_after_fast_loop();
+  bits.store_state(ctx);
+  return DecoderFastResult{DecoderFastStatus::kInvalidData, dst_ptr, src_ptr};
 }
 
 } // {anonymous}
 } // {bl::Compression::Deflate::Fast}
+
+//! \endcond
+
+#endif // BLEND2D_COMPRESSION_DEFLATEDECODERFASTIMPL_P_H_INCLUDED

@@ -14,15 +14,15 @@
 
 namespace bl::Compression::Deflate::Fast {
 
-// Must be powers of 2 so we can divide easily from raw buffer lengths to calculate `safeIters`.
+// Must be powers of 2 so we can divide easily from raw buffer lengths to calculate `safe_iters`.
 // We definitely want extra safety here and to actually be more strict than necessary.
 constexpr uint32_t kSrcBytesPerIter = 8u;
 constexpr uint32_t kDstBytesPerIter = 8u;
 
 constexpr uint32_t kDstCopyBytesPerIter = 16u;
 
-constexpr uint32_t kSrcBytesPerIterShift = IntOps::ctzStatic(kSrcBytesPerIter);
-constexpr uint32_t kDstBytesPerIterShift = IntOps::ctzStatic(kDstBytesPerIter);
+constexpr uint32_t kSrcBytesPerIterShift = IntOps::ctz_static(kSrcBytesPerIter);
+constexpr uint32_t kDstBytesPerIterShift = IntOps::ctz_static(kDstBytesPerIter);
 
 // Scratch - extra size that must always be available to perform a single iteration.
 constexpr uint32_t kSrcMinScratch = sizeof(BLBitWord) * 2u;
@@ -41,21 +41,21 @@ constexpr uint32_t kMinimumFastSrcBuffer = kSrcMinScratch + kSrcBytesPerIter * k
 
 DecoderFastResult BL_CDECL decode(
   Decoder* ctx,
-  uint8_t* dstStart,
-  uint8_t* dstPtr,
-  uint8_t* dstEnd,
-  const uint8_t* srcPtr,
-  const uint8_t* srcEnd
+  uint8_t* dst_start,
+  uint8_t* dst_ptr,
+  uint8_t* dst_end,
+  const uint8_t* src_ptr,
+  const uint8_t* src_end
 ) noexcept;
 
 #if defined(BL_BUILD_OPT_AVX2)
 DecoderFastResult BL_CDECL decode_AVX2(
   Decoder* ctx,
-  uint8_t* dstStart,
-  uint8_t* dstPtr,
-  uint8_t* dstEnd,
-  const uint8_t* srcPtr,
-  const uint8_t* srcEnd
+  uint8_t* dst_start,
+  uint8_t* dst_ptr,
+  uint8_t* dst_end,
+  const uint8_t* src_ptr,
+  const uint8_t* src_end
 ) noexcept;
 #endif // BL_BUILD_OPT_AVX2
 

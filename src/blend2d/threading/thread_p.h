@@ -21,9 +21,9 @@ struct BLWorkerThreadVirt;
 struct BLThreadAttributes;
 
 #if defined(BL_TARGET_OPT_SSE2)
-static BL_INLINE void blThreadPause() noexcept { _mm_pause(); }
+static BL_INLINE void bl_thread_pause() noexcept { _mm_pause(); }
 #else
-static BL_INLINE void blThreadPause() noexcept {}
+static BL_INLINE void bl_thread_pause() noexcept {}
 #endif
 
 typedef void (BL_CDECL* BLThreadFunc)(BLThread* thread, void* data) noexcept;
@@ -39,14 +39,14 @@ enum BLThreadQuitFlags : uint32_t {
 };
 
 struct BLThreadAttributes {
-  uint32_t stackSize;
+  uint32_t stack_size;
 };
 
 struct BLWorkerThreadVirt {
   BLResult (BL_CDECL* destroy)(BLThread* self) noexcept;
   uint32_t (BL_CDECL* status)(const BLThread* self) noexcept;
-  BLResult (BL_CDECL* run)(BLThread* self, BLThreadFunc workFunc, void* data) noexcept;
-  BLResult (BL_CDECL* quit)(BLThread* self, uint32_t quitFlags) noexcept;
+  BLResult (BL_CDECL* run)(BLThread* self, BLThreadFunc work_func, void* data) noexcept;
+  BLResult (BL_CDECL* quit)(BLThread* self, uint32_t quit_flags) noexcept;
 };
 
 struct BLThread {
@@ -61,17 +61,17 @@ struct BLThread {
     return virt->status(this);
   }
 
-  BL_INLINE BLResult run(BLThreadFunc workFunc, void* data) noexcept {
-    return virt->run(this, workFunc, data);
+  BL_INLINE BLResult run(BLThreadFunc work_func, void* data) noexcept {
+    return virt->run(this, work_func, data);
   }
 
-  BL_INLINE BLResult quit(uint32_t quitFlags = 0) noexcept {
-    return virt->quit(this, quitFlags);
+  BL_INLINE BLResult quit(uint32_t quit_flags = 0) noexcept {
+    return virt->quit(this, quit_flags);
   }
 #endif
 };
 
-BL_HIDDEN BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes* attributes, BLThreadFunc exitFunc, void* exitData) noexcept;
+BL_HIDDEN BLResult BL_CDECL bl_thread_create(BLThread** thread_out, const BLThreadAttributes* attributes, BLThreadFunc exit_func, void* exit_data) noexcept;
 
 //! \}
 //! \endcond

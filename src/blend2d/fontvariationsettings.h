@@ -44,23 +44,23 @@ struct BLFontVariationSettingsImpl BL_CLASS_INHERITS(BLObjectImpl) {
 
 BL_BEGIN_C_DECLS
 
-BL_API BLResult BL_CDECL blFontVariationSettingsInit(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsInitMove(BLFontVariationSettingsCore* self, BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsInitWeak(BLFontVariationSettingsCore* self, const BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsDestroy(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsReset(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsClear(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsShrink(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsAssignMove(BLFontVariationSettingsCore* self, BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsAssignWeak(BLFontVariationSettingsCore* self, const BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontVariationSettingsGetSize(const BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontVariationSettingsGetCapacity(const BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsGetView(const BLFontVariationSettingsCore* self, BLFontVariationSettingsView* out) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontVariationSettingsHasValue(const BLFontVariationSettingsCore* self, BLTag variationTag) BL_NOEXCEPT_C;
-BL_API float BL_CDECL blFontVariationSettingsGetValue(const BLFontVariationSettingsCore* self, BLTag variationTag) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsSetValue(BLFontVariationSettingsCore* self, BLTag variationTag, float value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsRemoveValue(BLFontVariationSettingsCore* self, BLTag variationTag) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontVariationSettingsEquals(const BLFontVariationSettingsCore* a, const BLFontVariationSettingsCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_init(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_init_move(BLFontVariationSettingsCore* self, BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_init_weak(BLFontVariationSettingsCore* self, const BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_destroy(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_reset(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_clear(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_shrink(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_assign_move(BLFontVariationSettingsCore* self, BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_assign_weak(BLFontVariationSettingsCore* self, const BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL bl_font_variation_settings_get_size(const BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL bl_font_variation_settings_get_capacity(const BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_get_view(const BLFontVariationSettingsCore* self, BLFontVariationSettingsView* out) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_font_variation_settings_has_value(const BLFontVariationSettingsCore* self, BLTag variation_tag) BL_NOEXCEPT_C;
+BL_API float BL_CDECL bl_font_variation_settings_get_value(const BLFontVariationSettingsCore* self, BLTag variation_tag) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_set_value(BLFontVariationSettingsCore* self, BLTag variation_tag, float value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_font_variation_settings_remove_value(BLFontVariationSettingsCore* self, BLTag variation_tag) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_font_variation_settings_equals(const BLFontVariationSettingsCore* a, const BLFontVariationSettingsCore* b) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
@@ -101,16 +101,18 @@ struct BLFontVariationItem {
 struct BLFontVariationSettingsView {
   //! Pointer to font variation items, where each item describes a variation tag and its value.
   //!
-  //! \note If the container is in SSO mode the `data` member will point to `ssoData`.
+  //! \note If the container is in SSO mode the `data` member will point to `sso_data`.
   const BLFontVariationItem* data;
+
   //! Count of items in `data.
   size_t size;
+
   //! Unpacked SSO items into \ref BLFontVariationItem array.
   //!
   //! \note This member won't be initialized or zeroed in case \ref BLFontVariationSettings is not in
   //! SSO mode. And if the container is in SSO mode only the number of items used will be overwritten
-  //! by \ref BLFontVariationSettings::getView().
-  BLFontVariationItem ssoData[3];
+  //! by \ref BLFontVariationSettings::get_view().
+  BLFontVariationItem sso_data[3];
 
 #if defined(__cplusplus)
   //! \name C++ Iterator Compatibility
@@ -118,7 +120,7 @@ struct BLFontVariationSettingsView {
 
   //! Tests whether the view is empty.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool empty() const noexcept { return size == 0; }
+  BL_INLINE_NODEBUG bool is_empty() const noexcept { return size == 0; }
 
    //! Returns a const pointer to \ref BLFontVariationSettingsView data (iterator compatibility).
   [[nodiscard]]
@@ -157,7 +159,7 @@ public:
   static inline constexpr uint32_t kSSOCapacity = 3;
 
   //! Signature of SSO representation of an empty font variation settings.
-  static inline constexpr uint32_t kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS);
+  static inline constexpr uint32_t kSSOEmptySignature = BLObjectInfo::pack_type_with_marker(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS);
 
   [[nodiscard]]
   BL_INLINE_NODEBUG BLFontVariationSettingsImpl* _impl() const noexcept { return static_cast<BLFontVariationSettingsImpl*>(_d.impl); }
@@ -169,21 +171,21 @@ public:
   //! \{
 
   BL_INLINE_NODEBUG BLFontVariationSettings() noexcept {
-    _d.initStatic(BLObjectInfo{kSSOEmptySignature});
+    _d.init_static(BLObjectInfo{kSSOEmptySignature});
   }
 
   BL_INLINE_NODEBUG BLFontVariationSettings(BLFontVariationSettings&& other) noexcept {
     _d = other._d;
-    other._d.initStatic(BLObjectInfo{kSSOEmptySignature});
+    other._d.init_static(BLObjectInfo{kSSOEmptySignature});
   }
 
   BL_INLINE_NODEBUG BLFontVariationSettings(const BLFontVariationSettings& other) noexcept {
-    blFontVariationSettingsInitWeak(this, &other);
+    bl_font_variation_settings_init_weak(this, &other);
   }
 
   BL_INLINE_NODEBUG ~BLFontVariationSettings() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
-      blFontVariationSettingsDestroy(this);
+    if (BLInternal::object_needs_cleanup(_d.info.bits)) {
+      bl_font_variation_settings_destroy(this);
     }
   }
 
@@ -192,8 +194,8 @@ public:
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE_NODEBUG BLFontVariationSettings& operator=(BLFontVariationSettings&& other) noexcept { blFontVariationSettingsAssignMove(this, &other); return *this; }
-  BL_INLINE_NODEBUG BLFontVariationSettings& operator=(const BLFontVariationSettings& other) noexcept { blFontVariationSettingsAssignWeak(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLFontVariationSettings& operator=(BLFontVariationSettings&& other) noexcept { bl_font_variation_settings_assign_move(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLFontVariationSettings& operator=(const BLFontVariationSettings& other) noexcept { bl_font_variation_settings_assign_weak(this, &other); return *this; }
 
   BL_INLINE_NODEBUG bool operator==(const BLFontVariationSettings& other) const noexcept { return  equals(other); }
   BL_INLINE_NODEBUG bool operator!=(const BLFontVariationSettings& other) const noexcept { return !equals(other); }
@@ -204,7 +206,7 @@ public:
   //! \{
 
   BL_INLINE_NODEBUG BLResult reset() noexcept {
-    BLResult result = blFontVariationSettingsReset(this);
+    BLResult result = bl_font_variation_settings_reset(this);
 
     // Reset operation always succeeds.
     BL_ASSUME(result == BL_SUCCESS);
@@ -214,11 +216,11 @@ public:
     return result;
   }
 
-  BL_INLINE_NODEBUG BLResult clear() noexcept { return blFontVariationSettingsClear(this); }
+  BL_INLINE_NODEBUG BLResult clear() noexcept { return bl_font_variation_settings_clear(this); }
   BL_INLINE_NODEBUG void swap(BLFontVariationSettings& other) noexcept { _d.swap(other._d); }
 
-  BL_INLINE_NODEBUG BLResult assign(BLFontVariationSettings&& other) noexcept { return blFontVariationSettingsAssignMove(this, &other); }
-  BL_INLINE_NODEBUG BLResult assign(const BLFontVariationSettings& other) noexcept { return blFontVariationSettingsAssignWeak(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(BLFontVariationSettings&& other) noexcept { return bl_font_variation_settings_assign_move(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(const BLFontVariationSettings& other) noexcept { return bl_font_variation_settings_assign_weak(this, &other); }
 
   //! \}
 
@@ -227,11 +229,11 @@ public:
 
   //! Tests whether the container is empty, which means that no tag/value pairs are stored in it.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool empty() const noexcept { return size() == 0; }
+  BL_INLINE_NODEBUG bool is_empty() const noexcept { return size() == 0; }
 
   //! Returns the number of tag/value pairs stored in the container.
   [[nodiscard]]
-  BL_INLINE_NODEBUG size_t size() const noexcept { return _d.sso() ? size_t(_d.info.aField()) : _impl()->size; }
+  BL_INLINE_NODEBUG size_t size() const noexcept { return _d.sso() ? size_t(_d.info.a_field()) : _impl()->size; }
 
   //! Returns the container capacity.
   //!
@@ -244,29 +246,29 @@ public:
   //!
   //! \note If the container is in SSO mode then all \ref BLFontVariationItem values will be created from the
   //! underlying SSO representation and \ref BLFontVariationSettingsView::data will point to \ref
-  //! BLFontVariationSettingsView::ssoData. If the container is dynamic, \ref BLFontVariationSettingsView::ssoData
+  //! BLFontVariationSettingsView::sso_data. If the container is dynamic, \ref BLFontVariationSettingsView::sso_data
   //! won't be initialized and \ref BLFontVariationSettingsView::data will point to the container's data. This means
   //! that the view cannot outlive the container, and also during iteration the view the container cannot be modified
   //! as that could invalidate the entire view.
-  BL_INLINE_NODEBUG BLResult getView(BLFontVariationSettingsView* out) const noexcept { return blFontVariationSettingsGetView(this, out); }
+  BL_INLINE_NODEBUG BLResult get_view(BLFontVariationSettingsView* out) const noexcept { return bl_font_variation_settings_get_view(this, out); }
 
-  //! Tests whether the settings contains the given `variationTag`.
+  //! Tests whether the settings contains the given `variation_tag`.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool hasValue(BLTag variationTag) const noexcept { return blFontVariationSettingsHasValue(this, variationTag); }
+  BL_INLINE_NODEBUG bool has_value(BLTag variation_tag) const noexcept { return bl_font_variation_settings_has_value(this, variation_tag); }
 
-  //! Returns the value associated with the given `variationTag`.
+  //! Returns the value associated with the given `variation_tag`.
   //!
-  //! If the `variationTag` doesn't exist or is invalid `NaN` is returned.
+  //! If the `variation_tag` doesn't exist or is invalid `NaN` is returned.
   [[nodiscard]]
-  BL_INLINE_NODEBUG float getValue(BLTag variationTag) const noexcept { return blFontVariationSettingsGetValue(this, variationTag); }
+  BL_INLINE_NODEBUG float get_value(BLTag variation_tag) const noexcept { return bl_font_variation_settings_get_value(this, variation_tag); }
 
-  //! Sets or inserts the given `variationTag` to the settings and associates it with the given `value`.
-  BL_INLINE_NODEBUG BLResult setValue(BLTag variationTag, float value) noexcept { return blFontVariationSettingsSetValue(this, variationTag, value); }
+  //! Sets or inserts the given `variation_tag` to the settings and associates it with the given `value`.
+  BL_INLINE_NODEBUG BLResult set_value(BLTag variation_tag, float value) noexcept { return bl_font_variation_settings_set_value(this, variation_tag, value); }
 
-  //! Removes the given `variationTag` and its value from the settings.
+  //! Removes the given `variation_tag` and its value from the settings.
   //!
-  //! Nothing happens if the `variationTag` is not in the settings (\ref BL_SUCCESS is returned).
-  BL_INLINE_NODEBUG BLResult removeValue(BLTag variationTag) noexcept { return blFontVariationSettingsRemoveValue(this, variationTag); }
+  //! Nothing happens if the `variation_tag` is not in the settings (\ref BL_SUCCESS is returned).
+  BL_INLINE_NODEBUG BLResult remove_value(BLTag variation_tag) noexcept { return bl_font_variation_settings_remove_value(this, variation_tag); }
 
   //! \}
 
@@ -275,7 +277,7 @@ public:
 
   //! Tests whether this font variation settings is equal to `other` - equality means that it has the same tag/value pairs.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool equals(const BLFontVariationSettings& other) const noexcept { return blFontVariationSettingsEquals(this, &other); }
+  BL_INLINE_NODEBUG bool equals(const BLFontVariationSettings& other) const noexcept { return bl_font_variation_settings_equals(this, &other); }
 
   //! \}
 };

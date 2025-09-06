@@ -16,54 +16,54 @@ namespace bl::BitArrayInternal {
 static constexpr size_t kSSOWordCapacity = uint32_t(BLBitArray::kSSOWordCount);
 static constexpr size_t kSSOBitCapacity = kSSOWordCapacity * uint32_t(BitArrayOps::kNumBits);
 
-static BL_INLINE_CONSTEXPR size_t bitIndexOf(size_t wordIndex) noexcept { return wordIndex * BitArrayOps::kNumBits; }
-static BL_INLINE_CONSTEXPR size_t wordIndexOf(size_t bitIndex) noexcept { return bitIndex / BitArrayOps::kNumBits; }
+static BL_INLINE_CONSTEXPR size_t bit_index_of(size_t word_index) noexcept { return word_index * BitArrayOps::kNumBits; }
+static BL_INLINE_CONSTEXPR size_t word_index_of(size_t bit_index) noexcept { return bit_index / BitArrayOps::kNumBits; }
 
-static BL_INLINE_CONSTEXPR size_t wordCountFromBitCount(size_t bitCount) noexcept {
-  return BL_TARGET_ARCH_BITS >= 64 ? uint32_t((uint64_t(bitCount) + BitArrayOps::kBitMask) / BitArrayOps::kNumBits)
-                                   : (bitCount / BitArrayOps::kNumBits) + uint32_t((bitCount & BitArrayOps::kBitMask) != 0u);
+static BL_INLINE_CONSTEXPR size_t word_count_from_bit_count(size_t bit_count) noexcept {
+  return BL_TARGET_ARCH_BITS >= 64 ? uint32_t((uint64_t(bit_count) + BitArrayOps::kBitMask) / BitArrayOps::kNumBits)
+                                   : (bit_count / BitArrayOps::kNumBits) + uint32_t((bit_count & BitArrayOps::kBitMask) != 0u);
 }
 
-static BL_INLINE_CONSTEXPR size_t bitCountFromWordCount(size_t wordCount) noexcept {
-  return blMin<size_t>(wordCount * BitArrayOps::kNumBits, 0xFFFFFFFFu);
+static BL_INLINE_CONSTEXPR size_t bit_count_from_word_count(size_t word_count) noexcept {
+  return bl_min<size_t>(word_count * BitArrayOps::kNumBits, 0xFFFFFFFFu);
 }
 
-static BL_INLINE_CONSTEXPR BLObjectImplSize implSizeFromWordCapacity(size_t wordCapacity) noexcept {
-  return BLObjectImplSize(sizeof(BLBitArrayImpl) + wordCapacity * sizeof(uint32_t));
+static BL_INLINE_CONSTEXPR BLObjectImplSize impl_size_from_word_capacity(size_t word_capacity) noexcept {
+  return BLObjectImplSize(sizeof(BLBitArrayImpl) + word_capacity * sizeof(uint32_t));
 }
 
-static BL_INLINE_CONSTEXPR size_t wordCapacityFromImplSize(BLObjectImplSize implSize) noexcept {
-  return (implSize.value() - sizeof(BLBitArrayImpl)) / sizeof(uint32_t);
+static BL_INLINE_CONSTEXPR size_t word_capacity_from_impl_size(BLObjectImplSize impl_size) noexcept {
+  return (impl_size.value() - sizeof(BLBitArrayImpl)) / sizeof(uint32_t);
 }
 
-static BL_INLINE_NODEBUG BLObjectImplSize expandImplSize(BLObjectImplSize implSize) noexcept {
-  return blObjectExpandImplSize(implSize);
+static BL_INLINE_NODEBUG BLObjectImplSize expand_impl_size(BLObjectImplSize impl_size) noexcept {
+  return bl_object_expand_impl_size(impl_size);
 }
 
 // bl::BitArray - Private - SSO Representation
 // ===========================================
 
-static BL_INLINE BLResult initSSO(BLBitArrayCore* self, size_t size = 0) noexcept {
-  self->_d.initStatic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_BIT_ARRAY) | BLObjectInfo::fromAbcp(0, 0, 0, uint32_t(size)));
+static BL_INLINE BLResult init_sso(BLBitArrayCore* self, size_t size = 0) noexcept {
+  self->_d.init_static(BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_BIT_ARRAY) | BLObjectInfo::from_abcp(0, 0, 0, uint32_t(size)));
   return BL_SUCCESS;
 }
 
-static BL_INLINE void setSSOSize(BLBitArrayCore* self, size_t newSize) noexcept {
+static BL_INLINE void set_sso_size(BLBitArrayCore* self, size_t new_size) noexcept {
   BL_ASSERT(self->_d.sso());
-  self->_d.info.setPField(uint32_t(newSize));
+  self->_d.info.set_p_field(uint32_t(new_size));
 }
 
 // bl::BitArray - Private - Memory Management
 // ==========================================
 
-static BL_INLINE BLResult initDynamic(BLBitArrayCore* self, BLObjectImplSize implSize, size_t size = 0u) noexcept {
+static BL_INLINE BLResult init_dynamic(BLBitArrayCore* self, BLObjectImplSize impl_size, size_t size = 0u) noexcept {
   BL_ASSERT(size <= UINT32_MAX);
 
-  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_BIT_ARRAY);
-  BL_PROPAGATE(ObjectInternal::allocImplT<BLBitArrayImpl>(self, info, implSize));
+  BLObjectInfo info = BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_BIT_ARRAY);
+  BL_PROPAGATE(ObjectInternal::alloc_impl_t<BLBitArrayImpl>(self, info, impl_size));
 
-  BLBitArrayImpl* impl = getImpl(self);
-  impl->capacity = uint32_t(bitCountFromWordCount(wordCapacityFromImplSize(implSize)));
+  BLBitArrayImpl* impl = get_impl(self);
+  impl->capacity = uint32_t(bit_count_from_word_count(word_capacity_from_impl_size(impl_size)));
   impl->size = uint32_t(size);
   return BL_SUCCESS;
 }
@@ -72,166 +72,166 @@ static BL_INLINE BLResult initDynamic(BLBitArrayCore* self, BLObjectImplSize imp
 // ==================================
 
 // A helper function that makes the BitArray mutable, but only if `from` is within its bounds.
-static BL_NOINLINE BLResult makeMutableForModifyOp(BLBitArrayCore* self, size_t from, BitData* out) noexcept {
+static BL_NOINLINE BLResult make_mutable_for_modify_op(BLBitArrayCore* self, size_t from, BitData* out) noexcept {
   if (self->_d.sso()) {
-    size_t size = getSSOSize(self);
+    size_t size = get_sso_size(self);
     if (from >= size)
-      return blTraceError(BL_ERROR_INVALID_VALUE);
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-    *out = BitData{self->_d.u32_data, getSSOSize(self)};
+    *out = BitData{self->_d.u32_data, get_sso_size(self)};
     return BL_SUCCESS;
   }
   else {
-    BLBitArrayImpl* selfI = getImpl(self);
-    size_t size = selfI->size;
+    BLBitArrayImpl* self_impl = get_impl(self);
+    size_t size = self_impl->size;
 
     if (from >= size)
-      return blTraceError(BL_ERROR_INVALID_VALUE);
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-    if (isImplMutable(selfI)) {
-      *out = BitData{selfI->data(), size};
+    if (is_impl_mutable(self_impl)) {
+      *out = BitData{self_impl->data(), size};
       return BL_SUCCESS;
     }
 
     BLBitArrayCore newO;
     if (size <= kSSOBitCapacity) {
-      initSSO(&newO, size);
+      init_sso(&newO, size);
 
       *out = BitData{self->_d.u32_data, size};
-      return replaceInstance(self, &newO);
+      return replace_instance(self, &newO);
     }
 
-    BL_PROPAGATE(initDynamic(&newO, implSizeFromWordCapacity(wordCountFromBitCount(size)), size));
-    *out = BitData{getImpl(&newO)->data(), size};
-    return replaceInstance(self, &newO);
+    BL_PROPAGATE(init_dynamic(&newO, impl_size_from_word_capacity(word_count_from_bit_count(size)), size));
+    *out = BitData{get_impl(&newO)->data(), size};
+    return replace_instance(self, &newO);
   }
 }
 
 // Returns the original size of the BitArray when passed to this function (basically it returns the index where to append the bits).
-static BL_NOINLINE BLResult makeMutableForAppendOp(BLBitArrayCore* self, size_t appendBitCount, size_t* bitIndex, BitData* out) noexcept {
-  BL_ASSERT(appendBitCount > 0u);
+static BL_NOINLINE BLResult make_mutable_for_append_op(BLBitArrayCore* self, size_t append_bit_count, size_t* bit_index, BitData* out) noexcept {
+  BL_ASSERT(append_bit_count > 0u);
 
   BitData d;
   if (self->_d.sso()) {
-    d = BitData{self->_d.u32_data, getSSOSize(self)};
-    *bitIndex = d.size;
+    d = BitData{self->_d.u32_data, get_sso_size(self)};
+    *bit_index = d.size;
 
-    size_t remainingCapacity = size_t(kSSOBitCapacity) - d.size;
-    if (appendBitCount <= remainingCapacity) {
-      size_t newSize = d.size + appendBitCount;
-      setSSOSize(self, newSize);
+    size_t remaining_capacity = size_t(kSSOBitCapacity) - d.size;
+    if (append_bit_count <= remaining_capacity) {
+      size_t new_size = d.size + append_bit_count;
+      set_sso_size(self, new_size);
 
-      *out = BitData{d.data, newSize};
+      *out = BitData{d.data, new_size};
       return BL_SUCCESS;
     }
 
-    if (BL_UNLIKELY(appendBitCount > size_t(UINT32_MAX) - d.size))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    if (BL_UNLIKELY(append_bit_count > size_t(UINT32_MAX) - d.size))
+      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
   }
   else {
-    BLBitArrayImpl* selfI = getImpl(self);
+    BLBitArrayImpl* self_impl = get_impl(self);
 
-    d = BitData{selfI->data(), selfI->size};
-    *bitIndex = d.size;
+    d = BitData{self_impl->data(), self_impl->size};
+    *bit_index = d.size;
 
-    size_t remainingCapacity = size_t(selfI->capacity) - d.size;
-    size_t mutableMsk = IntOps::bitMaskFromBool<size_t>(isImplMutable(selfI));
+    size_t remaining_capacity = size_t(self_impl->capacity) - d.size;
+    size_t mutable_msk = IntOps::bool_as_mask<size_t>(is_impl_mutable(self_impl));
 
-    if (appendBitCount <= (remainingCapacity & mutableMsk)) {
-      size_t newSize = d.size + appendBitCount;
-      size_t fromWord = wordIndexOf(d.size + BitArrayOps::kBitMask);
-      size_t lastWord = wordIndexOf(newSize - 1u);
+    if (append_bit_count <= (remaining_capacity & mutable_msk)) {
+      size_t new_size = d.size + append_bit_count;
+      size_t from_word = word_index_of(d.size + BitArrayOps::kBitMask);
+      size_t last_word = word_index_of(new_size - 1u);
 
-      MemOps::fillInlineT(d.data + fromWord, uint32_t(0), lastWord - fromWord + 1);
-      selfI->size = uint32_t(newSize);
+      MemOps::fill_inline_t(d.data + from_word, uint32_t(0), last_word - from_word + 1);
+      self_impl->size = uint32_t(new_size);
 
-      *out = BitData{d.data, newSize};
+      *out = BitData{d.data, new_size};
       return BL_SUCCESS;
     }
   }
 
   OverflowFlag of{};
-  size_t newSize = IntOps::addOverflow(d.size, appendBitCount, &of);
+  size_t new_size = IntOps::add_overflow(d.size, append_bit_count, &of);
 
   if (BL_UNLIKELY(of))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-  size_t oldWordCount = wordCountFromBitCount(d.size);
-  size_t newWordCount = wordCountFromBitCount(newSize);
-  BLObjectImplSize implSize = implSizeFromWordCapacity(newWordCount);
+  size_t old_word_count = word_count_from_bit_count(d.size);
+  size_t new_word_count = word_count_from_bit_count(new_size);
+  BLObjectImplSize impl_size = impl_size_from_word_capacity(new_word_count);
 
   BLBitArrayCore newO;
-  BL_PROPAGATE(initDynamic(&newO, expandImplSize(implSize), newSize));
+  BL_PROPAGATE(init_dynamic(&newO, expand_impl_size(impl_size), new_size));
 
-  BLBitArrayImpl* newI = getImpl(&newO);
-  MemOps::copyForwardInlineT(newI->data(), d.data, oldWordCount);
-  MemOps::fillInlineT(newI->data() + oldWordCount, uint32_t(0), newWordCount - oldWordCount);
+  BLBitArrayImpl* new_impl = get_impl(&newO);
+  MemOps::copy_forward_inline_t(new_impl->data(), d.data, old_word_count);
+  MemOps::fill_inline_t(new_impl->data() + old_word_count, uint32_t(0), new_word_count - old_word_count);
 
-  *out = BitData{newI->data(), newSize};
-  return replaceInstance(self, &newO);
+  *out = BitData{new_impl->data(), new_size};
+  return replace_instance(self, &newO);
 }
 
 // bl::BitArray - Private - Combine Op
 // ===================================
 
 template<typename BitOp>
-static BL_INLINE BLResult combineWordData(BitData d, size_t bitIndex, const uint32_t* wordData, size_t wordCount) noexcept {
-  size_t bitEnd = bitIndex + blMin(bitIndexOf(wordCount), d.size - bitIndex);
-  size_t bitCount = bitEnd - bitIndex;
+static BL_INLINE BLResult combine_word_data(BitData d, size_t bit_index, const uint32_t* word_data, size_t word_count) noexcept {
+  size_t bit_end = bit_index + bl_min(bit_index_of(word_count), d.size - bit_index);
+  size_t bit_count = bit_end - bit_index;
 
-  size_t wordIndex = wordIndexOf(bitIndex);
-  uint32_t* dst = d.data + wordIndex;
-  uint32_t bitShift = uint32_t(bitIndex & BitArrayOps::kBitMask);
+  size_t word_index = word_index_of(bit_index);
+  uint32_t* dst = d.data + word_index;
+  uint32_t bit_shift = uint32_t(bit_index & BitArrayOps::kBitMask);
 
-  // Special case - if `wordData` is aligned to a word boundary, we don't have to shift the input BitWords.
-  if (bitShift == 0u) {
-    wordCount = blMin(wordCountFromBitCount(bitCount), wordCount);
-    uint32_t endBitCount = uint32_t(bitEnd & BitArrayOps::kBitMask);
+  // Special case - if `word_data` is aligned to a word boundary, we don't have to shift the input BitWords.
+  if (bit_shift == 0u) {
+    word_count = bl_min(word_count_from_bit_count(bit_count), word_count);
+    uint32_t end_bit_count = uint32_t(bit_end & BitArrayOps::kBitMask);
 
-    size_t end = wordCount - size_t(endBitCount != 0);
-    BitArrayOps::bitArrayCombineWords<BitOp>(dst, wordData, end);
+    size_t end = word_count - size_t(end_bit_count != 0);
+    BitArrayOps::bit_array_combine_words<BitOp>(dst, word_data, end);
 
-    if (endBitCount)
-      dst[end] = BitOp::opMasked(dst[end], wordData[end], BitArrayOps::nonZeroStartMask(endBitCount));
+    if (end_bit_count)
+      dst[end] = BitOp::op_masked(dst[end], word_data[end], BitArrayOps::non_zero_start_mask(end_bit_count));
 
     return BL_SUCCESS;
   }
 
-  uint32_t w = wordData[0];
-  uint32_t bitShiftInv = BitArrayOps::kNumBits - bitShift;
+  uint32_t w = word_data[0];
+  uint32_t bit_shift_inv = BitArrayOps::kNumBits - bit_shift;
 
   // Special case - if the number of processed bits is less than number of the remaining bits in the current BitWord.
-  if (bitCount <= bitShiftInv) {
-    uint32_t mask = BitArrayOps::nonZeroStartMask(bitCount, bitShift);
-    dst[0] = BitOp::opMasked(dst[0], BitArrayOps::shiftToEnd(w, bitShift), mask);
+  if (bit_count <= bit_shift_inv) {
+    uint32_t mask = BitArrayOps::non_zero_start_mask(bit_count, bit_shift);
+    dst[0] = BitOp::op_masked(dst[0], BitArrayOps::shift_to_end(w, bit_shift), mask);
     return BL_SUCCESS;
   }
 
   // Process the first BitWord, which is not fully combined (must combine under a write-mask).
-  dst[0] = BitOp::opMasked(dst[0], BitArrayOps::shiftToEnd(w, bitShift), BitArrayOps::nonZeroEndMask(bitShiftInv));
-  bitCount -= bitShiftInv;
+  dst[0] = BitOp::op_masked(dst[0], BitArrayOps::shift_to_end(w, bit_shift), BitArrayOps::non_zero_end_mask(bit_shift_inv));
+  bit_count -= bit_shift_inv;
 
   // Process guaranteed BitWord quantities.
   size_t i = 1;
-  size_t n = wordIndexOf(bitCount);
+  size_t n = word_index_of(bit_count);
 
   while (i <= n) {
-    uint32_t prevWordBits = BitArrayOps::shiftToStart(w, bitShiftInv);
-    w = wordData[i];
-    dst[i] = BitOp::op(dst[i], prevWordBits | BitArrayOps::shiftToEnd(w, bitShift));
+    uint32_t prev_word_bits = BitArrayOps::shift_to_start(w, bit_shift_inv);
+    w = word_data[i];
+    dst[i] = BitOp::op(dst[i], prev_word_bits | BitArrayOps::shift_to_end(w, bit_shift));
 
     i++;
   }
 
-  bitCount &= BitArrayOps::kBitMask;
-  if (bitCount == 0)
+  bit_count &= BitArrayOps::kBitMask;
+  if (bit_count == 0)
     return BL_SUCCESS;
 
-  uint32_t lastWordBits = BitArrayOps::shiftToStart(w, bitShiftInv);
-  if (bitShiftInv < bitCount)
-    lastWordBits |= BitArrayOps::shiftToEnd(wordData[i], bitShift);
+  uint32_t last_word_bits = BitArrayOps::shift_to_start(w, bit_shift_inv);
+  if (bit_shift_inv < bit_count)
+    last_word_bits |= BitArrayOps::shift_to_end(word_data[i], bit_shift);
 
-  dst[i] = BitOp::opMasked(dst[i], lastWordBits, BitArrayOps::nonZeroStartMask(bitCount));
+  dst[i] = BitOp::op_masked(dst[i], last_word_bits, BitArrayOps::non_zero_start_mask(bit_count));
   return BL_SUCCESS;
 }
 
@@ -240,296 +240,296 @@ static BL_INLINE BLResult combineWordData(BitData d, size_t bitIndex, const uint
 // bl::BitArray - API - Init & Destroy
 // ===================================
 
-BL_API_IMPL BLResult blBitArrayInit(BLBitArrayCore* self) noexcept {
+BL_API_IMPL BLResult bl_bit_array_init(BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
-  return initSSO(self);
+  return init_sso(self);
 }
 
-BL_API_IMPL BLResult blBitArrayInitMove(BLBitArrayCore* self, BLBitArrayCore* other) noexcept {
+BL_API_IMPL BLResult bl_bit_array_init_move(BLBitArrayCore* self, BLBitArrayCore* other) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(other->_d.isBitArray());
+  BL_ASSERT(other->_d.is_bit_array());
 
   BLBitArrayCore tmp = *other;
-  initSSO(other);
+  init_sso(other);
   *self = tmp;
 
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blBitArrayInitWeak(BLBitArrayCore* self, const BLBitArrayCore* other) noexcept {
+BL_API_IMPL BLResult bl_bit_array_init_weak(BLBitArrayCore* self, const BLBitArrayCore* other) noexcept {
   using namespace bl::BitArrayInternal;
 
   BL_ASSERT(self != other);
-  BL_ASSERT(other->_d.isBitArray());
+  BL_ASSERT(other->_d.is_bit_array());
 
   self->_d = other->_d;
-  return retainInstance(self);
+  return retain_instance(self);
 }
 
-BL_API_IMPL BLResult blBitArrayDestroy(BLBitArrayCore* self) noexcept {
+BL_API_IMPL BLResult bl_bit_array_destroy(BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
-  return releaseInstance(self);
+  return release_instance(self);
 }
 
 // bl::BitArray - API - Reset
 // ==========================
 
-BL_API_IMPL BLResult blBitArrayReset(BLBitArrayCore* self) noexcept {
+BL_API_IMPL BLResult bl_bit_array_reset(BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
-  releaseInstance(self);
-  return initSSO(self);
+  release_instance(self);
+  return init_sso(self);
 }
 
 // bl::BitArray - API - Assign
 // ===========================
 
-BL_API_IMPL BLResult blBitArrayAssignMove(BLBitArrayCore* self, BLBitArrayCore* other) noexcept {
+BL_API_IMPL BLResult bl_bit_array_assign_move(BLBitArrayCore* self, BLBitArrayCore* other) noexcept {
   using namespace bl::BitArrayInternal;
 
-  BL_ASSERT(self->_d.isBitArray());
-  BL_ASSERT(other->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
+  BL_ASSERT(other->_d.is_bit_array());
 
   BLBitArrayCore tmp = *other;
-  initSSO(other);
-  return replaceInstance(self, &tmp);
+  init_sso(other);
+  return replace_instance(self, &tmp);
 }
 
-BL_API_IMPL BLResult blBitArrayAssignWeak(BLBitArrayCore* self, const BLBitArrayCore* other) noexcept {
+BL_API_IMPL BLResult bl_bit_array_assign_weak(BLBitArrayCore* self, const BLBitArrayCore* other) noexcept {
   using namespace bl::BitArrayInternal;
 
-  BL_ASSERT(self->_d.isBitArray());
-  BL_ASSERT(other->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
+  BL_ASSERT(other->_d.is_bit_array());
 
-  retainInstance(other);
-  return replaceInstance(self, other);
+  retain_instance(other);
+  return replace_instance(self, other);
 }
 
-BL_API_IMPL BLResult blBitArrayAssignWords(BLBitArrayCore* self, const uint32_t* wordData, uint32_t wordCount) noexcept {
+BL_API_IMPL BLResult bl_bit_array_assign_words(BLBitArrayCore* self, const uint32_t* word_data, uint32_t word_count) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   if (self->_d.sso()) {
-    if (wordCount <= kSSOWordCapacity) {
-      setSSOSize(self, wordCount * bl::BitArrayOps::kNumBits);
-      bl::MemOps::copyForwardInlineT(self->_d.u32_data, wordData, wordCount);
-      bl::MemOps::fillInlineT(self->_d.u32_data + wordCount, uint32_t(0), kSSOWordCapacity - wordCount);
+    if (word_count <= kSSOWordCapacity) {
+      set_sso_size(self, word_count * bl::BitArrayOps::kNumBits);
+      bl::MemOps::copy_forward_inline_t(self->_d.u32_data, word_data, word_count);
+      bl::MemOps::fill_inline_t(self->_d.u32_data + word_count, uint32_t(0), kSSOWordCapacity - word_count);
       return BL_SUCCESS;
     }
   }
   else {
-    BLBitArrayImpl* selfI = getImpl(self);
+    BLBitArrayImpl* self_impl = get_impl(self);
 
-    size_t capacityInWords = wordCountFromBitCount(selfI->capacity);
-    size_t immutableMsk = bl::IntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
+    size_t capacity_in_words = word_count_from_bit_count(self_impl->capacity);
+    size_t immutable_msk = bl::IntOps::bool_as_mask<size_t>(!is_impl_mutable(self_impl));
 
-    if ((wordCount | immutableMsk) > capacityInWords) {
+    if ((word_count | immutable_msk) > capacity_in_words) {
       BLBitArrayCore newO;
-      initSSO(&newO, size_t(wordCount) * bl::BitArrayOps::kNumBits);
-      bl::MemOps::copyForwardInlineT(newO._d.u32_data, wordData, wordCount);
+      init_sso(&newO, size_t(word_count) * bl::BitArrayOps::kNumBits);
+      bl::MemOps::copy_forward_inline_t(newO._d.u32_data, word_data, word_count);
 
-      return replaceInstance(self, &newO);
+      return replace_instance(self, &newO);
     }
   }
 
   BLBitArrayCore newO;
-  BL_PROPAGATE(initDynamic(&newO, implSizeFromWordCapacity(wordCount)));
+  BL_PROPAGATE(init_dynamic(&newO, impl_size_from_word_capacity(word_count)));
 
-  BLBitArrayImpl* newI = getImpl(&newO);
-  bl::MemOps::copyForwardInlineT(newI->data(), wordData, wordCount);
+  BLBitArrayImpl* new_impl = get_impl(&newO);
+  bl::MemOps::copy_forward_inline_t(new_impl->data(), word_data, word_count);
 
-  return replaceInstance(self, &newO);
+  return replace_instance(self, &newO);
 }
 
 // bl::BitArray - API - Accessors
 // ==============================
 
-BL_API_IMPL bool blBitArrayIsEmpty(const BLBitArrayCore* self) noexcept {
+BL_API_IMPL bool bl_bit_array_is_empty(const BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
-  return getSize(self) == 0;
+  return get_size(self) == 0;
 }
 
-BL_API_IMPL uint32_t blBitArrayGetSize(const BLBitArrayCore* self) noexcept {
+BL_API_IMPL uint32_t bl_bit_array_get_size(const BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
-  return uint32_t(getSize(self));
+  return uint32_t(get_size(self));
 }
 
-BL_API_IMPL uint32_t blBitArrayGetWordCount(const BLBitArrayCore* self) noexcept {
+BL_API_IMPL uint32_t bl_bit_array_get_word_count(const BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
-  return uint32_t(wordCountFromBitCount(getSize(self)));
+  return uint32_t(word_count_from_bit_count(get_size(self)));
 }
 
-BL_API_IMPL uint32_t blBitArrayGetCapacity(const BLBitArrayCore* self) noexcept {
+BL_API_IMPL uint32_t bl_bit_array_get_capacity(const BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
-  return uint32_t(getCapacity(self));
+  return uint32_t(get_capacity(self));
 }
 
-BL_API_IMPL const uint32_t* blBitArrayGetData(const BLBitArrayCore* self) noexcept {
+BL_API_IMPL const uint32_t* bl_bit_array_get_data(const BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d = unpack(self);
   return d.data;
 }
 
-BL_API_IMPL uint32_t blBitArrayGetCardinality(const BLBitArrayCore* self) noexcept {
+BL_API_IMPL uint32_t bl_bit_array_get_cardinality(const BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d = unpack(self);
   if (!d.size)
     return 0u;
 
   bl::IntOps::PopCounter<uint32_t> counter;
-  counter.addArray(d.data, wordCountFromBitCount(d.size));
+  counter.add_array(d.data, word_count_from_bit_count(d.size));
   return counter.get();
 }
 
-BL_API_IMPL uint32_t blBitArrayGetCardinalityInRange(const BLBitArrayCore* self, uint32_t startBit, uint32_t endBit) noexcept {
+BL_API_IMPL uint32_t bl_bit_array_get_cardinality_in_range(const BLBitArrayCore* self, uint32_t start_bit, uint32_t end_bit) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d = unpack(self);
-  size_t start = startBit;
-  size_t end = blMin<size_t>(endBit, d.size);
+  size_t start = start_bit;
+  size_t end = bl_min<size_t>(end_bit, d.size);
 
   if (start >= end)
     return 0u;
 
-  size_t startWord = wordIndexOf(start);
-  size_t lastWord = wordIndexOf(end - 1u);
+  size_t start_word = word_index_of(start);
+  size_t last_word = word_index_of(end - 1u);
   bl::IntOps::PopCounter<uint32_t> counter;
 
-  if (startWord == lastWord) {
+  if (start_word == last_word) {
     // Special case - the range is within a single BitWord.
-    uint32_t mask = bl::BitArrayOps::nonZeroStartMask(end - start, startBit);
-    counter.addItem(d.data[startWord] & mask);
+    uint32_t mask = bl::BitArrayOps::non_zero_start_mask(end - start, start_bit);
+    counter.add_item(d.data[start_word] & mask);
   }
   else {
-    uint32_t startMask = bl::BitArrayOps::nonZeroEndMask(bl::BitArrayOps::kNumBits - uint32_t(start & bl::BitArrayOps::kBitMask));
-    uint32_t endMask = bl::BitArrayOps::nonZeroStartMask((uint32_t(end - 1u) & bl::BitArrayOps::kBitMask) + 1u);
+    uint32_t start_mask = bl::BitArrayOps::non_zero_end_mask(bl::BitArrayOps::kNumBits - uint32_t(start & bl::BitArrayOps::kBitMask));
+    uint32_t end_mask = bl::BitArrayOps::non_zero_start_mask((uint32_t(end - 1u) & bl::BitArrayOps::kBitMask) + 1u);
 
-    counter.addItem(d.data[startWord] & startMask);
-    counter.addArray(d.data + startWord + 1, lastWord - startWord - 1);
-    counter.addItem(d.data[lastWord] & endMask);
+    counter.add_item(d.data[start_word] & start_mask);
+    counter.add_array(d.data + start_word + 1, last_word - start_word - 1);
+    counter.add_item(d.data[last_word] & end_mask);
   }
 
   return counter.get();
 }
 
-BL_API_IMPL bool blBitArrayHasBit(const BLBitArrayCore* self, uint32_t bitIndex) noexcept {
+BL_API_IMPL bool bl_bit_array_has_bit(const BLBitArrayCore* self, uint32_t bit_index) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d = unpack(self);
-  if (bitIndex >= d.size)
+  if (bit_index >= d.size)
     return false;
 
-  return bl::BitArrayOps::bitArrayTestBit(d.data, bitIndex);
+  return bl::BitArrayOps::bit_array_test_bit(d.data, bit_index);
 }
 
-BL_API_IMPL bool blBitArrayHasBitsInRange(const BLBitArrayCore* self, uint32_t startBit, uint32_t endBit) noexcept {
+BL_API_IMPL bool bl_bit_array_has_bits_in_range(const BLBitArrayCore* self, uint32_t start_bit, uint32_t end_bit) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d = unpack(self);
-  size_t start = startBit;
-  size_t end = blMin(d.size, size_t(endBit));
+  size_t start = start_bit;
+  size_t end = bl_min(d.size, size_t(end_bit));
 
   if (start >= end)
     return false;
 
-  size_t startWord = wordIndexOf(start);
-  size_t endWord = wordIndexOf(end);
+  size_t start_word = word_index_of(start);
+  size_t end_word = word_index_of(end);
 
-  if (startWord == endWord) {
+  if (start_word == end_word) {
     // Special case - the range is within a single BitWord.
-    uint32_t mask = bl::BitArrayOps::nonZeroStartMask(end - start, start);
-    return (d.data[startWord] & mask) != 0u;
+    uint32_t mask = bl::BitArrayOps::non_zero_start_mask(end - start, start);
+    return (d.data[start_word] & mask) != 0u;
   }
 
-  uint32_t startMask = bl::BitArrayOps::nonZeroEndMask(bl::BitArrayOps::kNumBits - (start & bl::BitArrayOps::kBitMask));
-  if (d.data[startWord] & startMask)
+  uint32_t start_mask = bl::BitArrayOps::non_zero_end_mask(bl::BitArrayOps::kNumBits - (start & bl::BitArrayOps::kBitMask));
+  if (d.data[start_word] & start_mask)
     return true;
 
-  for (size_t i = startWord + 1; i < endWord; i++)
+  for (size_t i = start_word + 1; i < end_word; i++)
     if (d.data[i])
       return true;
 
-  uint32_t endMask = bl::BitArrayOps::nonZeroStartMask(end & bl::BitArrayOps::kBitMask);
-  return (d.data[endWord] & endMask) != 0u;
+  uint32_t end_mask = bl::BitArrayOps::non_zero_start_mask(end & bl::BitArrayOps::kBitMask);
+  return (d.data[end_word] & end_mask) != 0u;
 }
 
 // bl::BitArray - API - Testing
 // ============================
 
-BL_API_IMPL bool blBitArraySubsumes(const BLBitArrayCore* a, const BLBitArrayCore* b) noexcept {
+BL_API_IMPL bool bl_bit_array_subsumes(const BLBitArrayCore* a, const BLBitArrayCore* b) noexcept {
   using namespace bl::BitArrayInternal;
 
-  BL_ASSERT(a->_d.isBitArray());
-  BL_ASSERT(b->_d.isBitArray());
+  BL_ASSERT(a->_d.is_bit_array());
+  BL_ASSERT(b->_d.is_bit_array());
 
   BitData ad = unpack(a);
   BitData bd = unpack(b);
 
-  size_t sharedWordCount = wordCountFromBitCount(blMin(ad.size, bd.size));
-  for (size_t i = 0; i < sharedWordCount; i++)
+  size_t shared_word_count = word_count_from_bit_count(bl_min(ad.size, bd.size));
+  for (size_t i = 0; i < shared_word_count; i++)
     if ((ad.data[i] & bd.data[i]) != bd.data[i])
       return false;
 
-  size_t bWordCount = wordCountFromBitCount(bd.size);
-  for (size_t i = sharedWordCount; i < bWordCount; i++)
+  size_t bWordCount = word_count_from_bit_count(bd.size);
+  for (size_t i = shared_word_count; i < bWordCount; i++)
     if (bd.data[i])
       return false;
 
   return true;
 }
 
-BL_API_IMPL bool blBitArrayIntersects(const BLBitArrayCore* a, const BLBitArrayCore* b) noexcept {
+BL_API_IMPL bool bl_bit_array_intersects(const BLBitArrayCore* a, const BLBitArrayCore* b) noexcept {
   using namespace bl::BitArrayInternal;
 
-  BL_ASSERT(a->_d.isBitArray());
-  BL_ASSERT(b->_d.isBitArray());
+  BL_ASSERT(a->_d.is_bit_array());
+  BL_ASSERT(b->_d.is_bit_array());
 
   BitData ad = unpack(a);
   BitData bd = unpack(b);
 
-  size_t sharedWordCount = wordCountFromBitCount(blMin(ad.size, bd.size));
-  for (size_t i = 0; i < sharedWordCount; i++)
+  size_t shared_word_count = word_count_from_bit_count(bl_min(ad.size, bd.size));
+  for (size_t i = 0; i < shared_word_count; i++)
     if ((ad.data[i] & bd.data[i]) != 0u)
       return true;
 
   return false;
 }
 
-BL_API_IMPL bool blBitArrayGetRange(const BLBitArrayCore* self, uint32_t* startOut, uint32_t* endOut) noexcept {
+BL_API_IMPL bool bl_bit_array_get_range(const BLBitArrayCore* self, uint32_t* start_out, uint32_t* end_out) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d = unpack(self);
-  size_t wordCount = wordCountFromBitCount(d.size);
+  size_t word_count = word_count_from_bit_count(d.size);
 
-  for (size_t i = 0; i < wordCount; i++) {
+  for (size_t i = 0; i < word_count; i++) {
     uint32_t bits = d.data[i];
     if (bits) {
-      size_t start = bitIndexOf(i) + bl::BitArrayOps::countZerosFromStart(bits);
-      for (size_t j = wordCount; j != 0; j--) {
+      size_t start = bit_index_of(i) + bl::BitArrayOps::count_zeros_from_start(bits);
+      for (size_t j = word_count; j != 0; j--) {
         bits = d.data[j - 1];
         if (bits) {
-          size_t end = bitIndexOf(j) - bl::BitArrayOps::countZerosFromEnd(bits);
-          *startOut = uint32_t(start);
-          *endOut = uint32_t(end);
+          size_t end = bit_index_of(j) - bl::BitArrayOps::count_zeros_from_end(bits);
+          *start_out = uint32_t(start);
+          *end_out = uint32_t(end);
           return true;
         }
       }
@@ -537,19 +537,19 @@ BL_API_IMPL bool blBitArrayGetRange(const BLBitArrayCore* self, uint32_t* startO
   }
 
   // There are no bits set in this BitArray.
-  *startOut = 0u;
-  *endOut = 0u;
+  *start_out = 0u;
+  *end_out = 0u;
   return false;
 }
 
 // bl::BitArray - API - Equality & Comparison
 // ==========================================
 
-BL_API_IMPL bool blBitArrayEquals(const BLBitArrayCore* a, const BLBitArrayCore* b) noexcept {
+BL_API_IMPL bool bl_bit_array_equals(const BLBitArrayCore* a, const BLBitArrayCore* b) noexcept {
   using namespace bl::BitArrayInternal;
 
-  BL_ASSERT(a->_d.isBitArray());
-  BL_ASSERT(b->_d.isBitArray());
+  BL_ASSERT(a->_d.is_bit_array());
+  BL_ASSERT(b->_d.is_bit_array());
 
   BitData ad = unpack(a);
   BitData bd = unpack(b);
@@ -557,29 +557,29 @@ BL_API_IMPL bool blBitArrayEquals(const BLBitArrayCore* a, const BLBitArrayCore*
   if (ad.size != bd.size)
     return false;
 
-  size_t wordCount = wordCountFromBitCount(ad.size);
-  for (size_t i = 0; i < wordCount; i++)
+  size_t word_count = word_count_from_bit_count(ad.size);
+  for (size_t i = 0; i < word_count; i++)
     if (ad.data[i] != bd.data[i])
       return false;
 
   return true;
 }
 
-BL_API_IMPL int blBitArrayCompare(const BLBitArrayCore* a, const BLBitArrayCore* b) noexcept {
+BL_API_IMPL int bl_bit_array_compare(const BLBitArrayCore* a, const BLBitArrayCore* b) noexcept {
   using namespace bl::BitArrayInternal;
 
-  BL_ASSERT(a->_d.isBitArray());
-  BL_ASSERT(b->_d.isBitArray());
+  BL_ASSERT(a->_d.is_bit_array());
+  BL_ASSERT(b->_d.is_bit_array());
 
   BitData ad = unpack(a);
   BitData bd = unpack(b);
 
-  size_t minSize = blMin(ad.size, bd.size);
-  size_t wordCount = wordCountFromBitCount(minSize);
+  size_t min_size = bl_min(ad.size, bd.size);
+  size_t word_count = word_count_from_bit_count(min_size);
 
   // We don't need any masking here - bits in a BitWord that are outside of a BitArray range must be zero. If one
   // of the BitArray has a greater size and any bit not used by the other filled, it's would compare as greater.
-  for (size_t i = 0; i < wordCount; i++)
+  for (size_t i = 0; i < word_count; i++)
     if (ad.data[i] != bd.data[i])
       return bl::BitArrayOps::compare(ad.data[i], bd.data[i]);
 
@@ -589,21 +589,21 @@ BL_API_IMPL int blBitArrayCompare(const BLBitArrayCore* a, const BLBitArrayCore*
 // bl::BitArray - API - Manipulation - Clear
 // =========================================
 
-BL_API_IMPL BLResult blBitArrayClear(BLBitArrayCore* self) noexcept {
+BL_API_IMPL BLResult bl_bit_array_clear(BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   if (self->_d.sso())
-    return initSSO(self);
+    return init_sso(self);
 
-  BLBitArrayImpl* selfI = getImpl(self);
-  if (isImplMutable(selfI)) {
-    selfI->size = 0;
+  BLBitArrayImpl* self_impl = get_impl(self);
+  if (is_impl_mutable(self_impl)) {
+    self_impl->size = 0;
     return BL_SUCCESS;
   }
   else {
-    releaseInstance(self);
-    initSSO(self);
+    release_instance(self);
+    init_sso(self);
     return BL_SUCCESS;
   }
 }
@@ -611,48 +611,48 @@ BL_API_IMPL BLResult blBitArrayClear(BLBitArrayCore* self) noexcept {
 // bl::BitArray - API - Manipulation - Resize
 // ==========================================
 
-BL_API_IMPL BLResult blBitArrayResize(BLBitArrayCore* self, uint32_t nBits) noexcept {
+BL_API_IMPL BLResult bl_bit_array_resize(BLBitArrayCore* self, uint32_t n_bits) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d;
 
   if (self->_d.sso()) {
-    d = BitData{getSSOData(self), getSSOSize(self)};
-    if (nBits <= kSSOBitCapacity) {
-      if (nBits < d.size) {
+    d = BitData{get_sso_data(self), get_sso_size(self)};
+    if (n_bits <= kSSOBitCapacity) {
+      if (n_bits < d.size) {
         // SSO mode requires ALL bits outside of the range to be set to zero.
-        size_t i = wordIndexOf(nBits);
+        size_t i = word_index_of(n_bits);
 
-        if (nBits & bl::BitArrayOps::kBitMask)
-          d.data[i++] &= bl::BitArrayOps::nonZeroStartMask(nBits & bl::BitArrayOps::kBitMask);
+        if (n_bits & bl::BitArrayOps::kBitMask)
+          d.data[i++] &= bl::BitArrayOps::non_zero_start_mask(n_bits & bl::BitArrayOps::kBitMask);
 
         while (i < kSSOWordCapacity)
           d.data[i++] = 0;
       }
 
-      setSSOSize(self, nBits);
+      set_sso_size(self, n_bits);
       return BL_SUCCESS;
     }
   }
   else {
-    BLBitArrayImpl* selfI = getImpl(self);
-    size_t immutableMask = bl::IntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
+    BLBitArrayImpl* self_impl = get_impl(self);
+    size_t immutable_mask = bl::IntOps::bool_as_mask<size_t>(!is_impl_mutable(self_impl));
 
-    d = BitData{selfI->data(), selfI->size};
-    if ((nBits | immutableMask) <= selfI->capacity) {
-      if (nBits < d.size) {
-        size_t i = wordIndexOf(nBits);
-        if (nBits & bl::BitArrayOps::kBitMask)
-          d.data[i] &= bl::BitArrayOps::nonZeroStartMask(nBits & bl::BitArrayOps::kBitMask);
+    d = BitData{self_impl->data(), self_impl->size};
+    if ((n_bits | immutable_mask) <= self_impl->capacity) {
+      if (n_bits < d.size) {
+        size_t i = word_index_of(n_bits);
+        if (n_bits & bl::BitArrayOps::kBitMask)
+          d.data[i] &= bl::BitArrayOps::non_zero_start_mask(n_bits & bl::BitArrayOps::kBitMask);
       }
       else {
-        size_t from = wordIndexOf(d.size + bl::BitArrayOps::kBitMask);
-        size_t end = wordCountFromBitCount(nBits);
-        bl::MemOps::fillInlineT(d.data + from, uint32_t(0), end - from);
+        size_t from = word_index_of(d.size + bl::BitArrayOps::kBitMask);
+        size_t end = word_count_from_bit_count(n_bits);
+        bl::MemOps::fill_inline_t(d.data + from, uint32_t(0), end - from);
       }
 
-      selfI->size = uint32_t(nBits);
+      self_impl->size = uint32_t(n_bits);
       return BL_SUCCESS;
     }
   }
@@ -660,92 +660,92 @@ BL_API_IMPL BLResult blBitArrayResize(BLBitArrayCore* self, uint32_t nBits) noex
   BLBitArrayCore newO;
   uint32_t* dst;
 
-  if (nBits <= kSSOBitCapacity) {
-    initSSO(&newO, nBits);
+  if (n_bits <= kSSOBitCapacity) {
+    init_sso(&newO, n_bits);
     dst = newO._d.u32_data;
   }
   else {
-    BLObjectImplSize implSize = implSizeFromWordCapacity(wordCountFromBitCount(nBits));
-    BL_PROPAGATE(initDynamic(&newO, implSize, nBits));
-    dst = getImpl(&newO)->data();
+    BLObjectImplSize impl_size = impl_size_from_word_capacity(word_count_from_bit_count(n_bits));
+    BL_PROPAGATE(init_dynamic(&newO, impl_size, n_bits));
+    dst = get_impl(&newO)->data();
   }
 
-  size_t bitCount = blMin<size_t>(nBits, d.size);
-  size_t wordCount = wordCountFromBitCount(bitCount);
+  size_t bit_count = bl_min<size_t>(n_bits, d.size);
+  size_t word_count = word_count_from_bit_count(bit_count);
 
-  bl::MemOps::copyForwardInlineT(dst, d.data, wordCount);
-  uint32_t lastWordBitCount = uint32_t(bitCount & bl::BitArrayOps::kBitMask);
+  bl::MemOps::copy_forward_inline_t(dst, d.data, word_count);
+  uint32_t last_word_bit_count = uint32_t(bit_count & bl::BitArrayOps::kBitMask);
 
-  if (lastWordBitCount)
-    dst[wordCount - 1] &= bl::BitArrayOps::nonZeroStartMask(lastWordBitCount);
+  if (last_word_bit_count)
+    dst[word_count - 1] &= bl::BitArrayOps::non_zero_start_mask(last_word_bit_count);
 
-  return replaceInstance(self, &newO);
+  return replace_instance(self, &newO);
 }
 
 // bl::BitArray - API - Manipulation - Reserve
 // ===========================================
 
-BL_API_IMPL BLResult blBitArrayReserve(BLBitArrayCore* self, uint32_t nBits) noexcept {
+BL_API_IMPL BLResult bl_bit_array_reserve(BLBitArrayCore* self, uint32_t n_bits) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d;
   if (self->_d.sso()) {
-    if (nBits <= kSSOBitCapacity)
+    if (n_bits <= kSSOBitCapacity)
       return BL_SUCCESS;
 
-    d = BitData{getSSOData(self), getSSOSize(self)};
+    d = BitData{get_sso_data(self), get_sso_size(self)};
   }
   else {
-    BLBitArrayImpl* selfI = getImpl(self);
-    size_t immutableMask = bl::IntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
+    BLBitArrayImpl* self_impl = get_impl(self);
+    size_t immutable_mask = bl::IntOps::bool_as_mask<size_t>(!is_impl_mutable(self_impl));
 
-    if ((nBits | immutableMask) <= selfI->capacity)
+    if ((n_bits | immutable_mask) <= self_impl->capacity)
       return BL_SUCCESS;
 
-    d = BitData{selfI->data(), selfI->size};
+    d = BitData{self_impl->data(), self_impl->size};
   }
 
-  BLObjectImplSize implSize = implSizeFromWordCapacity(wordCountFromBitCount(nBits));
+  BLObjectImplSize impl_size = impl_size_from_word_capacity(word_count_from_bit_count(n_bits));
   BLBitArrayCore newO;
-  BL_PROPAGATE(initDynamic(&newO, implSize, d.size));
+  BL_PROPAGATE(init_dynamic(&newO, impl_size, d.size));
 
-  BLBitArrayImpl* newI = getImpl(&newO);
-  bl::MemOps::copyForwardInlineT(newI->data(), d.data, wordCountFromBitCount(d.size));
-  return replaceInstance(self, &newO);
+  BLBitArrayImpl* new_impl = get_impl(&newO);
+  bl::MemOps::copy_forward_inline_t(new_impl->data(), d.data, word_count_from_bit_count(d.size));
+  return replace_instance(self, &newO);
 }
 
 // bl::BitArray - API - Manipulation - Shrink
 // ==========================================
 
-BL_API_IMPL BLResult blBitArrayShrink(BLBitArrayCore* self) noexcept {
+BL_API_IMPL BLResult bl_bit_array_shrink(BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   if (self->_d.sso())
     return BL_SUCCESS;
 
-  BLBitArrayImpl* impl = getImpl(self);
+  BLBitArrayImpl* impl = get_impl(self);
   size_t size = impl->size;
   size_t capacity = impl->capacity;
 
   if (size <= kSSOBitCapacity) {
     BLBitArrayCore newO;
-    initSSO(&newO, size);
-    bl::MemOps::copyForwardInlineT(newO._d.u32_data, impl->data(), wordCountFromBitCount(size));
-    return replaceInstance(self, &newO);
+    init_sso(&newO, size);
+    bl::MemOps::copy_forward_inline_t(newO._d.u32_data, impl->data(), word_count_from_bit_count(size));
+    return replace_instance(self, &newO);
   }
 
-  BLObjectImplSize currentImplSize = implSizeFromWordCapacity(wordCountFromBitCount(capacity));
-  BLObjectImplSize optimalImplSize = implSizeFromWordCapacity(wordCountFromBitCount(size));
+  BLObjectImplSize current_impl_size = impl_size_from_word_capacity(word_count_from_bit_count(capacity));
+  BLObjectImplSize optimal_impl_size = impl_size_from_word_capacity(word_count_from_bit_count(size));
 
-  if (optimalImplSize + BL_OBJECT_IMPL_ALIGNMENT <= currentImplSize) {
+  if (optimal_impl_size + BL_OBJECT_IMPL_ALIGNMENT <= current_impl_size) {
     BLBitArrayCore newO;
-    BL_PROPAGATE(initDynamic(&newO, optimalImplSize, size));
+    BL_PROPAGATE(init_dynamic(&newO, optimal_impl_size, size));
 
-    BLBitArrayImpl* newI = getImpl(&newO);
-    bl::MemOps::copyForwardInlineT(newI->data(), impl->data(), wordCountFromBitCount(size));
-    return replaceInstance(self, &newO);
+    BLBitArrayImpl* new_impl = get_impl(&newO);
+    bl::MemOps::copy_forward_inline_t(new_impl->data(), impl->data(), word_count_from_bit_count(size));
+    return replace_instance(self, &newO);
   }
 
   return BL_SUCCESS;
@@ -754,211 +754,211 @@ BL_API_IMPL BLResult blBitArrayShrink(BLBitArrayCore* self) noexcept {
 // bl::BitArray - API - Manipulation - Set / Fill
 // ==============================================
 
-BL_API_IMPL BLResult blBitArraySetBit(BLBitArrayCore* self, uint32_t bitIndex) noexcept {
+BL_API_IMPL BLResult bl_bit_array_set_bit(BLBitArrayCore* self, uint32_t bit_index) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d;
-  BL_PROPAGATE(makeMutableForModifyOp(self, bitIndex, &d));
+  BL_PROPAGATE(make_mutable_for_modify_op(self, bit_index, &d));
 
-  bl::BitArrayOps::bitArraySetBit(d.data, bitIndex);
+  bl::BitArrayOps::bit_array_set_bit(d.data, bit_index);
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blBitArrayFillRange(BLBitArrayCore* self, uint32_t startBit, uint32_t endBit) noexcept {
+BL_API_IMPL BLResult bl_bit_array_fill_range(BLBitArrayCore* self, uint32_t start_bit, uint32_t end_bit) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
-  if (BL_UNLIKELY(startBit >= endBit))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(start_bit >= end_bit))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
   BitData d;
-  BL_PROPAGATE(makeMutableForModifyOp(self, startBit, &d));
+  BL_PROPAGATE(make_mutable_for_modify_op(self, start_bit, &d));
 
-  size_t end = blMin(size_t(endBit), d.size);
-  bl::BitArrayOps::bitArrayFill(d.data, startBit, end - startBit);
+  size_t end = bl_min(size_t(end_bit), d.size);
+  bl::BitArrayOps::bit_array_fill(d.data, start_bit, end - start_bit);
 
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blBitArrayFillWords(BLBitArrayCore* self, uint32_t bitIndex, const uint32_t* wordData, uint32_t wordCount) noexcept {
+BL_API_IMPL BLResult bl_bit_array_fill_words(BLBitArrayCore* self, uint32_t bit_index, const uint32_t* word_data, uint32_t word_count) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d;
-  BL_PROPAGATE(makeMutableForModifyOp(self, bitIndex, &d));
+  BL_PROPAGATE(make_mutable_for_modify_op(self, bit_index, &d));
 
-  combineWordData<bl::BitOperator::Or>(d, bitIndex, wordData, wordCount);
+  combine_word_data<bl::BitOperator::Or>(d, bit_index, word_data, word_count);
   return BL_SUCCESS;
 }
 
 // bl::BitArray - API - Manipulation - Clear
 // =========================================
 
-BL_API_IMPL BLResult blBitArrayClearBit(BLBitArrayCore* self, uint32_t bitIndex) noexcept {
+BL_API_IMPL BLResult bl_bit_array_clear_bit(BLBitArrayCore* self, uint32_t bit_index) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d;
-  BL_PROPAGATE(makeMutableForModifyOp(self, bitIndex, &d));
+  BL_PROPAGATE(make_mutable_for_modify_op(self, bit_index, &d));
 
-  bl::BitArrayOps::bitArrayClearBit(d.data, bitIndex);
+  bl::BitArrayOps::bit_array_clear_bit(d.data, bit_index);
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blBitArrayClearRange(BLBitArrayCore* self, uint32_t startBit, uint32_t endBit) noexcept {
+BL_API_IMPL BLResult bl_bit_array_clear_range(BLBitArrayCore* self, uint32_t start_bit, uint32_t end_bit) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
-  if (BL_UNLIKELY(startBit >= endBit))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(start_bit >= end_bit))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
   BitData d;
-  BL_PROPAGATE(makeMutableForModifyOp(self, startBit, &d));
+  BL_PROPAGATE(make_mutable_for_modify_op(self, start_bit, &d));
 
-  size_t end = blMin(size_t(endBit), d.size);
-  bl::BitArrayOps::bitArrayClear(d.data, startBit, end - startBit);
+  size_t end = bl_min(size_t(end_bit), d.size);
+  bl::BitArrayOps::bit_array_clear(d.data, start_bit, end - start_bit);
 
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blBitArrayClearWord(BLBitArrayCore* self, uint32_t bitIndex, uint32_t wordValue) noexcept {
-  return blBitArrayClearWords(self, bitIndex, &wordValue, 1);
+BL_API_IMPL BLResult bl_bit_array_clear_word(BLBitArrayCore* self, uint32_t bit_index, uint32_t word_value) noexcept {
+  return bl_bit_array_clear_words(self, bit_index, &word_value, 1);
 }
 
-BL_API_IMPL BLResult blBitArrayClearWords(BLBitArrayCore* self, uint32_t bitIndex, const uint32_t* wordData, uint32_t wordCount) noexcept {
+BL_API_IMPL BLResult bl_bit_array_clear_words(BLBitArrayCore* self, uint32_t bit_index, const uint32_t* word_data, uint32_t word_count) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d;
-  BL_PROPAGATE(makeMutableForModifyOp(self, bitIndex, &d));
+  BL_PROPAGATE(make_mutable_for_modify_op(self, bit_index, &d));
 
-  combineWordData<bl::BitOperator::AndNot>(d, bitIndex, wordData, wordCount);
+  combine_word_data<bl::BitOperator::AndNot>(d, bit_index, word_data, word_count);
   return BL_SUCCESS;
 }
 
 // bl::BitArray - API - Manipulation - Replace
 // ===========================================
 
-BL_API_IMPL BLResult blBitArrayReplaceOp(BLBitArrayCore* self, uint32_t nBits, uint32_t** dataOut) noexcept {
+BL_API_IMPL BLResult bl_bit_array_replace_op(BLBitArrayCore* self, uint32_t n_bits, uint32_t** data_out) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BLBitArrayCore newO;
-  size_t wordCount = wordCountFromBitCount(nBits);
+  size_t word_count = word_count_from_bit_count(n_bits);
   uint32_t* dst = nullptr;
 
   // Not a real loop, just to be able to jump to the end without the use of the hated 'goto'.
   do {
     if (self->_d.sso()) {
-      if (nBits <= kSSOBitCapacity) {
-        initSSO(self, nBits);
+      if (n_bits <= kSSOBitCapacity) {
+        init_sso(self, n_bits);
 
-        *dataOut = getSSOData(self);
+        *data_out = get_sso_data(self);
         return BL_SUCCESS;
       }
     }
     else {
-      BLBitArrayImpl* selfI = getImpl(self);
-      size_t immutableMask = bl::IntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
+      BLBitArrayImpl* self_impl = get_impl(self);
+      size_t immutable_mask = bl::IntOps::bool_as_mask<size_t>(!is_impl_mutable(self_impl));
 
-      if ((nBits | immutableMask) <= selfI->capacity) {
-        dst = selfI->data();
-        selfI->size = uint32_t(nBits);
+      if ((n_bits | immutable_mask) <= self_impl->capacity) {
+        dst = self_impl->data();
+        self_impl->size = uint32_t(n_bits);
 
         // Using the passed instance's Impl, it's mutable and it has enough capacity.
         break;
       }
-      else if (nBits <= kSSOBitCapacity) {
-        releaseInstance(self);
-        initSSO(self, nBits);
+      else if (n_bits <= kSSOBitCapacity) {
+        release_instance(self);
+        init_sso(self, n_bits);
 
-        *dataOut = getSSOData(self);
+        *data_out = get_sso_data(self);
         return BL_SUCCESS;
       }
     }
 
-    BLObjectImplSize implSize = implSizeFromWordCapacity(wordCountFromBitCount(nBits));
-    BL_PROPAGATE(initDynamic(&newO, implSize, nBits));
-    releaseInstance(self);
+    BLObjectImplSize impl_size = impl_size_from_word_capacity(word_count_from_bit_count(n_bits));
+    BL_PROPAGATE(init_dynamic(&newO, impl_size, n_bits));
+    release_instance(self);
 
-    dst = getImpl(&newO)->data();
+    dst = get_impl(&newO)->data();
     *self = newO;
   } while (0);
 
   // We don't know whether the C++ compiler would decide to unroll this one, that's it's only once in the body.
-  bl::MemOps::fillInlineT(dst, uint32_t(0), wordCount);
+  bl::MemOps::fill_inline_t(dst, uint32_t(0), word_count);
 
-  *dataOut = dst;
+  *data_out = dst;
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blBitArrayReplaceBit(BLBitArrayCore* self, uint32_t bitIndex, bool bitValue) noexcept {
+BL_API_IMPL BLResult bl_bit_array_replace_bit(BLBitArrayCore* self, uint32_t bit_index, bool bit_value) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
-  if (bitValue)
-    return blBitArraySetBit(self, bitIndex);
+  if (bit_value)
+    return bl_bit_array_set_bit(self, bit_index);
   else
-    return blBitArrayClearBit(self, bitIndex);
+    return bl_bit_array_clear_bit(self, bit_index);
 }
 
-BL_API_IMPL BLResult blBitArrayReplaceWord(BLBitArrayCore* self, uint32_t bitIndex, uint32_t wordValue) noexcept {
+BL_API_IMPL BLResult bl_bit_array_replace_word(BLBitArrayCore* self, uint32_t bit_index, uint32_t word_value) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
-  return blBitArrayReplaceWords(self, bitIndex, &wordValue, 1);
+  return bl_bit_array_replace_words(self, bit_index, &word_value, 1);
 }
 
-BL_API_IMPL BLResult blBitArrayReplaceWords(BLBitArrayCore* self, uint32_t bitIndex, const uint32_t* wordData, uint32_t wordCount) noexcept {
+BL_API_IMPL BLResult bl_bit_array_replace_words(BLBitArrayCore* self, uint32_t bit_index, const uint32_t* word_data, uint32_t word_count) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d;
-  BL_PROPAGATE(makeMutableForModifyOp(self, bitIndex, &d));
+  BL_PROPAGATE(make_mutable_for_modify_op(self, bit_index, &d));
 
-  combineWordData<bl::BitOperator::Assign>(d, bitIndex, wordData, wordCount);
+  combine_word_data<bl::BitOperator::Assign>(d, bit_index, word_data, word_count);
   return BL_SUCCESS;
 }
 
 // bl::BitArray - API - Manipulation - Append
 // ==========================================
 
-BL_API_IMPL BLResult blBitArrayAppendBit(BLBitArrayCore* self, bool bitValue) noexcept {
+BL_API_IMPL BLResult bl_bit_array_append_bit(BLBitArrayCore* self, bool bit_value) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
   BitData d;
-  size_t bitIndex;
-  BL_PROPAGATE(makeMutableForAppendOp(self, 1u, &bitIndex, &d));
+  size_t bit_index;
+  BL_PROPAGATE(make_mutable_for_append_op(self, 1u, &bit_index, &d));
 
-  bl::BitArrayOps::bitArrayOrBit(d.data, bitIndex, bitValue);
+  bl::BitArrayOps::bit_array_or_bit(d.data, bit_index, bit_value);
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blBitArrayAppendWord(BLBitArrayCore* self, uint32_t wordValue) noexcept {
-  return blBitArrayAppendWords(self, &wordValue, 1);
+BL_API_IMPL BLResult bl_bit_array_append_word(BLBitArrayCore* self, uint32_t word_value) noexcept {
+  return bl_bit_array_append_words(self, &word_value, 1);
 }
 
-BL_API_IMPL BLResult blBitArrayAppendWords(BLBitArrayCore* self, const uint32_t* wordData, uint32_t wordCount) noexcept {
+BL_API_IMPL BLResult bl_bit_array_append_words(BLBitArrayCore* self, const uint32_t* word_data, uint32_t word_count) noexcept {
   using namespace bl::BitArrayInternal;
-  BL_ASSERT(self->_d.isBitArray());
+  BL_ASSERT(self->_d.is_bit_array());
 
-  if (!wordCount)
+  if (!word_count)
     return BL_SUCCESS;
 
   BitData d;
-  size_t bitIndex;
-  BL_PROPAGATE(makeMutableForAppendOp(self, size_t(wordCount) * bl::BitArrayOps::kNumBits, &bitIndex, &d));
+  size_t bit_index;
+  BL_PROPAGATE(make_mutable_for_append_op(self, size_t(word_count) * bl::BitArrayOps::kNumBits, &bit_index, &d));
 
-  combineWordData<bl::BitOperator::Or>(d, bitIndex, wordData, wordCount);
+  combine_word_data<bl::BitOperator::Or>(d, bit_index, word_data, word_count);
   return BL_SUCCESS;
 }
 
 // bl::BitArray - Runtime Registration
 // ===================================
 
-void blBitArrayRtInit(BLRuntimeContext* rt) noexcept {
-  blUnused(rt);
-  bl::BitArrayInternal::initSSO(static_cast<BLBitArrayCore*>(&blObjectDefaults[BL_OBJECT_TYPE_BIT_ARRAY]));
+void bl_bit_array_rt_init(BLRuntimeContext* rt) noexcept {
+  bl_unused(rt);
+  bl::BitArrayInternal::init_sso(static_cast<BLBitArrayCore*>(&bl_object_defaults[BL_OBJECT_TYPE_BIT_ARRAY]));
 }

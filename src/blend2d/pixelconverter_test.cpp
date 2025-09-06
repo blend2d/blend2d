@@ -27,12 +27,12 @@ static void testRgb32A8Conversions() noexcept {
   INFO("Testing ?RGB32 <-> A8 conversions");
 
   // Pixel formats.
-  BLFormatInfo a8Format = blFormatInfo[BL_FORMAT_A8];
-  BLFormatInfo xrgb32Format = blFormatInfo[BL_FORMAT_XRGB32];
-  BLFormatInfo argb32Format = blFormatInfo[BL_FORMAT_PRGB32];
-  BLFormatInfo prgb32Format = blFormatInfo[BL_FORMAT_PRGB32];
+  BLFormatInfo a8_format = bl_format_info[BL_FORMAT_A8];
+  BLFormatInfo xrgb32_format = bl_format_info[BL_FORMAT_XRGB32];
+  BLFormatInfo argb32_format = bl_format_info[BL_FORMAT_PRGB32];
+  BLFormatInfo prgb32_format = bl_format_info[BL_FORMAT_PRGB32];
 
-  argb32Format.clearFlags(BL_FORMAT_FLAG_PREMULTIPLIED);
+  argb32_format.clear_flags(BL_FORMAT_FLAG_PREMULTIPLIED);
 
   // Pixel buffers.
   uint8_t srcX8[256];
@@ -51,16 +51,16 @@ static void testRgb32A8Conversions() noexcept {
   BLPixelConverter cvtPrgb32FromA8;
   BLPixelConverter cvtA8FromPrgb32;
 
-  EXPECT_SUCCESS(cvtXrgb32FromA8.create(xrgb32Format, a8Format));
-  EXPECT_SUCCESS(cvtArgb32FromA8.create(argb32Format, a8Format));
-  EXPECT_SUCCESS(cvtPrgb32FromA8.create(prgb32Format, a8Format));
-  EXPECT_SUCCESS(cvtA8FromPrgb32.create(a8Format, prgb32Format));
+  EXPECT_SUCCESS(cvtXrgb32FromA8.create(xrgb32_format, a8_format));
+  EXPECT_SUCCESS(cvtArgb32FromA8.create(argb32_format, a8_format));
+  EXPECT_SUCCESS(cvtPrgb32FromA8.create(prgb32_format, a8_format));
+  EXPECT_SUCCESS(cvtA8FromPrgb32.create(a8_format, prgb32_format));
 
   // This would test the conversion and also whether the SIMD implementation
   // is okay. We test for 1..256 pixels and verify all pixels from 0..255.
   for (n = 1; n < 256; n++) {
     memset(rgb32, 0, sizeof(rgb32));
-    EXPECT_SUCCESS(cvtXrgb32FromA8.convertSpan(rgb32, srcX8, n));
+    EXPECT_SUCCESS(cvtXrgb32FromA8.convert_span(rgb32, srcX8, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
@@ -74,7 +74,7 @@ static void testRgb32A8Conversions() noexcept {
     }
 
     memset(rgb32, 0, sizeof(rgb32));
-    EXPECT_SUCCESS(cvtArgb32FromA8.convertSpan(rgb32, srcX8, n));
+    EXPECT_SUCCESS(cvtArgb32FromA8.convert_span(rgb32, srcX8, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
@@ -88,7 +88,7 @@ static void testRgb32A8Conversions() noexcept {
     }
 
     memset(rgb32, 0, sizeof(rgb32));
-    EXPECT_SUCCESS(cvtPrgb32FromA8.convertSpan(rgb32, srcX8, n));
+    EXPECT_SUCCESS(cvtPrgb32FromA8.convert_span(rgb32, srcX8, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
@@ -104,7 +104,7 @@ static void testRgb32A8Conversions() noexcept {
 
   for (n = 1; n < 256; n++) {
     memset(dstX8, 0, sizeof(dstX8));
-    EXPECT_SUCCESS(cvtA8FromPrgb32.convertSpan(dstX8, rgb32, n));
+    EXPECT_SUCCESS(cvtA8FromPrgb32.convert_span(dstX8, rgb32, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
@@ -126,11 +126,11 @@ static void testRgb32Rgb24Conversions() noexcept {
   INFO("Testing ?RGB32 <-> RGB24 conversions");
 
   // Pixel formats.
-  BLFormatInfo rgb32Format = blFormatInfo[BL_FORMAT_XRGB32];
-  BLFormatInfo rgb24Format { 24, BLFormatFlags(BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BE), {{ { 8, 8, 8, 0 }, { 16, 8, 0, 0 } }} };
-  BLFormatInfo bgr24Format { 24, BLFormatFlags(BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_LE), {{ { 8, 8, 8, 0 }, { 16, 8, 0, 0 } }} };
+  BLFormatInfo rgb32_format = bl_format_info[BL_FORMAT_XRGB32];
+  BLFormatInfo rgb24_format { 24, BLFormatFlags(BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BE), {{ { 8, 8, 8, 0 }, { 16, 8, 0, 0 } }} };
+  BLFormatInfo bgr24_format { 24, BLFormatFlags(BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_LE), {{ { 8, 8, 8, 0 }, { 16, 8, 0, 0 } }} };
 
-  const uint8_t allZeros[4] {};
+  const uint8_t all_zeros[4] {};
 
   // Pixel buffers.
   uint8_t srcRgb24[256 * 3];
@@ -152,17 +152,17 @@ static void testRgb32Rgb24Conversions() noexcept {
   BLPixelConverter cvtBgr24FromRgb32;
   BLPixelConverter cvtRgb24FromRgb32;
 
-  EXPECT_SUCCESS(cvtRgb32FromRgb24.create(rgb32Format, rgb24Format));
-  EXPECT_SUCCESS(cvtRgb32FromBgr24.create(rgb32Format, bgr24Format));
+  EXPECT_SUCCESS(cvtRgb32FromRgb24.create(rgb32_format, rgb24_format));
+  EXPECT_SUCCESS(cvtRgb32FromBgr24.create(rgb32_format, bgr24_format));
 
-  EXPECT_SUCCESS(cvtRgb24FromRgb32.create(rgb24Format, rgb32Format));
-  EXPECT_SUCCESS(cvtBgr24FromRgb32.create(bgr24Format, rgb32Format));
+  EXPECT_SUCCESS(cvtRgb24FromRgb32.create(rgb24_format, rgb32_format));
+  EXPECT_SUCCESS(cvtBgr24FromRgb32.create(bgr24_format, rgb32_format));
 
   // This would test the conversion and also whether the SIMD implementation
   // is okay. We test for 1..256 pixels and verify all pixels from 0..255.
   for (n = 1; n < 256; n++) {
     memset(rgb32, 0, sizeof(rgb32));
-    EXPECT_SUCCESS(cvtRgb32FromRgb24.convertSpan(rgb32, srcRgb24, n));
+    EXPECT_SUCCESS(cvtRgb32FromRgb24.convert_span(rgb32, srcRgb24, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
@@ -180,7 +180,7 @@ static void testRgb32Rgb24Conversions() noexcept {
 
   for (n = 1; n < 256; n++) {
     memset(dstRgb24, 0, sizeof(dstRgb24));
-    EXPECT_SUCCESS(cvtRgb24FromRgb32.convertSpan(dstRgb24, rgb32, n));
+    EXPECT_SUCCESS(cvtRgb24FromRgb32.convert_span(dstRgb24, rgb32, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
@@ -190,7 +190,7 @@ static void testRgb32Rgb24Conversions() noexcept {
                    srcRgb24[i * 3 + 0], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 2]);
       }
       else {
-        EXPECT_EQ(memcmp(dstRgb24 + i * 3, allZeros, 3), 0)
+        EXPECT_EQ(memcmp(dstRgb24 + i * 3, all_zeros, 3), 0)
           .message("[%u] Detected buffer overrun after RGB24<-RGB32 conversion", i);
       }
     }
@@ -198,7 +198,7 @@ static void testRgb32Rgb24Conversions() noexcept {
 
   for (n = 1; n < 256; n++) {
     memset(rgb32, 0, sizeof(rgb32));
-    EXPECT_SUCCESS(cvtRgb32FromBgr24.convertSpan(rgb32, srcRgb24, n));
+    EXPECT_SUCCESS(cvtRgb32FromBgr24.convert_span(rgb32, srcRgb24, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
@@ -216,7 +216,7 @@ static void testRgb32Rgb24Conversions() noexcept {
 
   for (n = 1; n < 256; n++) {
     memset(dstRgb24, 0, sizeof(dstRgb24));
-    EXPECT_SUCCESS(cvtBgr24FromRgb32.convertSpan(dstRgb24, rgb32, n));
+    EXPECT_SUCCESS(cvtBgr24FromRgb32.convert_span(dstRgb24, rgb32, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
@@ -226,7 +226,7 @@ static void testRgb32Rgb24Conversions() noexcept {
                     srcRgb24[i * 3 + 0], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 2]);
       }
       else {
-        EXPECT_EQ(memcmp(dstRgb24 + i * 3, allZeros, 3), 0)
+        EXPECT_EQ(memcmp(dstRgb24 + i * 3, all_zeros, 3), 0)
           .message("[%u] Detected buffer overrun after BGR24<-RGB32 conversion", i);
       }
     }
@@ -236,7 +236,7 @@ static void testRgb32Rgb24Conversions() noexcept {
 // Premultiply / Unpremultiply Conversion Tests
 // --------------------------------------------
 
-static void testPremultiplyConversions() noexcept {
+static void test_premultiply_conversions() noexcept {
   INFO("Testing premultiply & unpremultiply conversions");
 
   uint32_t i;
@@ -249,20 +249,20 @@ static void testPremultiplyConversions() noexcept {
   uint32_t dst[N];
   uint32_t unp[N];
 
-  uint64_t defaultSeed = 0x1234;
+  uint64_t default_seed = 0x1234;
 
-  BLFormatInfo unpremultipliedFmt[4];
-  BLFormatInfo premultipliedFmt[4];
+  BLFormatInfo unpremultiplied_fmt[4];
+  BLFormatInfo premultiplied_fmt[4];
 
   // Shifts in host byte-order.
-  static const uint8_t formatShifts[4][4] = {
+  static const uint8_t format_shifts[4][4] = {
     { 16,  8,  0, 24 }, // 0x[AA|RR|GG|BB]
     {  0,  8, 16, 24 }, // 0x[AA|BB|GG|RR]
     { 24, 16,  8,  0 }, // 0x[RR|GG|BB|AA]
     {  8, 16, 24,  0 }  // 0x[BB|GG|RR|AA]
   };
 
-  static const char* formatNames[4] = {
+  static const char* format_names[4] = {
     "ARGB32",
     "ABGR32",
     "RGBA32",
@@ -271,38 +271,38 @@ static void testPremultiplyConversions() noexcept {
 
   // Initialize both formats.
   for (f = 0; f < 4; f++) {
-    const uint8_t* s = formatShifts[f];
+    const uint8_t* s = format_shifts[f];
 
-    unpremultipliedFmt[f].depth = 32;
-    unpremultipliedFmt[f].flags = BL_FORMAT_FLAG_RGBA;
-    unpremultipliedFmt[f].setSizes(8, 8, 8, 8);
-    unpremultipliedFmt[f].setShifts(s[0], s[1], s[2], s[3]);
+    unpremultiplied_fmt[f].depth = 32;
+    unpremultiplied_fmt[f].flags = BL_FORMAT_FLAG_RGBA;
+    unpremultiplied_fmt[f].set_sizes(8, 8, 8, 8);
+    unpremultiplied_fmt[f].set_shifts(s[0], s[1], s[2], s[3]);
 
-    premultipliedFmt[f] = unpremultipliedFmt[f];
-    premultipliedFmt[f].addFlags(BL_FORMAT_FLAG_PREMULTIPLIED);
+    premultiplied_fmt[f] = unpremultiplied_fmt[f];
+    premultiplied_fmt[f].add_flags(BL_FORMAT_FLAG_PREMULTIPLIED);
   }
 
-  BLRandom r(defaultSeed);
+  BLRandom r(default_seed);
   for (i = 0; i < N; i++) {
-    src[i] = r.nextUInt32();
+    src[i] = r.next_uint32();
   }
 
   for (f = 0; f < 4; f++) {
-    INFO("  32-bit %s format", formatNames[f]);
+    INFO("  32-bit %s format", format_names[f]);
 
-    bool leadingAlpha = formatShifts[f][3] == 24;
+    bool leading_alpha = format_shifts[f][3] == 24;
     BLPixelConverter cvt1;
     BLPixelConverter cvt2;
 
-    EXPECT_SUCCESS(cvt1.create(premultipliedFmt[f], unpremultipliedFmt[f]));
-    EXPECT_SUCCESS(cvt2.create(unpremultipliedFmt[f], premultipliedFmt[f]));
+    EXPECT_SUCCESS(cvt1.create(premultiplied_fmt[f], unpremultiplied_fmt[f]));
+    EXPECT_SUCCESS(cvt2.create(unpremultiplied_fmt[f], premultiplied_fmt[f]));
 
     for (n = 1; n < N; n++) {
       memset(dst, 0, sizeof(dst));
       memset(unp, 0, sizeof(unp));
 
-      EXPECT_SUCCESS(cvt1.convertSpan(dst, src, n));
-      EXPECT_SUCCESS(cvt2.convertSpan(unp, dst, n));
+      EXPECT_SUCCESS(cvt1.convert_span(dst, src, n));
+      EXPECT_SUCCESS(cvt2.convert_span(unp, dst, n));
 
       for (i = 0; i < n; i++) {
         if (i < n) {
@@ -315,8 +315,8 @@ static void testPremultiplyConversions() noexcept {
           uint32_t s2 = (sp >>  8) & 0xFFu;
           uint32_t s3 = (sp >>  0) & 0xFFu;
 
-          uint32_t a = leadingAlpha ? s0 : s3;
-          if (leadingAlpha)
+          uint32_t a = leading_alpha ? s0 : s3;
+          if (leading_alpha)
             s0 = 0xFF;
           else
             s3 = 0xFF;
@@ -330,7 +330,7 @@ static void testPremultiplyConversions() noexcept {
           EXPECT_EQ(dp, ep)
             .message("[%u] OUT[0x%08X] != EXP[0x%08X] <- Premultiply(SRC[0x%08X])", i, dp, ep, sp);
 
-          if (leadingAlpha)
+          if (leading_alpha)
             PixelOps::Scalar::unpremultiply_rgb_8bit(e1, e2, e3, e0);
           else
             PixelOps::Scalar::unpremultiply_rgb_8bit(e0, e1, e2, e3);
@@ -354,7 +354,7 @@ static void testPremultiplyConversions() noexcept {
 
 template<typename T>
 struct BLPixelConverterGenericTest {
-  static void fillMasks(BLFormatInfo& fi) noexcept {
+  static void fill_masks(BLFormatInfo& fi) noexcept {
     fi.shifts[0] = uint8_t(T::kR > 0u ? IntOps::ctz(uint32_t(T::kR)) : uint32_t(0));
     fi.shifts[1] = uint8_t(T::kG > 0u ? IntOps::ctz(uint32_t(T::kG)) : uint32_t(0));
     fi.shifts[2] = uint8_t(T::kB > 0u ? IntOps::ctz(uint32_t(T::kB)) : uint32_t(0));
@@ -366,21 +366,21 @@ struct BLPixelConverterGenericTest {
   }
 
   static void testPrgb32() noexcept {
-    INFO("  %d-bit %s format", T::kDepth, T::formatString());
+    INFO("  %d-bit %s format", T::kDepth, T::format_string());
 
     BLPixelConverter from;
     BLPixelConverter back;
 
     BLFormatInfo fi {};
-    fillMasks(fi);
+    fill_masks(fi);
     fi.depth = T::kDepth;
     fi.flags = fi.sizes[3] ? BLFormatFlags(BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_PREMULTIPLIED) : BL_FORMAT_FLAG_RGB;
 
-    EXPECT_SUCCESS(from.create(fi, blFormatInfo[BL_FORMAT_PRGB32]))
-      .message("%s: Failed to create from [%dbpp 0x%08X 0x%08X 0x%08X 0x%08X]", T::formatString(), T::kDepth, T::kR, T::kG, T::kB, T::kA);
+    EXPECT_SUCCESS(from.create(fi, bl_format_info[BL_FORMAT_PRGB32]))
+      .message("%s: Failed to create from [%dbpp 0x%08X 0x%08X 0x%08X 0x%08X]", T::format_string(), T::kDepth, T::kR, T::kG, T::kB, T::kA);
 
-    EXPECT_SUCCESS(back.create(blFormatInfo[BL_FORMAT_PRGB32], fi))
-      .message("%s: Failed to create to [%dbpp 0x%08X 0x%08X 0x%08X 0x%08X]", T::formatString(), T::kDepth, T::kR, T::kG, T::kB, T::kA);
+    EXPECT_SUCCESS(back.create(bl_format_info[BL_FORMAT_PRGB32], fi))
+      .message("%s: Failed to create to [%dbpp 0x%08X 0x%08X 0x%08X 0x%08X]", T::format_string(), T::kDepth, T::kR, T::kG, T::kB, T::kA);
 
     enum : uint32_t { kCount = 8 };
 
@@ -395,8 +395,8 @@ struct BLPixelConverterGenericTest {
     // The test is rather basic now, we basically convert from PRGB to external
     // pixel format, then back, and then compare if the output is matching input.
     // In the future we should also check the intermediate result.
-    from.convertSpan(buf, src, kCount);
-    back.convertSpan(dst, buf, kCount);
+    from.convert_span(buf, src, kCount);
+    back.convert_span(dst, buf, kCount);
 
     for (uint32_t i = 0; i < kCount; i++) {
       uint32_t mid = 0;
@@ -409,7 +409,7 @@ struct BLPixelConverterGenericTest {
 
       EXPECT_EQ(dst[i], src[i])
         .message("%s: [%u] Dst(%08X) <- 0x%08X <- Src(0x%08X) [%dbpp %08X|%08X|%08X|%08X]",
-                 T::formatString(), i, dst[i], mid, src[i], T::kDepth, T::kA, T::kR, T::kG, T::kB);
+                 T::format_string(), i, dst[i], mid, src[i], T::kDepth, T::kA, T::kR, T::kG, T::kB);
     }
   }
 
@@ -420,7 +420,7 @@ struct BLPixelConverterGenericTest {
 
 #define BL_PIXEL_TEST(FORMAT, DEPTH, R_MASK, G_MASK, B_MASK, A_MASK)      \
   struct Test_##FORMAT {                                                  \
-    static inline const char* formatString() noexcept { return #FORMAT; } \
+    static inline const char* format_string() noexcept { return #FORMAT; } \
                                                                           \
     enum : uint32_t {                                                     \
       kDepth = DEPTH,                                                     \
@@ -451,7 +451,7 @@ BL_PIXEL_TEST(BGRA_8888, 32, 0x0000FF00u, 0x00FF0000u, 0xFF000000u, 0x000000FFu)
 BL_PIXEL_TEST(BRGA_8888, 32, 0x00FF0000u, 0x0000FF00u, 0xFF000000u, 0x000000FFu);
 #undef BL_PIXEL_TEST
 
-static void testGenericConversions() noexcept {
+static void test_generic_conversions() noexcept {
   INFO("Testing generic conversions");
   BLPixelConverterGenericTest<Test_XRGB_0555>::test();
   BLPixelConverterGenericTest<Test_XBGR_0555>::test();
@@ -477,8 +477,8 @@ static void testGenericConversions() noexcept {
 UNIT(pixel_converter, BL_TEST_GROUP_IMAGE_UTILITIES) {
   testRgb32A8Conversions();
   testRgb32Rgb24Conversions();
-  testPremultiplyConversions();
-  testGenericConversions();
+  test_premultiply_conversions();
+  test_generic_conversions();
 }
 
 } // {Tests}

@@ -23,7 +23,7 @@ public:
   size_t _size = 0;
 
 #if defined(_WIN32)
-  HANDLE _fileMappingHandle = INVALID_HANDLE_VALUE;
+  HANDLE _file_mapping_handle = INVALID_HANDLE_VALUE;
 #endif
 
   //! \name Construction & Destruction
@@ -42,9 +42,9 @@ public:
     _size = size;
 
 #if defined(_WIN32)
-    HANDLE fileMappingHandle = other._fileMappingHandle;
-    other._fileMappingHandle = INVALID_HANDLE_VALUE;
-    _fileMappingHandle = fileMappingHandle;
+    HANDLE file_mapping_handle = other._file_mapping_handle;
+    other._file_mapping_handle = INVALID_HANDLE_VALUE;
+    _file_mapping_handle = file_mapping_handle;
 #endif
   }
 
@@ -63,8 +63,8 @@ public:
     other._size = 0;
 
 #if defined(_WIN32)
-    HANDLE fileMappingHandle = other._fileMappingHandle;
-    other._fileMappingHandle = INVALID_HANDLE_VALUE;
+    HANDLE file_mapping_handle = other._file_mapping_handle;
+    other._file_mapping_handle = INVALID_HANDLE_VALUE;
 #endif
 
     unmap();
@@ -72,7 +72,7 @@ public:
     _data = data;
     _size = size;
 #if defined(_WIN32)
-    _fileMappingHandle = fileMappingHandle;
+    _file_mapping_handle = file_mapping_handle;
 #endif
 
     return *this;
@@ -85,7 +85,7 @@ public:
 
   //! Returns whether the mapping is empty (i.e. not file has been mapped).
   [[nodiscard]]
-  BL_INLINE bool empty() const noexcept { return _size == 0; }
+  BL_INLINE bool is_empty() const noexcept { return _size == 0; }
 
   //! Returns mapped data casted to `T`.
   template<typename T = void>
@@ -104,7 +104,7 @@ public:
 #if defined(_WIN32)
   //! Returns a Windows-specific HANDLE of the mapped object.
   [[nodiscard]]
-  BL_INLINE HANDLE fileMappingHandle() const noexcept { return _fileMappingHandle; }
+  BL_INLINE HANDLE file_mapping_handle() const noexcept { return _file_mapping_handle; }
 #endif
 
   //! \}

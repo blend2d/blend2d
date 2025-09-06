@@ -22,7 +22,7 @@ static constexpr uint32_t BL_FONT_GET_GLYPH_OUTLINE_BUFFER_SIZE = 2048;
 
 struct BLFontPrivateImpl : public BLFontImpl {};
 
-static BL_INLINE void blFontMatrixMultiply(BLMatrix2D* dst, const BLFontMatrix* a, const BLMatrix2D* b) noexcept {
+static BL_INLINE void bl_font_matrix_multiply(BLMatrix2D* dst, const BLFontMatrix* a, const BLMatrix2D* b) noexcept {
   dst->reset(a->m00 * b->m00 + a->m01 * b->m10,
              a->m00 * b->m01 + a->m01 * b->m11,
              a->m10 * b->m00 + a->m11 * b->m10,
@@ -31,7 +31,7 @@ static BL_INLINE void blFontMatrixMultiply(BLMatrix2D* dst, const BLFontMatrix* 
              b->m21);
 }
 
-static BL_INLINE void blFontMatrixMultiply(BLMatrix2D* dst, const BLMatrix2D* a, const BLFontMatrix* b) noexcept {
+static BL_INLINE void bl_font_matrix_multiply(BLMatrix2D* dst, const BLMatrix2D* a, const BLFontMatrix* b) noexcept {
   dst->reset(a->m00 * b->m00 + a->m01 * b->m10,
              a->m00 * b->m01 + a->m01 * b->m11,
              a->m10 * b->m00 + a->m11 * b->m10,
@@ -41,10 +41,10 @@ static BL_INLINE void blFontMatrixMultiply(BLMatrix2D* dst, const BLMatrix2D* a,
 }
 
 
-static BL_INLINE void blFontImplCtor(BLFontPrivateImpl* impl) noexcept {
-  impl->face._d = blObjectDefaults[BL_OBJECT_TYPE_FONT_FACE]._d;
-  blCallCtor(impl->featureSettings.dcast());
-  blCallCtor(impl->variationSettings.dcast());
+static BL_INLINE void bl_font_impl_ctor(BLFontPrivateImpl* impl) noexcept {
+  impl->face._d = bl_object_defaults[BL_OBJECT_TYPE_FONT_FACE]._d;
+  bl_call_ctor(impl->feature_settings.dcast());
+  bl_call_ctor(impl->variation_settings.dcast());
 }
 
 namespace bl {
@@ -53,15 +53,15 @@ namespace FontInternal {
 //! \name BLFont - Internals - Common Functionality (Impl)
 //! \{
 
-static BL_INLINE bool isImplMutable(const BLFontPrivateImpl* impl) noexcept {
-  return ObjectInternal::isImplMutable(impl);
+static BL_INLINE bool is_impl_mutable(const BLFontPrivateImpl* impl) noexcept {
+  return ObjectInternal::is_impl_mutable(impl);
 }
 
-BL_HIDDEN BLResult freeImpl(BLFontPrivateImpl* impl) noexcept;
+BL_HIDDEN BLResult free_impl(BLFontPrivateImpl* impl) noexcept;
 
 template<RCMode kRCMode>
-static BL_INLINE BLResult releaseImpl(BLFontPrivateImpl* impl) noexcept {
-  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+static BL_INLINE BLResult release_impl(BLFontPrivateImpl* impl) noexcept {
+  return ObjectInternal::deref_impl_and_test<kRCMode>(impl) ? free_impl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -69,26 +69,26 @@ static BL_INLINE BLResult releaseImpl(BLFontPrivateImpl* impl) noexcept {
 //! \name BLFont - Internals - Common Functionality (Instance)
 //! \{
 
-static BL_INLINE BLFontPrivateImpl* getImpl(const BLFontCore* self) noexcept {
+static BL_INLINE BLFontPrivateImpl* get_impl(const BLFontCore* self) noexcept {
   return static_cast<BLFontPrivateImpl*>(self->_d.impl);
 }
 
-static BL_INLINE bool isInstanceMutable(const BLFontCore* self) noexcept {
-  return ObjectInternal::isImplMutable(self->_d.impl);
+static BL_INLINE bool is_instance_mutable(const BLFontCore* self) noexcept {
+  return ObjectInternal::is_impl_mutable(self->_d.impl);
 }
 
-static BL_INLINE BLResult retainInstance(const BLFontCore* self, size_t n = 1) noexcept {
-  return ObjectInternal::retainInstance(self, n);
+static BL_INLINE BLResult retain_instance(const BLFontCore* self, size_t n = 1) noexcept {
+  return ObjectInternal::retain_instance(self, n);
 }
 
-static BL_INLINE BLResult releaseInstance(BLFontCore* self) noexcept {
-  return releaseImpl<RCMode::kMaybe>(getImpl(self));
+static BL_INLINE BLResult release_instance(BLFontCore* self) noexcept {
+  return release_impl<RCMode::kMaybe>(get_impl(self));
 }
 
-static BL_INLINE BLResult replaceInstance(BLFontCore* self, const BLFontCore* other) noexcept {
-  BLFontPrivateImpl* impl = getImpl(self);
+static BL_INLINE BLResult replace_instance(BLFontCore* self, const BLFontCore* other) noexcept {
+  BLFontPrivateImpl* impl = get_impl(self);
   self->_d = other->_d;
-  return releaseImpl<RCMode::kMaybe>(impl);
+  return release_impl<RCMode::kMaybe>(impl);
 }
 
 //! \}

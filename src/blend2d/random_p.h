@@ -32,7 +32,7 @@ static constexpr uint32_t kMantissaShift = 64 - 52;
 //! \name Inline API (Private)
 //! \{
 
-static BL_INLINE void resetSeed(BLRandom* self, uint64_t seed) noexcept {
+static BL_INLINE void reset_seed(BLRandom* self, uint64_t seed) noexcept {
   // The number is arbitrary, it means nothing.
   const uint64_t kZeroSeed = 0x1F0A2BE71D163FA0u;
 
@@ -47,7 +47,7 @@ static BL_INLINE void resetSeed(BLRandom* self, uint64_t seed) noexcept {
   }
 }
 
-static BL_INLINE uint64_t nextUInt64(BLRandom* self) noexcept {
+static BL_INLINE uint64_t next_uint64(BLRandom* self) noexcept {
   uint64_t x = self->data[0];
   uint64_t y = self->data[1];
 
@@ -62,16 +62,16 @@ static BL_INLINE uint64_t nextUInt64(BLRandom* self) noexcept {
   return x + y;
 }
 
-static BL_INLINE uint32_t nextUInt32(BLRandom* self) noexcept {
-  return uint32_t(nextUInt64(self) >> 32);
+static BL_INLINE uint32_t next_uint32(BLRandom* self) noexcept {
+  return uint32_t(next_uint64(self) >> 32);
 }
 
 #if defined(BL_TARGET_OPT_SSE2)
 
 //! High-performance SIMD implementation. Better utilizes CPU in 32-bit mode and it's a better candidate for
-//! `blRandomNextDouble()` in general on X86 as it returns a SIMD register, which is easier to convert to `double`
+//! `bl_random_next_double()` in general on X86 as it returns a SIMD register, which is easier to convert to `double`
 //! than GP.
-static BL_INLINE SIMD::Vec2xU64 nextUInt64AsI128(BLRandom* self) noexcept {
+static BL_INLINE SIMD::Vec2xU64 next_uint64AsI128(BLRandom* self) noexcept {
   using namespace SIMD;
 
   Vec2xU64 x = loada_64<Vec2xU64>(&self->data[0]);
@@ -88,20 +88,20 @@ static BL_INLINE SIMD::Vec2xU64 nextUInt64AsI128(BLRandom* self) noexcept {
   return x + y;
 }
 
-static BL_INLINE double nextDouble(BLRandom* self) noexcept {
+static BL_INLINE double next_double(BLRandom* self) noexcept {
   using namespace SIMD;
 
   Vec2xU64 kExpMsk = make128_u64(0x3FF0000000000000u);
-  Vec2xU64 u = (nextUInt64AsI128(self) >> Shift<kMantissaShift>{}) | kExpMsk;
+  Vec2xU64 u = (next_uint64AsI128(self) >> Shift<kMantissaShift>{}) | kExpMsk;
   return cast_to_f64(u) - 1.0;
 }
 
 #else
 
-static BL_INLINE double nextDouble(BLRandom* self) noexcept {
+static BL_INLINE double next_double(BLRandom* self) noexcept {
   uint64_t kExpMsk = 0x3FF0000000000000u;
-  uint64_t u = (nextUInt64(self) >> kMantissaShift) | kExpMsk;
-  return blBitCast<double>(u) - 1.0;
+  uint64_t u = (next_uint64(self) >> kMantissaShift) | kExpMsk;
+  return bl_bit_cast<double>(u) - 1.0;
 }
 
 #endif

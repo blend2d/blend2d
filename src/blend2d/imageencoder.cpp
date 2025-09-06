@@ -14,7 +14,7 @@
 namespace bl {
 namespace ImageEncoderInternal {
 
-static BLObjectEternalVirtualImpl<BLImageEncoderImpl, BLImageEncoderVirt> defaultEncoder;
+static BLObjectEternalVirtualImpl<BLImageEncoderImpl, BLImageEncoderVirt> default_encoder;
 
 } // {ImageEncoderInternal}
 } // {bl}
@@ -22,115 +22,115 @@ static BLObjectEternalVirtualImpl<BLImageEncoderImpl, BLImageEncoderVirt> defaul
 // bl::ImageEncoder - API - Init & Destroy
 // =======================================
 
-BL_API_IMPL BLResult blImageEncoderInit(BLImageEncoderCore* self) noexcept {
-  self->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_ENCODER]._d;
+BL_API_IMPL BLResult bl_image_encoder_init(BLImageEncoderCore* self) noexcept {
+  self->_d = bl_object_defaults[BL_OBJECT_TYPE_IMAGE_ENCODER]._d;
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blImageEncoderInitMove(BLImageEncoderCore* self, BLImageEncoderCore* other) noexcept {
+BL_API_IMPL BLResult bl_image_encoder_init_move(BLImageEncoderCore* self, BLImageEncoderCore* other) noexcept {
   BL_ASSERT(self != other);
-  BL_ASSERT(other->_d.isImageEncoder());
+  BL_ASSERT(other->_d.is_image_encoder());
 
   self->_d = other->_d;
-  other->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_ENCODER]._d;
+  other->_d = bl_object_defaults[BL_OBJECT_TYPE_IMAGE_ENCODER]._d;
 
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blImageEncoderInitWeak(BLImageEncoderCore* self, const BLImageEncoderCore* other) noexcept {
+BL_API_IMPL BLResult bl_image_encoder_init_weak(BLImageEncoderCore* self, const BLImageEncoderCore* other) noexcept {
   BL_ASSERT(self != other);
-  BL_ASSERT(other->_d.isImageEncoder());
+  BL_ASSERT(other->_d.is_image_encoder());
 
-  return blObjectPrivateInitWeakTagged(self, other);
+  return bl_object_private_init_weak_tagged(self, other);
 }
 
-BL_API_IMPL BLResult blImageEncoderDestroy(BLImageEncoderCore* self) noexcept {
-  BL_ASSERT(self->_d.isImageEncoder());
+BL_API_IMPL BLResult bl_image_encoder_destroy(BLImageEncoderCore* self) noexcept {
+  BL_ASSERT(self->_d.is_image_encoder());
 
-  return bl::ObjectInternal::releaseVirtualInstance(self);
+  return bl::ObjectInternal::release_virtual_instance(self);
 }
 
 // bl::ImageEncoder - API - Reset
 // ==============================
 
-BL_API_IMPL BLResult blImageEncoderReset(BLImageEncoderCore* self) noexcept {
-  BL_ASSERT(self->_d.isImageEncoder());
+BL_API_IMPL BLResult bl_image_encoder_reset(BLImageEncoderCore* self) noexcept {
+  BL_ASSERT(self->_d.is_image_encoder());
 
-  return bl::ObjectInternal::replaceVirtualInstance(self, static_cast<BLImageEncoderCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_ENCODER]));
+  return bl::ObjectInternal::replace_virtual_instance(self, static_cast<BLImageEncoderCore*>(&bl_object_defaults[BL_OBJECT_TYPE_IMAGE_ENCODER]));
 }
 
 // bl::ImageEncoder - API - Assign
 // ===============================
 
-BL_API_IMPL BLResult blImageEncoderAssignMove(BLImageEncoderCore* self, BLImageEncoderCore* other) noexcept {
-  BL_ASSERT(self->_d.isImageEncoder());
-  BL_ASSERT(other->_d.isImageEncoder());
+BL_API_IMPL BLResult bl_image_encoder_assign_move(BLImageEncoderCore* self, BLImageEncoderCore* other) noexcept {
+  BL_ASSERT(self->_d.is_image_encoder());
+  BL_ASSERT(other->_d.is_image_encoder());
 
   BLImageEncoderCore tmp = *other;
-  other->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_ENCODER]._d;
-  return bl::ObjectInternal::replaceVirtualInstance(self, &tmp);
+  other->_d = bl_object_defaults[BL_OBJECT_TYPE_IMAGE_ENCODER]._d;
+  return bl::ObjectInternal::replace_virtual_instance(self, &tmp);
 }
 
-BL_API_IMPL BLResult blImageEncoderAssignWeak(BLImageEncoderCore* self, const BLImageEncoderCore* other) noexcept {
-  BL_ASSERT(self->_d.isImageEncoder());
-  BL_ASSERT(other->_d.isImageEncoder());
+BL_API_IMPL BLResult bl_image_encoder_assign_weak(BLImageEncoderCore* self, const BLImageEncoderCore* other) noexcept {
+  BL_ASSERT(self->_d.is_image_encoder());
+  BL_ASSERT(other->_d.is_image_encoder());
 
-  return bl::ObjectInternal::assignVirtualInstance(self, other);
+  return bl::ObjectInternal::assign_virtual_instance(self, other);
 }
 
 // bl::ImageEncoder - API - Interface
 // ==================================
 
-BL_API_IMPL BLResult blImageEncoderRestart(BLImageEncoderCore* self) noexcept {
-  BL_ASSERT(self->_d.isImageEncoder());
-  BLImageEncoderImpl* selfI = self->_impl();
+BL_API_IMPL BLResult bl_image_encoder_restart(BLImageEncoderCore* self) noexcept {
+  BL_ASSERT(self->_d.is_image_encoder());
+  BLImageEncoderImpl* self_impl = self->_impl();
 
-  return selfI->virt->restart(selfI);
+  return self_impl->virt->restart(self_impl);
 }
 
-BL_API_IMPL BLResult blImageEncoderWriteFrame(BLImageEncoderCore* self, BLArrayCore* dst, const BLImageCore* src) noexcept {
-  BL_ASSERT(self->_d.isImageEncoder());
-  BLImageEncoderImpl* selfI = self->_impl();
+BL_API_IMPL BLResult bl_image_encoder_write_frame(BLImageEncoderCore* self, BLArrayCore* dst, const BLImageCore* src) noexcept {
+  BL_ASSERT(self->_d.is_image_encoder());
+  BLImageEncoderImpl* self_impl = self->_impl();
 
-  return selfI->virt->writeFrame(selfI, dst, src);
+  return self_impl->virt->write_frame(self_impl, dst, src);
 }
 
 // bl::ImageEncoder - Virtual Functions (Null)
 // ===========================================
 
-static BLResult BL_CDECL blImageEncoderImplDestroy(BLObjectImpl* impl) noexcept {
-  blUnused(impl);
+static BLResult BL_CDECL bl_image_encoder_impl_destroy(BLObjectImpl* impl) noexcept {
+  bl_unused(impl);
   return BL_SUCCESS;
 }
 
-static uint32_t BL_CDECL blImageEncoderImplRestart(BLImageEncoderImpl* impl) noexcept {
-  blUnused(impl);
+static uint32_t BL_CDECL bl_image_encoder_impl_restart(BLImageEncoderImpl* impl) noexcept {
+  bl_unused(impl);
   return BL_ERROR_INVALID_STATE;
 }
 
-static BLResult BL_CDECL blImageEncoderImplWriteFrame(BLImageEncoderImpl* impl, BLArrayCore* dst, const BLImageCore* image) noexcept {
-  blUnused(impl, dst, image);
+static BLResult BL_CDECL bl_image_encoder_impl_write_frame(BLImageEncoderImpl* impl, BLArrayCore* dst, const BLImageCore* image) noexcept {
+  bl_unused(impl, dst, image);
   return BL_ERROR_INVALID_STATE;
 }
 
 // bl::ImageEncoder - Runtime Registration
 // =======================================
 
-void blImageEncoderRtInit(BLRuntimeContext* rt) noexcept {
+void bl_image_encoder_rt_init(BLRuntimeContext* rt) noexcept {
   using namespace bl::ImageEncoderInternal;
 
-  blUnused(rt);
+  bl_unused(rt);
 
   // Initialize default BLImageEncoder.
-  defaultEncoder.virt.base.destroy = blImageEncoderImplDestroy;
-  defaultEncoder.virt.base.getProperty = blObjectImplGetProperty;
-  defaultEncoder.virt.base.setProperty = blObjectImplSetProperty;
-  defaultEncoder.virt.restart = blImageEncoderImplRestart;
-  defaultEncoder.virt.writeFrame = blImageEncoderImplWriteFrame;
-  defaultEncoder.impl->ctor(
-    &defaultEncoder.virt,
-    static_cast<BLImageCodecCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]));
-  defaultEncoder.impl->lastResult = BL_ERROR_NOT_INITIALIZED;
+  default_encoder.virt.base.destroy = bl_image_encoder_impl_destroy;
+  default_encoder.virt.base.get_property = bl_object_impl_get_property;
+  default_encoder.virt.base.set_property = bl_object_impl_set_property;
+  default_encoder.virt.restart = bl_image_encoder_impl_restart;
+  default_encoder.virt.write_frame = bl_image_encoder_impl_write_frame;
+  default_encoder.impl->ctor(
+    &default_encoder.virt,
+    static_cast<BLImageCodecCore*>(&bl_object_defaults[BL_OBJECT_TYPE_IMAGE_CODEC]));
+  default_encoder.impl->last_result = BL_ERROR_NOT_INITIALIZED;
 
-  blObjectDefaults[BL_OBJECT_TYPE_IMAGE_ENCODER]._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_ENCODER), &defaultEncoder.impl);
+  bl_object_defaults[BL_OBJECT_TYPE_IMAGE_ENCODER]._d.init_dynamic(BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_IMAGE_ENCODER), &default_encoder.impl);
 }

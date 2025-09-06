@@ -12,9 +12,9 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-BL_HIDDEN void* blZeroAllocatorAlloc(size_t size, size_t* allocatedSize) noexcept;
-BL_HIDDEN void* blZeroAllocatorResize(void* prevPtr, size_t prevSize, size_t size, size_t* allocatedSize) noexcept;
-BL_HIDDEN void  blZeroAllocatorRelease(void* ptr, size_t size) noexcept;
+BL_HIDDEN void* bl_zero_allocator_alloc(size_t size, size_t* allocated_size) noexcept;
+BL_HIDDEN void* bl_zero_allocator_resize(void* prev_ptr, size_t prev_size, size_t size, size_t* allocated_size) noexcept;
+BL_HIDDEN void  bl_zero_allocator_release(void* ptr, size_t size) noexcept;
 
 namespace bl {
 
@@ -47,7 +47,7 @@ public:
 
   BL_INLINE ~ZeroBuffer() noexcept {
     if (data)
-      blZeroAllocatorRelease(data, size);
+      bl_zero_allocator_release(data, size);
   }
 
   //! \}
@@ -56,17 +56,17 @@ public:
   //! \{
 
   [[nodiscard]]
-  BL_INLINE BLResult ensure(size_t minimumSize) noexcept {
-    if (minimumSize <= size)
+  BL_INLINE BLResult ensure(size_t minimum_size) noexcept {
+    if (minimum_size <= size)
       return BL_SUCCESS;
 
-    data = static_cast<uint8_t*>(blZeroAllocatorResize(data, size, minimumSize, &size));
-    return data ? BL_SUCCESS : blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    data = static_cast<uint8_t*>(bl_zero_allocator_resize(data, size, minimum_size, &size));
+    return data ? BL_SUCCESS : bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
   }
 
   BL_INLINE void release() noexcept {
     if (data) {
-      blZeroAllocatorRelease(data, size);
+      bl_zero_allocator_release(data, size);
       data = nullptr;
       size = 0;
     }

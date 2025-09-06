@@ -37,19 +37,19 @@ static BL_INLINE_NODEBUG T* deoffset(P* ptr, Offset offset) noexcept { return (T
 
 template<typename T, typename U>
 [[nodiscard]]
-static BL_INLINE_NODEBUG bool bothAligned(const T* ptr1, const U* ptr2, size_t alignment) noexcept {
+static BL_INLINE_NODEBUG bool both_aligned(const T* ptr1, const U* ptr2, size_t alignment) noexcept {
   return (((uintptr_t)(ptr1) | (uintptr_t)(ptr2)) % uintptr_t(alignment)) == 0;
 }
 
 template<typename T, typename U>
 [[nodiscard]]
-static BL_INLINE_NODEBUG bool haveEqualAlignment(const T* ptr1, const U* ptr2, size_t alignment) noexcept {
+static BL_INLINE_NODEBUG bool have_equal_alignment(const T* ptr1, const U* ptr2, size_t alignment) noexcept {
   return (((uintptr_t)(ptr1) ^ (uintptr_t)(ptr2)) % uintptr_t(alignment)) == 0;
 }
 
 [[nodiscard]]
-static BL_INLINE_NODEBUG size_t byteOffset(const void* base, const void* ptr) noexcept {
-  // The `byteOffset` function expects `ptr` to always be greater than base - the result must be
+static BL_INLINE_NODEBUG size_t byte_offset(const void* base, const void* ptr) noexcept {
+  // The `byte_offset` function expects `ptr` to always be greater than base - the result must be
   // zero/positive as it's represented by an unsigned type.
   BL_ASSERT(static_cast<const uint8_t*>(ptr) >= static_cast<const uint8_t*>(base));
 
@@ -57,8 +57,8 @@ static BL_INLINE_NODEBUG size_t byteOffset(const void* base, const void* ptr) no
 }
 
 [[nodiscard]]
-static BL_INLINE_NODEBUG size_t bytesUntil(const void* ptr, const void* end) noexcept {
-  // The `bytesUntil` function requires `end` to always be greater than or equal to `ptr` as it
+static BL_INLINE_NODEBUG size_t bytes_until(const void* ptr, const void* end) noexcept {
+  // The `bytes_until` function requires `end` to always be greater than or equal to `ptr` as it
   // describes the end of a buffer where data is stored or read from.
   BL_ASSERT(static_cast<const uint8_t*>(ptr) <= static_cast<const uint8_t*>(end));
 

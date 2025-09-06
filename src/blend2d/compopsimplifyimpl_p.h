@@ -39,28 +39,28 @@ struct CompOpSimplifyInfoImpl {
   // Shorthands of pixel formats.
   using Fmt = bl::FormatExt;
 
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo makeOp(CompOpExt compOp, Fmt d, Fmt s) noexcept {
-    return CompOpSimplifyInfo::make(compOp, d, s, CompOpSolidId::kNone);
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo make_op(CompOpExt comp_op, Fmt d, Fmt s) noexcept {
+    return CompOpSimplifyInfo::make(comp_op, d, s, CompOpSolidId::kNone);
   }
 
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo transparent(CompOpExt compOp, Fmt d, Fmt s) noexcept {
-    return CompOpSimplifyInfo::make(compOp, d, s, CompOpSolidId::kTransparent);
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo transparent(CompOpExt comp_op, Fmt d, Fmt s) noexcept {
+    return CompOpSimplifyInfo::make(comp_op, d, s, CompOpSolidId::kTransparent);
   }
 
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo opaqueBlack(CompOpExt compOp, Fmt d, Fmt s) noexcept {
-    return CompOpSimplifyInfo::make(compOp, d, s, CompOpSolidId::kOpaqueBlack);
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo opaque_black(CompOpExt comp_op, Fmt d, Fmt s) noexcept {
+    return CompOpSimplifyInfo::make(comp_op, d, s, CompOpSolidId::kOpaqueBlack);
   }
 
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo opaqueWhite(CompOpExt compOp, Fmt d, Fmt s) noexcept {
-    return CompOpSimplifyInfo::make(compOp, d, s, CompOpSolidId::kOpaqueWhite);
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo opaque_white(CompOpExt comp_op, Fmt d, Fmt s) noexcept {
+    return CompOpSimplifyInfo::make(comp_op, d, s, CompOpSolidId::kOpaqueWhite);
   }
 
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo opaqueAlpha(CompOpExt compOp, Fmt d, Fmt s) noexcept {
-    return CompOpSimplifyInfo::make(compOp, d, s, CompOpSolidId::kOpaqueWhite);
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo opaque_alpha(CompOpExt comp_op, Fmt d, Fmt s) noexcept {
+    return CompOpSimplifyInfo::make(comp_op, d, s, CompOpSolidId::kOpaqueWhite);
   }
 
   // Internal Formats:
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo alphaInv(Fmt d, Fmt s) noexcept {
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo alpha_inv(Fmt d, Fmt s) noexcept {
     return CompOpSimplifyInfo::make(CompOpExt::kAlphaInv, d, s, CompOpSolidId::kOpaqueWhite);
   }
 
@@ -78,10 +78,10 @@ struct CompOpSimplifyInfoImpl {
   // [Clear XRGBxXRGB] ~= [Clear XRGBxPRGB]
   static BL_INLINE_CONSTEXPR CompOpSimplifyInfo clear(Fmt d, Fmt s) noexcept {
     return d == Fmt::kPRGB32 ? transparent(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
-           d == Fmt::kXRGB32 ? opaqueBlack(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
+           d == Fmt::kXRGB32 ? opaque_black(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
            d == Fmt::kA8     ? transparent(CompOpExt::kSrcCopy, Fmt::kA8    , Fmt::kPRGB32) :
 
-           makeOp(CompOpExt::kClear, d, s);
+           make_op(CompOpExt::kClear, d, s);
   }
 
   // SrcCopy
@@ -100,20 +100,20 @@ struct CompOpSimplifyInfoImpl {
   //
   // [Src XRGBxXRGB]
   //   Dc'  = Sc                             Dc'  = Sc.m + Dc.(1 - m)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo srcCopy(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? makeOp(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? makeOp(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo src_copy(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? make_op(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? make_op(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? makeOp(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kXRGB32) :
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? makeOp(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kXRGB32) :
-           d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? makeOp(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kXRGB32) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? makeOp(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? make_op(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kXRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? make_op(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kXRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? make_op(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kXRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? make_op(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
 
            d == Fmt::kA8 && s == Fmt::kZERO32 ? clear(Fmt::kA8, Fmt::kZERO32) :
-           d == Fmt::kA8 && s == Fmt::kXRGB32 ? opaqueAlpha(CompOpExt::kSrcCopy, d, Fmt::kPRGB32) :
-           d == Fmt::kA8 && s == Fmt::kFRGB32 ? opaqueAlpha(CompOpExt::kSrcCopy, d, Fmt::kPRGB32) :
+           d == Fmt::kA8 && s == Fmt::kXRGB32 ? opaque_alpha(CompOpExt::kSrcCopy, d, Fmt::kPRGB32) :
+           d == Fmt::kA8 && s == Fmt::kFRGB32 ? opaque_alpha(CompOpExt::kSrcCopy, d, Fmt::kPRGB32) :
 
-           makeOp(CompOpExt::kSrcCopy, d, s);
+           make_op(CompOpExt::kSrcCopy, d, s);
   }
 
   // DstCopy
@@ -123,8 +123,8 @@ struct CompOpSimplifyInfoImpl {
   //   Dca' = Dca
   //   Da   = Da
   BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dstCopy(Fmt d, Fmt s) noexcept {
-    return CompOpSimplifyInfo::dstCopy();
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dst_copy(Fmt d, Fmt s) noexcept {
+    return CompOpSimplifyInfo::dst_copy();
   }
   BL_DIAGNOSTIC_POP
 
@@ -144,21 +144,21 @@ struct CompOpSimplifyInfoImpl {
   //
   // [SrcOver XRGBxXRGB] ~= [Src PRGBxPRGB]
   //   Dc'  = Sc                             Dc'  = Sc.m + Dc.(1 - m)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo srcOver(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(Fmt::kPRGB32, Fmt::kPRGB32) :
-           d == Fmt::kPRGB32 && s == Fmt::kXRGB32 ? srcCopy(Fmt::kPRGB32, Fmt::kXRGB32) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? srcCopy(Fmt::kPRGB32, Fmt::kFRGB32) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo src_over(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(Fmt::kPRGB32, Fmt::kPRGB32) :
+           d == Fmt::kPRGB32 && s == Fmt::kXRGB32 ? src_copy(Fmt::kPRGB32, Fmt::kXRGB32) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? src_copy(Fmt::kPRGB32, Fmt::kFRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? srcOver(Fmt::kPRGB32, Fmt::kPRGB32) :
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(Fmt::kPRGB32, Fmt::kPRGB32) :
-           d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? srcCopy(Fmt::kPRGB32, Fmt::kXRGB32) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? srcCopy(Fmt::kPRGB32, Fmt::kFRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? src_over(Fmt::kPRGB32, Fmt::kPRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(Fmt::kPRGB32, Fmt::kPRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? src_copy(Fmt::kPRGB32, Fmt::kXRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? src_copy(Fmt::kPRGB32, Fmt::kFRGB32) :
 
-           d == Fmt::kA8 && s == Fmt::kZERO32 ? dstCopy(Fmt::kA8, Fmt::kPRGB32) :
-           d == Fmt::kA8 && s == Fmt::kXRGB32 ? srcCopy(Fmt::kA8, Fmt::kXRGB32) :
-           d == Fmt::kA8 && s == Fmt::kFRGB32 ? srcCopy(Fmt::kA8, Fmt::kFRGB32) :
+           d == Fmt::kA8 && s == Fmt::kZERO32 ? dst_copy(Fmt::kA8, Fmt::kPRGB32) :
+           d == Fmt::kA8 && s == Fmt::kXRGB32 ? src_copy(Fmt::kA8, Fmt::kXRGB32) :
+           d == Fmt::kA8 && s == Fmt::kFRGB32 ? src_copy(Fmt::kA8, Fmt::kFRGB32) :
 
-           makeOp(CompOpExt::kSrcOver, d, s);
+           make_op(CompOpExt::kSrcOver, d, s);
   }
 
   // DstOver
@@ -177,15 +177,15 @@ struct CompOpSimplifyInfoImpl {
   //
   // [DstOver XRGBxXRGB] ~= [Dst]
   //   Dc'  = Dc
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dstOver(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(Fmt::kPRGB32, Fmt::kPRGB32) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? dstOver(Fmt::kPRGB32, Fmt::kPRGB32) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dst_over(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(Fmt::kPRGB32, Fmt::kPRGB32) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? dst_over(Fmt::kPRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kXRGB32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 ? dst_copy(d, s) :
 
-           d == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kDstOver, d, s);
+           make_op(CompOpExt::kDstOver, d, s);
   }
 
   // SrcIn
@@ -204,17 +204,17 @@ struct CompOpSimplifyInfoImpl {
   //
   // [SrcIn XRGBxXRGB] ~= [SrcCopy XRGBxXRGB]
   //   Dc'  = Sc                             Dc'  = Sc.m + Dc.(1 - m)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo srcIn(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? srcIn(Fmt::kPRGB32, Fmt::kPRGB32) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? srcIn(Fmt::kPRGB32, Fmt::kPRGB32) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo src_in(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? src_in(Fmt::kPRGB32, Fmt::kPRGB32) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? src_in(Fmt::kPRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kXRGB32 ? srcCopy(d, s) :
+           d == Fmt::kXRGB32 ? src_copy(d, s) :
 
            d == Fmt::kA8 && s == Fmt::kZERO32 ? clear(d, s) :
-           d == Fmt::kA8 && s == Fmt::kXRGB32 ? dstCopy(d, s) :
-           d == Fmt::kA8 && s == Fmt::kFRGB32 ? dstCopy(d, s) :
+           d == Fmt::kA8 && s == Fmt::kXRGB32 ? dst_copy(d, s) :
+           d == Fmt::kA8 && s == Fmt::kFRGB32 ? dst_copy(d, s) :
 
-           makeOp(CompOpExt::kSrcIn, d, s);
+           make_op(CompOpExt::kSrcIn, d, s);
   }
 
   // DstIn
@@ -233,19 +233,19 @@ struct CompOpSimplifyInfoImpl {
   //
   // [DstIn XRGBxXRGB] ~= [Dst]
   //   Dc'  = Dc
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dstIn(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? srcCopy(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kXRGB32 ? dstCopy(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? dstCopy(d, s) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dst_in(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? src_copy(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kXRGB32 ? dst_copy(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? dst_copy(d, s) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? dstIn(Fmt::kPRGB32, Fmt::kPRGB32) :
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstIn(Fmt::kPRGB32, Fmt::kFRGB32) :
-           d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? dstCopy(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? dst_in(Fmt::kPRGB32, Fmt::kPRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_in(Fmt::kPRGB32, Fmt::kFRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? dst_copy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? dst_copy(d, s) :
 
-           d == Fmt::kA8 ? srcIn(d, s) :
+           d == Fmt::kA8 ? src_in(d, s) :
 
-           makeOp(CompOpExt::kDstIn, d, s);
+           make_op(CompOpExt::kDstIn, d, s);
   }
 
   // SrcOut
@@ -264,17 +264,17 @@ struct CompOpSimplifyInfoImpl {
   //
   // [SrcOut XRGBxXRGB] ~= [Clear XRGBxPRGB]
   //   Dc'  = 0                              Dc'  = Dc.(1 - m)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo srcOut(Fmt d, Fmt s) noexcept {
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo src_out(Fmt d, Fmt s) noexcept {
     return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? clear(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? srcOut(Fmt::kPRGB32, Fmt::kPRGB32) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? src_out(Fmt::kPRGB32, Fmt::kPRGB32) :
 
            d == Fmt::kXRGB32 ? clear(d, s) :
 
            d == Fmt::kA8 && s == Fmt::kZERO32 ? clear(d, s) :
-           d == Fmt::kA8 && s == Fmt::kXRGB32 ? alphaInv(d, Fmt::kXRGB32) :
-           d == Fmt::kA8 && s == Fmt::kFRGB32 ? alphaInv(d, Fmt::kXRGB32) :
+           d == Fmt::kA8 && s == Fmt::kXRGB32 ? alpha_inv(d, Fmt::kXRGB32) :
+           d == Fmt::kA8 && s == Fmt::kFRGB32 ? alpha_inv(d, Fmt::kXRGB32) :
 
-           makeOp(CompOpExt::kSrcOut, d, s);
+           make_op(CompOpExt::kSrcOut, d, s);
   }
 
   // DstOut
@@ -293,20 +293,20 @@ struct CompOpSimplifyInfoImpl {
   //
   // [DstOut XRGBxXRGB] ~= [Clear XRGBxPRGB]
   //   Dc'  = 0
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dstOut(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dst_out(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kPRGB32 && s == Fmt::kXRGB32 ? clear(d, s) :
            d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? clear(d, s) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? clear(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? clear(d, s) :
 
-           d == Fmt::kA8 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kA8 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kA8 && s == Fmt::kXRGB32 ? clear(d, s) :
            d == Fmt::kA8 && s == Fmt::kFRGB32 ? clear(d, s) :
 
-           makeOp(CompOpExt::kDstOut, d, s);
+           make_op(CompOpExt::kDstOut, d, s);
   }
 
   // SrcAtop
@@ -325,19 +325,19 @@ struct CompOpSimplifyInfoImpl {
   //
   // [SrcAtop XRGBxXRGB] ~= [Src PRGBxPRGB]
   //   Dc'  = Sc                             Dc'  = Sc.m + Dc.(1 - m)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo srcAtop(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kXRGB32 ? srcIn(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? srcIn(d, s) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo src_atop(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kXRGB32 ? src_in(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? src_in(d, s) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? srcOver(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? srcOver(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? srcCopy(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? srcCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? src_over(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? src_over(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? src_copy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? src_copy(d, s) :
 
-           d == Fmt::kA8 ? dstCopy(d, s) :
+           d == Fmt::kA8 ? dst_copy(d, s) :
 
-           makeOp(CompOpExt::kSrcAtop, d, s);
+           make_op(CompOpExt::kSrcAtop, d, s);
   }
 
   // DstAtop
@@ -356,19 +356,19 @@ struct CompOpSimplifyInfoImpl {
   //
   // [DstAtop XRGBxXRGB] ~= [Dst]
   //   Dc'  = Dc
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dstAtop(Fmt d, Fmt s) noexcept {
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dst_atop(Fmt d, Fmt s) noexcept {
     return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? clear(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kXRGB32 ? dstOver(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? dstOver(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kXRGB32 ? dst_over(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? dst_over(d, s) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? dstIn(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? dst_in(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? clear(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? dstCopy(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? dst_copy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? dst_copy(d, s) :
 
-           d == Fmt::kA8 ? srcCopy(d, s) :
+           d == Fmt::kA8 ? src_copy(d, s) :
 
-           makeOp(CompOpExt::kDstAtop, d, s);
+           make_op(CompOpExt::kDstAtop, d, s);
   }
 
   // Xor
@@ -388,20 +388,20 @@ struct CompOpSimplifyInfoImpl {
   // [Xor XRGBxXRGB] ~= [Clear XRGBxPRGB]
   //   Dc'  = 0                              Dc'  = Dc.(1 - m)
   static BL_INLINE_CONSTEXPR CompOpSimplifyInfo xor_(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kXRGB32 ? srcOut(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? srcOut(d, s) :
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kXRGB32 ? src_out(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? src_out(d, s) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? dstOut(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? dst_out(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? clear(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? clear(d, s) :
 
-           d == Fmt::kA8 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kA8 && s == Fmt::kXRGB32 ? alphaInv(d, Fmt::kXRGB32) :
-           d == Fmt::kA8 && s == Fmt::kFRGB32 ? alphaInv(d, Fmt::kXRGB32) :
+           d == Fmt::kA8 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kA8 && s == Fmt::kXRGB32 ? alpha_inv(d, Fmt::kXRGB32) :
+           d == Fmt::kA8 && s == Fmt::kFRGB32 ? alpha_inv(d, Fmt::kXRGB32) :
 
-           makeOp(CompOpExt::kXor, d, s);
+           make_op(CompOpExt::kXor, d, s);
   }
 
   // Plus
@@ -421,19 +421,19 @@ struct CompOpSimplifyInfoImpl {
   // [Plus XRGBxXRGB] ~= [Plus PRGBxPRGB]
   //   Dc'  = Clamp(Dc + Sc)                 Dc'  = Clamp(Dc + Sc.m)
   static BL_INLINE_CONSTEXPR CompOpSimplifyInfo plus(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? plus(Fmt::kPRGB32, Fmt::kPRGB32) :
 
            d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? plus(Fmt::kPRGB32, Fmt::kPRGB32) :
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? plus(Fmt::kPRGB32, Fmt::kPRGB32) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? plus(Fmt::kPRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kA8 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kA8 && s == Fmt::kXRGB32 ? opaqueAlpha(CompOpExt::kPlus, d, Fmt::kPRGB32) :
-           d == Fmt::kA8 && s == Fmt::kFRGB32 ? opaqueAlpha(CompOpExt::kPlus, d, Fmt::kPRGB32) :
+           d == Fmt::kA8 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kA8 && s == Fmt::kXRGB32 ? opaque_alpha(CompOpExt::kPlus, d, Fmt::kPRGB32) :
+           d == Fmt::kA8 && s == Fmt::kFRGB32 ? opaque_alpha(CompOpExt::kPlus, d, Fmt::kPRGB32) :
 
-           makeOp(CompOpExt::kPlus, d, s);
+           make_op(CompOpExt::kPlus, d, s);
   }
 
   // Minus
@@ -456,17 +456,17 @@ struct CompOpSimplifyInfoImpl {
   // NOTE:
   //   `Clamp(a - b)` == `Max(a - b, 0)` == `1 - Min(1 - a + b, 1)`
   static BL_INLINE_CONSTEXPR CompOpSimplifyInfo minus(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? minus(Fmt::kPRGB32, Fmt::kPRGB32) :
 
            d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? minus(Fmt::kPRGB32, Fmt::kPRGB32) :
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? minus(Fmt::kPRGB32, Fmt::kPRGB32) :
            d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? minus(Fmt::kPRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kMinus, d, s);
+           make_op(CompOpExt::kMinus, d, s);
   }
 
   // Modulate
@@ -497,13 +497,13 @@ struct CompOpSimplifyInfoImpl {
     return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? transparent(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
            d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? modulate(Fmt::kPRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? opaqueBlack(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? opaque_black(CompOpExt::kSrcCopy, Fmt::kPRGB32, Fmt::kPRGB32) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? modulate(Fmt::kXRGB32, Fmt::kPRGB32) :
            d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? modulate(Fmt::kXRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kA8 || s == Fmt::kA8 ? dstIn(d, s) :
+           d == Fmt::kA8 || s == Fmt::kA8 ? dst_in(d, s) :
 
-           makeOp(CompOpExt::kModulate, d, s);
+           make_op(CompOpExt::kModulate, d, s);
   }
 
   // Multiply
@@ -531,16 +531,16 @@ struct CompOpSimplifyInfoImpl {
   //   Dc'  = Dc.Sc
   //   Dc'  = Dc.(Sc.m + 1 - m)
   static BL_INLINE_CONSTEXPR CompOpSimplifyInfo multiply(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? multiply(Fmt::kPRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? modulate(Fmt::kXRGB32, Fmt::kXRGB32) :
            d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? modulate(Fmt::kXRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 || s == Fmt::kA8 ? dstOver(d, s) :
+           d == Fmt::kA8 || s == Fmt::kA8 ? dst_over(d, s) :
 
-           makeOp(CompOpExt::kMultiply, d, s);
+           make_op(CompOpExt::kMultiply, d, s);
   }
 
   // Screen
@@ -569,17 +569,17 @@ struct CompOpSimplifyInfoImpl {
   //   Dc'  = Dc + Sc.m.(1 - Dc)
 
   static BL_INLINE_CONSTEXPR CompOpSimplifyInfo screen(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? screen(Fmt::kPRGB32, Fmt::kPRGB32) :
 
            d == Fmt::kXRGB32 && s == Fmt::kPRGB32 ? screen(Fmt::kPRGB32, Fmt::kPRGB32) :
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? screen(Fmt::kPRGB32, Fmt::kPRGB32) :
            d == Fmt::kXRGB32 && s == Fmt::kXRGB32 ? screen(Fmt::kPRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 || s == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 || s == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kScreen, d, s);
+           make_op(CompOpExt::kScreen, d, s);
   }
 
   // Overlay
@@ -613,15 +613,15 @@ struct CompOpSimplifyInfoImpl {
   //   else
   //     Dc'  = 2.(Dc + Sc) - 2.Sc.Dc - 1
   static BL_INLINE_CONSTEXPR CompOpSimplifyInfo overlay(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? overlay(Fmt::kPRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? overlay(Fmt::kXRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kOverlay, d, s);
+           make_op(CompOpExt::kOverlay, d, s);
   }
 
   // Darken
@@ -653,15 +653,15 @@ struct CompOpSimplifyInfoImpl {
   //   Dc'  = min(Sc, Dc)
   //   Dc'  = min(Sc, Dc).m + Dc.(1 - m)
   static BL_INLINE_CONSTEXPR CompOpSimplifyInfo darken(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? darken(Fmt::kPRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? darken(Fmt::kXRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 || s == Fmt::kA8 ? dstOver(d, s) :
+           d == Fmt::kA8 || s == Fmt::kA8 ? dst_over(d, s) :
 
-           makeOp(CompOpExt::kDarken, d, s);
+           make_op(CompOpExt::kDarken, d, s);
   }
 
   // Lighten
@@ -693,15 +693,15 @@ struct CompOpSimplifyInfoImpl {
   //   Dc'  = max(Sc, Dc)
   //   Dc'  = max(Sc, Dc).m + Dc.(1 - m)
   static BL_INLINE_CONSTEXPR CompOpSimplifyInfo lighten(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? lighten(Fmt::kPRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? lighten(Fmt::kXRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 || s == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 || s == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kLighten, d, s);
+           make_op(CompOpExt::kLighten, d, s);
   }
 
   // ColorDodge
@@ -728,16 +728,16 @@ struct CompOpSimplifyInfoImpl {
   // [ColorDodge XRGBxXRGB]
   //   Dc'  = min(Dc / max(1 - Sc, 0.001), 1)
   //   Dc'  = min(Dc / max(1 - Sc, 0.001), 1).m + Dc.(1 - m)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo colorDodge(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? colorDodge(Fmt::kPRGB32, Fmt::kPRGB32) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo color_dodge(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? color_dodge(Fmt::kPRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? colorDodge(Fmt::kXRGB32, Fmt::kXRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? color_dodge(Fmt::kXRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 || s == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 || s == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kColorDodge, d, s);
+           make_op(CompOpExt::kColorDodge, d, s);
   }
 
   // ColorBurn
@@ -764,16 +764,16 @@ struct CompOpSimplifyInfoImpl {
   // [ColorBurn XRGBxXRGB]
   //   Dc'  = (1 - min(1, (1 - Dc) / max(Sc, 0.001)))
   //   Dc'  = (1 - min(1, (1 - Dc) / max(Sc, 0.001))).m + Dc.(1 - m)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo colorBurn(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? colorBurn(Fmt::kPRGB32, Fmt::kXRGB32) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo color_burn(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? color_burn(Fmt::kPRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? colorBurn(Fmt::kXRGB32, Fmt::kXRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? color_burn(Fmt::kXRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 || s == Fmt::kA8 ? dstOver(d, s) :
+           d == Fmt::kA8 || s == Fmt::kA8 ? dst_over(d, s) :
 
-           makeOp(CompOpExt::kColorBurn, d, s);
+           make_op(CompOpExt::kColorBurn, d, s);
   }
 
   // LinearBurn
@@ -800,16 +800,16 @@ struct CompOpSimplifyInfoImpl {
   // [LinearBurn XRGBxXRGB]
   //   Dc'  = Clamp(Dc + Sc - 1)
   //   Dc'  = Clamp(Dc + Sc - 1).m + Dc.(1 - m)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo linearBurn(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? linearBurn(Fmt::kPRGB32, Fmt::kXRGB32) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo linear_burn(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? linear_burn(Fmt::kPRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? linearBurn(Fmt::kXRGB32, Fmt::kXRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? linear_burn(Fmt::kXRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 || s == Fmt::kA8 ? dstOver(d, s) :
+           d == Fmt::kA8 || s == Fmt::kA8 ? dst_over(d, s) :
 
-           makeOp(CompOpExt::kLinearBurn, d, s);
+           make_op(CompOpExt::kLinearBurn, d, s);
   }
 
   // LinearLight
@@ -836,16 +836,16 @@ struct CompOpSimplifyInfoImpl {
   // [LinearLight XRGBxXRGB]
   //   Dc'  = min(max((Dc + 2.Sc - 1), 0), 1)
   //   Dc'  = min(max((Dc + 2.Sc - 1), 0), 1).m + Dca.(1 - m)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo linearLight(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? linearLight(Fmt::kPRGB32, Fmt::kXRGB32) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo linear_light(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? linear_light(Fmt::kPRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? linearLight(Fmt::kXRGB32, Fmt::kXRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? linear_light(Fmt::kXRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 || s == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 || s == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kLinearLight, d, s);
+           make_op(CompOpExt::kLinearLight, d, s);
   }
 
   // PinLight
@@ -902,16 +902,16 @@ struct CompOpSimplifyInfoImpl {
   //     Dc'  = min(Dc, 2.Sc).m + Dca.(1 - m)
   //   else
   //     Dc'  = max(Dc, 2.Sc - 1).m + Dca.(1 - m)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo pinLight(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? pinLight(Fmt::kPRGB32, Fmt::kXRGB32) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo pin_light(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? pin_light(Fmt::kPRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? pinLight(Fmt::kXRGB32, Fmt::kXRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? pin_light(Fmt::kXRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 || s == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 || s == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kPinLight, d, s);
+           make_op(CompOpExt::kPinLight, d, s);
   }
 
   // HardLight
@@ -968,16 +968,16 @@ struct CompOpSimplifyInfoImpl {
   //     Dc'  = 2.Sc.Dc.m + Dc.(1 - m)
   //   else
   //     Dc'  = (1 - 2.(1 - Dc).(1 - Sc)).m - Dc.(1 - m)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo hardLight(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? hardLight(Fmt::kPRGB32, Fmt::kXRGB32) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo hard_light(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? hard_light(Fmt::kPRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? hardLight(Fmt::kXRGB32, Fmt::kXRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? hard_light(Fmt::kXRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 || s == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 || s == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kHardLight, d, s);
+           make_op(CompOpExt::kHardLight, d, s);
   }
 
   // SoftLight
@@ -1002,16 +1002,16 @@ struct CompOpSimplifyInfoImpl {
   //     Dc' = Dc + (2.Sc - 1).[[ 4.Dc.(4.Dc.Dc + Dc - 4.Dc + 1) - Dc]]
   //   else
   //     Dc' = Dc + (2.Sc - 1).[[             sqrt(Dc) - Dc          ]]
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo softLight(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? softLight(Fmt::kPRGB32, Fmt::kXRGB32) :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo soft_light(Fmt d, Fmt s) noexcept {
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? soft_light(Fmt::kPRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
-           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? softLight(Fmt::kXRGB32, Fmt::kXRGB32) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? soft_light(Fmt::kXRGB32, Fmt::kXRGB32) :
 
-           d == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kSoftLight, d, s);
+           make_op(CompOpExt::kSoftLight, d, s);
   }
 
   // Difference
@@ -1039,15 +1039,15 @@ struct CompOpSimplifyInfoImpl {
   //   Dc'  = Dc + Sc   - 2.min(Sc  , Dc  )
   //   Dc'  = Dc + Sc.m - 2.min(Sc.m, Dc.m)
   static BL_INLINE_CONSTEXPR CompOpSimplifyInfo difference(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? difference(Fmt::kPRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? difference(Fmt::kXRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kDifference, d, s);
+           make_op(CompOpExt::kDifference, d, s);
   }
 
   // Exclusion
@@ -1075,64 +1075,64 @@ struct CompOpSimplifyInfoImpl {
   //   Dc'  = Dc + Sc  .(1 - 2.Dc)
   //   Dc'  = Dc + Sc.m.(1 - 2.Dc)
   static BL_INLINE_CONSTEXPR CompOpSimplifyInfo exclusion(Fmt d, Fmt s) noexcept {
-    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+    return d == Fmt::kPRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kPRGB32 && s == Fmt::kFRGB32 ? exclusion(Fmt::kPRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dstCopy(d, s) :
+           d == Fmt::kXRGB32 && s == Fmt::kZERO32 ? dst_copy(d, s) :
            d == Fmt::kXRGB32 && s == Fmt::kFRGB32 ? exclusion(Fmt::kXRGB32, Fmt::kPRGB32) :
 
-           d == Fmt::kA8 ? srcOver(d, s) :
+           d == Fmt::kA8 ? src_over(d, s) :
 
-           makeOp(CompOpExt::kExclusion, d, s);
+           make_op(CompOpExt::kExclusion, d, s);
   }
 
   // HACK: MSVC has a problem with code that does multiple ternary operations (? :)
   //       so we had to split it so Blend2D can compile. So please don't be active
   //       here and don't try to join these functions as you would break MSVC builds.
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo simplify_1(CompOpExt compOp, Fmt d, Fmt s) noexcept {
-    return compOp == CompOpExt::kSrcCopy     ? srcCopy(d, s)     :
-           compOp == CompOpExt::kSrcOver     ? srcOver(d, s)     :
-           compOp == CompOpExt::kSrcIn       ? srcIn(d, s)       :
-           compOp == CompOpExt::kSrcOut      ? srcOut(d, s)      :
-           compOp == CompOpExt::kSrcAtop     ? srcAtop(d, s)     :
-           compOp == CompOpExt::kDstCopy     ? dstCopy(d, s)     :
-           compOp == CompOpExt::kDstOver     ? dstOver(d, s)     :
-           compOp == CompOpExt::kDstIn       ? dstIn(d, s)       :
-           compOp == CompOpExt::kDstOut      ? dstOut(d, s)      :
-           compOp == CompOpExt::kDstAtop     ? dstAtop(d, s)     : dstCopy(d, s);
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo simplify_1(CompOpExt comp_op, Fmt d, Fmt s) noexcept {
+    return comp_op == CompOpExt::kSrcCopy     ? src_copy(d, s)     :
+           comp_op == CompOpExt::kSrcOver     ? src_over(d, s)     :
+           comp_op == CompOpExt::kSrcIn       ? src_in(d, s)       :
+           comp_op == CompOpExt::kSrcOut      ? src_out(d, s)      :
+           comp_op == CompOpExt::kSrcAtop     ? src_atop(d, s)     :
+           comp_op == CompOpExt::kDstCopy     ? dst_copy(d, s)     :
+           comp_op == CompOpExt::kDstOver     ? dst_over(d, s)     :
+           comp_op == CompOpExt::kDstIn       ? dst_in(d, s)       :
+           comp_op == CompOpExt::kDstOut      ? dst_out(d, s)      :
+           comp_op == CompOpExt::kDstAtop     ? dst_atop(d, s)     : dst_copy(d, s);
   }
 
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo simplify_2(CompOpExt compOp, Fmt d, Fmt s) noexcept {
-    return compOp == CompOpExt::kXor         ? xor_(d, s)        :
-           compOp == CompOpExt::kClear       ? clear(d, s)       :
-           compOp == CompOpExt::kPlus        ? plus(d, s)        :
-           compOp == CompOpExt::kMinus       ? minus(d, s)       :
-           compOp == CompOpExt::kModulate    ? modulate(d, s)    :
-           compOp == CompOpExt::kMultiply    ? multiply(d, s)    :
-           compOp == CompOpExt::kScreen      ? screen(d, s)      :
-           compOp == CompOpExt::kOverlay     ? overlay(d, s)     :
-           compOp == CompOpExt::kDarken      ? darken(d, s)      :
-           compOp == CompOpExt::kLighten     ? lighten(d, s)     : simplify_1(compOp, d, s);
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo simplify_2(CompOpExt comp_op, Fmt d, Fmt s) noexcept {
+    return comp_op == CompOpExt::kXor         ? xor_(d, s)        :
+           comp_op == CompOpExt::kClear       ? clear(d, s)       :
+           comp_op == CompOpExt::kPlus        ? plus(d, s)        :
+           comp_op == CompOpExt::kMinus       ? minus(d, s)       :
+           comp_op == CompOpExt::kModulate    ? modulate(d, s)    :
+           comp_op == CompOpExt::kMultiply    ? multiply(d, s)    :
+           comp_op == CompOpExt::kScreen      ? screen(d, s)      :
+           comp_op == CompOpExt::kOverlay     ? overlay(d, s)     :
+           comp_op == CompOpExt::kDarken      ? darken(d, s)      :
+           comp_op == CompOpExt::kLighten     ? lighten(d, s)     : simplify_1(comp_op, d, s);
   }
 
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo simplify_3(CompOpExt compOp, Fmt d, Fmt s) noexcept {
-    return compOp == CompOpExt::kColorDodge  ? colorDodge(d, s)  :
-           compOp == CompOpExt::kColorBurn   ? colorBurn(d, s)   :
-           compOp == CompOpExt::kLinearBurn  ? linearBurn(d, s)  :
-           compOp == CompOpExt::kLinearLight ? linearLight(d, s) :
-           compOp == CompOpExt::kPinLight    ? pinLight(d, s)    :
-           compOp == CompOpExt::kHardLight   ? hardLight(d, s)   :
-           compOp == CompOpExt::kSoftLight   ? softLight(d, s)   :
-           compOp == CompOpExt::kDifference  ? difference(d, s)  :
-           compOp == CompOpExt::kExclusion   ? exclusion(d, s)   :
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo simplify_3(CompOpExt comp_op, Fmt d, Fmt s) noexcept {
+    return comp_op == CompOpExt::kColorDodge  ? color_dodge(d, s)  :
+           comp_op == CompOpExt::kColorBurn   ? color_burn(d, s)   :
+           comp_op == CompOpExt::kLinearBurn  ? linear_burn(d, s)  :
+           comp_op == CompOpExt::kLinearLight ? linear_light(d, s) :
+           comp_op == CompOpExt::kPinLight    ? pin_light(d, s)    :
+           comp_op == CompOpExt::kHardLight   ? hard_light(d, s)   :
+           comp_op == CompOpExt::kSoftLight   ? soft_light(d, s)   :
+           comp_op == CompOpExt::kDifference  ? difference(d, s)  :
+           comp_op == CompOpExt::kExclusion   ? exclusion(d, s)   :
 
            // Extended operators, only used to simplify others.
-           compOp == CompOpExt::kAlphaInv    ? alphaInv(d, s)    : simplify_2(compOp, d, s);
+           comp_op == CompOpExt::kAlphaInv    ? alpha_inv(d, s)    : simplify_2(comp_op, d, s);
   }
 
   // Just dispatches to the respective composition operator.
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo simplify(CompOpExt compOp, Fmt d, Fmt s) noexcept {
-    return simplify_3(compOp, d, s);
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo simplify(CompOpExt comp_op, Fmt d, Fmt s) noexcept {
+    return simplify_3(comp_op, d, s);
   }
 };
 

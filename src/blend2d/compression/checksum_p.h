@@ -20,8 +20,8 @@ struct FunctionTable {
   Crc32Func crc32;
 };
 
-BL_HIDDEN extern FunctionTable functionTable;
-BL_HIDDEN extern const uint32_t crc32Table[];
+BL_HIDDEN extern FunctionTable function_table;
+BL_HIDDEN extern const uint32_t crc32_table[];
 
 // Initial value used by CRC32 checksum.
 static constexpr uint32_t kCrc32Initial = 0xFFFFFFFFu;
@@ -38,30 +38,30 @@ static constexpr uint32_t kAdler32Divisor = 65521u;
 static constexpr uint32_t kAdler32MaxBytesPerChunk = 5552u;
 
 namespace {
-static BL_INLINE uint32_t crc32UpdateByte(uint32_t checksum, uint8_t b) noexcept { return (checksum >> 8) ^ crc32Table[(checksum ^ b) & 0xFFu]; }
-static BL_INLINE uint32_t crc32Finalize(uint32_t checksum) noexcept { return ~checksum; }
+static BL_INLINE uint32_t crc32_update_byte(uint32_t checksum, uint8_t b) noexcept { return (checksum >> 8) ^ crc32_table[(checksum ^ b) & 0xFFu]; }
+static BL_INLINE uint32_t crc32_finalize(uint32_t checksum) noexcept { return ~checksum; }
 } // {anonymous}
 
 BL_HIDDEN uint32_t BL_CDECL crc32(const uint8_t* data, size_t size) noexcept;
-BL_HIDDEN uint32_t BL_CDECL crc32Update_Ref(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
+BL_HIDDEN uint32_t BL_CDECL crc32_update_ref(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
 
 #if defined(BL_BUILD_OPT_SSE4_2)
-BL_HIDDEN uint32_t BL_CDECL crc32Update_SSE4_2(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
+BL_HIDDEN uint32_t BL_CDECL crc32_update_sse4_2(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
 #endif // BL_BUILD_OPT_SSE4_2
 
 #if defined(BL_BUILD_OPT_ASIMD_CRYPTO)
-BL_HIDDEN uint32_t BL_CDECL crc32Update_ASIMD(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
+BL_HIDDEN uint32_t BL_CDECL crc32_update_asimd(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
 #endif // BL_BUILD_OPT_ASIMD_CRYPTO
 
 BL_HIDDEN uint32_t BL_CDECL adler32(const uint8_t* data, size_t size) noexcept;
-BL_HIDDEN uint32_t BL_CDECL adler32Update_Ref(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
+BL_HIDDEN uint32_t BL_CDECL adler32_update_ref(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
 
 #if defined(BL_BUILD_OPT_SSE2)
-BL_HIDDEN uint32_t BL_CDECL adler32Update_SSE2(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
+BL_HIDDEN uint32_t BL_CDECL adler32_update_sse2(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
 #endif // BL_TARGET_OPT_SSE2
 
 #if defined(BL_BUILD_OPT_ASIMD)
-BL_HIDDEN uint32_t BL_CDECL adler32Update_ASIMD(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
+BL_HIDDEN uint32_t BL_CDECL adler32_update_asimd(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
 #endif // BL_TARGET_OPT_ASIMD
 
 } // {bl::Compression::Checksum}

@@ -27,24 +27,24 @@ public:
   public:
     BL_NONCOPYABLE(FamiliesMapNode)
 
-    BLString familyName;
+    BLString family_name;
     BLArray<BLFontFace> faces;
 
-    BL_INLINE FamiliesMapNode(uint32_t hashCode, const BLString& familyName) noexcept
-      : bl::ArenaHashMapNode(hashCode),
-        familyName(familyName),
+    BL_INLINE FamiliesMapNode(uint32_t hash_code, const BLString& family_name) noexcept
+      : bl::ArenaHashMapNode(hash_code),
+        family_name(family_name),
         faces() {}
     BL_INLINE ~FamiliesMapNode() noexcept {}
 
-    BL_INLINE FamiliesMapNode* next() const noexcept { return static_cast<FamiliesMapNode*>(_hashNext); }
+    BL_INLINE FamiliesMapNode* next() const noexcept { return static_cast<FamiliesMapNode*>(_hash_next); }
   };
 
   struct FamilyMatcher {
     BLStringView _family;
-    uint32_t _hashCode;
+    uint32_t _hash_code;
 
-    BL_INLINE uint32_t hashCode() const noexcept { return _hashCode; }
-    BL_INLINE bool matches(const FamiliesMapNode* node) const noexcept { return node->familyName.equals(_family); }
+    BL_INLINE uint32_t hash_code() const noexcept { return _hash_code; }
+    BL_INLINE bool matches(const FamiliesMapNode* node) const noexcept { return node->family_name.equals(_family); }
   };
 
   class SubstitutionMapNode : public bl::ArenaHashMapNode {
@@ -54,26 +54,26 @@ public:
     BLString from;
     BLString to;
 
-    BL_INLINE SubstitutionMapNode(uint32_t hashCode, const BLString& from, const BLString& to) noexcept
-      : bl::ArenaHashMapNode(hashCode),
+    BL_INLINE SubstitutionMapNode(uint32_t hash_code, const BLString& from, const BLString& to) noexcept
+      : bl::ArenaHashMapNode(hash_code),
         from(from),
         to(to) {}
     BL_INLINE ~SubstitutionMapNode() noexcept {}
 
-    BL_INLINE SubstitutionMapNode* next() const noexcept { return static_cast<SubstitutionMapNode*>(_hashNext); }
+    BL_INLINE SubstitutionMapNode* next() const noexcept { return static_cast<SubstitutionMapNode*>(_hash_next); }
   };
 
   BLSharedMutex mutex;
   bl::ArenaAllocator allocator;
-  bl::ArenaHashMap<FamiliesMapNode> familiesMap;
-  bl::ArenaHashMap<SubstitutionMapNode> substitutionMap;
-  size_t faceCount = 0;
+  bl::ArenaHashMap<FamiliesMapNode> families_map;
+  bl::ArenaHashMap<SubstitutionMapNode> substitution_map;
+  size_t face_count = 0;
 
   BL_INLINE BLFontManagerPrivateImpl(const BLFontManagerVirt* virt_) noexcept
     : mutex(),
       allocator(8192),
-      familiesMap(&allocator),
-      substitutionMap(&allocator) { virt = virt_; }
+      families_map(&allocator),
+      substitution_map(&allocator) { virt = virt_; }
 
   BL_INLINE ~BLFontManagerPrivateImpl() noexcept {}
 };
@@ -81,7 +81,7 @@ public:
 namespace bl {
 namespace FontManagerInternal {
 
-static BL_INLINE BLFontManagerPrivateImpl* getImpl(const BLFontManagerCore* self) noexcept {
+static BL_INLINE BLFontManagerPrivateImpl* get_impl(const BLFontManagerCore* self) noexcept {
   return static_cast<BLFontManagerPrivateImpl*>(self->_d.impl);
 }
 

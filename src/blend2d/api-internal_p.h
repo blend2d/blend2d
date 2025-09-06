@@ -26,7 +26,7 @@
 // ===========
 
 // We are just fine with <math.h>, however, there are some useful overloads in C++'s <cmath> that are nicer to use
-// than those in <math.h>. Mostly low-level functionality like Math::isFinite() relies on <cmath> instead of <math.h>.
+// than those in <math.h>. Mostly low-level functionality like Math::is_finite() relies on <cmath> instead of <math.h>.
 #include <cmath>
 #include <limits>
 #include <type_traits>
@@ -356,7 +356,7 @@
 //!
 //! Run-time assertion used in code that should never be reached.
 #ifdef BL_BUILD_DEBUG
-  #define BL_NOT_REACHED() blRuntimeAssertionFailure(__FILE__, __LINE__, "BL_NOT_REACHED()")
+  #define BL_NOT_REACHED() bl_runtime_assertion_failure(__FILE__, __LINE__, "BL_NOT_REACHED()")
 #elif defined(__GNUC__)
   #define BL_NOT_REACHED() __builtin_unreachable()
 #else
@@ -376,19 +376,19 @@
 
 #define BL_PROPAGATE_(exp, cleanup)                                           \
   do {                                                                        \
-    BLResult _resultToPropagate = (exp);                                      \
-    if (BL_UNLIKELY(_resultToPropagate != BL_SUCCESS)) {                      \
+    BLResult _result_to_propagate = (exp);                                      \
+    if (BL_UNLIKELY(_result_to_propagate != BL_SUCCESS)) {                      \
       cleanup                                                                 \
-      return _resultToPropagate;                                              \
+      return _result_to_propagate;                                              \
     }                                                                         \
   } while (0)
 
 //! Like BL_PROPAGATE, but propagates everything except `BL_RESULT_NOTHING`.
 #define BL_PROPAGATE_IF_NOT_NOTHING(...)                                      \
   do {                                                                        \
-    BLResult resultToPropagate = (__VA_ARGS__);                               \
-    if (resultToPropagate != BL_RESULT_NOTHING) {                             \
-      return resultToPropagate;                                               \
+    BLResult result_to_propagate = (__VA_ARGS__);                               \
+    if (result_to_propagate != BL_RESULT_NOTHING) {                             \
+      return result_to_propagate;                                               \
     }                                                                         \
   } while (0)
 
@@ -448,8 +448,8 @@ struct C {                                                                      
                                                                                         \
   BL_INLINE_CONSTEXPR T value() const noexcept { return _v; }                           \
                                                                                         \
-  BL_INLINE_CONSTEXPR T* valuePtr() noexcept { return &_v; }                            \
-  BL_INLINE_CONSTEXPR const T* valuePtr() const noexcept { return &_v; }                \
+  BL_INLINE_CONSTEXPR T* value_ptr() noexcept { return &_v; }                            \
+  BL_INLINE_CONSTEXPR const T* value_ptr() const noexcept { return &_v; }                \
                                                                                         \
   BL_INLINE_CONSTEXPR C& operator=(T x) noexcept { _v = x; return *this; };             \
   BL_INLINE_CONSTEXPR C& operator=(const C& x) noexcept { _v = x._v; return *this; }    \
@@ -495,14 +495,14 @@ struct C {                                                                      
 #define BL_RETURN_ERROR_IF_NULL(ptr)               \
   do {                                             \
     if (!(ptr))                                    \
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY); \
+      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY); \
   } while (0)
 
 #define BL_RETURN_ERROR_IF_NULL_(ptr, ...)         \
   do {                                             \
     if (!(ptr)) {                                  \
       __VA_ARGS__                                  \
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY); \
+      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY); \
     }                                              \
   } while (0)
 
@@ -522,9 +522,9 @@ static constexpr BLModifyOp BL_MODIFY_OP_APPEND_START = BLModifyOp(2);
 //! Mask that can be used to check whether `BLModifyOp` has a grow hint.
 static constexpr BLModifyOp BL_MODIFY_OP_GROW_MASK = BLModifyOp(1);
 
-static BL_INLINE_CONSTEXPR bool blModifyOpIsAssign(BLModifyOp modifyOp) noexcept { return modifyOp < BL_MODIFY_OP_APPEND_START; }
-static BL_INLINE_CONSTEXPR bool blModifyOpIsAppend(BLModifyOp modifyOp) noexcept { return modifyOp >= BL_MODIFY_OP_APPEND_START; }
-static BL_INLINE_CONSTEXPR bool blModifyOpDoesGrow(BLModifyOp modifyOp) noexcept { return (modifyOp & BL_MODIFY_OP_GROW_MASK) != 0; }
+static BL_INLINE_CONSTEXPR bool bl_modify_op_is_assign(BLModifyOp modify_op) noexcept { return modify_op < BL_MODIFY_OP_APPEND_START; }
+static BL_INLINE_CONSTEXPR bool bl_modify_op_is_append(BLModifyOp modify_op) noexcept { return modify_op >= BL_MODIFY_OP_APPEND_START; }
+static BL_INLINE_CONSTEXPR bool bl_modify_op_does_grow(BLModifyOp modify_op) noexcept { return (modify_op & BL_MODIFY_OP_GROW_MASK) != 0; }
 
 //! Internal constants and limits used across the library.
 enum : uint32_t {
@@ -589,27 +589,27 @@ struct BLResultT {
 
 //! Used to silence warnings about unused arguments or variables.
 template<typename... Args>
-static BL_INLINE_NODEBUG void blUnused(Args&&...) noexcept {}
+static BL_INLINE_NODEBUG void bl_unused(Args&&...) noexcept {}
 
 template<typename T>
-static BL_INLINE_CONSTEXPR bool blTestFlag(const T& x, const T& y) noexcept {
+static BL_INLINE_CONSTEXPR bool bl_test_flag(const T& x, const T& y) noexcept {
   return (std::underlying_type_t<T>(x) & std::underlying_type_t<T>(y)) != std::underlying_type_t<T>(0);
 }
 
 // TODO: Remove.
 template<typename T, typename F>
-static BL_INLINE_NODEBUG void blAssignFunc(T** dst, F f) noexcept { *(void**)dst = (void*)f; }
+static BL_INLINE_NODEBUG void bl_assign_func(T** dst, F f) noexcept { *(void**)dst = (void*)f; }
 
 // Miscellaneous Internals
 // =======================
 
-//! Checks whether `dataAccessFlags` is valid.
-static BL_INLINE_NODEBUG bool blDataAccessFlagsIsValid(uint32_t dataAccessFlags) noexcept {
-  return dataAccessFlags == BL_DATA_ACCESS_READ ||
-         dataAccessFlags == BL_DATA_ACCESS_RW;
+//! Checks whether `data_access_flags` is valid.
+static BL_INLINE_NODEBUG bool bl_data_access_flags_is_valid(uint32_t data_access_flags) noexcept {
+  return data_access_flags == BL_DATA_ACCESS_READ ||
+         data_access_flags == BL_DATA_ACCESS_RW;
 }
 
-static BL_INLINE_NODEBUG void blPrefetchW(const void* p) { (void)p; }
+static BL_INLINE_NODEBUG void bl_prefetch_w(const void* p) { (void)p; }
 
 // BLInternal API Accessible Via 'bl' Namespace
 // ============================================

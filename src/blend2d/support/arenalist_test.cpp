@@ -21,19 +21,19 @@ UNIT(arena_list, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   ArenaAllocator zone(4096);
   ArenaList<MyListNode> list;
 
-  MyListNode* a = zone.newT<MyListNode>();
-  MyListNode* b = zone.newT<MyListNode>();
-  MyListNode* c = zone.newT<MyListNode>();
-  MyListNode* d = zone.newT<MyListNode>();
+  MyListNode* a = zone.new_t<MyListNode>();
+  MyListNode* b = zone.new_t<MyListNode>();
+  MyListNode* c = zone.new_t<MyListNode>();
+  MyListNode* d = zone.new_t<MyListNode>();
 
   INFO("Append / Unlink");
 
   // []
-  EXPECT_TRUE(list.empty());
+  EXPECT_TRUE(list.is_empty());
 
   // [A]
   list.append(a);
-  EXPECT_FALSE(list.empty());
+  EXPECT_FALSE(list.is_empty());
   EXPECT_EQ(list.first(), a);
   EXPECT_EQ(list.last(), a);
   EXPECT_EQ(a->prev(), nullptr);
@@ -81,7 +81,7 @@ UNIT(arena_list, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
 
   // []
   list.unlink(b);
-  EXPECT_TRUE(list.empty());
+  EXPECT_TRUE(list.is_empty());
   EXPECT_EQ(list.first(), nullptr);
   EXPECT_EQ(list.last(), nullptr);
   EXPECT_EQ(b->prev(), nullptr);
@@ -91,7 +91,7 @@ UNIT(arena_list, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
 
   // [A]
   list.prepend(a);
-  EXPECT_FALSE(list.empty());
+  EXPECT_FALSE(list.is_empty());
   EXPECT_EQ(list.first(), a);
   EXPECT_EQ(list.last(), a);
   EXPECT_EQ(a->prev(), nullptr);
@@ -109,7 +109,7 @@ UNIT(arena_list, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   INFO("InsertAfter / InsertBefore");
 
   // [B, A, C]
-  list.insertAfter(a, c);
+  list.insert_after(a, c);
   EXPECT_EQ(list.first(), b);
   EXPECT_EQ(list.last(), c);
   EXPECT_EQ(b->prev(), nullptr);
@@ -120,7 +120,7 @@ UNIT(arena_list, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   EXPECT_EQ(c->next(), nullptr);
 
   // [B, D, A, C]
-  list.insertBefore(a, d);
+  list.insert_before(a, d);
   EXPECT_EQ(list.first(), b);
   EXPECT_EQ(list.last(), c);
   EXPECT_EQ(b->prev(), nullptr);
@@ -135,7 +135,7 @@ UNIT(arena_list, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   INFO("PopFirst / Pop");
 
   // [D, A, C]
-  EXPECT_EQ(list.popFirst(), b);
+  EXPECT_EQ(list.pop_first(), b);
   EXPECT_EQ(b->prev(), nullptr);
   EXPECT_EQ(b->next(), nullptr);
 

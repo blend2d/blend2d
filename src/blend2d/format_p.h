@@ -75,7 +75,7 @@ BL_DEFINE_ENUM_FLAGS(FormatFlagsExt)
 
 namespace FormatInternal {
 
-static BL_INLINE_CONSTEXPR FormatFlagsExt makeFlagsStatic(FormatExt format) noexcept {
+static BL_INLINE_CONSTEXPR FormatFlagsExt make_flags_static(FormatExt format) noexcept {
   return format == FormatExt::kPRGB32 ? FormatFlagsExt::kRGBA          |
                                         FormatFlagsExt::kPremultiplied |
                                         FormatFlagsExt::kByteAligned   :
@@ -101,17 +101,17 @@ static BL_INLINE_CONSTEXPR FormatFlagsExt makeFlagsStatic(FormatExt format) noex
                                         FormatFlagsExt::kZeroAlpha     : FormatFlagsExt::kNoFlags;
 }
 
-static BL_INLINE bool hasSameAlphaLayout(const BLFormatInfo& a, const BLFormatInfo& b) noexcept {
+static BL_INLINE bool has_same_alpha_layout(const BLFormatInfo& a, const BLFormatInfo& b) noexcept {
   return (a.sizes[3] == b.sizes[3]) & (a.shifts[3] == b.shifts[3]) ;
 }
 
-static BL_INLINE bool hasSameRgbLayout(const BLFormatInfo& a, const BLFormatInfo& b) noexcept {
+static BL_INLINE bool has_same_rgb_layout(const BLFormatInfo& a, const BLFormatInfo& b) noexcept {
   return (a.sizes[0] == b.sizes[0]) & (a.shifts[0] == b.shifts[0]) &
          (a.sizes[1] == b.sizes[1]) & (a.shifts[1] == b.shifts[1]) &
          (a.sizes[2] == b.sizes[2]) & (a.shifts[2] == b.shifts[2]) ;
 }
 
-static BL_INLINE bool hasSameRgbaLayout(const BLFormatInfo& a, const BLFormatInfo& b) noexcept {
+static BL_INLINE bool has_same_rgba_layout(const BLFormatInfo& a, const BLFormatInfo& b) noexcept {
   return (a.sizes[0] == b.sizes[0]) & (a.shifts[0] == b.shifts[0]) &
          (a.sizes[1] == b.sizes[1]) & (a.shifts[1] == b.shifts[1]) &
          (a.sizes[2] == b.sizes[2]) & (a.shifts[2] == b.shifts[2]) &
@@ -122,7 +122,7 @@ static BL_INLINE bool hasSameRgbaLayout(const BLFormatInfo& a, const BLFormatInf
 //! pixel formats with absolute masks up to 64 bits (uint64_t input). Commonly used to convert pixel formats that
 //! use 32 or less bits.
 template<typename T>
-static void assignAbsoluteMasks(BLFormatInfo& info, const T* masks, size_t n = 4) noexcept {
+static void assign_absolute_masks(BLFormatInfo& info, const T* masks, size_t n = 4) noexcept {
   using U = std::make_unsigned_t<T>;
 
   memset(info.sizes, 0, sizeof(info.sizes));
@@ -130,8 +130,9 @@ static void assignAbsoluteMasks(BLFormatInfo& info, const T* masks, size_t n = 4
 
   for (size_t i = 0; i < n; i++) {
     U m = U(masks[i]);
-    if (!m)
+    if (!m) {
       continue;
+    }
 
     uint32_t shift = IntOps::ctz(m);
     m >>= shift;

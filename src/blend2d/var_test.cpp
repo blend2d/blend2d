@@ -27,7 +27,7 @@ UNIT(var_basic_types, BL_TEST_GROUP_CORE_OBJECT) {
     EXPECT_EQ(BLVar(), BLVar());
 
     // Null can be used as a style to disable drawing.
-    EXPECT_TRUE(BLVar().isStyle());
+    EXPECT_TRUE(BLVar().is_style());
   }
 
   INFO("Verifying bool value functionality");
@@ -104,50 +104,50 @@ UNIT(var_basic_types, BL_TEST_GROUP_CORE_OBJECT) {
   INFO("Checking bool/int/uint/double value conversions");
   {
     bool b;
-    EXPECT_TRUE(BLVar(0).toBool(&b) == BL_SUCCESS && b == false);
-    EXPECT_TRUE(BLVar(1).toBool(&b) == BL_SUCCESS && b == true);
-    EXPECT_TRUE(BLVar(0.0).toBool(&b) == BL_SUCCESS && b == false);
-    EXPECT_TRUE(BLVar(Math::nan<double>()).toBool(&b) == BL_SUCCESS && b == false);
-    EXPECT_TRUE(BLVar(1.0).toBool(&b) == BL_SUCCESS && b == true);
-    EXPECT_TRUE(BLVar(123456.0).toBool(&b) == BL_SUCCESS && b == true);
-    EXPECT_TRUE(BLVar(-123456.0).toBool(&b) == BL_SUCCESS && b == true);
+    EXPECT_TRUE(BLVar(0).to_bool(&b) == BL_SUCCESS && b == false);
+    EXPECT_TRUE(BLVar(1).to_bool(&b) == BL_SUCCESS && b == true);
+    EXPECT_TRUE(BLVar(0.0).to_bool(&b) == BL_SUCCESS && b == false);
+    EXPECT_TRUE(BLVar(Math::nan<double>()).to_bool(&b) == BL_SUCCESS && b == false);
+    EXPECT_TRUE(BLVar(1.0).to_bool(&b) == BL_SUCCESS && b == true);
+    EXPECT_TRUE(BLVar(123456.0).to_bool(&b) == BL_SUCCESS && b == true);
+    EXPECT_TRUE(BLVar(-123456.0).to_bool(&b) == BL_SUCCESS && b == true);
 
     int64_t i64;
-    EXPECT_TRUE(BLVar(0).toInt64(&i64) == BL_SUCCESS && i64 == 0);
-    EXPECT_TRUE(BLVar(1).toInt64(&i64) == BL_SUCCESS && i64 == 1);
-    EXPECT_TRUE(BLVar(INT64_MIN).toInt64(&i64) == BL_SUCCESS && i64 == INT64_MIN);
-    EXPECT_TRUE(BLVar(INT64_MAX).toInt64(&i64) == BL_SUCCESS && i64 == INT64_MAX);
-    EXPECT_TRUE(BLVar(0.0).toInt64(&i64) == BL_SUCCESS && i64 == 0);
-    EXPECT_TRUE(BLVar(Math::nan<double>()).toInt64(&i64) == BL_ERROR_INVALID_CONVERSION && i64 == 0);
-    EXPECT_TRUE(BLVar(1.0).toInt64(&i64) == BL_SUCCESS && i64 == 1);
-    EXPECT_TRUE(BLVar(123456.0).toInt64(&i64) == BL_SUCCESS && i64 == 123456);
-    EXPECT_TRUE(BLVar(-123456.0).toInt64(&i64) == BL_SUCCESS && i64 == -123456);
-    EXPECT_TRUE(BLVar(123456.3).toInt64(&i64) == BL_ERROR_OVERFLOW && i64 == 123456);
-    EXPECT_TRUE(BLVar(123456.9).toInt64(&i64) == BL_ERROR_OVERFLOW && i64 == 123456);
+    EXPECT_TRUE(BLVar(0).to_int64(&i64) == BL_SUCCESS && i64 == 0);
+    EXPECT_TRUE(BLVar(1).to_int64(&i64) == BL_SUCCESS && i64 == 1);
+    EXPECT_TRUE(BLVar(INT64_MIN).to_int64(&i64) == BL_SUCCESS && i64 == INT64_MIN);
+    EXPECT_TRUE(BLVar(INT64_MAX).to_int64(&i64) == BL_SUCCESS && i64 == INT64_MAX);
+    EXPECT_TRUE(BLVar(0.0).to_int64(&i64) == BL_SUCCESS && i64 == 0);
+    EXPECT_TRUE(BLVar(Math::nan<double>()).to_int64(&i64) == BL_ERROR_INVALID_CONVERSION && i64 == 0);
+    EXPECT_TRUE(BLVar(1.0).to_int64(&i64) == BL_SUCCESS && i64 == 1);
+    EXPECT_TRUE(BLVar(123456.0).to_int64(&i64) == BL_SUCCESS && i64 == 123456);
+    EXPECT_TRUE(BLVar(-123456.0).to_int64(&i64) == BL_SUCCESS && i64 == -123456);
+    EXPECT_TRUE(BLVar(123456.3).to_int64(&i64) == BL_ERROR_OVERFLOW && i64 == 123456);
+    EXPECT_TRUE(BLVar(123456.9).to_int64(&i64) == BL_ERROR_OVERFLOW && i64 == 123456);
 
     uint64_t u64;
-    EXPECT_TRUE(BLVar(0).toUInt64(&u64) == BL_SUCCESS && u64 == 0);
-    EXPECT_TRUE(BLVar(1).toUInt64(&u64) == BL_SUCCESS && u64 == 1);
-    EXPECT_TRUE(BLVar(INT64_MIN).toUInt64(&u64) == BL_ERROR_OVERFLOW && u64 == 0);
-    EXPECT_TRUE(BLVar(INT64_MAX).toUInt64(&u64) == BL_SUCCESS && u64 == uint64_t(INT64_MAX));
-    EXPECT_TRUE(BLVar(0.0).toUInt64(&u64) == BL_SUCCESS && u64 == 0);
-    EXPECT_TRUE(BLVar(Math::nan<double>()).toUInt64(&u64) == BL_ERROR_INVALID_CONVERSION && u64 == 0);
-    EXPECT_TRUE(BLVar(1.0).toUInt64(&u64) == BL_SUCCESS && u64 == 1);
-    EXPECT_TRUE(BLVar(123456.0).toUInt64(&u64) == BL_SUCCESS && u64 == 123456);
-    EXPECT_TRUE(BLVar(-123456.0).toUInt64(&u64) == BL_ERROR_OVERFLOW && u64 == 0);
-    EXPECT_TRUE(BLVar(123456.3).toUInt64(&u64) == BL_ERROR_OVERFLOW && u64 == 123456);
-    EXPECT_TRUE(BLVar(123456.9).toUInt64(&u64) == BL_ERROR_OVERFLOW && u64 == 123456);
+    EXPECT_TRUE(BLVar(0).to_uint64(&u64) == BL_SUCCESS && u64 == 0);
+    EXPECT_TRUE(BLVar(1).to_uint64(&u64) == BL_SUCCESS && u64 == 1);
+    EXPECT_TRUE(BLVar(INT64_MIN).to_uint64(&u64) == BL_ERROR_OVERFLOW && u64 == 0);
+    EXPECT_TRUE(BLVar(INT64_MAX).to_uint64(&u64) == BL_SUCCESS && u64 == uint64_t(INT64_MAX));
+    EXPECT_TRUE(BLVar(0.0).to_uint64(&u64) == BL_SUCCESS && u64 == 0);
+    EXPECT_TRUE(BLVar(Math::nan<double>()).to_uint64(&u64) == BL_ERROR_INVALID_CONVERSION && u64 == 0);
+    EXPECT_TRUE(BLVar(1.0).to_uint64(&u64) == BL_SUCCESS && u64 == 1);
+    EXPECT_TRUE(BLVar(123456.0).to_uint64(&u64) == BL_SUCCESS && u64 == 123456);
+    EXPECT_TRUE(BLVar(-123456.0).to_uint64(&u64) == BL_ERROR_OVERFLOW && u64 == 0);
+    EXPECT_TRUE(BLVar(123456.3).to_uint64(&u64) == BL_ERROR_OVERFLOW && u64 == 123456);
+    EXPECT_TRUE(BLVar(123456.9).to_uint64(&u64) == BL_ERROR_OVERFLOW && u64 == 123456);
 
     double f64;
-    EXPECT_TRUE(BLVar(true).toDouble(&f64) == BL_SUCCESS && f64 == 1.0);
-    EXPECT_TRUE(BLVar(false).toDouble(&f64) == BL_SUCCESS && f64 == 0.0);
-    EXPECT_TRUE(BLVar(0).toDouble(&f64) == BL_SUCCESS && f64 == 0.0);
-    EXPECT_TRUE(BLVar(1).toDouble(&f64) == BL_SUCCESS && f64 == 1.0);
-    EXPECT_TRUE(BLVar(0u).toDouble(&f64) == BL_SUCCESS && f64 == 0.0);
-    EXPECT_TRUE(BLVar(1u).toDouble(&f64) == BL_SUCCESS && f64 == 1.0);
-    EXPECT_TRUE(BLVar(0.0).toDouble(&f64) == BL_SUCCESS && f64 == 0.0);
-    EXPECT_TRUE(BLVar(1.0).toDouble(&f64) == BL_SUCCESS && f64 == 1.0);
-    EXPECT_TRUE(BLVar(Math::nan<double>()).toDouble(&f64) == BL_SUCCESS && Math::isNaN(f64));
+    EXPECT_TRUE(BLVar(true).to_double(&f64) == BL_SUCCESS && f64 == 1.0);
+    EXPECT_TRUE(BLVar(false).to_double(&f64) == BL_SUCCESS && f64 == 0.0);
+    EXPECT_TRUE(BLVar(0).to_double(&f64) == BL_SUCCESS && f64 == 0.0);
+    EXPECT_TRUE(BLVar(1).to_double(&f64) == BL_SUCCESS && f64 == 1.0);
+    EXPECT_TRUE(BLVar(0u).to_double(&f64) == BL_SUCCESS && f64 == 0.0);
+    EXPECT_TRUE(BLVar(1u).to_double(&f64) == BL_SUCCESS && f64 == 1.0);
+    EXPECT_TRUE(BLVar(0.0).to_double(&f64) == BL_SUCCESS && f64 == 0.0);
+    EXPECT_TRUE(BLVar(1.0).to_double(&f64) == BL_SUCCESS && f64 == 1.0);
+    EXPECT_TRUE(BLVar(Math::nan<double>()).to_double(&f64) == BL_SUCCESS && Math::isNaN(f64));
   }
 }
 
@@ -158,25 +158,25 @@ UNIT(var_styles, BL_TEST_GROUP_CORE_OBJECT) {
     EXPECT_EQ(BLVar(rgba32).type(), BL_OBJECT_TYPE_RGBA32);
     EXPECT_EQ(BLVar(rgba32), BLVar(rgba32));
     EXPECT_EQ(BLVar(rgba32).as<BLRgba32>(), rgba32);
-    EXPECT_TRUE(BLVar(rgba32).isRgba32());
-    EXPECT_TRUE(BLVar(rgba32).isStyle());
+    EXPECT_TRUE(BLVar(rgba32).is_rgba32());
+    EXPECT_TRUE(BLVar(rgba32).is_style());
 
     BLRgba64 rgba64 = BLRgba64(0xFFFF000011112222);
     EXPECT_EQ(BLVar(rgba64).type(), BL_OBJECT_TYPE_RGBA64);
     EXPECT_EQ(BLVar(rgba64), BLVar(rgba64));
     EXPECT_EQ(BLVar(rgba64).as<BLRgba64>(), rgba64);
-    EXPECT_TRUE(BLVar(rgba64).isRgba64());
-    EXPECT_TRUE(BLVar(rgba64).isStyle());
+    EXPECT_TRUE(BLVar(rgba64).is_rgba64());
+    EXPECT_TRUE(BLVar(rgba64).is_style());
 
     BLRgba rgba = BLRgba(0.1f, 0.2f, 0.3f, 0.5f);
     EXPECT_EQ(BLVar(rgba).type(), BL_OBJECT_TYPE_RGBA);
     EXPECT_EQ(BLVar(rgba), BLVar(rgba));
     EXPECT_EQ(BLVar(rgba).as<BLRgba>(), rgba);
-    EXPECT_TRUE(BLVar(rgba).isRgba());
-    EXPECT_TRUE(BLVar(rgba).isStyle());
+    EXPECT_TRUE(BLVar(rgba).is_rgba());
+    EXPECT_TRUE(BLVar(rgba).is_style());
 
     // Wrapped BLRgba is an exception - it doesn't form a valid BLObject signature.
-    EXPECT_FALSE(BLVar(rgba)._d.hasObjectSignature());
+    EXPECT_FALSE(BLVar(rgba)._d.has_object_signature());
   }
 
   INFO("Checking BLRgba[32|64] value conversions");
@@ -184,24 +184,24 @@ UNIT(var_styles, BL_TEST_GROUP_CORE_OBJECT) {
     BLRgba32 rgba32;
     BLRgba64 rgba64;
 
-    EXPECT_TRUE(BLVar(BLRgba32(0xFF008040u)).toRgba32(&rgba32) == BL_SUCCESS && rgba32 == BLRgba32(0xFF008040u));
-    EXPECT_TRUE(BLVar(BLRgba32(0xFF008040u)).toRgba64(&rgba64) == BL_SUCCESS && rgba64 == BLRgba64(0xFFFF000080804040u));
-    EXPECT_TRUE(BLVar(BLRgba64(0xFFEE00DD80CC40BBu)).toRgba64(&rgba64) == BL_SUCCESS && rgba64 == BLRgba64(0xFFEE00DD80CC40BBu));
-    EXPECT_TRUE(BLVar(BLRgba64(0xFFEE00DD80CC40BBu)).toRgba32(&rgba32) == BL_SUCCESS && rgba32 == BLRgba32(0xFF008040u));
+    EXPECT_TRUE(BLVar(BLRgba32(0xFF008040u)).to_rgba32(&rgba32) == BL_SUCCESS && rgba32 == BLRgba32(0xFF008040u));
+    EXPECT_TRUE(BLVar(BLRgba32(0xFF008040u)).to_rgba64(&rgba64) == BL_SUCCESS && rgba64 == BLRgba64(0xFFFF000080804040u));
+    EXPECT_TRUE(BLVar(BLRgba64(0xFFEE00DD80CC40BBu)).to_rgba64(&rgba64) == BL_SUCCESS && rgba64 == BLRgba64(0xFFEE00DD80CC40BBu));
+    EXPECT_TRUE(BLVar(BLRgba64(0xFFEE00DD80CC40BBu)).to_rgba32(&rgba32) == BL_SUCCESS && rgba32 == BLRgba32(0xFF008040u));
   }
 
   INFO("Checking BLGradient value functionality");
   {
-    EXPECT_TRUE(BLVar(BLGradient()).isStyle());
+    EXPECT_TRUE(BLVar(BLGradient()).is_style());
 
     BLGradient g;
-    g.addStop(0.0, BLRgba32(0x00000000u));
-    g.addStop(1.0, BLRgba32(0xFFFFFFFFu));
+    g.add_stop(0.0, BLRgba32(0x00000000u));
+    g.add_stop(1.0, BLRgba32(0xFFFFFFFFu));
 
     BLVar var(BLInternal::move(g));
 
     // The object should have been moved, so `g` should be default constructed now.
-    EXPECT_EQ(g._d.getType(), BL_OBJECT_TYPE_GRADIENT);
+    EXPECT_EQ(g._d.get_type(), BL_OBJECT_TYPE_GRADIENT);
     EXPECT_EQ(g, BLGradient());
     EXPECT_FALSE(var.equals(g));
 
@@ -211,13 +211,13 @@ UNIT(var_styles, BL_TEST_GROUP_CORE_OBJECT) {
 
   INFO("Checking BLPattern value functionality");
   {
-    EXPECT_TRUE(BLVar(BLPattern()).isStyle());
+    EXPECT_TRUE(BLVar(BLPattern()).is_style());
 
     BLPattern p(BLImage(16, 16, BL_FORMAT_PRGB32));
     BLVar var(BLInternal::move(p));
 
     // The object should have been moved, so `p` should be default constructed now.
-    EXPECT_EQ(p._d.getType(), BL_OBJECT_TYPE_PATTERN);
+    EXPECT_EQ(p._d.get_type(), BL_OBJECT_TYPE_PATTERN);
     EXPECT_EQ(p, BLPattern());
     EXPECT_FALSE(var.equals(p));
 

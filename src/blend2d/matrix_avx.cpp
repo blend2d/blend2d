@@ -17,10 +17,10 @@ namespace TransformInternal {
 // bl::Transform - MapPointDArray (AVX)
 // ====================================
 
-static BLResult BL_CDECL mapPointDArrayIdentity_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL map_point_darray_identity_avx(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
-  blUnused(self);
+  bl_unused(self);
   if (dst == src)
     return BL_SUCCESS;
 
@@ -55,7 +55,7 @@ static BLResult BL_CDECL mapPointDArrayIdentity_AVX(const BLMatrix2D* self, BLPo
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL mapPointDArrayTranslate_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL map_point_darray_translate_avx(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   size_t i = size;
@@ -91,7 +91,7 @@ static BLResult BL_CDECL mapPointDArrayTranslate_AVX(const BLMatrix2D* self, BLP
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL mapPointDArrayScale_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL map_point_darray_scale_avx(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   size_t i = size;
@@ -128,7 +128,7 @@ static BLResult BL_CDECL mapPointDArrayScale_AVX(const BLMatrix2D* self, BLPoint
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL mapPointDArraySwap_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL map_point_darray_swap_avx(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   size_t i = size;
@@ -165,7 +165,7 @@ static BLResult BL_CDECL mapPointDArraySwap_AVX(const BLMatrix2D* self, BLPoint*
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL mapPointDArrayAffine_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL map_point_darray_affine_avx(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   size_t i = size;
@@ -209,16 +209,16 @@ static BLResult BL_CDECL mapPointDArrayAffine_AVX(const BLMatrix2D* self, BLPoin
 // bl::Transform - Runtime Registration (AVX)
 // ==========================================
 
-void blTransformRtInit_AVX(BLRuntimeContext* rt) noexcept {
-  blUnused(rt);
-  BLMapPointDArrayFunc* funcs = mapPointDArrayFuncs;
+void bl_transform_rt_init_avx(BLRuntimeContext* rt) noexcept {
+  bl_unused(rt);
+  BLMapPointDArrayFunc* funcs = map_pointd_array_funcs;
 
-  blAssignFunc(&funcs[BL_TRANSFORM_TYPE_IDENTITY ], mapPointDArrayIdentity_AVX);
-  blAssignFunc(&funcs[BL_TRANSFORM_TYPE_TRANSLATE], mapPointDArrayTranslate_AVX);
-  blAssignFunc(&funcs[BL_TRANSFORM_TYPE_SCALE    ], mapPointDArrayScale_AVX);
-  blAssignFunc(&funcs[BL_TRANSFORM_TYPE_SWAP     ], mapPointDArraySwap_AVX);
-  blAssignFunc(&funcs[BL_TRANSFORM_TYPE_AFFINE   ], mapPointDArrayAffine_AVX);
-  blAssignFunc(&funcs[BL_TRANSFORM_TYPE_INVALID  ], mapPointDArrayAffine_AVX);
+  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_IDENTITY ], map_point_darray_identity_avx);
+  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_TRANSLATE], map_point_darray_translate_avx);
+  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_SCALE    ], map_point_darray_scale_avx);
+  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_SWAP     ], map_point_darray_swap_avx);
+  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_AFFINE   ], map_point_darray_affine_avx);
+  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_INVALID  ], map_point_darray_affine_avx);
 }
 
 } // {TransformInternal}

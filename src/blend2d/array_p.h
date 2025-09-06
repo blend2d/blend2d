@@ -19,15 +19,15 @@ namespace bl::ArrayInternal {
 //! \name BLArray - Internals - Common Functionality (Impl)
 //! \{
 
-static BL_INLINE bool isImplMutable(const BLArrayImpl* impl) noexcept {
-  return ObjectInternal::isImplMutable(impl);
+static BL_INLINE bool is_impl_mutable(const BLArrayImpl* impl) noexcept {
+  return ObjectInternal::is_impl_mutable(impl);
 }
 
-BL_HIDDEN BLResult freeImpl(BLArrayImpl* impl) noexcept;
+BL_HIDDEN BLResult free_impl(BLArrayImpl* impl) noexcept;
 
 template<RCMode kRCMode>
-static BL_INLINE BLResult releaseImpl(BLArrayImpl* impl) noexcept {
-  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+static BL_INLINE BLResult release_impl(BLArrayImpl* impl) noexcept {
+  return ObjectInternal::deref_impl_and_test<kRCMode>(impl) ? free_impl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -35,37 +35,37 @@ static BL_INLINE BLResult releaseImpl(BLArrayImpl* impl) noexcept {
 //! \name BLArray - Internals - Common Functionality (Instance)
 //! \{
 
-static BL_INLINE BLArrayImpl* getImpl(const BLArrayCore* self) noexcept {
+static BL_INLINE BLArrayImpl* get_impl(const BLArrayCore* self) noexcept {
   return static_cast<BLArrayImpl*>(self->_d.impl);
 }
 
-static BL_INLINE bool isInstanceMutable(const BLArrayCore* self) noexcept {
-  return ObjectInternal::isInstanceMutable(self);
+static BL_INLINE bool is_instance_mutable(const BLArrayCore* self) noexcept {
+  return ObjectInternal::is_instance_mutable(self);
 }
 
-static BL_INLINE bool isInstanceDynamicAndMutable(const BLArrayCore* self) noexcept {
-  return ObjectInternal::isInstanceDynamicAndMutable(self);
+static BL_INLINE bool is_instance_dynamic_and_mutable(const BLArrayCore* self) noexcept {
+  return ObjectInternal::is_instance_dynamic_and_mutable(self);
 }
 
-static BL_INLINE bool isDynamicInstanceMutable(const BLArrayCore* self) noexcept {
-  return ObjectInternal::isDynamicInstanceMutable(self);
+static BL_INLINE bool is_dynamic_instance_mutable(const BLArrayCore* self) noexcept {
+  return ObjectInternal::is_dynamic_instance_mutable(self);
 }
 
-static BL_INLINE BLResult retainInstance(const BLArrayCore* self, size_t n = 1) noexcept {
-  return ObjectInternal::retainInstance(self, n);
+static BL_INLINE BLResult retain_instance(const BLArrayCore* self, size_t n = 1) noexcept {
+  return ObjectInternal::retain_instance(self, n);
 }
 
-static BL_INLINE BLResult releaseInstance(BLArrayCore* self) noexcept {
-  return self->_d.isRefCountedObject() ? releaseImpl<RCMode::kForce>(getImpl(self)) : BLResult(BL_SUCCESS);
+static BL_INLINE BLResult release_instance(BLArrayCore* self) noexcept {
+  return self->_d.is_ref_counted_object() ? release_impl<RCMode::kForce>(get_impl(self)) : BLResult(BL_SUCCESS);
 }
 
-static BL_INLINE BLResult replaceInstance(BLArrayCore* self, const BLArrayCore* other) noexcept {
+static BL_INLINE BLResult replace_instance(BLArrayCore* self, const BLArrayCore* other) noexcept {
   // NOTE: UBSAN doesn't like casting the impl in case the Array is in SSO mode, so wait with the cast.
   void* impl = static_cast<void*>(self->_d.impl);
   BLObjectInfo info = self->_d.info;
 
   self->_d = other->_d;
-  return info.isRefCountedObject() ? releaseImpl<RCMode::kForce>(static_cast<BLArrayImpl*>(impl)) : BLResult(BL_SUCCESS);
+  return info.is_ref_counted_object() ? release_impl<RCMode::kForce>(static_cast<BLArrayImpl*>(impl)) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -81,42 +81,42 @@ struct UnpackedData {
 
 static BL_INLINE UnpackedData unpack(const BLArrayCore* self) noexcept {
   if (self->_d.sso()) {
-    return UnpackedData { const_cast<uint8_t*>(self->_d.u8_data), self->_d.aField(), self->_d.bField() };
+    return UnpackedData { const_cast<uint8_t*>(self->_d.u8_data), self->_d.a_field(), self->_d.b_field() };
   }
   else {
-    BLArrayImpl* impl = getImpl(self);
-    return UnpackedData { impl->dataAs<uint8_t>(), impl->size, impl->capacity };
+    BLArrayImpl* impl = get_impl(self);
+    return UnpackedData { impl->data_as<uint8_t>(), impl->size, impl->capacity };
   }
 }
 
 template<typename T = void>
-static BL_INLINE T* getData(const BLArrayCore* self) noexcept {
+static BL_INLINE T* get_data(const BLArrayCore* self) noexcept {
   if (self->_d.sso())
     return (T*)(self->_d.char_data);
   else
-    return getImpl(self)->dataAs<T>();
+    return get_impl(self)->data_as<T>();
 }
 
-static BL_INLINE size_t getSize(const BLArrayCore* self) noexcept {
+static BL_INLINE size_t get_size(const BLArrayCore* self) noexcept {
   if (self->_d.sso())
-    return size_t(self->_d.aField());
+    return size_t(self->_d.a_field());
   else
-    return getImpl(self)->size;
+    return get_impl(self)->size;
 }
 
-static BL_INLINE size_t getCapacity(const BLArrayCore* self) noexcept {
+static BL_INLINE size_t get_capacity(const BLArrayCore* self) noexcept {
   if (self->_d.sso())
-    return size_t(self->_d.bField());
+    return size_t(self->_d.b_field());
   else
-    return getImpl(self)->capacity;
+    return get_impl(self)->capacity;
 }
 
-static BL_INLINE void setSize(BLArrayCore* self, size_t newSize) noexcept {
-  BL_ASSERT(newSize <= getCapacity(self));
+static BL_INLINE void set_size(BLArrayCore* self, size_t new_size) noexcept {
+  BL_ASSERT(new_size <= get_capacity(self));
   if (self->_d.sso())
-    self->_d.info.setAField(uint32_t(newSize));
+    self->_d.info.set_a_field(uint32_t(new_size));
   else
-    getImpl(self)->size = newSize;
+    get_impl(self)->size = new_size;
 }
 
 //! \}

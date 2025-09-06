@@ -130,11 +130,11 @@ enum class DecoderStatusFlags : uint32_t {
 BL_DEFINE_ENUM_FLAGS(DecoderStatusFlags)
 
 //! Tests whether the marker `m` is a SOF marker.
-static BL_INLINE bool isMarkerSOF(uint32_t m) noexcept { return m >= kMarkerSOF0 && m <= kMarkerSOF2; }
+static BL_INLINE bool is_marker_sof(uint32_t m) noexcept { return m >= kMarkerSOF0 && m <= kMarkerSOF2; }
 //! Tests whether the marker `m` is an RST marker.
-static BL_INLINE bool isMarkerRST(uint32_t m) noexcept { return m >= kMarkerRST && m <= kMarkerRST_LAST; }
+static BL_INLINE bool is_marker_rst(uint32_t m) noexcept { return m >= kMarkerRST && m <= kMarkerRST_LAST; }
 //! Tests whether the marker `m` is an APP marker.
-static BL_INLINE bool isMarkerAPP(uint32_t m) noexcept { return m >= kMarkerAPP && m <= kMarkerAPP_LAST; }
+static BL_INLINE bool is_marker_app(uint32_t m) noexcept { return m >= kMarkerAPP && m <= kMarkerAPP_LAST; }
 
 template<typename T>
 struct alignas(16) Block {
@@ -170,34 +170,34 @@ struct DecoderComponent {
   uint8_t* data;
 
   //! Component ID.
-  uint8_t compId;
+  uint8_t comp_id;
   //! Quantization table ID.
-  uint8_t quantId;
+  uint8_t quant_id;
   //! DC Huffman-Table ID.
-  uint8_t dcId;
+  uint8_t dc_id;
   //! AC Huffman-Table ID.
-  uint8_t acId;
+  uint8_t ac_id;
 
   //! Effective width.
-  uint32_t pxW;
+  uint32_t px_w;
   //! Effective height.
-  uint32_t pxH;
+  uint32_t px_h;
   //! Oversized width to match the total width requires by all MCUs.
-  uint32_t osW;
+  uint32_t os_w;
   //! Oversized height to match the total height required by all MCUs.
-  uint32_t osH;
+  uint32_t os_h;
   //! Number of 8x8 blocks in horizontal direction.
-  uint32_t blW;
+  uint32_t bl_w;
   //! Number of 8x8 blocks in vertical direction.
-  uint32_t blH;
+  uint32_t bl_h;
 
   //! Horizontal sampling factor (width).
-  uint8_t sfW;
+  uint8_t sf_w;
   //! Vertical sampling factor (height).
-  uint8_t sfH;
+  uint8_t sf_h;
 
   //! DC prediction (modified during decoding phase).
-  int32_t dcPred;
+  int32_t dc_pred;
   //! Coefficients used only by progressive JPEGs.
   int16_t* coeff;
 
@@ -207,17 +207,17 @@ struct DecoderComponent {
 //! Start of stream (SOS) data.
 struct DecoderSOS {
   //! Maps a stream component index into the `DecoderComponent`.
-  DecoderComponent* scComp[4];
+  DecoderComponent* sc_comp[4];
   //! Count of components in this stream.
-  uint8_t scCount;
+  uint8_t sc_count;
   //! Start of spectral selection.
-  uint8_t ssStart;
+  uint8_t ss_start;
   //! End of spectral selection.
-  uint8_t ssEnd;
+  uint8_t ss_end;
   //! Successive approximation low bit.
-  uint8_t saLowBit;
+  uint8_t sa_low_bit;
   //! Successive approximation high bit.
-  uint8_t saHighBit;
+  uint8_t sa_high_bit;
 
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 };
@@ -240,7 +240,7 @@ struct DecoderThumbnail {
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 };
 
-BL_HIDDEN void jpegCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
+BL_HIDDEN void jpeg_codec_on_init(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
 } // {bl::Jpeg}
 
@@ -248,28 +248,28 @@ struct BLJpegDecoderImpl : public BLImageDecoderImpl {
   //! JPEG memory allocator (can allocate aligned blocks and keep track of them).
   bl::ScopedAllocator allocator;
   //! JPEG image information.
-  BLImageInfo imageInfo;
+  BLImageInfo image_info;
 
   //! JPEG decoder flags.
-  bl::Jpeg::DecoderStatusFlags statusFlags;
+  bl::Jpeg::DecoderStatusFlags status_flags;
   //! Restart interval as specified by DRI marker.
-  uint32_t restartInterval;
+  uint32_t restart_interval;
   //! SOF marker (so we can select right decompression algorithm), initially zero.
-  uint8_t sofMarker;
+  uint8_t sof_marker;
   //! Colorspace.
   uint8_t colorspace;
   //! True if the data contains zero height (delayed height).
-  uint8_t delayedHeight;
+  uint8_t delayed_height;
   //!< JFIF major version (if present).
-  uint8_t jfifMajor;
+  uint8_t jfif_major;
   //!< JFIF minor version (if present).
-  uint8_t jfifMinor;
+  uint8_t jfif_minor;
   //! Mask of all defined DC tables.
-  uint8_t dcTableMask;
+  uint8_t dc_table_mask;
   //! Mask of all defined AC tables.
-  uint8_t acTableMask;
+  uint8_t ac_table_mask;
   //! Mask of all defined (de)quantization tables.
-  uint8_t qTableMask;
+  uint8_t q_table_mask;
 
   //! JPEG decoder MCU information.
   bl::Jpeg::MCUInfo mcu;
@@ -280,11 +280,11 @@ struct BLJpegDecoderImpl : public BLImageDecoderImpl {
   //! JPEG decoder components.
   bl::Jpeg::DecoderComponent comp[4];
   //! JPEG Huffman DC tables.
-  bl::Jpeg::DecoderHuffmanDCTable dcTable[4];
+  bl::Jpeg::DecoderHuffmanDCTable dc_table[4];
   //! JPEG Huffman AC tables.
-  bl::Jpeg::DecoderHuffmanACTable acTable[4];
+  bl::Jpeg::DecoderHuffmanACTable ac_table[4];
   //! JPEG quantization tables.
-  bl::Jpeg::Block<uint16_t> qTable[4];
+  bl::Jpeg::Block<uint16_t> q_table[4];
 };
 
 struct BLJpegEncoderImpl : public BLImageEncoderImpl {};

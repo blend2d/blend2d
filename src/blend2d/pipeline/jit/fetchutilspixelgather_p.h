@@ -24,7 +24,7 @@ namespace bl::Pipeline::JIT {
 //     its latency (i.e. to not immediately depend on gathered content).
 typedef void (*InterleaveCallback)(uint32_t step, void* data) noexcept;
 
-static void dummyInterleaveCallback(uint32_t step, void* data) noexcept { blUnused(step, data); }
+static void dummy_interleave_callback(uint32_t step, void* data) noexcept { bl_unused(step, data); }
 
 namespace FetchUtils {
 
@@ -63,8 +63,8 @@ public:
   Vec _vec;
   Mem _mem;
   uint32_t _type;
-  uint16_t _indexSize;
-  uint16_t _memSize;
+  uint16_t _index_size;
+  uint16_t _mem_size;
 
   //! \}
 
@@ -76,7 +76,7 @@ public:
   //! Begins index extraction from a SIMD register `vec`.
   void begin(uint32_t type, const Vec& vec) noexcept;
   //! Begins index extraction from memory.
-  void begin(uint32_t type, const Mem& mem, uint32_t memSize) noexcept;
+  void begin(uint32_t type, const Mem& mem, uint32_t mem_size) noexcept;
   //! Extracts the given `index` into the destination register `dst`.
   void extract(const Gp& dst, uint32_t index) noexcept;
 };
@@ -139,29 +139,29 @@ public:
   Pixel* _pixel {};
 
   //! Required fetch flags, possibly enhanced to make the fetching logic simpler.
-  PixelFlags _fetchFlags {};
+  PixelFlags _fetch_flags {};
   //! Pixel fetch information.
-  PixelFetchInfo _fetchInfo {};
+  PixelFetchInfo _fetch_info {};
   //! The index of the pixel to be fetched next, starts at 0.
-  uint32_t _pixelIndex {};
-  //! The current vector index where the pixel will be fetched, incremented by `_vecStep`.
-  uint32_t _vecIndex {};
-  //! The step `_vecIndex` is incremented by when a vector lane reaches its end.
-  uint32_t _vecStep {};
+  uint32_t _pixel_index {};
+  //! The current vector index where the pixel will be fetched, incremented by `_vec_step`.
+  uint32_t _vec_index {};
+  //! The step `_vec_index` is incremented by when a vector lane reaches its end.
+  uint32_t _vec_step {};
   //! The current lane index where the next pixel will be fetched.
-  uint32_t _laneIndex {};
-  //! Number of lanes to fetch pixels to - when `_laneIndex` reaches `_laneCount` it's zeroed and `_vecIndex`
-  //! incremented by `_vecStep`.
-  uint32_t _laneCount {};
+  uint32_t _lane_index {};
+  //! Number of lanes to fetch pixels to - when `_lane_index` reaches `_lane_count` it's zeroed and `_vec_index`
+  //! incremented by `_vec_step`.
+  uint32_t _lane_count {};
   //! Fetch mode - selects the approach used to fetch pixels.
-  FetchMode _fetchMode {};
+  FetchMode _fetch_mode {};
 
   //! Fetch is predicated and never contains all the pixels (the fetcher can avoid checking the last pixel).
-  GatherMode _gatherMode {};
+  GatherMode _gather_mode {};
   //! Number of 128-bit vectors to fetch into.
-  uint8_t _p128Count {};
+  uint8_t _p128_count {};
   //! Fetch was completed, `end()` was already called.
-  bool _fetchDone = false;
+  bool _fetch_done = false;
 
   //! Temporary vector register that can be used as a load destination before inserting to any of _p128[].
   Vec _pTmp[2];
@@ -188,9 +188,9 @@ public:
   VecArray _p512;
 
   //! Widening operation used to widen 128-bit vectors to 256-bit vectors.
-  WideningOp _widening256Op {};
+  WideningOp _widening256_op {};
   //! Widening operation used to widen 256-bit vectors to 512-bit vectors.
-  WideningOp _widening512Op {};
+  WideningOp _widening512_op {};
 #endif // BL_JIT_ARCH_X86
 
   //! \}
@@ -198,42 +198,42 @@ public:
   inline FetchContext(PipeCompiler* pc, Pixel* pixel, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, GatherMode mode = GatherMode::kFetchAll) noexcept
     : _pc(pc),
       _pixel(pixel),
-      _fetchFlags(flags),
-      _fetchInfo(fInfo),
-      _gatherMode(mode),
-      _fetchDone(false) { _init(n); }
+      _fetch_flags(flags),
+      _fetch_info(fInfo),
+      _gather_mode(mode),
+      _fetch_done(false) { _init(n); }
 
-  BL_INLINE_NODEBUG FormatExt fetchFormat() const noexcept { return _fetchInfo.format(); }
-  BL_INLINE_NODEBUG FetchMode fetchMode() const noexcept { return _fetchMode; }
-  BL_INLINE_NODEBUG GatherMode gatherMode() const noexcept { return _gatherMode; }
+  BL_INLINE_NODEBUG FormatExt fetch_format() const noexcept { return _fetch_info.format(); }
+  BL_INLINE_NODEBUG FetchMode fetch_mode() const noexcept { return _fetch_mode; }
+  BL_INLINE_NODEBUG GatherMode gather_mode() const noexcept { return _gather_mode; }
 
   void _init(PixelCount n) noexcept;
-  void _initFetchMode() noexcept;
-  void _initFetchRegs() noexcept;
-  void _initTargetPixel() noexcept;
+  void _init_fetch_mode() noexcept;
+  void _init_fetch_regs() noexcept;
+  void _init_target_pixel() noexcept;
 
-  void fetchPixel(const Mem& src) noexcept;
-  void _fetchAll(const Mem& src, uint32_t srcShift, IndexExtractor& extractor, const uint8_t* indexes, InterleaveCallback cb, void* cbData) noexcept;
-  void _doneVec(uint32_t index) noexcept;
+  void fetch_pixel(const Mem& src) noexcept;
+  void _fetch_all(const Mem& src, uint32_t src_shift, IndexExtractor& extractor, const uint8_t* indexes, InterleaveCallback cb, void* cb_data) noexcept;
+  void _done_vec(uint32_t index) noexcept;
 
-  // Fetches all pixels and allows to interleave the fetch sequence with a lambda function `interleaveFunc`.
+  // Fetches all pixels and allows to interleave the fetch sequence with a lambda function `interleave_func`.
   template<class InterleaveFunc>
-  void fetchAll(const Mem& src, uint32_t srcShift, IndexExtractor& extractor, const uint8_t* indexes, InterleaveFunc&& interleaveFunc) noexcept {
-    _fetchAll(src, srcShift, extractor, indexes, [](uint32_t step, void* data) noexcept {
+  void fetch_all(const Mem& src, uint32_t src_shift, IndexExtractor& extractor, const uint8_t* indexes, InterleaveFunc&& interleave_func) noexcept {
+    _fetch_all(src, src_shift, extractor, indexes, [](uint32_t step, void* data) noexcept {
       (*static_cast<const InterleaveFunc*>(data))(step);
-    }, (void*)&interleaveFunc);
+    }, (void*)&interleave_func);
   }
 
   void end() noexcept;
 };
 
-void gatherPixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout indexLayout, GatherMode mode, InterleaveCallback cb, void* cbData) noexcept;
+void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout index_layout, GatherMode mode, InterleaveCallback cb, void* cb_data) noexcept;
 
 template<class InterleaveFunc>
-static void gatherPixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout indexLayout, GatherMode mode, InterleaveFunc&& interleaveFunc) noexcept {
-  gatherPixels(pc, p, n, flags, fInfo, src, idx, shift, indexLayout, mode, [](uint32_t step, void* data) noexcept {
+static void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout index_layout, GatherMode mode, InterleaveFunc&& interleave_func) noexcept {
+  gather_pixels(pc, p, n, flags, fInfo, src, idx, shift, index_layout, mode, [](uint32_t step, void* data) noexcept {
     (*static_cast<const InterleaveFunc*>(data))(step);
-  }, (void*)&interleaveFunc);
+  }, (void*)&interleave_func);
 }
 
 } // {FetchUtils}

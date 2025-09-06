@@ -18,15 +18,15 @@ namespace ContextTests {
 
 class MTTestApp : public BaseTestApp {
 public:
-  uint32_t failedCount {};
-  uint32_t passedCount {};
+  uint32_t failed_count {};
+  uint32_t passed_count {};
 
   MTTestApp() : BaseTestApp() {
-    defaultOptions.threadCount = 2u;
+    default_options.thread_count = 2u;
   }
 
   int help() {
-    using StringUtils::boolToString;
+    using StringUtils::bool_to_string;
 
     printf("Usage:\n");
     printf("  bl_test_context_mt [options] [--help for help]\n");
@@ -38,121 +38,121 @@ public:
     printf("  output when used with the same input data.\n");
     printf("\n");
 
-    printCommonOptions(defaultOptions);
+    print_common_options(default_options);
 
     printf("Multithreading Options:\n");
-    printf("  --flush-sync            - Do occasional syncs between calls [default=%s]\n", boolToString(defaultOptions.flushSync));
-    printf("  --thread-count=<uint>   - Number of threads of MT context   [default=%u]\n", defaultOptions.threadCount);
+    printf("  --flush-sync            - Do occasional syncs between calls [default=%s]\n", bool_to_string(default_options.flush_sync));
+    printf("  --thread-count=<uint>   - Number of threads of MT context   [default=%u]\n", default_options.thread_count);
     printf("\n");
 
-    printCommands();
-    printFormats();
-    printCompOps();
-    printOpacityOps();
-    printStyleIds();
-    printStyleOps();
+    print_commands();
+    print_formats();
+    print_comp_ops();
+    print_opacity_ops();
+    print_style_ids();
+    print_style_ops();
 
     fflush(stdout);
     return 0;
   }
 
-  bool parseMTOptions(CmdLine cmdLine) {
-    options.flushSync = cmdLine.hasArg("--flush-sync") || defaultOptions.flushSync;
-    options.threadCount = cmdLine.valueAsUInt("--thread-count", defaultOptions.threadCount);
+  bool parseMTOptions(CmdLine cmd_line) {
+    options.flush_sync = cmd_line.has_arg("--flush-sync") || default_options.flush_sync;
+    options.thread_count = cmd_line.value_as_uint("--thread-count", default_options.thread_count);
 
     return true;
   }
 
-  int run(CmdLine cmdLine) {
-    printAppInfo("Blend2D Multi-Threaded Rendering Context Tester", cmdLine.hasArg("--quiet"));
+  int run(CmdLine cmd_line) {
+    print_app_info("Blend2D Multi-Threaded Rendering Context Tester", cmd_line.has_arg("--quiet"));
 
-    if (cmdLine.hasArg("--help"))
+    if (cmd_line.has_arg("--help"))
       return help();
 
-    if (!parseCommonOptions(cmdLine) || !parseMTOptions(cmdLine))
+    if (!parse_common_options(cmd_line) || !parseMTOptions(cmd_line))
       return 1;
 
-    for (BLFormat format : testCases.formatIds) {
-      ContextTester aTester(testCases, "st");
-      ContextTester bTester(testCases, "mt");
+    for (BLFormat format : test_cases.format_ids) {
+      ContextTester a_tester(test_cases, "st");
+      ContextTester b_tester(test_cases, "mt");
 
-      aTester.setFlushSync(options.flushSync);
-      bTester.setFlushSync(options.flushSync);
+      a_tester.set_flush_sync(options.flush_sync);
+      b_tester.set_flush_sync(options.flush_sync);
 
-      BLContextCreateInfo aCreateInfo {};
-      BLContextCreateInfo bCreateInfo {};
+      BLContextCreateInfo a_create_info {};
+      BLContextCreateInfo b_create_info {};
 
-      bCreateInfo.threadCount = options.threadCount;
+      b_create_info.thread_count = options.thread_count;
 
-      if (aTester.init(int(options.width), int(options.height), format, aCreateInfo) != BL_SUCCESS ||
-          bTester.init(int(options.width), int(options.height), format, bCreateInfo) != BL_SUCCESS) {
+      if (a_tester.init(int(options.width), int(options.height), format, a_create_info) != BL_SUCCESS ||
+          b_tester.init(int(options.width), int(options.height), format, b_create_info) != BL_SUCCESS) {
         printf("Failed to initialize rendering contexts\n");
         return 1;
       }
 
       TestInfo info;
-      dispatchRuns([&](CommandId commandId, StyleId styleId, StyleOp styleOp, CompOp compOp, OpacityOp opacityOp) {
+      dispatch_runs([&](CommandId command_id, StyleId style_id, StyleOp style_op, CompOp comp_op, OpacityOp opacity_op) {
         BLString s0;
-        s0.appendFormat("%s/%s",
-          StringUtils::styleIdToString(styleId),
-          StringUtils::styleOpToString(styleOp));
+        s0.append_format("%s/%s",
+          StringUtils::style_id_to_string(style_id),
+          StringUtils::style_op_to_string(style_op));
 
         BLString s1;
-        s1.appendFormat("%s/%s",
-          StringUtils::compOpToString(compOp),
-          StringUtils::opacityOpToString(opacityOp));
+        s1.append_format("%s/%s",
+          StringUtils::comp_op_to_string(comp_op),
+          StringUtils::opacity_op_to_string(opacity_op));
 
-        info.name.assignFormat(
+        info.name.assign_format(
             "%-21s | fmt=%-7s| style+api=%-30s| comp+op=%-20s| thread-count=%u",
-            StringUtils::commandIdToString(commandId),
-            StringUtils::formatToString(format),
+            StringUtils::command_id_to_string(command_id),
+            StringUtils::format_to_string(format),
             s0.data(),
             s1.data(),
-            options.threadCount);
+            options.thread_count);
 
-        info.id.assignFormat("ctx-mt-%s-%s-%s-%s-%s-%s-%u",
-          StringUtils::formatToString(format),
-          StringUtils::commandIdToString(commandId),
-          StringUtils::styleIdToString(styleId),
-          StringUtils::styleOpToString(styleOp),
-          StringUtils::compOpToString(compOp),
-          StringUtils::opacityOpToString(opacityOp),
-          options.threadCount);
+        info.id.assign_format("ctx-mt-%s-%s-%s-%s-%s-%s-%u",
+          StringUtils::format_to_string(format),
+          StringUtils::command_id_to_string(command_id),
+          StringUtils::style_id_to_string(style_id),
+          StringUtils::style_op_to_string(style_op),
+          StringUtils::comp_op_to_string(comp_op),
+          StringUtils::opacity_op_to_string(opacity_op),
+          options.thread_count);
 
         if (!options.quiet) {
           printf("Running [%s]\n", info.name.data());
         }
 
-        aTester.setOptions(compOp, opacityOp, styleId, styleOp);
-        bTester.setOptions(compOp, opacityOp, styleId, styleOp);
+        a_tester.set_options(comp_op, opacity_op, style_id, style_op);
+        b_tester.set_options(comp_op, opacity_op, style_id, style_op);
 
-        if (runMultiple(commandId, info, aTester, bTester, 0))
-          passedCount++;
+        if (run_multiple(command_id, info, a_tester, b_tester, 0))
+          passed_count++;
         else
-          failedCount++;
+          failed_count++;
       });
 
-      aTester.reset();
-      bTester.reset();
+      a_tester.reset();
+      b_tester.reset();
     }
 
-    if (failedCount) {
-      printf("[FAILED] %u tests out of %u failed\n", failedCount, passedCount + failedCount);
+    if (failed_count) {
+      printf("[FAILED] %u tests out of %u failed\n", failed_count, passed_count + failed_count);
       return 1;
     }
     else {
-      printf("[PASSED] %u tests passed\n", passedCount);
+      printf("[PASSED] %u tests passed\n", passed_count);
       return 0;
     }
 
-    return failedCount ? 1 : 0;
+    return failed_count ? 1 : 0;
   }
 };
 
 } // {ContextTests}
 
 int main(int argc, char* argv[]) {
-  BLRuntimeScope rtScope;
+  BLRuntimeScope rt_scope;
   ContextTests::MTTestApp app;
 
   return app.run(CmdLine(argc, argv));

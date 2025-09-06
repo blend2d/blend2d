@@ -24,17 +24,17 @@ public:
   };
 
   //! Default options.
-  TestOptions defaultOptions {};
+  TestOptions default_options {};
   //! Current options (inherited from default options and parsed from command line).
   TestOptions options {};
   //! Tests cases to execute.
-  TestCases testCases;
+  TestCases test_cases;
 
   //! Font data to use during text rendering tests.
-  BLFontData fontData;
+  BLFontData font_data;
 
-  // Statistics from runMultiple().
-  uint32_t mismatchCount {};
+  // Statistics from run_multiple().
+  uint32_t mismatch_count {};
 
   template<typename T>
   struct CaseIterator {
@@ -42,17 +42,17 @@ public:
     uint32_t index {};
     uint32_t count {};
     bool randomized {};
-    T randomCase {};
+    T random_case {};
 
-    inline CaseIterator(const std::vector<T>& options, bool randomized, T randomCase = T::kRandom)
+    inline CaseIterator(const std::vector<T>& options, bool randomized, T random_case = T::kRandom)
       : options(options),
         index(0),
         count(randomized ? uint32_t(1) : uint32_t(options.size())),
         randomized(randomized),
-        randomCase(randomCase) {}
+        random_case(random_case) {}
 
     inline bool valid() const { return index < count; }
-    inline T value() const { return randomized ? randomCase : options[index]; }
+    inline T value() const { return randomized ? random_case : options[index]; }
 
     inline bool next() { return ++index < count; }
   };
@@ -60,46 +60,46 @@ public:
   BaseTestApp();
   ~BaseTestApp();
 
-  static TestOptions makeDefaultOptions();
-  bool parseCommonOptions(const CmdLine& cmdLine);
+  static TestOptions make_default_options();
+  bool parse_common_options(const CmdLine& cmd_line);
 
   template<typename RunFunc>
-  void dispatchRuns(RunFunc&& run) {
-    for (CommandId commandId : testCases.commandIds) {
-      CaseIterator<StyleId> styleIdIterator(testCases.styleIds, isRandomStyle(options.styleId), options.styleId);
+  void dispatch_runs(RunFunc&& run) {
+    for (CommandId command_id : test_cases.command_ids) {
+      CaseIterator<StyleId> style_id_iterator(test_cases.style_ids, is_random_style(options.style_id), options.style_id);
       do {
-        CaseIterator<StyleOp> styleOpIterator(testCases.styleOps, options.styleOp == StyleOp::kRandom);
+        CaseIterator<StyleOp> style_op_iterator(test_cases.style_ops, options.style_op == StyleOp::kRandom);
         do {
-          CaseIterator<CompOp> compOpIterator(testCases.compOps, options.compOp == CompOp::kRandom);
+          CaseIterator<CompOp> comp_op_iterator(test_cases.comp_ops, options.comp_op == CompOp::kRandom);
           do {
-            CaseIterator<OpacityOp> opacityOpIterator(testCases.opacityOps, options.opacityOp == OpacityOp::kRandom);
+            CaseIterator<OpacityOp> opacity_op_iterator(test_cases.opacity_ops, options.opacity_op == OpacityOp::kRandom);
             do {
-              run(commandId,
-                  styleIdIterator.value(),
-                  styleOpIterator.value(),
-                  compOpIterator.value(),
-                  opacityOpIterator.value());
-            } while (opacityOpIterator.next());
-          } while (compOpIterator.next());
-        } while (styleOpIterator.next());
-      } while (styleIdIterator.next());
+              run(command_id,
+                  style_id_iterator.value(),
+                  style_op_iterator.value(),
+                  comp_op_iterator.value(),
+                  opacity_op_iterator.value());
+            } while (opacity_op_iterator.next());
+          } while (comp_op_iterator.next());
+        } while (style_op_iterator.next());
+      } while (style_id_iterator.next());
     }
   }
 
-  void printAppInfo(const char* title, bool quiet) const;
-  void printCommonOptions(const TestOptions& defaultOptions) const;
-  void printFormats() const;
-  void printCompOps() const;
-  void printOpacityOps() const;
-  void printStyleIds() const;
-  void printStyleOps() const;
-  void printCommands() const;
+  void print_app_info(const char* title, bool quiet) const;
+  void print_common_options(const TestOptions& default_options) const;
+  void print_formats() const;
+  void print_comp_ops() const;
+  void print_opacity_ops() const;
+  void print_style_ids() const;
+  void print_style_ops() const;
+  void print_commands() const;
 
-  bool runMultiple(CommandId commandId, const TestInfo& info, ContextTester& aTester, ContextTester& bTester, uint32_t maxDiff);
-  void findProblem(CommandId commandId, const TestInfo& info, ContextTester& aTester, ContextTester& bTester, uint32_t maxDiff);
+  bool run_multiple(CommandId command_id, const TestInfo& info, ContextTester& a_tester, ContextTester& b_tester, uint32_t max_diff);
+  void find_problem(CommandId command_id, const TestInfo& info, ContextTester& a_tester, ContextTester& b_tester, uint32_t max_diff);
 
-  bool checkOutput(const char* testId, const ContextTester& aTester, const ContextTester& bTester, uint32_t maxDiff);
-  void storeImage(const BLImage& image, const char* name, const char* suffix = nullptr) const;
+  bool check_output(const char* test_id, const ContextTester& a_tester, const ContextTester& b_tester, uint32_t max_diff);
+  void store_image(const BLImage& image, const char* name, const char* suffix = nullptr) const;
 };
 
 } // {ContextTests}

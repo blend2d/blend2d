@@ -14,8 +14,8 @@ namespace bl::Compression::Checksum {
 // bl::Compression - CheckSum - CRC32 (ASIMD)
 // ==========================================
 
-uint32_t crc32Update_ASIMD(uint32_t checksum, const uint8_t* data, size_t size) noexcept {
-  return crc32Update_CLMUL128(checksum, data, size);
+uint32_t crc32_update_asimd(uint32_t checksum, const uint8_t* data, size_t size) noexcept {
+  return crc32_update_clmul128(checksum, data, size);
 }
 
 } // {bl::Compression::Checksum}

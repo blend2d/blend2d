@@ -18,46 +18,46 @@
 namespace bl::RasterEngine {
 namespace Debugging {
 
-static void debugEdges(EdgeStorage<int>* edgeStorage) noexcept {
-  EdgeList<int>* edgeList = edgeStorage->bandEdges();
-  size_t count = edgeStorage->bandCount();
-  uint32_t bandHeight = edgeStorage->bandHeight();
+static void debug_edges(EdgeStorage<int>* edge_storage) noexcept {
+  EdgeList<int>* edge_list = edge_storage->band_edges();
+  size_t count = edge_storage->band_count();
+  uint32_t band_height = edge_storage->band_height();
 
-  int minX = Traits::maxValue<int>();
-  int minY = Traits::maxValue<int>();
-  int maxX = Traits::minValue<int>();
-  int maxY = Traits::minValue<int>();
+  int min_x = Traits::max_value<int>();
+  int min_y = Traits::max_value<int>();
+  int max_x = Traits::min_value<int>();
+  int max_y = Traits::min_value<int>();
 
-  const BLBoxI& bb = edgeStorage->boundingBox();
+  const BLBoxI& bb = edge_storage->bounding_box();
   printf("EDGE STORAGE [%d.%d %d.%d %d.%d %d.%d]:\n",
          bb.x0 >> 8, bb.x0 & 0xFF,
          bb.y0 >> 8, bb.y0 & 0xFF,
          bb.x1 >> 8, bb.x1 & 0xFF,
          bb.y1 >> 8, bb.y1 & 0xFF);
 
-  for (size_t bandId = 0; bandId < count; bandId++) {
-    EdgeVector<int>* edge = edgeList[bandId].first();
+  for (size_t band_id = 0; band_id < count; band_id++) {
+    EdgeVector<int>* edge = edge_list[band_id].first();
     if (edge) {
-      printf("BAND #%d y={%d:%d}\n", int(bandId), int(bandId * bandHeight), int((bandId + 1) * bandHeight - 1));
+      printf("BAND #%d y={%d:%d}\n", int(band_id), int(band_id * band_height), int((band_id + 1) * band_height - 1));
       while (edge) {
-        printf("  EDGES {sign=%u count=%u}", unsigned(edge->signBit), unsigned(edge->count));
+        printf("  EDGES {sign=%u count=%u}", unsigned(edge->sign_bit), unsigned(edge->count));
 
         if (edge->count <= 1)
           printf("{WRONG COUNT!}");
 
         EdgePoint<int>* ptr = edge->pts;
-        EdgePoint<int>* ptrStart = ptr;
-        EdgePoint<int>* ptrEnd = edge->pts + edge->count;
+        EdgePoint<int>* ptr_start = ptr;
+        EdgePoint<int>* ptr_end = edge->pts + edge->count;
 
-        while (ptr != ptrEnd) {
-          minX = blMin(minX, ptr[0].x);
-          minY = blMin(minY, ptr[0].y);
-          maxX = blMax(maxX, ptr[0].x);
-          maxY = blMax(maxY, ptr[0].y);
+        while (ptr != ptr_end) {
+          min_x = bl_min(min_x, ptr[0].x);
+          min_y = bl_min(min_y, ptr[0].y);
+          max_x = bl_max(max_x, ptr[0].x);
+          max_y = bl_max(max_y, ptr[0].y);
 
           printf(" [%d.%d, %d.%d]", ptr[0].x >> 8, ptr[0].x & 0xFF, ptr[0].y >> 8, ptr[0].y & 0xFF);
 
-          if (ptr != ptrStart && ptr[-1].y > ptr[0].y)
+          if (ptr != ptr_start && ptr[-1].y > ptr[0].y)
             printf(" !INVALID! ");
 
           ptr++;
@@ -70,10 +70,10 @@ static void debugEdges(EdgeStorage<int>* edgeStorage) noexcept {
   }
 
   printf("EDGE STORAGE BBOX [%d.%d, %d.%d] -> [%d.%d, %d.%d]\n\n",
-    minX >> 8, minX & 0xFF,
-    minY >> 8, minY & 0xFF,
-    maxX >> 8, maxX & 0xFF,
-    maxY >> 8, maxY & 0xFF);
+    min_x >> 8, min_x & 0xFF,
+    min_y >> 8, min_y & 0xFF,
+    max_x >> 8, max_x & 0xFF,
+    max_y >> 8, max_y & 0xFF);
 }
 
 } // {Debugging}

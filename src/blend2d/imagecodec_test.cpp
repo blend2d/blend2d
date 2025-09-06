@@ -17,49 +17,49 @@ namespace bl {
 namespace Tests {
 
 UNIT(image_codec_find, BL_TEST_GROUP_IMAGE_CODEC_ROUNDTRIP) {
-  INFO("Testing BLImageCodec::findByName() and BLImageCodec::findByData()");
+  INFO("Testing BLImageCodec::find_by_name() and BLImageCodec::find_by_data()");
   {
-    static const uint8_t bmpSignature[2] = { 'B', 'M' };
-    static const uint8_t pngSignature[8] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
-    static const uint8_t jpgSignature[3] = { 0xFF, 0xD8, 0xFF };
+    static const uint8_t bmp_signature[2] = { 'B', 'M' };
+    static const uint8_t png_signature[8] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+    static const uint8_t jpg_signature[3] = { 0xFF, 0xD8, 0xFF };
 
     BLImageCodec codec;
     BLImageCodec bmp;
     BLImageCodec png;
     BLImageCodec jpg;
 
-    EXPECT_SUCCESS(bmp.findByName("BMP"));
-    EXPECT_SUCCESS(png.findByName("PNG"));
-    EXPECT_SUCCESS(jpg.findByName("JPEG"));
+    EXPECT_SUCCESS(bmp.find_by_name("BMP"));
+    EXPECT_SUCCESS(png.find_by_name("PNG"));
+    EXPECT_SUCCESS(jpg.find_by_name("JPEG"));
 
-    EXPECT_SUCCESS(codec.findByExtension("bmp"));
+    EXPECT_SUCCESS(codec.find_by_extension("bmp"));
     EXPECT_EQ(codec, bmp);
 
-    EXPECT_SUCCESS(codec.findByExtension(".bmp"));
+    EXPECT_SUCCESS(codec.find_by_extension(".bmp"));
     EXPECT_EQ(codec, bmp);
 
-    EXPECT_SUCCESS(codec.findByExtension("SomeFile.BMp"));
+    EXPECT_SUCCESS(codec.find_by_extension("SomeFile.BMp"));
     EXPECT_EQ(codec, bmp);
 
-    EXPECT_SUCCESS(codec.findByExtension("png"));
+    EXPECT_SUCCESS(codec.find_by_extension("png"));
     EXPECT_EQ(codec, png);
 
-    EXPECT_SUCCESS(codec.findByExtension(".png"));
+    EXPECT_SUCCESS(codec.find_by_extension(".png"));
     EXPECT_EQ(codec, png);
 
-    EXPECT_SUCCESS(codec.findByExtension(".jpg"));
+    EXPECT_SUCCESS(codec.find_by_extension(".jpg"));
     EXPECT_EQ(codec, jpg);
 
-    EXPECT_SUCCESS(codec.findByExtension(".jpeg"));
+    EXPECT_SUCCESS(codec.find_by_extension(".jpeg"));
     EXPECT_EQ(codec, jpg);
 
-    EXPECT_SUCCESS(codec.findByData(bmpSignature, BL_ARRAY_SIZE(bmpSignature)));
+    EXPECT_SUCCESS(codec.find_by_data(bmp_signature, BL_ARRAY_SIZE(bmp_signature)));
     EXPECT_EQ(codec, bmp);
 
-    EXPECT_SUCCESS(codec.findByData(pngSignature, BL_ARRAY_SIZE(pngSignature)));
+    EXPECT_SUCCESS(codec.find_by_data(png_signature, BL_ARRAY_SIZE(png_signature)));
     EXPECT_EQ(codec, png);
 
-    EXPECT_SUCCESS(codec.findByData(jpgSignature, BL_ARRAY_SIZE(jpgSignature)));
+    EXPECT_SUCCESS(codec.find_by_data(jpg_signature, BL_ARRAY_SIZE(jpg_signature)));
     EXPECT_EQ(codec, jpg);
   }
 }

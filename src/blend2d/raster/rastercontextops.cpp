@@ -16,84 +16,84 @@ namespace bl::RasterEngine {
 // ==========================================
 
 template<typename PointType>
-static BL_INLINE BLResult blRasterContextBuildPolyEdgesT(
-  WorkData* workData,
-  const PointType* pts, size_t size, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
+static BL_INLINE BLResult bl_raster_context_build_poly_edges_t(
+  WorkData* work_data,
+  const PointType* pts, size_t size, const BLMatrix2D& transform, BLTransformType transform_type) noexcept {
 
-  BLResult result = workData->edgeBuilder.initFromPoly(pts, size, transform, transformType);
+  BLResult result = work_data->edge_builder.init_from_poly(pts, size, transform, transform_type);
   if (BL_LIKELY(result == BL_SUCCESS))
     return result;
 
-  workData->revertEdgeBuilder();
-  return workData->accumulateError(result);
+  work_data->revert_edge_builder();
+  return work_data->accumulate_error(result);
 }
 
-BLResult addFilledPolygonEdges(WorkData* workData, const BLPointI* pts, size_t size, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
-  return blRasterContextBuildPolyEdgesT(workData, pts, size, transform, transformType);
+BLResult add_filled_polygon_edges(WorkData* work_data, const BLPointI* pts, size_t size, const BLMatrix2D& transform, BLTransformType transform_type) noexcept {
+  return bl_raster_context_build_poly_edges_t(work_data, pts, size, transform, transform_type);
 }
 
-BLResult addFilledPolygonEdges(WorkData* workData, const BLPoint* pts, size_t size, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
-  return blRasterContextBuildPolyEdgesT(workData, pts, size, transform, transformType);
+BLResult add_filled_polygon_edges(WorkData* work_data, const BLPoint* pts, size_t size, const BLMatrix2D& transform, BLTransformType transform_type) noexcept {
+  return bl_raster_context_build_poly_edges_t(work_data, pts, size, transform, transform_type);
 }
 
-BLResult addFilledPathEdges(WorkData* workData, const BLPathView& pathView, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
-  BLResult result = workData->edgeBuilder.initFromPath(pathView, true, transform, transformType);
+BLResult add_filled_path_edges(WorkData* work_data, const BLPathView& path_view, const BLMatrix2D& transform, BLTransformType transform_type) noexcept {
+  BLResult result = work_data->edge_builder.init_from_path(path_view, true, transform, transform_type);
   if (BL_LIKELY(result == BL_SUCCESS))
     return result;
 
-  workData->revertEdgeBuilder();
-  return workData->accumulateError(result);
+  work_data->revert_edge_builder();
+  return work_data->accumulate_error(result);
 }
 
 // bl::RasterEngine - Sinks & Sink Utilities
 // =========================================
 
-BLResult fillGlyphRunSink(BLPathCore* path, const void* info, void* userData) noexcept {
-  blUnused(info);
+BLResult fill_glyph_run_sink(BLPathCore* path, const void* info, void* user_data) noexcept {
+  bl_unused(info);
 
-  EdgeBuilderSink* sink = static_cast<EdgeBuilderSink*>(userData);
-  EdgeBuilder<int>* edgeBuilder = sink->edgeBuilder;
+  EdgeBuilderSink* sink = static_cast<EdgeBuilderSink*>(user_data);
+  EdgeBuilder<int>* edge_builder = sink->edge_builder;
 
-  BL_PROPAGATE(edgeBuilder->addPath(path->dcast().view(), true, TransformInternal::identityTransform, BL_TRANSFORM_TYPE_IDENTITY));
+  BL_PROPAGATE(edge_builder->add_path(path->dcast().view(), true, TransformInternal::identity_transform, BL_TRANSFORM_TYPE_IDENTITY));
   return path->dcast().clear();
 }
 
-BLResult strokeGeometrySink(BLPathCore* a, BLPathCore* b, BLPathCore* c, size_t figureStart, size_t figureEnd, void* userData) noexcept {
-  blUnused(figureStart, figureEnd);
+BLResult stroke_geometry_sink(BLPathCore* a, BLPathCore* b, BLPathCore* c, size_t figure_start, size_t figure_end, void* user_data) noexcept {
+  bl_unused(figure_start, figure_end);
 
-  StrokeSink* self = static_cast<StrokeSink*>(userData);
-  EdgeBuilder<int>* edgeBuilder = self->edgeBuilder;
+  StrokeSink* self = static_cast<StrokeSink*>(user_data);
+  EdgeBuilder<int>* edge_builder = self->edge_builder;
 
-  BL_PROPAGATE(edgeBuilder->addPath(a->dcast().view(), false, *self->transform, self->transformType));
-  BL_PROPAGATE(edgeBuilder->addReversePathFromStrokeSink(b->dcast().view(), *self->transform, self->transformType));
+  BL_PROPAGATE(edge_builder->add_path(a->dcast().view(), false, *self->transform, self->transform_type));
+  BL_PROPAGATE(edge_builder->add_reverse_path_from_stroke_sink(b->dcast().view(), *self->transform, self->transform_type));
 
-  if (!c->dcast().empty())
-    BL_PROPAGATE(edgeBuilder->addPath(c->dcast().view(), false, *self->transform, self->transformType));
+  if (!c->dcast().is_empty())
+    BL_PROPAGATE(edge_builder->add_path(c->dcast().view(), false, *self->transform, self->transform_type));
 
   return a->dcast().clear();
 }
 
-BLResult strokeGlyphRunSink(BLPathCore* path, const void* info, void* userData) noexcept {
-  blUnused(info);
+BLResult stroke_glyph_run_sink(BLPathCore* path, const void* info, void* user_data) noexcept {
+  bl_unused(info);
 
-  StrokeGlyphRunSink* sink = static_cast<StrokeGlyphRunSink*>(userData);
+  StrokeGlyphRunSink* sink = static_cast<StrokeGlyphRunSink*>(user_data);
   BLPath& a = sink->paths[0];
   BLPath& b = sink->paths[1];
   BLPath& c = sink->paths[2];
 
   a.clear();
-  BLResult localResult = PathInternal::strokePath(
+  BLResult local_result = PathInternal::stroke_path(
     path->dcast().view(),
-    *sink->strokeOptions,
-    *sink->approximationOptions,
+    *sink->stroke_options,
+    *sink->approximation_options,
     a, b, c,
-    strokeGeometrySink, sink);
+    stroke_geometry_sink, sink);
 
   // We must clear the input path, because glyph outlines are appended to it and we just just consumed its content.
   // If we haven't cleared it we would process the same data that we have already processed the next time.
-  blPathClear(path);
+  bl_path_clear(path);
 
-  return localResult;
+  return local_result;
 }
 
 } // {bl::RasterEngine}

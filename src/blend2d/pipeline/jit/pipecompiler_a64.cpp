@@ -19,18 +19,18 @@ namespace Inst { using namespace a64::Inst; }
 // bl::Pipeline::PipeCompiler - Construction & Destruction
 // =======================================================
 
-PipeCompiler::PipeCompiler(AsmCompiler* cc, const CpuFeatures& features, PipeOptFlags optFlags) noexcept
+PipeCompiler::PipeCompiler(AsmCompiler* cc, const CpuFeatures& features, PipeOptFlags opt_flags) noexcept
   : cc(cc),
-    ct(commonTable),
+    ct(common_table),
     _features(features),
-    _optFlags(optFlags),
-    _vecRegCount(32),
-    _commonTableOff(512 + 128) {
+    _opt_flags(opt_flags),
+    _vec_reg_count(32),
+    _common_table_offset(512 + 128) {
 
-  _scalarOpBehavior = ScalarOpBehavior::kZeroing;
-  _fMinMaxOpBehavior = FMinMaxOpBehavior::kFiniteValue;
-  _fMulAddOpBehavior = FMulAddOpBehavior::kFMAStoreToAccumulator;
-  _initExtensions(features);
+  _scalar_op_behavior = ScalarOpBehavior::kZeroing;
+  _fmin_fmax_op_hehavior = FMinFMaxOpBehavior::kFiniteValue;
+  _fmadd_op_behavior = FMAddOpBehavior::kFMAStoreToAccumulator;
+  _init_extensions(features);
 }
 
 PipeCompiler::~PipeCompiler() noexcept {}
@@ -38,63 +38,63 @@ PipeCompiler::~PipeCompiler() noexcept {}
 // bl::Pipeline::PipeCompiler - CPU Architecture, Features and Optimization Options
 // ================================================================================
 
-void PipeCompiler::_initExtensions(const asmjit::CpuFeatures& features) noexcept {
-  uint64_t gpExtMask = 0;
-  uint64_t asimdExtMask = 0;
+void PipeCompiler::_init_extensions(const asmjit::CpuFeatures& features) noexcept {
+  uint64_t gp_ext_mask = 0;
+  uint64_t asimd_ext_mask = 0;
 
-  if (features.arm().hasCSSC()    ) gpExtMask |= uint64_t(1) << uint32_t(GPExt::kCSSC);
-  if (features.arm().hasFLAGM()   ) gpExtMask |= uint64_t(1) << uint32_t(GPExt::kFLAGM);
-  if (features.arm().hasFLAGM2()  ) gpExtMask |= uint64_t(1) << uint32_t(GPExt::kFLAGM2);
-  if (features.arm().hasLS64()    ) gpExtMask |= uint64_t(1) << uint32_t(GPExt::kLS64);
-  if (features.arm().hasLS64_V()  ) gpExtMask |= uint64_t(1) << uint32_t(GPExt::kLS64_V);
-  if (features.arm().hasLSE()     ) gpExtMask |= uint64_t(1) << uint32_t(GPExt::kLSE);
-  if (features.arm().hasLSE128()  ) gpExtMask |= uint64_t(1) << uint32_t(GPExt::kLSE128);
-  if (features.arm().hasLSE2()    ) gpExtMask |= uint64_t(1) << uint32_t(GPExt::kLSE2);
+  if (features.arm().has_cssc()    ) gp_ext_mask |= uint64_t(1) << uint32_t(GPExt::kCSSC);
+  if (features.arm().has_flagm()   ) gp_ext_mask |= uint64_t(1) << uint32_t(GPExt::kFLAGM);
+  if (features.arm().has_flagm2()  ) gp_ext_mask |= uint64_t(1) << uint32_t(GPExt::kFLAGM2);
+  if (features.arm().has_ls64()    ) gp_ext_mask |= uint64_t(1) << uint32_t(GPExt::kLS64);
+  if (features.arm().has_ls64_v()  ) gp_ext_mask |= uint64_t(1) << uint32_t(GPExt::kLS64_V);
+  if (features.arm().has_lse()     ) gp_ext_mask |= uint64_t(1) << uint32_t(GPExt::kLSE);
+  if (features.arm().has_lse128()  ) gp_ext_mask |= uint64_t(1) << uint32_t(GPExt::kLSE128);
+  if (features.arm().has_lse2()    ) gp_ext_mask |= uint64_t(1) << uint32_t(GPExt::kLSE2);
 
-  if (features.arm().hasASIMD()   ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kASIMD);
-  if (features.arm().hasBF16()    ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kBF16);
-  if (features.arm().hasDOTPROD() ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kDOTPROD);
-  if (features.arm().hasFCMA()    ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kFCMA);
-  if (features.arm().hasFHM()     ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kFHM);
-  if (features.arm().hasFP16()    ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kFP16);
-  if (features.arm().hasFP16CONV()) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kFP16CONV);
-  if (features.arm().hasFP8()     ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kFP8);
-  if (features.arm().hasFRINTTS() ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kFRINTTS);
-  if (features.arm().hasI8MM()    ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kI8MM);
-  if (features.arm().hasJSCVT()   ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kJSCVT);
-  if (features.arm().hasPMULL()   ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kPMULL);
-  if (features.arm().hasRDM()     ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kRDM);
-  if (features.arm().hasSHA1()    ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kSHA1);
-  if (features.arm().hasSHA256()  ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kSHA256);
-  if (features.arm().hasSHA3()    ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kSHA3);
-  if (features.arm().hasSHA512()  ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kSHA512);
-  if (features.arm().hasSM3()     ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kSM3);
-  if (features.arm().hasSM4()     ) asimdExtMask |= uint64_t(1) << uint32_t(ASIMDExt::kSM4);
+  if (features.arm().has_asimd()   ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kASIMD);
+  if (features.arm().has_bf16()    ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kBF16);
+  if (features.arm().has_dotprod() ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kDOTPROD);
+  if (features.arm().has_fcma()    ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kFCMA);
+  if (features.arm().has_fhm()     ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kFHM);
+  if (features.arm().has_fp16()    ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kFP16);
+  if (features.arm().has_fp16conv()) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kFP16CONV);
+  if (features.arm().has_fp8()     ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kFP8);
+  if (features.arm().has_frintts() ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kFRINTTS);
+  if (features.arm().has_i8mm()    ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kI8MM);
+  if (features.arm().has_jscvt()   ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kJSCVT);
+  if (features.arm().has_pmull()   ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kPMULL);
+  if (features.arm().has_rdm()     ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kRDM);
+  if (features.arm().has_sha1()    ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kSHA1);
+  if (features.arm().has_sha256()  ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kSHA256);
+  if (features.arm().has_sha3()    ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kSHA3);
+  if (features.arm().has_sha512()  ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kSHA512);
+  if (features.arm().has_sm3()     ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kSM3);
+  if (features.arm().has_sm4()     ) asimd_ext_mask |= uint64_t(1) << uint32_t(ASIMDExt::kSM4);
 
-  _gpExtMask = gpExtMask;
-  _asimdExtMask = asimdExtMask;
+  _gp_ext_mask = gp_ext_mask;
+  _asimd_ext_mask = asimd_ext_mask;
 }
 
-VecWidth PipeCompiler::maxVecWidthFromCpuFeatures() noexcept {
+VecWidth PipeCompiler::max_vec_width_from_cpu_features() noexcept {
   return VecWidth::k128;
 }
 
-void PipeCompiler::initVecWidth(VecWidth vw) noexcept {
+void PipeCompiler::init_vec_width(VecWidth vw) noexcept {
   BL_ASSERT(vw == VecWidth::k128);
-  blUnused(vw);
+  bl_unused(vw);
 
-  _vecWidth = VecWidth::k128;
-  _vecRegType = RegType::kVec128;
-  _vecTypeId = asmjit::TypeId::kInt32x4;
-  _vecMultiplier = 1u;
+  _vec_width = VecWidth::k128;
+  _vec_reg_type = RegType::kVec128;
+  _vec_type_id = asmjit::TypeId::kInt32x4;
+  _vec_multiplier = 1u;
 }
 
-bool PipeCompiler::hasMaskedAccessOf(uint32_t dataSize) const noexcept {
-  switch (dataSize) {
-    case 1: return hasOptFlag(PipeOptFlags::kMaskOps8Bit);
-    case 2: return hasOptFlag(PipeOptFlags::kMaskOps16Bit);
-    case 4: return hasOptFlag(PipeOptFlags::kMaskOps32Bit);
-    case 8: return hasOptFlag(PipeOptFlags::kMaskOps64Bit);
+bool PipeCompiler::has_masked_access_of(uint32_t data_size) const noexcept {
+  switch (data_size) {
+    case 1: return has_opt_flag(PipeOptFlags::kMaskOps8Bit);
+    case 2: return has_opt_flag(PipeOptFlags::kMaskOps16Bit);
+    case 4: return has_opt_flag(PipeOptFlags::kMaskOps32Bit);
+    case 8: return has_opt_flag(PipeOptFlags::kMaskOps64Bit);
 
     default:
       return false;
@@ -104,181 +104,181 @@ bool PipeCompiler::hasMaskedAccessOf(uint32_t dataSize) const noexcept {
 // bl::Pipeline::PipeCompiler - Function
 // =====================================
 
-void PipeCompiler::initFunction(asmjit::FuncNode* funcNode) noexcept {
-  cc->addFunc(funcNode);
+void PipeCompiler::init_function(asmjit::FuncNode* func_node) noexcept {
+  cc->add_func(func_node);
 
-  _funcNode = funcNode;
-  _funcInit = cc->cursor();
-  _funcEnd = funcNode->endNode()->prev();
+  _func_node = func_node;
+  _func_init = cc->cursor();
+  _func_end = func_node->end_node()->prev();
 }
 
 // bl::Pipeline::PipeCompiler - Constants
 // ======================================
 
-void PipeCompiler::_initCommonTablePtr() noexcept {
-  const void* global = &commonTable;
+void PipeCompiler::_init_common_table_ptr() noexcept {
+  const void* global = &common_table;
 
-  if (!_commonTablePtr.isValid()) {
-    ScopedInjector injector(cc, &_funcInit);
-    _commonTablePtr = newGpPtr("commonTablePtr");
-    cc->mov(_commonTablePtr, (int64_t)global + _commonTableOff);
+  if (!_common_table_ptr.is_valid()) {
+    ScopedInjector injector(cc, &_func_init);
+    _common_table_ptr = new_gp("common_table_ptr");
+    cc->mov(_common_table_ptr, (int64_t)global + _common_table_offset);
   }
 }
 
-Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, VecWidth constWidth) noexcept {
-  return simdVecConst(c, bcstWidth, constWidth);
+Operand PipeCompiler::simd_const(const void* c, Bcst bcst_width, VecWidth const_width) noexcept {
+  return simd_vec_const(c, bcst_width, const_width);
 }
 
-Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept {
-  blUnused(similarTo);
-  return simdVecConst(c, bcstWidth, VecWidth::k128);
+Operand PipeCompiler::simd_const(const void* c, Bcst bcst_width, const Vec& similar_to) noexcept {
+  bl_unused(similar_to);
+  return simd_vec_const(c, bcst_width, VecWidth::k128);
 }
 
-Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept {
-  BL_ASSERT(!similarTo.empty());
-  blUnused(bcstWidth, similarTo);
+Operand PipeCompiler::simd_const(const void* c, Bcst bcst_width, const VecArray& similar_to) noexcept {
+  BL_ASSERT(!similar_to.is_empty());
+  bl_unused(bcst_width, similar_to);
 
-  return simdVecConst(c, bcstWidth, VecWidth::k128);
+  return simd_vec_const(c, bcst_width, VecWidth::k128);
 }
 
-Vec PipeCompiler::simdVecConst(const void* c, Bcst bcstWidth, VecWidth constWidth) noexcept {
-  blUnused(bcstWidth);
-  blUnused(constWidth);
+Vec PipeCompiler::simd_vec_const(const void* c, Bcst bcst_width, VecWidth const_width) noexcept {
+  bl_unused(bcst_width);
+  bl_unused(const_width);
 
-  size_t n = _vecConsts.size();
+  size_t n = _vec_consts.size();
   for (size_t i = 0; i < n; i++)
-    if (_vecConsts[i].ptr == c)
-      return Vec(OperandSignature{asmjit::RegTraits<RegType::kVec128>::kSignature}, _vecConsts[i].vRegId);
+    if (_vec_consts[i].ptr == c)
+      return Vec(OperandSignature{asmjit::RegTraits<RegType::kVec128>::kSignature}, _vec_consts[i].virt_id);
 
-  return Vec(OperandSignature{asmjit::RegTraits<RegType::kVec128>::kSignature}, _newVecConst(c, true).id());
+  return Vec(OperandSignature{asmjit::RegTraits<RegType::kVec128>::kSignature}, _new_vec_const(c, true).id());
 }
 
-Vec PipeCompiler::simdVecConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept {
-  blUnused(similarTo);
-  return simdVecConst(c, bcstWidth, VecWidth::k128);
+Vec PipeCompiler::simd_vec_const(const void* c, Bcst bcst_width, const Vec& similar_to) noexcept {
+  bl_unused(similar_to);
+  return simd_vec_const(c, bcst_width, VecWidth::k128);
 }
 
-Vec PipeCompiler::simdVecConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept {
-  blUnused(similarTo);
-  return simdVecConst(c, bcstWidth, VecWidth::k128);
+Vec PipeCompiler::simd_vec_const(const void* c, Bcst bcst_width, const VecArray& similar_to) noexcept {
+  bl_unused(similar_to);
+  return simd_vec_const(c, bcst_width, VecWidth::k128);
 }
 
-Mem PipeCompiler::simdMemConst(const void* c, Bcst bcstWidth, VecWidth constWidth) noexcept {
-  blUnused(bcstWidth, constWidth);
-  return _getMemConst(c);
+Mem PipeCompiler::simd_mem_const(const void* c, Bcst bcst_width, VecWidth const_width) noexcept {
+  bl_unused(bcst_width, const_width);
+  return _get_mem_const(c);
 }
 
-Mem PipeCompiler::simdMemConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept {
-  blUnused(bcstWidth, similarTo);
-  return _getMemConst(c);
+Mem PipeCompiler::simd_mem_const(const void* c, Bcst bcst_width, const Vec& similar_to) noexcept {
+  bl_unused(bcst_width, similar_to);
+  return _get_mem_const(c);
 }
 
-Mem PipeCompiler::simdMemConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept {
-  blUnused(bcstWidth, similarTo);
-  return _getMemConst(c);
+Mem PipeCompiler::simd_mem_const(const void* c, Bcst bcst_width, const VecArray& similar_to) noexcept {
+  bl_unused(bcst_width, similar_to);
+  return _get_mem_const(c);
 }
 
-Mem PipeCompiler::_getMemConst(const void* c) noexcept {
-  // Make sure we are addressing a constant from the `commonTable` constant pool.
-  const void* global = &commonTable;
+Mem PipeCompiler::_get_mem_const(const void* c) noexcept {
+  // Make sure we are addressing a constant from the `common_table` constant pool.
+  const void* global = &common_table;
   BL_ASSERT((uintptr_t)c >= (uintptr_t)global &&
             (uintptr_t)c <  (uintptr_t)global + sizeof(CommonTable));
 
-  // One GP register is sacrificed to hold the pointer to the `commonTable`.
-  _initCommonTablePtr();
+  // One GP register is sacrificed to hold the pointer to the `common_table`.
+  _init_common_table_ptr();
 
   int32_t disp = int32_t((intptr_t)c - (intptr_t)global);
-  return mem_ptr(_commonTablePtr, disp - _commonTableOff);
+  return mem_ptr(_common_table_ptr, disp - _common_table_offset);
 }
 
-Vec PipeCompiler::_newVecConst(const void* c, bool isUniqueConst) noexcept {
-  blUnused(isUniqueConst);
+Vec PipeCompiler::_new_vec_const(const void* c, bool is_unique_const) noexcept {
+  bl_unused(is_unique_const);
 
-  Vec vReg;
-  const char* specialConstName = nullptr;
+  Vec virt_reg;
+  const char* special_const_name = nullptr;
 
-  if (c == commonTable.swizu8_dither_rgba64_lo.data) {
-    specialConstName = "swizu8_dither_rgba64_lo";
+  if (c == common_table.swizu8_dither_rgba64_lo.data) {
+    special_const_name = "swizu8_dither_rgba64_lo";
   }
-  else if (c == commonTable.swizu8_dither_rgba64_hi.data) {
-    specialConstName = "swizu8_dither_rgba64_hi";
+  else if (c == common_table.swizu8_dither_rgba64_hi.data) {
+    special_const_name = "swizu8_dither_rgba64_hi";
   }
 
-  if (specialConstName) {
-    vReg = newVec(vecWidth(), specialConstName);
+  if (special_const_name) {
+    virt_reg = new_vec(vec_width(), special_const_name);
   }
   else {
     uint64_t u0 = static_cast<const uint64_t*>(c)[0];
     uint64_t u1 = static_cast<const uint64_t*>(c)[1];
 
     if (u0 != u1)
-      vReg = newVec(vecWidth(), "c_0x%016llX%016llX", (unsigned long long)u1, (unsigned long long)u0);
+      virt_reg = new_vec(vec_width(), "c_0x%016llX%016llX", (unsigned long long)u1, (unsigned long long)u0);
     else if ((u0 >> 32) != (u0 & 0xFFFFFFFFu))
-      vReg = newVec(vecWidth(), "c_0x%016llX", (unsigned long long)u0);
+      virt_reg = new_vec(vec_width(), "c_0x%016llX", (unsigned long long)u0);
     else if (((u0 >> 16) & 0xFFFFu) != (u0 & 0xFFFFu))
-      vReg = newVec(vecWidth(), "c_0x%08X", (unsigned)(u0 & 0xFFFFFFFFu));
+      virt_reg = new_vec(vec_width(), "c_0x%08X", (unsigned)(u0 & 0xFFFFFFFFu));
     else
-      vReg = newVec(vecWidth(), "c_0x%04X", (unsigned)(u0 & 0xFFFFu));
+      virt_reg = new_vec(vec_width(), "c_0x%04X", (unsigned)(u0 & 0xFFFFu));
   }
 
-  VecConst vConst;
-  vConst.ptr = c;
-  vConst.vRegId = vReg.id();
-  _vecConsts.append(zoneAllocator(), vConst);
+  VecConst v_const;
+  v_const.ptr = c;
+  v_const.virt_id = virt_reg.id();
+  _vec_consts.append(arena(), v_const);
 
-  if (c == &commonTable.i_0000000000000000) {
-    ScopedInjector inject(cc, &_funcInit);
-    v_zero_i(vReg.v128());
+  if (c == &common_table.i_0000000000000000) {
+    ScopedInjector inject(cc, &_func_init);
+    v_zero_i(virt_reg.v128());
   }
   else {
-    // NOTE: _getMemConst() must be outside of injected code as it uses injection too.
-    Mem m = _getMemConst(c);
+    // NOTE: _get_mem_const() must be outside of injected code as it uses injection too.
+    Mem m = _get_mem_const(c);
 
-    ScopedInjector inject(cc, &_funcInit);
-    v_loadavec(vReg, m);
+    ScopedInjector inject(cc, &_func_init);
+    v_loadavec(virt_reg, m);
   }
 
-  return vReg;
+  return virt_reg;
 }
 
-Vec PipeCompiler::simdConst16B(const void* data16) noexcept {
-  size_t n = _vecConstsEx.size();
+Vec PipeCompiler::simd_const_16b(const void* data16) noexcept {
+  size_t n = _vec_consts_ex.size();
 
   for (size_t i = 0; i < n; i++) {
-    if (memcmp(_vecConstsEx[i].data, data16, 16) == 0) {
-      return Vec(OperandSignature{asmjit::RegTraits<RegType::kVec128>::kSignature}, _vecConstsEx[i].vRegId);
+    if (memcmp(_vec_consts_ex[i].data, data16, 16) == 0) {
+      return Vec(OperandSignature{asmjit::RegTraits<RegType::kVec128>::kSignature}, _vec_consts_ex[i].virt_id);
     }
   }
 
-  Vec vReg = newVec(VecWidth::k128, "const");
+  Vec virt_reg = new_vec(VecWidth::k128, "const");
   VecConstEx entry;
 
   memcpy(entry.data, data16, 16);
-  entry.vRegId = vReg.id();
-  _vecConstsEx.append(zoneAllocator(), entry);
+  entry.virt_id = virt_reg.id();
+  _vec_consts_ex.append(arena(), entry);
 
-  Mem mem = cc->newConst(asmjit::ConstPoolScope::kLocal, data16, 16);
+  Mem mem = cc->new_const(asmjit::ConstPoolScope::kLocal, data16, 16);
   {
-    ScopedInjector inject(cc, &_funcInit);
-    v_loadavec(vReg, mem);
+    ScopedInjector inject(cc, &_func_init);
+    v_loadavec(virt_reg, mem);
   }
 
-  return vReg;
+  return virt_reg;
 }
 
 // bl::Pipeline::PipeCompiler - Stack
 // ==================================
 
-Mem PipeCompiler::tmpStack(StackId id, uint32_t size) noexcept {
-  BL_ASSERT(IntOps::isPowerOf2(size));
+Mem PipeCompiler::tmp_stack(StackId id, uint32_t size) noexcept {
+  BL_ASSERT(IntOps::is_power_of_2(size));
   BL_ASSERT(size <= 32);
 
   // Only used by asserts.
-  blUnused(size);
+  bl_unused(size);
 
-  Mem& stack = _tmpStack[size_t(id)];
-  if (!stack.baseId()) {
-    stack = cc->newStack(32, 16, "tmpStack");
+  Mem& stack = _tmp_stack[size_t(id)];
+  if (!stack.base_id()) {
+    stack = cc->new_stack(32, 16, "tmp_stack");
   }
   return stack;
 }
@@ -286,15 +286,15 @@ Mem PipeCompiler::tmpStack(StackId id, uint32_t size) noexcept {
 // bl::Pipeline::PipeCompiler - Utilities
 // ======================================
 
-void PipeCompiler::embedJumpTable(const Label* jumpTable, size_t jumpTableSize, const Label& jumpTableBase, uint32_t entrySize) noexcept {
+void PipeCompiler::embed_jump_table(const Label* jump_table, size_t jump_table_size, const Label& jump_table_base, uint32_t entry_size) noexcept {
   static const uint8_t zeros[8] {};
 
-  for (size_t i = 0; i < jumpTableSize; i++) {
-    if (jumpTable[i].isValid()) {
-      cc->embedLabelDelta(jumpTable[i], jumpTableBase, entrySize);
+  for (size_t i = 0; i < jump_table_size; i++) {
+    if (jump_table[i].is_valid()) {
+      cc->embed_label_delta(jump_table[i], jump_table_base, entry_size);
     }
     else {
-      cc->embed(zeros, entrySize);
+      cc->embed(zeros, entry_size);
     }
   }
 }
@@ -303,55 +303,55 @@ void PipeCompiler::embedJumpTable(const Label* jumpTable, size_t jumpTableSize, 
 // =====================================================================
 
 struct MemInst {
-  uint16_t instId;
-  uint16_t memSize;
+  uint16_t inst_id;
+  uint16_t mem_size;
 };
 
 static BL_NOINLINE void gp_emit_mem_op(PipeCompiler* pc, const Gp& r, Mem m, MemInst ii) noexcept {
   AsmCompiler* cc = pc->cc;
-  InstId instId = ii.instId;
+  InstId inst_id = ii.inst_id;
 
-  if (m.hasIndex() && m.hasShift()) {
+  if (m.has_index() && m.has_shift()) {
     // AArch64 limitation: shift can be the same size as the size of the read operation - HWord << 1, Word << 2, etc...
     // Other shift operations are not supported at the architectural level, so we have to perform it explicitly.
-    uint32_t memSize = ii.memSize ? uint32_t(ii.memSize) : r.size();
+    uint32_t mem_size = ii.mem_size ? uint32_t(ii.mem_size) : r.size();
     uint32_t shift = m.shift();
 
-    if (memSize != (1u << shift)) {
-      Gp tmp = pc->newGpPtr("@mem_addr");
-      cc->add(tmp, m.baseReg().as<Gp>(), m.indexReg().as<Gp>(), a64::Shift(m.shiftOp(), shift));
+    if (mem_size != (1u << shift)) {
+      Gp tmp = pc->new_gp("@mem_addr");
+      cc->add(tmp, m.base_reg().as<Gp>(), m.index_reg().as<Gp>(), a64::Shift(m.shift_op(), shift));
       m = a64::ptr(tmp);
     }
   }
 
-  cc->emit(instId, r, m);
+  cc->emit(inst_id, r, m);
 }
 
 static constexpr Gp gp_zero_regs[2] = { a64::wzr, a64::xzr };
 
 static BL_INLINE const Gp& gp_zero_as(const Gp& ref) noexcept {
-  return gp_zero_regs[size_t(ref.isGp64())];
+  return gp_zero_regs[size_t(ref.is_gp64())];
 }
 
 static BL_NOINLINE Gp gp_force_reg(PipeCompiler* pc, const Operand_& op, const Gp& ref) noexcept {
-  BL_ASSERT(op.isGp() || op.isMem() || op.isImm());
+  BL_ASSERT(op.is_gp() || op.is_mem() || op.is_imm());
 
   Gp reg;
 
-  if (op.isGp()) {
+  if (op.is_gp()) {
     reg = op.as<Gp>();
-    reg.setSignature(ref.signature());
+    reg.set_signature(ref.signature());
     return reg;
   }
 
-  if (op.isImm() && op.as<Imm>().value() == 0) {
+  if (op.is_imm() && op.as<Imm>().value() == 0) {
     return gp_zero_as(ref);
   }
 
   AsmCompiler* cc = pc->cc;
-  reg = pc->newSimilarReg(ref, "@tmp");
+  reg = pc->new_similar_reg(ref, "@tmp");
 
-  if (op.isMem()) {
+  if (op.is_mem()) {
     gp_emit_mem_op(pc, reg, op.as<Mem>(), MemInst{uint16_t(Inst::kIdLdr), uint16_t(reg.size())});
   }
   else {
@@ -364,7 +364,7 @@ static BL_NOINLINE Gp gp_force_reg(PipeCompiler* pc, const Operand_& op, const G
 // ======================================================================
 
 struct ConditionOpInfo {
-  uint16_t instId;
+  uint16_t inst_id;
   uint16_t reserved;
 };
 
@@ -384,15 +384,15 @@ class ConditionApplier : public Condition {
 public:
   BL_INLINE ConditionApplier(const Condition& condition) noexcept : Condition(condition) {
     // The first operand must always be a register.
-    BL_ASSERT(a.isGp());
+    BL_ASSERT(a.is_gp());
   }
 
   BL_NOINLINE void optimize(PipeCompiler* pc) noexcept {
-    blUnused(pc);
+    bl_unused(pc);
 
     switch (op) {
       case OpcodeCond::kCompare:
-        if (b.isImm() && b.as<Imm>().value() == 0 && (cond == CondCode::kEqual || cond == CondCode::kNotEqual)) {
+        if (b.is_imm() && b.as<Imm>().value() == 0 && (cond == CondCode::kEqual || cond == CondCode::kNotEqual)) {
           op = OpcodeCond::kTest;
           b = a;
           reverse();
@@ -400,10 +400,10 @@ public:
         break;
 
       case OpcodeCond::kBitTest: {
-        if (b.isImm()) {
-          uint64_t bitIndex = b.as<Imm>().valueAs<uint64_t>();
+        if (b.is_imm()) {
+          uint64_t bit_index = b.as<Imm>().value_as<uint64_t>();
           op = OpcodeCond::kTest;
-          b = Imm(1u << bitIndex);
+          b = Imm(1u << bit_index);
         }
         break;
       }
@@ -414,93 +414,93 @@ public:
   }
 
   BL_INLINE void reverse() noexcept {
-    cond = a64::reverseCond(cond);
+    cond = a64::reverse_cond(cond);
   }
 
   BL_NOINLINE void emit(PipeCompiler* pc) noexcept {
     AsmCompiler* cc = pc->cc;
     ConditionOpInfo info = condition_op_info[size_t(op)];
 
-    Gp aGp = a.as<Gp>();
+    Gp a_gp = a.as<Gp>();
 
     switch (op) {
       case OpcodeCond::kAssignAnd: {
-        if (b.isImm() && a64::Utils::isLogicalImm(b.as<Imm>().valueAs<uint64_t>(), aGp.size() * 8)) {
-          cc->emit(info.instId, aGp, aGp, b.as<Imm>());
+        if (b.is_imm() && a64::Utils::is_logical_imm(b.as<Imm>().value_as<uint64_t>(), a_gp.size() * 8)) {
+          cc->emit(info.inst_id, a_gp, a_gp, b.as<Imm>());
         }
         else {
-          cc->emit(info.instId, aGp, aGp, gp_force_reg(pc, b, aGp));
+          cc->emit(info.inst_id, a_gp, a_gp, gp_force_reg(pc, b, a_gp));
         }
         return;
       }
 
       case OpcodeCond::kAssignAdd:
       case OpcodeCond::kAssignSub: {
-        if (b.isImm() && a64::Utils::isAddSubImm(b.as<Imm>().valueAs<uint64_t>())) {
-          cc->emit(info.instId, aGp, aGp, b.as<Imm>());
+        if (b.is_imm() && a64::Utils::is_add_sub_imm(b.as<Imm>().value_as<uint64_t>())) {
+          cc->emit(info.inst_id, a_gp, a_gp, b.as<Imm>());
         }
         else {
-          cc->emit(info.instId, aGp, aGp, gp_force_reg(pc, b, aGp));
+          cc->emit(info.inst_id, a_gp, a_gp, gp_force_reg(pc, b, a_gp));
         }
         return;
       }
 
       case OpcodeCond::kAssignXor:
-        if (b.isImm()) {
-          const Imm& bImm = b.as<Imm>();
-          if (bImm.value() == -1 || (aGp.size() == 4 && bImm.valueAs<uint32_t>() == 0xFFFFFFFFu)) {
-            cc->mvn(aGp, aGp);
-            cc->tst(aGp, aGp);
+        if (b.is_imm()) {
+          const Imm& b_imm = b.as<Imm>();
+          if (b_imm.value() == -1 || (a_gp.size() == 4 && b_imm.value_as<uint32_t>() == 0xFFFFFFFFu)) {
+            cc->mvn(a_gp, a_gp);
+            cc->tst(a_gp, a_gp);
             return;
           }
         }
         [[fallthrough]];
       case OpcodeCond::kAssignOr: {
-        if (b.isImm() && a64::Utils::isLogicalImm(b.as<Imm>().valueAs<uint64_t>(), aGp.size() * 8)) {
-          cc->emit(info.instId, aGp, aGp, b.as<Imm>());
-          cc->tst(aGp, aGp);
+        if (b.is_imm() && a64::Utils::is_logical_imm(b.as<Imm>().value_as<uint64_t>(), a_gp.size() * 8)) {
+          cc->emit(info.inst_id, a_gp, a_gp, b.as<Imm>());
+          cc->tst(a_gp, a_gp);
         }
         else {
-          cc->emit(info.instId, aGp, aGp, gp_force_reg(pc, b, aGp));
-          cc->tst(aGp, aGp);
+          cc->emit(info.inst_id, a_gp, a_gp, gp_force_reg(pc, b, a_gp));
+          cc->tst(a_gp, a_gp);
         }
         return;
       }
 
       case OpcodeCond::kAssignShr: {
-        if (b.isImm()) {
-          cc->adds(aGp, gp_zero_as(aGp), aGp, a64::lsr(b.as<Imm>().valueAs<uint32_t>()));
+        if (b.is_imm()) {
+          cc->adds(a_gp, gp_zero_as(a_gp), a_gp, a64::lsr(b.as<Imm>().value_as<uint32_t>()));
         }
         else {
-          cc->lsr(aGp, aGp, gp_force_reg(pc, b, aGp));
-          cc->tst(aGp, aGp);
+          cc->lsr(a_gp, a_gp, gp_force_reg(pc, b, a_gp));
+          cc->tst(a_gp, a_gp);
         }
         return;
       }
 
       case OpcodeCond::kTest: {
-        if (b.isImm() && a64::Utils::isLogicalImm(b.as<Imm>().valueAs<uint64_t>(), aGp.size() * 8)) {
-          cc->emit(info.instId, aGp, b.as<Imm>());
+        if (b.is_imm() && a64::Utils::is_logical_imm(b.as<Imm>().value_as<uint64_t>(), a_gp.size() * 8)) {
+          cc->emit(info.inst_id, a_gp, b.as<Imm>());
         }
         else {
-          cc->emit(info.instId, aGp, gp_force_reg(pc, b, aGp));
+          cc->emit(info.inst_id, a_gp, gp_force_reg(pc, b, a_gp));
         }
         return;
       }
 
       case OpcodeCond::kCompare: {
-        if (b.isImm() && a64::Utils::isAddSubImm(b.as<Imm>().valueAs<uint64_t>())) {
-          cc->emit(info.instId, aGp, b.as<Imm>());
+        if (b.is_imm() && a64::Utils::is_add_sub_imm(b.as<Imm>().value_as<uint64_t>())) {
+          cc->emit(info.inst_id, a_gp, b.as<Imm>());
         }
         else {
-          cc->emit(info.instId, aGp, gp_force_reg(pc, b, aGp));
+          cc->emit(info.inst_id, a_gp, gp_force_reg(pc, b, a_gp));
         }
         return;
       }
 
       case OpcodeCond::kBitTest: {
-        Gp tmp = pc->newSimilarReg(aGp);
-        cc->lsr(tmp, aGp, gp_force_reg(pc, b, aGp));
+        Gp tmp = pc->new_similar_reg(a_gp);
+        cc->lsr(tmp, a_gp, gp_force_reg(pc, b, a_gp));
         cc->tst(tmp, Imm(1));
         return;
       }
@@ -515,7 +515,7 @@ public:
 // ================================================================
 
 void PipeCompiler::emit_mov(const Gp& dst, const Operand_& src) noexcept {
-  if (src.isMem()) {
+  if (src.is_mem()) {
     gp_emit_mem_op(this, dst, src.as<Mem>(), MemInst{uint16_t(Inst::kIdLdr), uint16_t(dst.size())});
   }
   else {
@@ -574,8 +574,8 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
     case OpcodeRM::kLoadU32:
     case OpcodeRM::kLoadI64:
     case OpcodeRM::kLoadU64: {
-      if (op == OpcodeRM::kLoadI32 && dst.isGp64()) {
-        ii.instId = uint16_t(Inst::kIdLdrsw);
+      if (op == OpcodeRM::kLoadI32 && dst.is_gp64()) {
+        ii.inst_id = uint16_t(Inst::kIdLdrsw);
       }
 
       if ((ld_32_mask >> uint32_t(op)) & 1) {
@@ -588,15 +588,15 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
 
     case OpcodeRM::kLoadShiftU8:
     case OpcodeRM::kLoadShiftU16: {
-      Gp tmp = newSimilarReg(r);
+      Gp tmp = new_similar_reg(r);
       gp_emit_mem_op(this, tmp.r32(), m, ii);
-      cc->orr(r, tmp, r, a64::lsl(ii.memSize * 8));
+      cc->orr(r, tmp, r, a64::lsl(ii.mem_size * 8));
       return;
     }
 
     case OpcodeRM::kLoadMergeU8:
     case OpcodeRM::kLoadMergeU16: {
-      Gp tmp = newSimilarReg(r);
+      Gp tmp = new_similar_reg(r);
       gp_emit_mem_op(this, tmp.r32(), m, ii);
       cc->orr(r, r, tmp);
       return;
@@ -609,8 +609,8 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
 }
 
 struct OpcodeMRInfo {
-  uint32_t opInst : 14;
-  uint32_t storeInst : 14;
+  uint32_t op_inst : 14;
+  uint32_t store_inst : 14;
   uint32_t size : 4;
 };
 
@@ -635,25 +635,25 @@ void PipeCompiler::emit_mr(OpcodeMR op, const Mem& dst, const Gp& src) noexcept 
 
   Mem m(dst);
   Gp r(src);
-  const OpcodeMRInfo& opInfo = op_info_table[size_t(op)];
+  const OpcodeMRInfo& op_info = op_info_table[size_t(op)];
 
   if ((st_32_mask >> uint32_t(op)) & 1)
     r = r.w();
 
-  if (opInfo.opInst == Inst::kIdNone) {
-    cc->emit(opInfo.storeInst, r, m);
+  if (op_info.op_inst == Inst::kIdNone) {
+    cc->emit(op_info.store_inst, r, m);
   }
   else {
-    Gp tmp = newSimilarReg(r, "@tmp");
-    switch (opInfo.size) {
+    Gp tmp = new_similar_reg(r, "@tmp");
+    switch (op_info.size) {
       case 0: load(tmp, dst); break;
       case 1: load_u8(tmp, dst); break;
       case 2: load_u16(tmp, dst); break;
       case 4: load_u32(tmp, dst); break;
       case 8: load_u64(tmp, dst); break;
     }
-    cc->emit(opInfo.opInst, tmp, tmp, r);
-    cc->emit(opInfo.storeInst, tmp, m);
+    cc->emit(op_info.op_inst, tmp, tmp, r);
+    cc->emit(op_info.store_inst, tmp, m);
   }
 }
 
@@ -678,12 +678,12 @@ void PipeCompiler::emit_2i(OpcodeRR op, const Gp& dst, const Operand_& src_) noe
   // ArithOp Reg, Any
   // ----------------
 
-  if (src_.isRegOrMem()) {
+  if (src_.is_reg_or_mem()) {
     Gp src = gp_force_reg(this, src_, dst);
 
     switch (op) {
       case OpcodeRR::kAbs: {
-        //if (hasCSSC()) {
+        //if (has_cssc()) {
         //  cc->abs(dst, src);
         //}
         //else {
@@ -714,7 +714,7 @@ void PipeCompiler::emit_2i(OpcodeRR op, const Gp& dst, const Operand_& src_) noe
       }
 
       case OpcodeRR::kCTZ: {
-        //if (hasCSSC()) {
+        //if (has_cssc()) {
         //  cc->ctz(dst, src);
         //}
         //else {
@@ -757,9 +757,9 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
   Operand src1(src1_);
   Operand src2(src2_);
 
-  if (!src1.isReg()) {
-    if (src2.isReg() && isOp3ICommutative(op)) {
-      BL_ASSERT(src2.isGp());
+  if (!src1.is_reg()) {
+    if (src2.is_reg() && isOp3ICommutative(op)) {
+      BL_ASSERT(src2.is_gp());
       BLInternal::swap(src1, src2);
     }
     else {
@@ -776,13 +776,13 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
   // ArithOp Reg, Reg, Imm
   // ---------------------
 
-  if (src2.isImm()) {
-    Gp a = src1.as<Gp>().cloneAs(dst);
+  if (src2.is_imm()) {
+    Gp a = src1.as<Gp>().clone_as(dst);
     Imm b = src2.as<Imm>();
 
     switch (op) {
       case OpcodeRRR::kXor:
-        if (b.value() == -1 || (b.valueAs<uint32_t>() == 0xFFFFFFFFu && dst.size() == 4)) {
+        if (b.value() == -1 || (b.value_as<uint32_t>() == 0xFFFFFFFFu && dst.size() == 4)) {
           cc->mvn(dst, a);
           return;
         }
@@ -790,7 +790,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
       case OpcodeRRR::kAnd:
       case OpcodeRRR::kOr:
       case OpcodeRRR::kBic: {
-        if (a64::Utils::isLogicalImm(b.valueAs<uint64_t>(), a.size() * 8u)) {
+        if (a64::Utils::is_logical_imm(b.value_as<uint64_t>(), a.size() * 8u)) {
           cc->emit(logical_inst[size_t(op) - size_t(OpcodeRRR::kAnd)], dst, a, b);
           return;
         }
@@ -801,7 +801,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
 
       case OpcodeRRR::kAdd:
       case OpcodeRRR::kSub: {
-        uint64_t value = b.valueAs<uint64_t>();
+        uint64_t value = b.value_as<uint64_t>();
         unsigned reverse = int64_t(value) < 0;
 
         if (reverse)
@@ -813,20 +813,20 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
         // TODO: [JIT] Just testing the idea of patching the previous instruction to have a post-index addressing.
         if (!reverse && uint64_t(value) < 256 && dst.id() == a.id()) {
           if (cc->cursor()->type() == asmjit::NodeType::kInst) {
-            asmjit::InstNode* prevInst = cc->cursor()->as<asmjit::InstNode>();
-            if (prevInst->id() == Inst::kIdLdr || prevInst->id() == Inst::kIdStr ||
-                prevInst->id() == Inst::kIdLdr_v || prevInst->id() == Inst::kIdStr_v) {
-              Mem& memOp = prevInst->op(prevInst->opCount() - 1).as<Mem>();
-              if (memOp.baseReg() == a && !memOp.hasIndex() && !memOp.hasOffset()) {
-                memOp.setOffsetMode(asmjit::arm::OffsetMode::kPostIndex);
-                memOp.addOffset(int64_t(value));
+            asmjit::InstNode* prev_inst = cc->cursor()->as<asmjit::InstNode>();
+            if (prev_inst->inst_id() == Inst::kIdLdr   || prev_inst->inst_id() == Inst::kIdStr ||
+                prev_inst->inst_id() == Inst::kIdLdr_v || prev_inst->inst_id() == Inst::kIdStr_v) {
+              Mem& mem_op = prev_inst->op(prev_inst->op_count() - 1).as<Mem>();
+              if (mem_op.base_reg() == a && !mem_op.has_index() && !mem_op.has_offset()) {
+                mem_op.set_offset_mode(asmjit::arm::OffsetMode::kPostIndex);
+                mem_op.add_offset(int64_t(value));
                 return;
               }
             }
           }
         }
 
-        if (asmjit::Support::isUInt12(value)) {
+        if (asmjit::Support::is_uint_n<12>(value)) {
           cc->emit(addsub_inst[reverse], dst, a, Imm(value));
           return;
         }
@@ -836,16 +836,16 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
       }
 
       case OpcodeRRR::kMul: {
-        uint64_t value = b.valueAs<uint64_t>();
+        uint64_t value = b.value_as<uint64_t>();
         if (value > 0u) {
-          if (asmjit::Support::isPowerOf2(value)) {
+          if (asmjit::Support::is_power_of_2(value)) {
             uint32_t shift = asmjit::Support::ctz(value);
             cc->lsl(dst, a, Imm(shift));
             return;
           }
 
           // We can still support multiplication with powerOf2 + 1
-          if (asmjit::Support::isPowerOf2(--value)) {
+          if (asmjit::Support::is_power_of_2(--value)) {
             uint32_t shift = asmjit::Support::ctz(value);
             cc->add(dst, a, a, a64::lsl(shift));
             return;
@@ -856,7 +856,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
 
       case OpcodeRRR::kSMin:
       case OpcodeRRR::kSMax: {
-        int64_t value = b.valueAs<int64_t>();
+        int64_t value = b.value_as<int64_t>();
 
         if (value == 0 || value == -1) {
           uint32_t shift = dst.size() * 8u - 1u;
@@ -870,12 +870,12 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
             Inst::kIdOrn  // smax(a, -1) == orn(a, expand_msb(a))
           };
 
-          InstId instId = inst_table[(size_t(op) - size_t(OpcodeRRR::kSMin)) * 2u + size_t(value == -1)];
-          cc->emit(instId, dst, a, a, Imm(a64::asr(shift)));
+          InstId inst_id = inst_table[(size_t(op) - size_t(OpcodeRRR::kSMin)) * 2u + size_t(value == -1)];
+          cc->emit(inst_id, dst, a, a, Imm(a64::asr(shift)));
           return;
         }
 
-        //if (hasCSSC() && Support::isInt8(value)) {
+        //if (has_cssc() && Support::is_int_n<8>(value)) {
         //  cc->emit(sminmax_inst[size_t(op) - size_t(OpcodeRRR::kSMin)], dst, a, b);
         //  return;
         //}
@@ -884,8 +884,8 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
 
       case OpcodeRRR::kUMin:
       case OpcodeRRR::kUMax: {
-        //uint64_t value = b.valueAs<uint64_t>();
-        //if (hasCSSC() && Support::isUInt8(value)) {
+        //uint64_t value = b.value_as<uint64_t>();
+        //if (has_cssc() && Support::is_uint8(value)) {
         //  cc->emit(uminmax_inst[size_t(op) - size_t(OpcodeRRR::kUMin)], dst, a, b);
         //  return;
         //}
@@ -902,7 +902,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
       case OpcodeRRR::kRol:
       case OpcodeRRR::kRor: {
         uint32_t width = dst.size() * 8u;
-        uint32_t value = b.valueAs<uint32_t>() & (width - 1);
+        uint32_t value = b.value_as<uint32_t>() & (width - 1);
 
         if (op == OpcodeRRR::kRol)
           value = width - value;
@@ -912,7 +912,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
       }
 
       case OpcodeRRR::kSBound: {
-        // if (hasCSSC() && Support::isUInt8(value)) {
+        // if (has_cssc() && Support::is_uint8(value)) {
         // }
         break;
       }
@@ -958,7 +958,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
       }
 
       case OpcodeRRR::kUMod: {
-        Gp tmp = newSimilarReg(dst, "@tmp");
+        Gp tmp = new_similar_reg(dst, "@tmp");
         cc->udiv(tmp, a, b);
         cc->mul(tmp, tmp, b);
         cc->sub(dst, a, tmp);
@@ -967,7 +967,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
 
       case OpcodeRRR::kSMin:
       case OpcodeRRR::kSMax: {
-        //if (hasCSSC()) {
+        //if (has_cssc()) {
         //  cc->emit(sminmax_inst[size_t(op) - size_t(OpcodeRRR::kSMin)], dst, a, b);
         //}
         //else {
@@ -979,7 +979,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
 
       case OpcodeRRR::kUMin:
       case OpcodeRRR::kUMax: {
-        //if (hasCSSC()) {
+        //if (has_cssc()) {
         //  cc->emit(uminmax_inst[size_t(op) - size_t(OpcodeRRR::kUMin)], dst, a, b);
         //}
         //else {
@@ -997,7 +997,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
       }
 
       case OpcodeRRR::kRol: {
-        Gp tmp = newSimilarReg(dst, "@rol_rev");
+        Gp tmp = new_similar_reg(dst, "@rol_rev");
         cc->neg(tmp, b);
         cc->ror(dst, a, tmp);
         return;
@@ -1038,12 +1038,12 @@ void PipeCompiler::adds_u8(const Gp& dst, const Gp& src1, const Gp& src2) noexce
   BL_ASSERT(dst.size() == src2.size());
 
   cc->add(dst, src1, src2);
-  //if (hasCSSC()) {
+  //if (has_cssc()) {
   //  cc->umin(dst, dst, 255);
   //  return;
   //}
 
-  Gp tmp = newSimilarReg(dst, "@tmp");
+  Gp tmp = new_similar_reg(dst, "@tmp");
   cc->cmp(dst, 255);
   cc->mov(tmp, 255);
   cc->csel(dst, dst, tmp, CondCode::kLO);
@@ -1070,9 +1070,9 @@ void PipeCompiler::mul_257_hu16(const Gp& dst, const Gp& src) noexcept {
 }
 
 void PipeCompiler::add_scaled(const Gp& dst, const Gp& a_, int b) noexcept {
-  Gp a = a_.cloneAs(dst);
+  Gp a = a_.clone_as(dst);
 
-  if (asmjit::Support::isPowerOf2(b)) {
+  if (asmjit::Support::is_power_of_2(b)) {
     uint32_t shift = asmjit::Support::ctz(b);
     cc->add(dst, dst, a, a64::lsl(shift));
   }
@@ -1080,7 +1080,7 @@ void PipeCompiler::add_scaled(const Gp& dst, const Gp& a_, int b) noexcept {
     cc->add(dst, dst, dst, a64::lsl(1));
   }
   else {
-    Gp tmp = newSimilarReg(dst, "@tmp");
+    Gp tmp = new_similar_reg(dst, "@tmp");
     cc->mov(tmp, b);
     cc->madd(dst, a, tmp, dst);
   }
@@ -1089,14 +1089,14 @@ void PipeCompiler::add_scaled(const Gp& dst, const Gp& a_, int b) noexcept {
 void PipeCompiler::add_ext(const Gp& dst, const Gp& src_, const Gp& idx_, uint32_t scale, int32_t disp) noexcept {
   BL_ASSERT(scale != 0);
 
-  Gp src = src_.cloneAs(dst);
-  Gp idx = idx_.cloneAs(dst);
+  Gp src = src_.clone_as(dst);
+  Gp idx = idx_.clone_as(dst);
 
-  if (asmjit::Support::isPowerOf2(scale)) {
+  if (asmjit::Support::is_power_of_2(scale)) {
     cc->add(dst, src, idx, a64::lsl(asmjit::Support::ctz(scale)));
   }
   else {
-    Gp tmp = newSimilarReg(dst, "@tmp");
+    Gp tmp = new_similar_reg(dst, "@tmp");
 
     if (scale == 3) {
       cc->add(tmp, src, idx, a64::lsl(1));
@@ -1118,13 +1118,13 @@ void PipeCompiler::add_ext(const Gp& dst, const Gp& src_, const Gp& idx_, uint32
 }
 
 void PipeCompiler::lea(const Gp& dst, const Mem& src) noexcept {
-  Gp base = src.baseReg().as<Gp>();
+  Gp base = src.base_reg().as<Gp>();
 
-  if (src.hasIndex()) {
-    add_ext(dst, base, src.indexReg().as<Gp>(), 1u << src.shift(), src.offsetLo32());
+  if (src.has_index()) {
+    add_ext(dst, base, src.index_reg().as<Gp>(), 1u << src.shift(), src.offset_lo32());
   }
-  else if (src.offsetLo32()) {
-    cc->add(dst, base, src.offsetLo32());
+  else if (src.offset_lo32()) {
+    cc->add(dst, base, src.offset_lo32());
   }
   else {
     cc->mov(dst, base);
@@ -1194,36 +1194,36 @@ struct OpcodeVInfo {
   //! \name Members
   //! \{
 
-  uint32_t instId        : 13;
-  ASIMDExt asimdExt      : 6;
+  uint32_t inst_id        : 13;
+  ASIMDExt asimd_ext      : 6;
   uint32_t commutative   : 1;
   uint32_t comparison    : 1;
   uint32_t reverse       : 1;
-  SameVecOp sameVecOp    : 2;
-  FloatMode floatMode    : 3;
-  ElementSize dstElement : 3;
-  VecPart dstPart        : 2;
-  ElementSize srcElement : 3;
-  VecPart srcPart        : 2;
+  SameVecOp same_vec_op    : 2;
+  FloatMode float_mode    : 3;
+  ElementSize dst_element : 3;
+  VecPart dst_part        : 2;
+  ElementSize src_element : 3;
+  VecPart src_part        : 2;
   uint32_t imm           : 8;
   uint32_t reserved2     : 19;
 
   //! \}
 };
 
-#define DEFINE_OP(instId, ext, commutative, comparison, reverse, sameVecOp, floatMode, dstElement, dstPart, srcElement, srcPart, imm) \
+#define DEFINE_OP(inst_id, ext, commutative, comparison, reverse, same_vec_op, float_mode, dst_element, dst_part, src_element, src_part, imm) \
   OpcodeVInfo {              \
-    instId,                  \
+    inst_id,                  \
     ASIMDExt::ext,           \
     commutative,             \
     comparison,              \
     reverse,                 \
-    SameVecOp::sameVecOp,    \
-    FloatMode::floatMode,    \
-    ElementSize::dstElement, \
-    VecPart::dstPart,        \
-    ElementSize::srcElement, \
-    VecPart::srcPart,        \
+    SameVecOp::same_vec_op,    \
+    FloatMode::float_mode,    \
+    ElementSize::dst_element, \
+    VecPart::dst_part,        \
+    ElementSize::src_element, \
+    VecPart::src_part,        \
     imm,                     \
     0                        \
   }
@@ -1630,14 +1630,14 @@ struct OpcodeVMInfo {
   //! \name Members
   //! \{
 
-  uint32_t cvtOp      : 16;
-  uint32_t memSize    : 8;
+  uint32_t cvt_op      : 16;
+  uint32_t mem_size    : 8;
   ElementSize element : 3;
 
   //! \}
 };
 
-#define DEFINE_OP(cvtOp, size, element) OpcodeVMInfo { uint32_t(cvtOp), size, ElementSize::element }
+#define DEFINE_OP(cvt_op, size, element) OpcodeVMInfo { uint32_t(cvt_op), size, ElementSize::element }
 
 static constexpr OpcodeVMInfo opcodeInfo2VM[size_t(OpcodeVM::kMaxValue) + 1] = {
   DEFINE_OP(0                       ,  1, k8 ), // kLoad8.
@@ -1791,8 +1791,8 @@ static constexpr OpcodeVMInfo opcodeInfo2MV[size_t(OpcodeMV::kMaxValue) + 1] = {
 
 static constexpr uint32_t float_mode_mem_size_table[5] = { 0, 4, 8, 0, 0 };
 
-static BL_INLINE bool isSameVec(const Vec& a, const Operand_& b) noexcept {
-  return b.isVec() && a.id() == b.id();
+static BL_INLINE bool is_same_vec(const Vec& a, const Operand_& b) noexcept {
+  return b.is_vec() && a.id() == b.id();
 }
 
 static BL_INLINE void vec_set_vec_type(Vec& vec, ElementSize sz) noexcept {
@@ -1803,42 +1803,42 @@ static BL_INLINE void vec_set_vec_type(Vec& vec, ElementSize sz) noexcept {
     asmjit::RegTraits<RegType::kVec64>::kSignature,
     asmjit::RegTraits<RegType::kVec128>::kSignature
   };
-  vec.setSignature(OperandSignature{signatures[size_t(sz)]});
+  vec.set_signature(OperandSignature{signatures[size_t(sz)]});
 }
 
 static BL_INLINE void vec_set_type(Vec& vec, ElementSize sz) noexcept {
-  vec.setElementType(a64::VecElementType(uint32_t(sz) + 1));
+  vec.set_element_type(a64::VecElementType(uint32_t(sz) + 1));
 }
 
 static BL_INLINE void vec_set_type_and_index(Vec& vec, ElementSize sz, uint32_t idx) noexcept {
-  vec.setElementType(a64::VecElementType(uint32_t(sz) + 1));
-  vec.setElementIndex(idx);
+  vec.set_element_type(a64::VecElementType(uint32_t(sz) + 1));
+  vec.set_element_index(idx);
 }
 
-static BL_NOINLINE void vec_load_mem(PipeCompiler* pc, const Vec& dst, Mem src, uint32_t memSize) noexcept {
+static BL_NOINLINE void vec_load_mem(PipeCompiler* pc, const Vec& dst, Mem src, uint32_t mem_size) noexcept {
   AsmCompiler* cc = pc->cc;
 
-  if (src.hasIndex() && src.hasShift()) {
+  if (src.has_index() && src.has_shift()) {
     // AArch64 limitation: index shift can be the same size as the size of the read operation, so H << 1, S << 2,
     // etc... Other shift values are not supported at the architectural level, so we have to precalculate the address.
     uint32_t shift = src.shift();
-    if (memSize != (1u << shift) || src.hasOffset()) {
-      Gp base = src.baseReg().as<Gp>();
-      Gp index = src.indexReg().as<Gp>();
+    if (mem_size != (1u << shift) || src.has_offset()) {
+      Gp base = src.base_reg().as<Gp>();
+      Gp index = src.index_reg().as<Gp>();
 
-      if (src.isPreIndex()) {
-        cc->add(base, base, index, a64::Shift(src.shiftOp(), shift));
-        src = a64::ptr(base, src.offsetLo32());
+      if (src.is_pre_index()) {
+        cc->add(base, base, index, a64::Shift(src.shift_op(), shift));
+        src = a64::ptr(base, src.offset_lo32());
       }
       else {
-        Gp tmp = pc->newGpPtr("@mem_addr");
-        cc->add(tmp, base, index, a64::Shift(src.shiftOp(), shift));
-        src = a64::ptr(tmp, src.offsetLo32());
+        Gp tmp = pc->new_gp("@mem_addr");
+        cc->add(tmp, base, index, a64::Shift(src.shift_op(), shift));
+        src = a64::ptr(tmp, src.offset_lo32());
       }
     }
   }
 
-  switch (memSize) {
+  switch (mem_size) {
     case  1: cc->ldr(dst.b(), src); break;
     case  2: cc->ldr(dst.h(), src); break;
     case  4: cc->ldr(dst.s(), src); break;
@@ -1849,24 +1849,24 @@ static BL_NOINLINE void vec_load_mem(PipeCompiler* pc, const Vec& dst, Mem src, 
   }
 }
 
-static BL_NOINLINE Vec vec_from_mem(PipeCompiler* pc, const Mem& op, const Vec& ref, uint32_t memSize = 0) noexcept {
-  Vec vec = pc->newV128("@tmp");
-  if (memSize == 0)
-    memSize = ref.size();
-  vec_load_mem(pc, vec, op, memSize);
-  return vec.cloneAs(ref);
+static BL_NOINLINE Vec vec_from_mem(PipeCompiler* pc, const Mem& op, const Vec& ref, uint32_t mem_size = 0) noexcept {
+  Vec vec = pc->new_vec128("@tmp");
+  if (mem_size == 0)
+    mem_size = ref.size();
+  vec_load_mem(pc, vec, op, mem_size);
+  return vec.clone_as(ref);
 }
 
-static BL_INLINE Vec as_vec(PipeCompiler* pc, const Operand_& op, const Vec& ref, uint32_t memSize = 0) noexcept {
-  if (op.isVec())
-    return op.as<Vec>().cloneAs(ref);
+static BL_INLINE Vec as_vec(PipeCompiler* pc, const Operand_& op, const Vec& ref, uint32_t mem_size = 0) noexcept {
+  if (op.is_vec())
+    return op.as<Vec>().clone_as(ref);
   else
-    return vec_from_mem(pc, op.as<Mem>(), ref, memSize);
+    return vec_from_mem(pc, op.as<Mem>(), ref, mem_size);
 }
 
 static BL_INLINE Vec as_vec(PipeCompiler* pc, const Operand_& op, const Vec& ref, FloatMode fm) noexcept {
-  if (op.isVec())
-    return op.as<Vec>().cloneAs(ref);
+  if (op.is_vec())
+    return op.as<Vec>().clone_as(ref);
   else
     return vec_from_mem(pc, op.as<Mem>(), ref, float_mode_mem_size_table[size_t(fm)]);
 }
@@ -1877,7 +1877,7 @@ static BL_NOINLINE Vec vec_mov(PipeCompiler* pc, const Vec& dst_, const Operand_
   Vec dst(dst_);
   vec_set_type(dst, ElementSize::k8);
 
-  if (src_.isVec()) {
+  if (src_.is_vec()) {
     if (dst.id() != src_.id()) {
       Vec src = src_.as<Vec>();
       vec_set_type(src, ElementSize::k8);
@@ -1886,7 +1886,7 @@ static BL_NOINLINE Vec vec_mov(PipeCompiler* pc, const Vec& dst_, const Operand_
     return dst;
   }
 
-  if (src_.isMem()) {
+  if (src_.is_mem()) {
     vec_load_mem(pc, dst, src_.as<Mem>(), dst.size());
     return dst;
   }
@@ -1986,17 +1986,17 @@ struct Swizzle32Data {
 
     uint8_t data;
 
-    BL_INLINE_NODEBUG bool isValid() const noexcept { return data != 0; }
+    BL_INLINE_NODEBUG bool is_valid() const noexcept { return data != 0; }
     BL_INLINE_NODEBUG uint32_t type() const noexcept { return data & 0xF; }
 
-    BL_INLINE_NODEBUG uint32_t dupIdx() const noexcept { return (data >> 4) & 0x3; }
-    BL_INLINE_NODEBUG uint32_t extImm() const noexcept { return (data >> 2) & (0x3 << 2); }
+    BL_INLINE_NODEBUG uint32_t dup_idx() const noexcept { return (data >> 4) & 0x3; }
+    BL_INLINE_NODEBUG uint32_t ext_imm() const noexcept { return (data >> 2) & (0x3 << 2); }
 
-    BL_INLINE_NODEBUG uint32_t zipOp() const noexcept { return (data >> 4) & 0x7; }
+    BL_INLINE_NODEBUG uint32_t zip_op() const noexcept { return (data >> 4) & 0x7; }
     BL_INLINE_NODEBUG bool zipS4() const noexcept { return (data & (1 << 7)) == 0; }
 
-    BL_INLINE_NODEBUG uint32_t insSrc() const noexcept { return (data >> 4) & 0x3; }
-    BL_INLINE_NODEBUG uint32_t insDst() const noexcept { return (data >> 6) & 0x3; }
+    BL_INLINE_NODEBUG uint32_t ins_src() const noexcept { return (data >> 4) & 0x3; }
+    BL_INLINE_NODEBUG uint32_t ins_dst() const noexcept { return (data >> 6) & 0x3; }
   };
 
   //! \name Members
@@ -2010,9 +2010,9 @@ struct Swizzle32Data {
   //! \name Accessors
   //! \{
 
-  BL_INLINE_NODEBUG bool isDefined() const noexcept { return ops[0].data != 0; }
+  BL_INLINE_NODEBUG bool is_defined() const noexcept { return ops[0].data != 0; }
   BL_INLINE_NODEBUG Op op(uint32_t index) const noexcept { return ops[index]; }
-  BL_INLINE_NODEBUG OpTarget opTarget(uint32_t index) const noexcept { return OpTarget((flags >> (index * 2)) & 0x3); }
+  BL_INLINE_NODEBUG OpTarget op_target(uint32_t index) const noexcept { return OpTarget((flags >> (index * 2)) & 0x3); }
 
   //! \}
 };
@@ -2120,60 +2120,60 @@ static void emit_swizzle32_impl(PipeCompiler* pc, const Vec& dst, const Vec& src
 
   AsmCompiler* cc = pc->cc;
 
-  uint32_t tableIndex = ((imm & 0x03000000) >> (24 - 6)) |
+  uint32_t table_index = ((imm & 0x03000000) >> (24 - 6)) |
                         ((imm & 0x00030000) >> (16 - 4)) |
                         ((imm & 0x00000300) >> (8  - 2)) | (imm & 0x00000003);
-  Swizzle32Data swiz = swizzle_32_data[tableIndex];
+  Swizzle32Data swiz = swizzle_32_data[table_index];
 
-  if (swiz.isDefined()) {
-    Vec opSrc[2] = { src, src };
-    Vec opDst;
+  if (swiz.is_defined()) {
+    Vec op_src[2] = { src, src };
+    Vec op_dst;
 
     for (uint32_t i = 0; i < 3; i++) {
       Swizzle32Data::Op op = swiz.op(i);
-      Swizzle32Data::OpTarget target = swiz.opTarget(i);
+      Swizzle32Data::OpTarget target = swiz.op_target(i);
 
-      if (!op.isValid())
+      if (!op.is_valid())
         break;
 
       if (target == Swizzle32Data::OpTarget::kDst) {
-        opDst = dst;
+        op_dst = dst;
       }
       else {
-        opDst = pc->newSimilarReg(dst, "@tmp");
+        op_dst = pc->new_similar_reg(dst, "@tmp");
       }
 
       switch (op.type()) {
         case Swizzle32Data::Op::kMov: {
-          vec_mov(pc, opDst, opSrc[0]);
+          vec_mov(pc, op_dst, op_src[0]);
           break;
         }
 
         case Swizzle32Data::Op::kIns: {
-          uint32_t srcLane = op.insSrc();
-          uint32_t dstLane = op.insDst();
+          uint32_t src_lane = op.ins_src();
+          uint32_t dst_lane = op.ins_dst();
           // Insert is always the last operation that only uses the destination register.
-          cc->mov(opDst.s(dstLane), opDst.s(srcLane));
+          cc->mov(op_dst.s(dst_lane), op_dst.s(src_lane));
           break;
         }
 
         case Swizzle32Data::Op::kDup: {
           // Use `dup` if the swizzle is actually a broadcast of a single element.
-          uint32_t idx = op.dupIdx();
-          cc->dup(opDst.s4(), opSrc[0].s(idx));
+          uint32_t idx = op.dup_idx();
+          cc->dup(op_dst.s4(), op_src[0].s(idx));
           break;
         }
 
         case Swizzle32Data::Op::kExt: {
           // Use `ext` if the swizzle is rotating the vector.
-          uint32_t n = op.extImm();
-          cc->ext(opDst.b16(), opSrc[0].b16(), opSrc[1].b16(), n);
+          uint32_t n = op.ext_imm();
+          cc->ext(op_dst.b16(), op_src[0].b16(), op_src[1].b16(), n);
           break;
         }
 
         case Swizzle32Data::Op::kRev64: {
           // Use `rev64` to swap lo/hi elements of 64-bit lanes.
-          cc->rev64(opDst.s4(), opSrc[0].s4());
+          cc->rev64(op_dst.s4(), op_src[0].s4());
           break;
         }
 
@@ -2188,11 +2188,11 @@ static void emit_swizzle32_impl(PipeCompiler* pc, const Vec& dst, const Vec& src
             Inst::kIdTrn2_v
           };
 
-          InstId instId = zip_unzip_inst[op.zipOp()];
+          InstId inst_id = zip_unzip_inst[op.zip_op()];
           if (op.zipS4())
-            cc->emit(instId, opDst.s4(), opSrc[0].s4(), opSrc[1].s4());
+            cc->emit(inst_id, op_dst.s4(), op_src[0].s4(), op_src[1].s4());
           else
-            cc->emit(instId, opDst.d2(), opSrc[0].d2(), opSrc[1].d2());
+            cc->emit(inst_id, op_dst.d2(), op_src[0].d2(), op_src[1].d2());
           break;
         }
 
@@ -2200,39 +2200,39 @@ static void emit_swizzle32_impl(PipeCompiler* pc, const Vec& dst, const Vec& src
           BL_NOT_REACHED();
       }
 
-      if (uint32_t(target) & uint32_t(Swizzle32Data::OpTarget::k1)) opSrc[0] = opDst;
-      if (uint32_t(target) & uint32_t(Swizzle32Data::OpTarget::k2)) opSrc[1] = opDst;
+      if (uint32_t(target) & uint32_t(Swizzle32Data::OpTarget::k1)) op_src[0] = op_dst;
+      if (uint32_t(target) & uint32_t(Swizzle32Data::OpTarget::k2)) op_src[1] = op_dst;
     }
   }
   else {
     // NOTE: This code is never used at the moment. It's kept if for some reason we would want to avoid using
     // more than 1 or 2 instructions to perform the swizzle. For example on hardware where TBL is faster than
     // other operations combined.
-    uint8_t predData[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF };
+    uint8_t pred_data[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF };
 
     uint32_t d = (imm >> 22) & (0x3 << 2);
     uint32_t c = (imm >> 14) & (0x3 << 2);
     uint32_t b = (imm >>  6) & (0x3 << 2);
     uint32_t a = (imm <<  2) & (0x3 << 2);
 
-    predData[ 0] = uint8_t(a);
-    predData[ 1] = uint8_t(a + 1u);
-    predData[ 2] = uint8_t(a + 2u);
-    predData[ 3] = uint8_t(a + 3u);
-    predData[ 4] = uint8_t(b);
-    predData[ 5] = uint8_t(b + 1u);
-    predData[ 6] = uint8_t(b + 2u);
-    predData[ 7] = uint8_t(b + 3u);
-    predData[ 8] = uint8_t(c);
-    predData[ 9] = uint8_t(c + 1u);
-    predData[10] = uint8_t(c + 2u);
-    predData[11] = uint8_t(c + 3u);
-    predData[12] = uint8_t(d);
-    predData[13] = uint8_t(d + 1u);
-    predData[14] = uint8_t(d + 2u);
-    predData[15] = uint8_t(d + 3u);
+    pred_data[ 0] = uint8_t(a);
+    pred_data[ 1] = uint8_t(a + 1u);
+    pred_data[ 2] = uint8_t(a + 2u);
+    pred_data[ 3] = uint8_t(a + 3u);
+    pred_data[ 4] = uint8_t(b);
+    pred_data[ 5] = uint8_t(b + 1u);
+    pred_data[ 6] = uint8_t(b + 2u);
+    pred_data[ 7] = uint8_t(b + 3u);
+    pred_data[ 8] = uint8_t(c);
+    pred_data[ 9] = uint8_t(c + 1u);
+    pred_data[10] = uint8_t(c + 2u);
+    pred_data[11] = uint8_t(c + 3u);
+    pred_data[12] = uint8_t(d);
+    pred_data[13] = uint8_t(d + 1u);
+    pred_data[14] = uint8_t(d + 2u);
+    pred_data[15] = uint8_t(d + 3u);
 
-    Vec pred = pc->simdConst16B(predData);
+    Vec pred = pc->simd_const_16b(pred_data);
     cc->tbl(dst.b16(), src.b16(), pred.b16());
   }
 }
@@ -2323,21 +2323,21 @@ struct InterleavedShuffle32Ops {
 
     uint32_t data;
 
-    BL_INLINE_NODEBUG bool isValid() const noexcept { return data != 0u; }
+    BL_INLINE_NODEBUG bool is_valid() const noexcept { return data != 0u; }
     BL_INLINE_NODEBUG uint32_t op() const noexcept { return data >> 8; }
-    BL_INLINE_NODEBUG uint32_t isInsOp() const noexcept { return op() == kOpInsS || op() == kOpInsD; }
+    BL_INLINE_NODEBUG uint32_t is_ins_op() const noexcept { return op() == kOpInsS || op() == kOpInsD; }
 
-    BL_INLINE_NODEBUG uint32_t dupIdx() const noexcept { return data & 0x3u; }
+    BL_INLINE_NODEBUG uint32_t dup_idx() const noexcept { return data & 0x3u; }
 
-    BL_INLINE_NODEBUG uint32_t permOp() const noexcept { return data & 0x7u; }
+    BL_INLINE_NODEBUG uint32_t perm_op() const noexcept { return data & 0x7u; }
     BL_INLINE_NODEBUG bool permS4() const noexcept { return (data & (1u << 3)) == 0u; }
-    BL_INLINE_NODEBUG uint32_t permExtImm() const noexcept { return ((data & 0x1) << 2) + (data & 0x8); }
+    BL_INLINE_NODEBUG uint32_t perm_ext_imm() const noexcept { return ((data & 0x1) << 2) + (data & 0x8); }
 
-    BL_INLINE_NODEBUG uint32_t insSrc() const noexcept { return (data >> 0) & 0x3u; }
-    BL_INLINE_NODEBUG uint32_t insDst() const noexcept { return (data >> 2) & 0x3u; }
+    BL_INLINE_NODEBUG uint32_t ins_src() const noexcept { return (data >> 0) & 0x3u; }
+    BL_INLINE_NODEBUG uint32_t ins_dst() const noexcept { return (data >> 2) & 0x3u; }
 
-    BL_INLINE_NODEBUG uint32_t srcA() const noexcept { return (data >> 4) & 0x3u; }
-    BL_INLINE_NODEBUG uint32_t srcB() const noexcept { return (data >> 6) & 0x3u; }
+    BL_INLINE_NODEBUG uint32_t src_a() const noexcept { return (data >> 4) & 0x3u; }
+    BL_INLINE_NODEBUG uint32_t src_b() const noexcept { return (data >> 6) & 0x3u; }
   };
 
   //! \name Members
@@ -2522,7 +2522,7 @@ static void emit_interleaved_shuffle32_impl(PipeCompiler* pc, const Vec& dst, co
 
   AsmCompiler* cc = pc->cc;
 
-  uint32_t tableIndex = ((imm & 0x03000000) >> (24 - 6)) |
+  uint32_t table_index = ((imm & 0x03000000) >> (24 - 6)) |
                         ((imm & 0x00030000) >> (16 - 4)) |
                         ((imm & 0x00000300) >> (8  - 2)) | (imm & 0x00000003);
 
@@ -2531,93 +2531,93 @@ static void emit_interleaved_shuffle32_impl(PipeCompiler* pc, const Vec& dst, co
   // to DST, so select the best version.
   InterleavedShuffle32Ops ops;
   if (dst.id() != src2.id())
-    ops = interleaved_shuffle32_ops[tableIndex];
+    ops = interleaved_shuffle32_ops[table_index];
   else
-    ops = interleaved_shuffle32_ops_dst_same_as_b[tableIndex];
+    ops = interleaved_shuffle32_ops_dst_same_as_b[table_index];
 
   Vec regs[5] = { src1, src2, Vec(), Vec(), Vec() };
 
   uint32_t count = ops.count();
-  uint32_t srcUseMask[4] {};
-  uint32_t dstIndex = count - 1;
+  uint32_t src_use_mask[4] {};
+  uint32_t dst_index = count - 1;
 
   {
     uint32_t i = count;
-    uint32_t allUseMask = 0;
+    uint32_t all_use_mask = 0;
 
     while (i != 0) {
       i--;
       InterleavedShuffle32Ops::Op op = ops.op(i);
 
       // Calculate masks that follow.
-      allUseMask |= 1u << op.srcA();
-      allUseMask |= 1u << op.srcB();
-      srcUseMask[i] = allUseMask;
+      all_use_mask |= 1u << op.src_a();
+      all_use_mask |= 1u << op.src_b();
+      src_use_mask[i] = all_use_mask;
 
       // Calculate the last operation where we need a new destination (inserts insert to the last).
-      if (op.isInsOp()) {
+      if (op.is_ins_op()) {
         // The last destination would be the previous operation (if not another insert).
-        dstIndex = i - 1;
+        dst_index = i - 1;
       }
     }
   }
 
-  uint32_t opIndex = 2;
-  Vec finalDst;
+  uint32_t op_index = 2;
+  Vec final_dst;
 
   for (uint32_t i = 0; i < count; i++) {
     InterleavedShuffle32Ops::Op op = ops.op(i);
 
-    if (i > 0 && !op.isInsOp())
-      opIndex++;
+    if (i > 0 && !op.is_ins_op())
+      op_index++;
 
     // Should not be counted if it's invalid - so let's verify it here...
-    BL_ASSERT(op.isValid());
+    BL_ASSERT(op.is_valid());
 
-    Vec opDst;
-    if (i < dstIndex) {
-      if (regs[opIndex].isValid())
-        opDst = regs[opIndex];
+    Vec op_dst;
+    if (i < dst_index) {
+      if (regs[op_index].is_valid())
+        op_dst = regs[op_index];
       else
-        opDst = pc->newSimilarReg(dst, "@shuf_tmp_%u", opIndex - 2);
+        op_dst = pc->new_similar_reg(dst, "@shuf_tmp_%u", op_index - 2);
     }
     else {
-      if (!finalDst.isValid()) {
+      if (!final_dst.is_valid()) {
         uint32_t msk = 0;
         if (dst.id() == src1.id())
           msk = 0x1u;
         else if (dst.id() == src2.id())
           msk = 0x2u;
 
-        if (srcUseMask[i + 1] & msk) {
+        if (src_use_mask[i + 1] & msk) {
           // In this case the destination is in conflict with one of the source registers. We have to
           // create a new virtual register and then move it to the real `dst` to not mess up the shuffle.
-          BL_ASSERT(!regs[opIndex].isValid());
-          finalDst = pc->newSimilarReg(dst, "@shuf_dst");
+          BL_ASSERT(!regs[op_index].is_valid());
+          final_dst = pc->new_similar_reg(dst, "@shuf_dst");
         }
         else {
           // Perfect - the destination is not in conflict with any source register.
-          finalDst = dst;
+          final_dst = dst;
         }
       }
-      opDst = finalDst;
+      op_dst = final_dst;
     }
 
-    uint32_t aIndex = op.srcA();
-    uint32_t bIndex = op.srcB();
+    uint32_t a_index = op.src_a();
+    uint32_t b_index = op.src_b();
 
     switch (op.op()) {
       case InterleavedShuffle32Ops::Op::kOpInsS: {
-        uint32_t srcLane = op.insSrc();
-        uint32_t dstLane = op.insDst();
-        cc->mov(opDst.s(dstLane), regs[aIndex].s(srcLane));
+        uint32_t src_lane = op.ins_src();
+        uint32_t dst_lane = op.ins_dst();
+        cc->mov(op_dst.s(dst_lane), regs[a_index].s(src_lane));
         break;
       }
 
       case InterleavedShuffle32Ops::Op::kOpInsD: {
-        uint32_t srcLane = op.insSrc();
-        uint32_t dstLane = op.insDst();
-        cc->mov(opDst.d(dstLane), regs[aIndex].d(srcLane));
+        uint32_t src_lane = op.ins_src();
+        uint32_t dst_lane = op.ins_dst();
+        cc->mov(op_dst.d(dst_lane), regs[a_index].d(src_lane));
         break;
       }
 
@@ -2633,25 +2633,25 @@ static void emit_interleaved_shuffle32_impl(PipeCompiler* pc, const Vec& dst, co
           Inst::kIdExt_v
         };
 
-        InstId instId = perm_inst[op.permOp()];
+        InstId inst_id = perm_inst[op.perm_op()];
 
-        if (instId == Inst::kIdExt_v)
-          cc->ext(opDst.b16(), regs[aIndex].b16(), regs[bIndex].b16(), op.permExtImm());
+        if (inst_id == Inst::kIdExt_v)
+          cc->ext(op_dst.b16(), regs[a_index].b16(), regs[b_index].b16(), op.perm_ext_imm());
         else if (op.permS4())
-          cc->emit(instId, opDst.s4(), regs[aIndex].s4(), regs[bIndex].s4());
+          cc->emit(inst_id, op_dst.s4(), regs[a_index].s4(), regs[b_index].s4());
         else
-          cc->emit(instId, opDst.d2(), regs[aIndex].d2(), regs[bIndex].d2());
+          cc->emit(inst_id, op_dst.d2(), regs[a_index].d2(), regs[b_index].d2());
         break;
       }
 
       case InterleavedShuffle32Ops::Op::kOpRev64: {
-        cc->rev64(opDst.s4(), regs[aIndex].s4());
+        cc->rev64(op_dst.s4(), regs[a_index].s4());
         break;
       }
 
       case InterleavedShuffle32Ops::Op::kOpDup: {
-        uint32_t idx = op.dupIdx();
-        cc->dup(opDst.s4(), regs[aIndex].s(idx));
+        uint32_t idx = op.dup_idx();
+        cc->dup(op_dst.s4(), regs[a_index].s(idx));
         break;
       }
 
@@ -2659,10 +2659,10 @@ static void emit_interleaved_shuffle32_impl(PipeCompiler* pc, const Vec& dst, co
         BL_NOT_REACHED();
     }
 
-    regs[opIndex] = opDst;
+    regs[op_index] = op_dst;
   }
 
-  vec_mov(pc, dst, finalDst);
+  vec_mov(pc, dst, final_dst);
 }
 
 // bl::Pipeline::PipeCompiler - Vector Instructions - OpArray Iterator
@@ -2681,12 +2681,12 @@ public:
 template<>
 class OpArrayIter<OpArray> {
 public:
-  const OpArray& _opArray;
+  const OpArray& _op_array;
   uint32_t _i {};
   uint32_t _n {};
 
-  BL_INLINE_NODEBUG OpArrayIter(const OpArray& opArray) noexcept : _opArray(opArray), _i(0), _n(opArray.size()) {}
-  BL_INLINE_NODEBUG const Operand_& op() const noexcept { return _opArray[_i]; }
+  BL_INLINE_NODEBUG OpArrayIter(const OpArray& op_array) noexcept : _op_array(op_array), _i(0), _n(op_array.size()) {}
+  BL_INLINE_NODEBUG const Operand_& op() const noexcept { return _op_array[_i]; }
   BL_INLINE_NODEBUG void next() noexcept { if (++_i >= _n) _i = 0; }
 };
 
@@ -2757,16 +2757,16 @@ static BL_INLINE void emit_4v_t(PipeCompiler* pc, OpcodeVVVV op, const OpArray& 
 // ==========================================================
 
 void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& src_) noexcept {
-  BL_ASSERT(dst_.isVec());
+  BL_ASSERT(dst_.is_vec());
 
   Vec dst(dst_.as<Vec>());
-  OpcodeVInfo opInfo = opcodeInfo2V[size_t(op)];
+  OpcodeVInfo op_info = opcodeInfo2V[size_t(op)];
 
-  InstId instId = opInfo.instId;
+  InstId inst_id = op_info.inst_id;
 
   switch (op) {
     case OpcodeVV::kMov: {
-      if (src_.isVec()) {
+      if (src_.is_vec()) {
         Vec src = src_.as<Vec>();
         if (dst.size() < 16 || src.size() < 16)
           cc->mov(dst.b8(), src.b8());
@@ -2795,38 +2795,38 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
     case OpcodeVV::kBroadcastF32:
     case OpcodeVV::kBroadcastU64:
     case OpcodeVV::kBroadcastF64: {
-      ElementSize elementSize = ElementSize(opInfo.dstElement);
-      vec_set_type(dst, elementSize);
+      ElementSize element_size = ElementSize(op_info.dst_element);
+      vec_set_type(dst, element_size);
 
       Operand src(src_);
 
-      if (src.isMem()) {
+      if (src.is_mem()) {
         // NOTE: ld1r instruction is pretty limited - it offers only `[base]` or `[base + offset|index]@` (post-index)
         // addressing. This means that it's sometimes just better to emit a regular load folowed by dup than to actually
         // use ld1r.
         Mem& m = src.as<Mem>();
-        if (!m.hasIndex() && !m.hasOffset()) {
+        if (!m.has_index() && !m.has_offset()) {
           cc->ld1r(dst, m);
           return;
         }
 
-        v_load_iany(dst, src.as<Mem>(), 1u << uint32_t(opInfo.srcElement), Alignment{1});
+        v_load_iany(dst, src.as<Mem>(), 1u << uint32_t(op_info.src_element), Alignment{1});
         src = dst;
       }
 
-      if (src.isVec()) {
+      if (src.is_vec()) {
         Vec& srcV = src.as<Vec>();
-        vec_set_type_and_index(srcV, elementSize, 0);
+        vec_set_type_and_index(srcV, element_size, 0);
         cc->dup(dst, srcV);
         return;
       }
-      else if (src.isGp()) {
-        Gp& srcGp = src.as<Gp>();
-        if (elementSize <= ElementSize::k32)
-          srcGp = srcGp.r32();
+      else if (src.is_gp()) {
+        Gp& src_gp = src.as<Gp>();
+        if (element_size <= ElementSize::k32)
+          src_gp = src_gp.r32();
         else
-          srcGp = srcGp.r64();
-        cc->dup(dst, srcGp);
+          src_gp = src_gp.r64();
+        cc->dup(dst, src_gp);
         return;
       }
 
@@ -2858,18 +2858,18 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
     case OpcodeVV::kNotF64: {
       Vec src = as_vec(this, src_, dst);
 
-      vec_set_type(dst, opInfo.dstElement);
-      vec_set_type(src, opInfo.srcElement);
+      vec_set_type(dst, op_info.dst_element);
+      vec_set_type(src, op_info.src_element);
 
-      cc->emit(instId, dst, src);
+      cc->emit(inst_id, dst, src);
       return;
     }
 
     case OpcodeVV::kCvtI8ToI32:
     case OpcodeVV::kCvtU8ToU32: {
       Vec src = as_vec(this, src_, dst);
-      cc->emit(instId, dst.h8(), src.b8(), 0);
-      cc->emit(instId, dst.s4(), dst.h4(), 0);
+      cc->emit(inst_id, dst.h8(), src.b8(), 0);
+      cc->emit(inst_id, dst.s4(), dst.h4(), 0);
       return;
     }
 
@@ -2885,43 +2885,43 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
     case OpcodeVV::kCvtI32HiToI64:
     case OpcodeVV::kCvtU32LoToU64:
     case OpcodeVV::kCvtU32HiToU64: {
-      vec_set_type(dst, opInfo.dstElement);
+      vec_set_type(dst, op_info.dst_element);
 
       Vec src;
 
-      if (opInfo.srcPart == VecPart::kLo) {
+      if (op_info.src_part == VecPart::kLo) {
         src = as_vec(this, src_, dst, 8);
         src = src.v64();
       }
-      else if (src_.isVec()) {
+      else if (src_.is_vec()) {
         src = src_.as<Vec>();
       }
       else {
         Mem m(src_.as<Mem>());
-        m.addOffset(8);
+        m.add_offset(8);
         src = vec_from_mem(this,  m, dst, 8);
         src = src.v64();
 
         // Since we have loaded from memory, we want to use the low-part variant of the instruction.
-        instId = opcodeInfo2V[size_t(op) - 1u].instId;
+        inst_id = opcodeInfo2V[size_t(op) - 1u].inst_id;
       }
 
-      vec_set_type(src, opInfo.srcElement);
-      cc->emit(instId, dst, src, 0);
+      vec_set_type(src, op_info.src_element);
+      cc->emit(inst_id, dst, src, 0);
       return;
     }
 
     case OpcodeVV::kRcpF32:
     case OpcodeVV::kRcpF64: {
       // Intrinsic.
-      const void* onePtr = op == OpcodeVV::kRcpF32 ? static_cast<const void*>(&ct.f32_1) : static_cast<const void*>(&ct.f64_1);
+      const void* one_ptr = op == OpcodeVV::kRcpF32 ? static_cast<const void*>(&ct.f32_1) : static_cast<const void*>(&ct.f64_1);
 
-      Vec one = simdVecConst(onePtr, Bcst::kNA, dst);
+      Vec one = simd_vec_const(one_ptr, Bcst::kNA, dst);
       Vec src = as_vec(this, src_, dst);
 
-      vec_set_type(dst, opInfo.dstElement);
-      vec_set_type(one, opInfo.dstElement);
-      vec_set_type(src, opInfo.dstElement);
+      vec_set_type(dst, op_info.dst_element);
+      vec_set_type(one, op_info.dst_element);
+      vec_set_type(src, op_info.dst_element);
 
       cc->fdiv(dst, one, src);
       return;
@@ -2932,10 +2932,10 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
     case OpcodeVV::kCeilF32S:
     case OpcodeVV::kRoundF32S:
     case OpcodeVV::kSqrtF32S: {
-      dst.setSignature(asmjit::RegTraits<RegType::kVec32>::kSignature);
+      dst.set_signature(asmjit::RegTraits<RegType::kVec32>::kSignature);
       Vec src = as_vec(this, src_, dst);
 
-      cc->emit(instId, dst, src);
+      cc->emit(inst_id, dst, src);
       return;
     }
 
@@ -2944,10 +2944,10 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
     case OpcodeVV::kCeilF64S:
     case OpcodeVV::kRoundF64S:
     case OpcodeVV::kSqrtF64S: {
-      dst.setSignature(asmjit::RegTraits<RegType::kVec64>::kSignature);
+      dst.set_signature(asmjit::RegTraits<RegType::kVec64>::kSignature);
       Vec src = as_vec(this, src_, dst);
 
-      cc->emit(instId, dst, src);
+      cc->emit(inst_id, dst, src);
       return;
     }
 
@@ -2970,10 +2970,10 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
     case OpcodeVV::kCvtTruncF32ToI32: {
       Vec src = as_vec(this, src_, dst);
 
-      vec_set_type(dst, opInfo.dstElement);
-      vec_set_type(src, opInfo.srcElement);
+      vec_set_type(dst, op_info.dst_element);
+      vec_set_type(src, op_info.src_element);
 
-      cc->emit(instId, dst, src);
+      cc->emit(inst_id, dst, src);
       return;
     }
 
@@ -2981,45 +2981,45 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
     case OpcodeVV::kCvtF64ToF32S: {
       Vec src = as_vec(this, src_, dst);
 
-      vec_set_vec_type(dst, opInfo.dstElement);
-      vec_set_vec_type(src, opInfo.srcElement);
+      vec_set_vec_type(dst, op_info.dst_element);
+      vec_set_vec_type(src, op_info.src_element);
 
       cc->fcvt(dst, src);
       return;
     }
 
     case OpcodeVV::kCvtF32HiToF64:
-      if (src_.isMem()) {
-        Vec src = as_vec(this, src_.as<Mem>().cloneAdjusted(8), dst, 8).v64();
+      if (src_.is_mem()) {
+        Vec src = as_vec(this, src_.as<Mem>().clone_adjusted(8), dst, 8).v64();
 
-        vec_set_type(dst, opInfo.dstElement);
-        vec_set_type(src, opInfo.srcElement);
+        vec_set_type(dst, op_info.dst_element);
+        vec_set_type(src, op_info.src_element);
 
-        cc->emit(opcodeInfo2V[size_t(op) - 1u].instId, dst, src);
+        cc->emit(opcodeInfo2V[size_t(op) - 1u].inst_id, dst, src);
         return;
       }
       [[fallthrough]];
     case OpcodeVV::kCvtF32LoToF64: {
       Vec src = as_vec(this, src_, dst, 8);
 
-      if (opInfo.srcPart == VecPart::kLo)
+      if (op_info.src_part == VecPart::kLo)
         src = src.v64();
 
-      vec_set_type(dst, opInfo.dstElement);
-      vec_set_type(src, opInfo.srcElement);
+      vec_set_type(dst, op_info.dst_element);
+      vec_set_type(src, op_info.src_element);
 
-      cc->emit(instId, dst, src);
+      cc->emit(inst_id, dst, src);
       return;
     }
 
     case OpcodeVV::kCvtI32HiToF64:
-      if (src_.isMem()) {
-        Vec src = as_vec(this, src_.as<Mem>().cloneAdjusted(8), dst, 8).v64();
+      if (src_.is_mem()) {
+        Vec src = as_vec(this, src_.as<Mem>().clone_adjusted(8), dst, 8).v64();
 
-        vec_set_type(dst, opInfo.dstElement);
-        vec_set_type(src, opInfo.srcElement);
+        vec_set_type(dst, op_info.dst_element);
+        vec_set_type(src, op_info.src_element);
 
-        cc->emit(opcodeInfo2V[size_t(op) - 1u].instId, dst, src, 0);
+        cc->emit(opcodeInfo2V[size_t(op) - 1u].inst_id, dst, src, 0);
         cc->scvtf(dst.d2(), dst.d2());
         return;
       }
@@ -3027,13 +3027,13 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
     case OpcodeVV::kCvtI32LoToF64: {
       Vec src = as_vec(this, src_, dst, 8);
 
-      if (opInfo.srcPart == VecPart::kLo)
+      if (op_info.src_part == VecPart::kLo)
         src = src.v64();
 
-      vec_set_type(dst, opInfo.dstElement);
-      vec_set_type(src, opInfo.srcElement);
+      vec_set_type(dst, op_info.dst_element);
+      vec_set_type(src, op_info.src_element);
 
-      cc->emit(instId, dst, src, 0);
+      cc->emit(inst_id, dst, src, 0);
       cc->scvtf(dst.d2(), dst.d2());
       return;
     }
@@ -3043,13 +3043,13 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
       dst = dst.q();
       Vec src = as_vec(this, src_, dst);
 
-      if (opInfo.dstPart == VecPart::kLo)
+      if (op_info.dst_part == VecPart::kLo)
         dst = dst.d();
 
-      vec_set_type(dst, opInfo.dstElement);
-      vec_set_type(src, opInfo.srcElement);
+      vec_set_type(dst, op_info.dst_element);
+      vec_set_type(src, op_info.src_element);
 
-      cc->emit(instId, dst, src);
+      cc->emit(inst_id, dst, src);
       return;
     }
 
@@ -3060,11 +3060,11 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
       dst = dst.q();
 
       Vec src = as_vec(this, src_, dst);
-      Vec tmp = newSimilarReg(dst, "@tmp");
+      Vec tmp = new_similar_reg(dst, "@tmp");
 
-      cc->emit(instId, tmp.d2(), src.d2());
+      cc->emit(inst_id, tmp.d2(), src.d2());
 
-      if (opInfo.dstPart == VecPart::kLo)
+      if (op_info.dst_part == VecPart::kLo)
         cc->sqxtn(dst.s2(), tmp.d2());
       else
         cc->sqxtn2(dst.s4(), tmp.d2());
@@ -3084,12 +3084,12 @@ void PipeCompiler::emit_2v(OpcodeVV op, const OpArray& dst_, const OpArray& src_
 // ===========================================================
 
 void PipeCompiler::emit_2vi(OpcodeVVI op, const Operand_& dst_, const Operand_& src_, uint32_t imm) noexcept {
-  BL_ASSERT(dst_.isVec());
+  BL_ASSERT(dst_.is_vec());
 
   Vec dst(dst_.as<Vec>());
-  OpcodeVInfo opInfo = opcodeInfo2VI[size_t(op)];
+  OpcodeVInfo op_info = opcodeInfo2VI[size_t(op)];
 
-  InstId instId = opInfo.instId;
+  InstId inst_id = op_info.inst_id;
 
   switch (op) {
     case OpcodeVVI::kSllbU128:
@@ -3110,7 +3110,7 @@ void PipeCompiler::emit_2vi(OpcodeVVI op, const Operand_& dst_, const Operand_& 
         return;
       }
 
-      Vec zero = simdVecZero(dst);
+      Vec zero = simd_vec_zero(dst);
       vec_set_type(dst, ElementSize::k8);
       vec_set_type(src, ElementSize::k8);
       vec_set_type(zero, ElementSize::k8);
@@ -3127,7 +3127,7 @@ void PipeCompiler::emit_2vi(OpcodeVVI op, const Operand_& dst_, const Operand_& 
     case OpcodeVVI::kSwizzleHiU16x4: {
       Vec src = as_vec(this, src_, dst);
 
-      uint8_t predData[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF };
+      uint8_t pred_data[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF };
 
       uint32_t d = (imm >> 23) & (0x3 << 1);
       uint32_t c = (imm >> 15) & (0x3 << 1);
@@ -3135,28 +3135,28 @@ void PipeCompiler::emit_2vi(OpcodeVVI op, const Operand_& dst_, const Operand_& 
       uint32_t a = (imm <<  1) & (0x3 << 1);
 
       if (op != OpcodeVVI::kSwizzleHiU16x4) {
-        predData[ 0] = uint8_t(a);
-        predData[ 1] = uint8_t(a + 1u);
-        predData[ 2] = uint8_t(b);
-        predData[ 3] = uint8_t(b + 1u);
-        predData[ 4] = uint8_t(c);
-        predData[ 5] = uint8_t(c + 1u);
-        predData[ 6] = uint8_t(d);
-        predData[ 7] = uint8_t(d + 1u);
+        pred_data[ 0] = uint8_t(a);
+        pred_data[ 1] = uint8_t(a + 1u);
+        pred_data[ 2] = uint8_t(b);
+        pred_data[ 3] = uint8_t(b + 1u);
+        pred_data[ 4] = uint8_t(c);
+        pred_data[ 5] = uint8_t(c + 1u);
+        pred_data[ 6] = uint8_t(d);
+        pred_data[ 7] = uint8_t(d + 1u);
       }
 
       if (op != OpcodeVVI::kSwizzleLoU16x4) {
-        predData[ 8] = uint8_t(a + 8u);
-        predData[ 9] = uint8_t(a + 9u);
-        predData[10] = uint8_t(b + 8u);
-        predData[11] = uint8_t(b + 9u);
-        predData[12] = uint8_t(c + 8u);
-        predData[13] = uint8_t(c + 9u);
-        predData[14] = uint8_t(d + 8u);
-        predData[15] = uint8_t(d + 9u);
+        pred_data[ 8] = uint8_t(a + 8u);
+        pred_data[ 9] = uint8_t(a + 9u);
+        pred_data[10] = uint8_t(b + 8u);
+        pred_data[11] = uint8_t(b + 9u);
+        pred_data[12] = uint8_t(c + 8u);
+        pred_data[13] = uint8_t(c + 9u);
+        pred_data[14] = uint8_t(d + 8u);
+        pred_data[15] = uint8_t(d + 9u);
       }
 
-      Vec pred = simdConst16B(predData);
+      Vec pred = simd_const_16b(pred_data);
       cc->tbl(dst.b16(), src.b16(), pred.b16());
       return;
     }
@@ -3211,13 +3211,13 @@ void PipeCompiler::emit_2vi(OpcodeVVI op, const Operand_& dst_, const Operand_& 
     default: {
       Vec src = as_vec(this, src_, dst);
 
-      if (opInfo.dstPart == VecPart::kLo) dst = dst.d();
-      if (opInfo.srcPart == VecPart::kLo) src = src.d();
+      if (op_info.dst_part == VecPart::kLo) dst = dst.d();
+      if (op_info.src_part == VecPart::kLo) src = src.d();
 
-      vec_set_type(dst, opInfo.dstElement);
-      vec_set_type(src, opInfo.srcElement);
+      vec_set_type(dst, op_info.dst_element);
+      vec_set_type(src, op_info.src_element);
 
-      cc->emit(instId, dst, src, imm);
+      cc->emit(inst_id, dst, src, imm);
       return;
     }
   }
@@ -3230,14 +3230,14 @@ void PipeCompiler::emit_2vi(OpcodeVVI op, const OpArray& dst_, const OpArray& sr
 // ===========================================================
 
 void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& src_, uint32_t idx) noexcept {
-  OpcodeVInfo opInfo = opcodeInfo2VS[size_t(op)];
+  OpcodeVInfo op_info = opcodeInfo2VS[size_t(op)];
 
   switch (op) {
     case OpcodeVR::kMov: {
-      BL_ASSERT(dst_.isReg());
-      BL_ASSERT(src_.isReg());
+      BL_ASSERT(dst_.is_reg());
+      BL_ASSERT(src_.is_reg());
 
-      if (dst_.isGp() && src_.isVec()) {
+      if (dst_.is_gp() && src_.is_vec()) {
         if (dst_.as<Reg>().size() == 4)
           cc->mov(dst_.as<Gp>(), src_.as<Vec>().s(0));
         else
@@ -3245,7 +3245,7 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
         return;
       }
 
-      if (dst_.isVec() && src_.isGp()) {
+      if (dst_.is_vec() && src_.is_gp()) {
         if (src_.as<Reg>().size() == 4)
           cc->fmov(dst_.as<Vec>().s(), src_.as<Gp>());
         else
@@ -3258,10 +3258,10 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
 
     case OpcodeVR::kMovU32:
     case OpcodeVR::kMovU64: {
-      BL_ASSERT(dst_.isReg());
-      BL_ASSERT(src_.isReg());
+      BL_ASSERT(dst_.is_reg());
+      BL_ASSERT(src_.is_reg());
 
-      if (dst_.isGp() && src_.isVec()) {
+      if (dst_.is_gp() && src_.is_vec()) {
         if (op == OpcodeVR::kMovU32)
           cc->mov(dst_.as<Gp>().r32(), src_.as<Vec>().s(0));
         else
@@ -3269,7 +3269,7 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
         return;
       }
 
-      if (dst_.isVec() && src_.isGp()) {
+      if (dst_.is_vec() && src_.is_gp()) {
         if (op == OpcodeVR::kMovU32)
           cc->fmov(dst_.as<Vec>().s(), src_.as<Gp>().r32());
         else
@@ -3284,14 +3284,14 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
     case OpcodeVR::kInsertU16:
     case OpcodeVR::kInsertU32:
     case OpcodeVR::kInsertU64: {
-      BL_ASSERT(dst_.isVec());
-      BL_ASSERT(src_.isGp());
+      BL_ASSERT(dst_.is_vec());
+      BL_ASSERT(src_.is_gp());
 
       Vec dst(dst_.as<Vec>());
       Gp src(src_.as<Gp>());
 
-      vec_set_type_and_index(dst, opInfo.dstElement, idx);
-      src.setSignature(op == OpcodeVR::kInsertU64 ?
+      vec_set_type_and_index(dst, op_info.dst_element, idx);
+      src.set_signature(op == OpcodeVR::kInsertU64 ?
         asmjit::RegTraits<RegType::kGp64>::kSignature :
         asmjit::RegTraits<RegType::kGp32>::kSignature);
 
@@ -3303,16 +3303,16 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
     case OpcodeVR::kExtractU16:
     case OpcodeVR::kExtractU32:
     case OpcodeVR::kExtractU64: {
-      BL_ASSERT(dst_.isGp());
-      BL_ASSERT(src_.isVec());
+      BL_ASSERT(dst_.is_gp());
+      BL_ASSERT(src_.is_vec());
 
       Gp dst(dst_.as<Gp>());
       Vec src(src_.as<Vec>());
 
-      dst.setSignature(op == OpcodeVR::kExtractU64 ?
+      dst.set_signature(op == OpcodeVR::kExtractU64 ?
         asmjit::RegTraits<RegType::kGp64>::kSignature :
         asmjit::RegTraits<RegType::kGp32>::kSignature);
-      vec_set_type_and_index(src, opInfo.dstElement, idx);
+      vec_set_type_and_index(src, op_info.dst_element, idx);
 
       cc->mov(dst, src);
       return;
@@ -3320,11 +3320,11 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
 
     case OpcodeVR::kCvtIntToF32:
     case OpcodeVR::kCvtIntToF64: {
-      BL_ASSERT(dst_.isVec());
-      BL_ASSERT(src_.isGp());
+      BL_ASSERT(dst_.is_vec());
+      BL_ASSERT(src_.is_gp());
 
       Vec dst(dst_.as<Vec>());
-      vec_set_vec_type(dst, opInfo.dstElement);
+      vec_set_vec_type(dst, op_info.dst_element);
       cc->scvtf(dst, src_.as<Gp>());
       return;
     }
@@ -3333,12 +3333,12 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
     case OpcodeVR::kCvtRoundF32ToInt:
     case OpcodeVR::kCvtTruncF64ToInt:
     case OpcodeVR::kCvtRoundF64ToInt: {
-      BL_ASSERT(dst_.isGp());
-      BL_ASSERT(src_.isVec());
+      BL_ASSERT(dst_.is_gp());
+      BL_ASSERT(src_.is_vec());
 
       Vec src(src_.as<Vec>());
-      vec_set_vec_type(src, opInfo.srcElement);
-      cc->emit(opInfo.instId, dst_, src);
+      vec_set_vec_type(src, op_info.src_element);
+      cc->emit(op_info.inst_id, dst_, src);
       return;
     }
 
@@ -3351,14 +3351,14 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
 // ===========================================================
 
 void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32_t alignment, uint32_t idx) noexcept {
-  BL_ASSERT(dst_.isVec());
-  BL_ASSERT(src_.isMem());
+  BL_ASSERT(dst_.is_vec());
+  BL_ASSERT(src_.is_mem());
 
-  blUnused(alignment);
+  bl_unused(alignment);
 
   Vec dst(dst_);
   Mem src(src_);
-  OpcodeVMInfo opInfo = opcodeInfo2VM[size_t(op)];
+  OpcodeVMInfo op_info = opcodeInfo2VM[size_t(op)];
 
   switch (op) {
     case OpcodeVM::kLoad8:
@@ -3373,7 +3373,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
     case OpcodeVM::kLoad128_U64:
     case OpcodeVM::kLoad128_F32:
     case OpcodeVM::kLoad128_F64: {
-      vec_load_mem(this, dst, src, opInfo.memSize);
+      vec_load_mem(this, dst, src, op_info.mem_size);
       return;
     }
 
@@ -3387,7 +3387,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
 
     case OpcodeVM::kLoadCvtN_U8ToU64:
     case OpcodeVM::kLoadCvt16_U8ToU64: {
-      Gp tmp = newGp32("@tmp");
+      Gp tmp = new_gp32("@tmp");
       cc->ldrh(tmp, src);
       cc->mov(dst.b(), tmp);
       cc->lsr(tmp, tmp, 8);
@@ -3409,8 +3409,8 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
     case OpcodeVM::kLoadCvt64_U16ToU32:
     case OpcodeVM::kLoadCvt64_I32ToI64:
     case OpcodeVM::kLoadCvt64_U32ToU64: {
-      vec_load_mem(this, dst, src, opInfo.memSize);
-      emit_2v(OpcodeVV(opInfo.cvtOp), dst, dst);
+      vec_load_mem(this, dst, src, op_info.mem_size);
+      emit_2v(OpcodeVV(op_info.cvt_op), dst, dst);
       return;
     }
 
@@ -3423,7 +3423,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
     case OpcodeVM::kLoadCvtN_I32ToI64:
     case OpcodeVM::kLoadCvtN_U32ToU64: {
       vec_load_mem(this, dst, src, dst.size() / 2u);
-      emit_2v(OpcodeVV(opInfo.cvtOp), dst, dst);
+      emit_2v(OpcodeVV(op_info.cvt_op), dst, dst);
       return;
     }
 
@@ -3434,16 +3434,16 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
     case OpcodeVM::kLoadInsertU64:
     case OpcodeVM::kLoadInsertF32x2:
     case OpcodeVM::kLoadInsertF64: {
-      if (!src.hasIndex() && !src.hasOffset()) {
-        vec_set_type_and_index(dst, opInfo.element, idx);
+      if (!src.has_index() && !src.has_offset()) {
+        vec_set_type_and_index(dst, op_info.element, idx);
         cc->ld1(dst, src);
       }
       else {
-        Vec tmp = newSimilarReg(dst, "@tmp");
-        v_load_iany(tmp, src, opInfo.memSize, Alignment{1});
+        Vec tmp = new_similar_reg(dst, "@tmp");
+        v_load_iany(tmp, src, op_info.mem_size, Alignment{1});
 
-        vec_set_type_and_index(dst, opInfo.element, idx);
-        vec_set_type_and_index(tmp, opInfo.element, 0);
+        vec_set_type_and_index(dst, op_info.element, idx);
+        vec_set_type_and_index(tmp, op_info.element, 0);
         cc->mov(dst, tmp);
       }
       return;
@@ -3484,7 +3484,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
 }
 
 void PipeCompiler::emit_vm(OpcodeVM op, const OpArray& dst_, const Mem& src_, uint32_t alignment, uint32_t idx) noexcept {
-  blUnused(alignment);
+  bl_unused(alignment);
 
   uint32_t i = 0;
   uint32_t n = dst_.size();
@@ -3493,47 +3493,47 @@ void PipeCompiler::emit_vm(OpcodeVM op, const OpArray& dst_, const Mem& src_, ui
     return;
 
   Mem src(src_);
-  OpcodeVMInfo opInfo = opcodeInfo2VM[size_t(op)];
+  OpcodeVMInfo op_info = opcodeInfo2VM[size_t(op)];
 
-  uint32_t overriddenMemSize = opInfo.memSize;
-  uint32_t memSize = overriddenMemSize ? overriddenMemSize : dst_[0].as<Vec>().size();
+  uint32_t overridden_mem_size = op_info.mem_size;
+  uint32_t mem_size = overridden_mem_size ? overridden_mem_size : dst_[0].as<Vec>().size();
 
-  if (op <= OpcodeVM::kLoadN_F64 && !src.hasIndex() && !src.hasOffset() && memSize >= 4) {
+  if (op <= OpcodeVM::kLoadN_F64 && !src.has_index() && !src.has_offset() && mem_size >= 4) {
     while (i + 2 <= n) {
       const Vec& dst0 = dst_[i + 0].as<Vec>();
       const Vec& dst1 = dst_[i + 1].as<Vec>();
 
-      if (memSize == 4)
+      if (mem_size == 4)
         cc->ldp(dst0.s(), dst1.s(), src);
-      else if (memSize == 8)
+      else if (mem_size == 8)
         cc->ldp(dst0.d(), dst1.d(), src);
       else
         cc->ldp(dst0.q(), dst1.q(), src);
 
-      src.addOffsetLo32(int32_t(memSize * 2));
+      src.add_offset_lo32(int32_t(mem_size * 2));
 
       i += 2;
     }
   }
 
   while (i < n) {
-    BL_ASSERT(dst_[i].isVec());
+    BL_ASSERT(dst_[i].is_vec());
 
     const Vec& dst = dst_[i].as<Vec>();
-    memSize = dst.size();
+    mem_size = dst.size();
 
     emit_vm(op, dst, src, 1, idx);
 
-    src.addOffsetLo32(int32_t(memSize));
+    src.add_offset_lo32(int32_t(mem_size));
     i++;
   }
 }
 
 void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const Vec& src_, uint32_t alignment, uint32_t idx) noexcept {
-  BL_ASSERT(dst_.isMem());
-  BL_ASSERT(src_.isVec());
+  BL_ASSERT(dst_.is_mem());
+  BL_ASSERT(src_.is_vec());
 
-  blUnused(alignment);
+  bl_unused(alignment);
 
   Mem dst(dst_);
   Vec src(src_);
@@ -3673,7 +3673,7 @@ void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const Vec& src_, uint32
 }
 
 void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const OpArray& src_, uint32_t alignment, uint32_t idx) noexcept {
-  blUnused(alignment);
+  bl_unused(alignment);
 
   uint32_t i = 0;
   uint32_t n = src_.size();
@@ -3682,27 +3682,27 @@ void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const OpArray& src_, ui
     return;
 
   Mem dst(dst_);
-  OpcodeVMInfo opInfo = opcodeInfo2MV[size_t(op)];
+  OpcodeVMInfo op_info = opcodeInfo2MV[size_t(op)];
 
-  uint32_t overriddenMemSize = opInfo.memSize;
-  uint32_t memSize = overriddenMemSize ? overriddenMemSize : src_[0].as<Vec>().size();
+  uint32_t overridden_mem_size = op_info.mem_size;
+  uint32_t mem_size = overridden_mem_size ? overridden_mem_size : src_[0].as<Vec>().size();
 
-  if (op <= OpcodeMV::kStoreN_F64 && memSize >= 4) {
-    bool goodOffset = (uint32_t(dst.offsetLo32()) & (memSize - 1)) == 0u;
+  if (op <= OpcodeMV::kStoreN_F64 && mem_size >= 4) {
+    bool good_offset = (uint32_t(dst.offset_lo32()) & (mem_size - 1)) == 0u;
 
-    if (goodOffset) {
+    if (good_offset) {
       while (i + 2 <= n) {
         const Vec& src0 = src_[i + 0].as<Vec>();
         const Vec& src1 = src_[i + 1].as<Vec>();
 
-        if (memSize == 4)
+        if (mem_size == 4)
           cc->stp(src0.s(), src1.s(), dst);
-        else if (memSize == 8)
+        else if (mem_size == 8)
           cc->stp(src0.d(), src1.d(), dst);
         else
           cc->stp(src0.q(), src1.q(), dst);
 
-        dst.addOffsetLo32(int32_t(memSize * 2));
+        dst.add_offset_lo32(int32_t(mem_size * 2));
 
         i += 2;
       }
@@ -3710,12 +3710,12 @@ void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const OpArray& src_, ui
   }
 
   while (i < n) {
-    BL_ASSERT(src_[i].isVec());
+    BL_ASSERT(src_[i].is_vec());
 
     const Vec& src = src_[i].as<Vec>();
     emit_mv(op, dst, src, 1, idx);
 
-    dst.addOffsetLo32(int32_t(memSize));
+    dst.add_offset_lo32(int32_t(mem_size));
     i++;
   }}
 
@@ -3724,16 +3724,16 @@ void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const OpArray& src_, ui
 
 static void emit_3v_op(
   PipeCompiler* pc,
-  InstId instId,
+  InstId inst_id,
   Vec dst, Vec src1, Operand_ src2_,
-  FloatMode floatMode,
-  ElementSize dstElement, VecPart dstPart,
-  ElementSize srcElement, VecPart srcPart,
+  FloatMode float_mode,
+  ElementSize dst_element, VecPart dst_part,
+  ElementSize src_element, VecPart src_part,
   uint32_t reversed) noexcept {
 
   Vec src2;
 
-  switch (floatMode) {
+  switch (float_mode) {
     case FloatMode::kF32S: {
       dst = dst.s();
       src1 = src1.s();
@@ -3751,41 +3751,41 @@ static void emit_3v_op(
     default: {
       src2 = as_vec(pc, src2_, dst);
 
-      if (dstPart == VecPart::kLo) {
+      if (dst_part == VecPart::kLo) {
         dst = dst.d();
       }
 
-      if (srcPart == VecPart::kLo) {
+      if (src_part == VecPart::kLo) {
         src1 = src1.d();
         src2 = src2.d();
       }
 
-      vec_set_type(dst, dstElement);
-      vec_set_type(src1, srcElement);
-      vec_set_type(src2, srcElement);
+      vec_set_type(dst, dst_element);
+      vec_set_type(src1, src_element);
+      vec_set_type(src2, src_element);
       break;
     }
   }
 
   AsmCompiler* cc = pc->cc;
   if (reversed)
-    cc->emit(instId, dst, src2, src1);
+    cc->emit(inst_id, dst, src2, src1);
   else
-    cc->emit(instId, dst, src1, src2);
+    cc->emit(inst_id, dst, src1, src2);
 }
 
 void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_) noexcept {
-  BL_ASSERT(dst_.isVec());
-  BL_ASSERT(src1_.isVec());
+  BL_ASSERT(dst_.is_vec());
+  BL_ASSERT(src1_.is_vec());
 
   Vec dst(dst_.as<Vec>());
-  Vec src1(src1_.as<Vec>().cloneAs(dst));
-  OpcodeVInfo opInfo = opcodeInfo3V[size_t(op)];
+  Vec src1(src1_.as<Vec>().clone_as(dst));
+  OpcodeVInfo op_info = opcodeInfo3V[size_t(op)];
 
-  InstId instId = opInfo.instId;
+  InstId inst_id = op_info.inst_id;
 
-  if (isSameVec(src1, src2_)) {
-    switch (opInfo.sameVecOp) {
+  if (is_same_vec(src1, src2_)) {
+    switch (op_info.same_vec_op) {
       case SameVecOp::kZero: {
         cc->movi(dst.b16(), 0);
         return;
@@ -3809,9 +3809,9 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
   switch (op) {
     case OpcodeVVV::kMulU64: {
       Vec src2 = as_vec(this, src2_, dst);
-      Vec tmp1 = newSimilarReg(dst, "@tmp1");
-      Vec tmp2 = newSimilarReg(dst, "@tmp2");
-      Vec tmp3 = newSimilarReg(dst, "@tmp3");
+      Vec tmp1 = new_similar_reg(dst, "@tmp1");
+      Vec tmp2 = new_similar_reg(dst, "@tmp2");
+      Vec tmp3 = new_similar_reg(dst, "@tmp3");
 
       cc->rev64(tmp1.s4(), src1.s4());
       cc->xtn(tmp2.s2(), src1.d2());
@@ -3826,7 +3826,7 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
 
     case OpcodeVVV::kMulhI16: {
       Vec src2 = as_vec(this, src2_, dst);
-      Vec tmp = newSimilarReg(dst, "@tmp");
+      Vec tmp = new_similar_reg(dst, "@tmp");
 
       cc->smull(tmp.s4(), src1.h4(), src2.h4());
       cc->smull2(dst.s4(), src1.h8(), src2.h8());
@@ -3836,7 +3836,7 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
 
     case OpcodeVVV::kMulhU16: {
       Vec src2 = as_vec(this, src2_, dst);
-      Vec tmp = newSimilarReg(dst, "@tmp");
+      Vec tmp = new_similar_reg(dst, "@tmp");
 
       cc->umull(tmp.s4(), src1.h4(), src2.h4());
       cc->umull2(dst.s4(), src1.h8(), src2.h8());
@@ -3846,12 +3846,12 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
 
     case OpcodeVVV::kMulU64_LoU32: {
       Vec src2 = as_vec(this, src2_, dst);
-      Vec tmp1 = newSimilarReg(dst, "@tmp1");
-      Vec tmp2 = newSimilarReg(dst, "@tmp2");
+      Vec tmp1 = new_similar_reg(dst, "@tmp1");
+      Vec tmp2 = new_similar_reg(dst, "@tmp2");
       Vec tmp3 = dst;
 
       if (dst.id() == src1.id() || dst.id() == src2.id())
-        tmp3 = newSimilarReg(dst, "@tmp3");
+        tmp3 = new_similar_reg(dst, "@tmp3");
 
       cc->xtn(tmp1.s2(), src1.d2());
       cc->shl(tmp3.d2(), src2.d2(), 32);
@@ -3865,10 +3865,10 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
     case OpcodeVVV::kMHAddI16_I32: {
       Vec src2 = as_vec(this, src2_, dst);
 
-      Vec al = newSimilarReg(dst, "@al");
-      Vec ah = newSimilarReg(dst, "@ah");
-      Vec bl = newSimilarReg(dst, "@bl");
-      Vec bh = newSimilarReg(dst, "@bh");
+      Vec al = new_similar_reg(dst, "@al");
+      Vec ah = new_similar_reg(dst, "@ah");
+      Vec bl = new_similar_reg(dst, "@bl");
+      Vec bh = new_similar_reg(dst, "@bh");
 
       cc->xtn(al.h4(), src1.s4());
       cc->xtn(bl.h4(), src2.s4());
@@ -3893,11 +3893,11 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
         BLInternal::swap(src1, src2);
       }
 
-      bool dstOverlapsSrc = dst.id() == src1.id();
+      bool dst_overlaps_src = dst.id() == src1.id();
 
       Vec tmp = dst;
-      if (dstOverlapsSrc) {
-        tmp = newSimilarReg(dst, "@tmp");
+      if (dst_overlaps_src) {
+        tmp = new_similar_reg(dst, "@tmp");
       }
 
       // Let's emit a nicer sequence for u64 maximum.
@@ -3907,9 +3907,9 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
         return;
       }
 
-      cc->emit(instId, tmp.d2(), src1.d2(), src2.d2());
+      cc->emit(inst_id, tmp.d2(), src1.d2(), src2.d2());
 
-      if (opInfo.imm)
+      if (op_info.imm)
         v_blendv_u8(dst, src2, src1, tmp);
       else
         v_blendv_u8(dst, src1, src2, tmp);
@@ -3921,8 +3921,8 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
     case OpcodeVVV::kCmpNeF64S:
     case OpcodeVVV::kCmpNeF32:
     case OpcodeVVV::kCmpNeF64: {
-      emit_3v_op(this, instId, dst, src1, src2_, opInfo.floatMode, opInfo.dstElement, opInfo.dstPart, opInfo.srcElement, opInfo.srcPart, 0);
-      vec_neg(this, dst, dst, opInfo.floatMode);
+      emit_3v_op(this, inst_id, dst, src1, src2_, op_info.float_mode, op_info.dst_element, op_info.dst_part, op_info.src_element, op_info.src_part, 0);
+      vec_neg(this, dst, dst, op_info.float_mode);
       return;
     }
 
@@ -3934,8 +3934,8 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
     case OpcodeVVV::kCmpUnordF64S:
     case OpcodeVVV::kCmpUnordF32:
     case OpcodeVVV::kCmpUnordF64: {
-      if (isSameVec(src1, src2_)) {
-        emit_3v_op(this, Inst::kIdFcmeq_v, dst, src1, src1, opInfo.floatMode, opInfo.dstElement, opInfo.dstPart, opInfo.srcElement, opInfo.srcPart, 0);
+      if (is_same_vec(src1, src2_)) {
+        emit_3v_op(this, Inst::kIdFcmeq_v, dst, src1, src1, op_info.float_mode, op_info.dst_element, op_info.dst_part, op_info.src_element, op_info.src_part, 0);
       }
       else {
         // This takes advantage of the following:
@@ -3950,19 +3950,19 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
         //
         //   - If both elements are zeros, regardless of the sign of either zero, the result is the second element.
         //   - If either element is a NaN, regardless of the value of FPCR.DN, the result is the second element.
-        Vec src2 = as_vec(this, src2_, dst, opInfo.floatMode);
-        emit_3v_op(this, Inst::kIdFmin_v, dst, src1, src2, opInfo.floatMode, opInfo.dstElement, opInfo.dstPart, opInfo.srcElement, opInfo.srcPart, 0);
-        emit_3v_op(this, Inst::kIdFcmeq_v, dst, dst, dst, opInfo.floatMode, opInfo.dstElement, opInfo.dstPart, opInfo.srcElement, opInfo.srcPart, 0);
+        Vec src2 = as_vec(this, src2_, dst, op_info.float_mode);
+        emit_3v_op(this, Inst::kIdFmin_v, dst, src1, src2, op_info.float_mode, op_info.dst_element, op_info.dst_part, op_info.src_element, op_info.src_part, 0);
+        emit_3v_op(this, Inst::kIdFcmeq_v, dst, dst, dst, op_info.float_mode, op_info.dst_element, op_info.dst_part, op_info.src_element, op_info.src_part, 0);
       }
 
-      if (opInfo.imm)
-        vec_neg(this, dst, dst, opInfo.floatMode);
+      if (op_info.imm)
+        vec_neg(this, dst, dst, op_info.float_mode);
 
       return;
     }
 
     case OpcodeVVV::kHAddF64: {
-      Vec tmp = newSimilarReg(dst, "@tmp");
+      Vec tmp = new_similar_reg(dst, "@tmp");
       Vec src2 = as_vec(this, src2_, dst);
 
       if (src1.id() == src2.id()) {
@@ -3996,12 +3996,12 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
       // Intrinsic - dst = {src1.u64[1], src2.64[0]} - combining high part of src1 and low part of src2.
       Vec src2 = as_vec(this, src2_, dst);
 
-      if (isSameVec(dst, src1)) {
-        if (isSameVec(dst, src2))
+      if (is_same_vec(dst, src1)) {
+        if (is_same_vec(dst, src2))
           return;
         cc->mov(dst.d(0), src2.d(0));
       }
-      else if (isSameVec(dst, src2)) {
+      else if (is_same_vec(dst, src2)) {
         cc->mov(dst.d(1), src1.d(1));
       }
       else {
@@ -4022,30 +4022,30 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
       size_t id = size_t(op) - size_t(OpcodeVVV::kPacksI16_I8);
 
       Vec src2 = as_vec(this, src2_, dst);
-      vec_set_type(src1, opInfo.srcElement);
-      vec_set_type(src2, opInfo.srcElement);
+      vec_set_type(src1, op_info.src_element);
+      vec_set_type(src2, op_info.src_element);
 
       if (src1.id() == src2.id()) {
-        Vec dstD = dst.d();
+        Vec dst_d = dst.d();
 
-        vec_set_type(dst, opInfo.dstElement);
-        vec_set_type(dstD, opInfo.dstElement);
+        vec_set_type(dst, op_info.dst_element);
+        vec_set_type(dst_d, op_info.dst_element);
 
-        cc->emit(pack_lo_inst[id], dstD, src1);
+        cc->emit(pack_lo_inst[id], dst_d, src1);
         cc->mov(dst.d(1), dst.d(0));
       }
       else {
         Vec tmp = dst;
         if (dst.id() == src1.id() || dst.id() == src2.id()) {
-          tmp = newSimilarReg(dst, "@tmp");
+          tmp = new_similar_reg(dst, "@tmp");
         }
 
-        a64::Vec tmpD = tmp.d();
+        a64::Vec tmp_d = tmp.d();
 
-        vec_set_type(tmp, opInfo.dstElement);
-        vec_set_type(tmpD, opInfo.dstElement);
+        vec_set_type(tmp, op_info.dst_element);
+        vec_set_type(tmp_d, op_info.dst_element);
 
-        cc->emit(pack_lo_inst[id], tmpD, src1);
+        cc->emit(pack_lo_inst[id], tmp_d, src1);
         cc->emit(pack_hi_inst[id], tmp, src2);
 
         if (dst.id() != tmp.id()) {
@@ -4056,7 +4056,7 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
     }
 
     default: {
-      emit_3v_op(this, instId, dst, src1, src2_, opInfo.floatMode, opInfo.dstElement, opInfo.dstPart, opInfo.srcElement, opInfo.srcPart, opInfo.reverse);
+      emit_3v_op(this, inst_id, dst, src1, src2_, op_info.float_mode, op_info.dst_element, op_info.dst_part, op_info.src_element, op_info.src_part, op_info.reverse);
       return;
     }
   }
@@ -4070,15 +4070,15 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const OpArray& dst_, const OpArray& src
 // ===========================================================
 
 void PipeCompiler::emit_3vi(OpcodeVVVI op, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_, uint32_t imm) noexcept {
-  BL_ASSERT(dst_.isVec());
-  BL_ASSERT(src1_.isVec());
+  BL_ASSERT(dst_.is_vec());
+  BL_ASSERT(src1_.is_vec());
 
   Vec dst(dst_.as<Vec>());
-  Vec src1(src1_.as<Vec>().cloneAs(dst));
+  Vec src1(src1_.as<Vec>().clone_as(dst));
 
   // Not used at the moment - maybe the info is not needed in this case.
-  OpcodeVInfo opInfo = opcodeInfo3VI[size_t(op)];
-  blUnused(opInfo);
+  OpcodeVInfo op_info = opcodeInfo3VI[size_t(op)];
+  bl_unused(op_info);
 
   switch (op) {
     case OpcodeVVVI::kAlignr_U128: {
@@ -4153,26 +4153,26 @@ void PipeCompiler::emit_3vi(OpcodeVVVI op, const OpArray& dst_, const OpArray& s
 // ==========================================================
 
 void PipeCompiler::emit_4v(OpcodeVVVV op, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_, const Operand_& src3_) noexcept {
-  BL_ASSERT(dst_.isVec());
-  BL_ASSERT(src1_.isVec());
+  BL_ASSERT(dst_.is_vec());
+  BL_ASSERT(src1_.is_vec());
 
   Vec dst(dst_.as<Vec>());
-  Vec src1(src1_.as<Vec>().cloneAs(dst));
+  Vec src1(src1_.as<Vec>().clone_as(dst));
   Operand src2(src2_);
   Operand src3(src3_);
-  OpcodeVInfo opInfo = opcodeInfo4V[size_t(op)];
+  OpcodeVInfo op_info = opcodeInfo4V[size_t(op)];
 
-  InstId instId = opInfo.instId;
+  InstId inst_id = op_info.inst_id;
 
   switch (op) {
     case OpcodeVVVV::kBlendV_U8: {
       Vec src2 = as_vec(this, src2_, dst);
       Vec src3 = as_vec(this, src3_, dst);
 
-      vec_set_type(dst, opInfo.dstElement);
-      vec_set_type(src1, opInfo.srcElement);
-      vec_set_type(src2, opInfo.srcElement);
-      vec_set_type(src3, opInfo.srcElement);
+      vec_set_type(dst, op_info.dst_element);
+      vec_set_type(src1, op_info.src_element);
+      vec_set_type(src2, op_info.src_element);
+      vec_set_type(src3, op_info.src_element);
 
       // We can pick between these depending on register arrangement:
       //   - BSL (bitwise select)
@@ -4205,7 +4205,7 @@ void PipeCompiler::emit_4v(OpcodeVVVV op, const Operand_& dst_, const Operand_& 
       Vec src2;
       Vec src3;
 
-      if (opInfo.floatMode == FloatMode::kF32S) {
+      if (op_info.float_mode == FloatMode::kF32S) {
         dst = dst.s();
         src1 = src1.s();
         src2 = as_vec(this, src2_, dst, 4);
@@ -4218,7 +4218,7 @@ void PipeCompiler::emit_4v(OpcodeVVVV op, const Operand_& dst_, const Operand_& 
         src3 = as_vec(this, src3_, dst, 8);
       }
 
-      cc->emit(instId, dst, src1, src2, src3);
+      cc->emit(inst_id, dst, src1, src2, src3);
       return;
     }
 
@@ -4235,11 +4235,11 @@ void PipeCompiler::emit_4v(OpcodeVVVV op, const Operand_& dst_, const Operand_& 
       Vec src2 = as_vec(this, src2_, dst);
       Vec src3;
 
-      bool negateAcc = opInfo.imm != 0;
-      bool dstOverlaps = dst.id() == src1.id() || dst.id() == src2.id();
-      bool destructible = isSameVec(dst, src3_) || !src3_.isReg();
+      bool negate_acc = op_info.imm != 0;
+      bool dst_overlaps = dst.id() == src1.id() || dst.id() == src2.id();
+      bool destructible = is_same_vec(dst, src3_) || !src3_.is_reg();
 
-      if (!dstOverlaps && src3_.isMem()) {
+      if (!dst_overlaps && src3_.is_mem()) {
         vec_load_mem(this, dst, src3_.as<Mem>(), dst.size());
         src3 = dst;
       }
@@ -4247,16 +4247,16 @@ void PipeCompiler::emit_4v(OpcodeVVVV op, const Operand_& dst_, const Operand_& 
         src3 = as_vec(this, src3_, dst);
       }
 
-      vec_set_type(dst, opInfo.dstElement);
-      vec_set_type(src1, opInfo.srcElement);
-      vec_set_type(src2, opInfo.srcElement);
-      vec_set_type(src3, opInfo.srcElement);
+      vec_set_type(dst, op_info.dst_element);
+      vec_set_type(src1, op_info.src_element);
+      vec_set_type(src2, op_info.src_element);
+      vec_set_type(src3, op_info.src_element);
 
       if (destructible) {
-        if (negateAcc)
+        if (negate_acc)
           cc->fneg(src3, src3);
 
-        cc->emit(instId, src3, src1, src2);
+        cc->emit(inst_id, src3, src1, src2);
 
         if (dst.id() != src3.id())
           cc->mov(dst, src3);
@@ -4265,17 +4265,17 @@ void PipeCompiler::emit_4v(OpcodeVVVV op, const Operand_& dst_, const Operand_& 
 
       Vec tmp = dst;
 
-      if (dstOverlaps) {
-        tmp = newSimilarReg(dst, "@tmp");
-        vec_set_type(tmp, opInfo.dstElement);
+      if (dst_overlaps) {
+        tmp = new_similar_reg(dst, "@tmp");
+        vec_set_type(tmp, op_info.dst_element);
       }
 
-      if (negateAcc)
+      if (negate_acc)
         cc->fneg(tmp, src3);
       else
         cc->mov(tmp, src3);
 
-      cc->emit(instId, tmp, src1, src2);
+      cc->emit(inst_id, tmp, src1, src2);
 
       if (dst.id() != tmp.id())
         cc->mov(dst, tmp);

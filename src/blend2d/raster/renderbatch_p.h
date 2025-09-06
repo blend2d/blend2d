@@ -30,47 +30,47 @@ public:
   struct alignas(BL_CACHE_LINE_SIZE) {
     //! Job index, incremented by each worker when trying to get the next job.
     //! Can go out of range in case there is no more jobs to process.
-    size_t _jobIndex;
+    size_t _job_index;
 
     //! Accumulated errors, initially zero for each batch. Since all workers
     //! would only OR their errors (if happened) at the end we can share the
-    //! cache line with `_jobIndex`.
-    uint32_t _accumulatedErrorFlags;
+    //! cache line with `_job_index`.
+    uint32_t _accumulated_error_flags;
   };
 
   //! Contains all jobs of this batch.
-  ArenaList<RenderJobQueue> _jobList;
+  ArenaList<RenderJobQueue> _job_list;
   //! Contains all commands of this batch.
-  ArenaList<RenderCommandQueue> _commandList;
+  ArenaList<RenderCommandQueue> _command_list;
 
-  ArenaAllocator::Block* _pastBlock;
+  ArenaAllocator::Block* _past_block;
 
-  uint32_t _workerCount;
-  uint32_t _jobCount;
-  uint32_t _commandCount;
-  uint32_t _bandCount;
-  uint32_t _stateSlotCount;
+  uint32_t _worker_count;
+  uint32_t _job_count;
+  uint32_t _command_count;
+  uint32_t _band_count;
+  uint32_t _state_slot_count;
 
   //! \}
 
   //! name Accessors
   //! \{
 
-  BL_INLINE_NODEBUG size_t nextJobIndex() noexcept { return blAtomicFetchAddStrong(&_jobIndex); }
+  BL_INLINE_NODEBUG size_t next_job_index() noexcept { return bl_atomic_fetch_add_strong(&_job_index); }
 
-  BL_INLINE_NODEBUG const ArenaList<RenderJobQueue>& jobList() const noexcept { return _jobList; }
-  BL_INLINE_NODEBUG const ArenaList<RenderCommandQueue>& commandList() const noexcept { return _commandList; }
+  BL_INLINE_NODEBUG const ArenaList<RenderJobQueue>& job_list() const noexcept { return _job_list; }
+  BL_INLINE_NODEBUG const ArenaList<RenderCommandQueue>& command_list() const noexcept { return _command_list; }
 
-  BL_INLINE_NODEBUG uint32_t workerCount() const noexcept { return _workerCount; }
+  BL_INLINE_NODEBUG uint32_t worker_count() const noexcept { return _worker_count; }
 
-  BL_INLINE_NODEBUG uint32_t jobCount() const noexcept { return _jobCount; }
-  BL_INLINE_NODEBUG uint32_t commandCount() const noexcept { return _commandCount; }
+  BL_INLINE_NODEBUG uint32_t job_count() const noexcept { return _job_count; }
+  BL_INLINE_NODEBUG uint32_t command_count() const noexcept { return _command_count; }
 
-  BL_INLINE_NODEBUG uint32_t bandCount() const noexcept { return _bandCount; }
-  BL_INLINE_NODEBUG uint32_t stateSlotCount() const noexcept { return _stateSlotCount; }
+  BL_INLINE_NODEBUG uint32_t band_count() const noexcept { return _band_count; }
+  BL_INLINE_NODEBUG uint32_t state_slot_count() const noexcept { return _state_slot_count; }
 
-  BL_INLINE void accumulateErrorFlags(uint32_t errorFlags) noexcept {
-    blAtomicFetchOrRelaxed(&_accumulatedErrorFlags, errorFlags);
+  BL_INLINE void accumulate_error_flags(uint32_t error_flags) noexcept {
+    bl_atomic_fetch_or_relaxed(&_accumulated_error_flags, error_flags);
   }
 
   //! \}

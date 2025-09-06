@@ -24,20 +24,20 @@ namespace ContextTests {
 
 class JITTestApp : public BaseTestApp {
 public:
-  BLString _cpuFeaturesString;
+  BLString _cpu_features_string;
 
-  bool iterateAllJitFeatures = false;
-  uint32_t selectedCpuFeatures {};
-  uint32_t maximumPixelDifference = 0xFFFFFFFFu;
+  bool iterate_all_jit_features = false;
+  uint32_t selected_cpu_features {};
+  uint32_t maximum_pixel_difference = 0xFFFFFFFFu;
 
-  uint32_t failedCount {};
-  uint32_t passedCount {};
+  uint32_t failed_count {};
+  uint32_t passed_count {};
 
   JITTestApp()
     : BaseTestApp() {}
 
   int help() {
-    using StringUtils::boolToString;
+    using StringUtils::bool_to_string;
 
     printf("Usage:\n");
     printf("  bl_test_context_jit [options] [--help for help]\n");
@@ -66,7 +66,7 @@ public:
     printf("  during fetching so they must yield identical results.\n");
     printf("\n");
 
-    printCommonOptions(defaultOptions);
+    print_common_options(default_options);
 
     printf("JIT options:\n");
     printf("  --max-diff=<value>      - Maximum pixel difference allowed  [default=auto]\n");
@@ -93,71 +93,71 @@ public:
     printf("  all                     - Executes all available SIMD levels\n");
     printf("\n");
 
-    printCommands();
-    printFormats();
-    printCompOps();
-    printOpacityOps();
-    printStyleIds();
-    printStyleOps();
+    print_commands();
+    print_formats();
+    print_comp_ops();
+    print_opacity_ops();
+    print_style_ids();
+    print_style_ops();
 
     fflush(stdout);
     return 0;
   }
 
-  void resetCounters() {
-    mismatchCount = 0;
+  void reset_counters() {
+    mismatch_count = 0;
   }
 
-  bool parseJITOptions(CmdLine cmdLine) {
-    const char* maxDiffValue = cmdLine.valueOf("--max-diff", "auto");
-    if (strcmp(maxDiffValue, "auto") == 0) {
-      maximumPixelDifference = 0xFFFFFFFFu;
+  bool parse_jit_options(CmdLine cmd_line) {
+    const char* max_diff_value = cmd_line.value_of("--max-diff", "auto");
+    if (strcmp(max_diff_value, "auto") == 0) {
+      maximum_pixel_difference = 0xFFFFFFFFu;
     }
     else {
-      maximumPixelDifference = cmdLine.valueAsUInt("--max-diff", 0);
+      maximum_pixel_difference = cmd_line.value_as_uint("--max-diff", 0);
     }
 
-    const char* simdLevel = cmdLine.valueOf("--simd-level", "all");
-    if (simdLevel) {
-      if (StringUtils::strieq(simdLevel, "native")) {
+    const char* simd_level = cmd_line.value_of("--simd-level", "all");
+    if (simd_level) {
+      if (StringUtils::strieq(simd_level, "native")) {
         // Nothing to do if configured to auto-detect.
       }
-      else if (StringUtils::strieq(simdLevel, "all")) {
-        iterateAllJitFeatures = true;
+      else if (StringUtils::strieq(simd_level, "all")) {
+        iterate_all_jit_features = true;
       }
 #if defined(BL_JIT_ARCH_X86)
-      else if (StringUtils::strieq(simdLevel, "sse2")) {
-        selectedCpuFeatures = BL_RUNTIME_CPU_FEATURE_X86_SSE2;
+      else if (StringUtils::strieq(simd_level, "sse2")) {
+        selected_cpu_features = BL_RUNTIME_CPU_FEATURE_X86_SSE2;
       }
-      else if (StringUtils::strieq(simdLevel, "sse3")) {
-        selectedCpuFeatures = BL_RUNTIME_CPU_FEATURE_X86_SSE3;
+      else if (StringUtils::strieq(simd_level, "sse3")) {
+        selected_cpu_features = BL_RUNTIME_CPU_FEATURE_X86_SSE3;
       }
-      else if (StringUtils::strieq(simdLevel, "ssse3")) {
-        selectedCpuFeatures = BL_RUNTIME_CPU_FEATURE_X86_SSSE3;
+      else if (StringUtils::strieq(simd_level, "ssse3")) {
+        selected_cpu_features = BL_RUNTIME_CPU_FEATURE_X86_SSSE3;
       }
-      else if (StringUtils::strieq(simdLevel, "sse4.1")) {
-        selectedCpuFeatures = BL_RUNTIME_CPU_FEATURE_X86_SSE4_1;
+      else if (StringUtils::strieq(simd_level, "sse4.1")) {
+        selected_cpu_features = BL_RUNTIME_CPU_FEATURE_X86_SSE4_1;
       }
-      else if (StringUtils::strieq(simdLevel, "sse4.2")) {
-        selectedCpuFeatures = BL_RUNTIME_CPU_FEATURE_X86_SSE4_2;
+      else if (StringUtils::strieq(simd_level, "sse4.2")) {
+        selected_cpu_features = BL_RUNTIME_CPU_FEATURE_X86_SSE4_2;
       }
-      else if (StringUtils::strieq(simdLevel, "avx")) {
-        selectedCpuFeatures = BL_RUNTIME_CPU_FEATURE_X86_AVX;
+      else if (StringUtils::strieq(simd_level, "avx")) {
+        selected_cpu_features = BL_RUNTIME_CPU_FEATURE_X86_AVX;
       }
-      else if (StringUtils::strieq(simdLevel, "avx2")) {
-        selectedCpuFeatures = BL_RUNTIME_CPU_FEATURE_X86_AVX2;
+      else if (StringUtils::strieq(simd_level, "avx2")) {
+        selected_cpu_features = BL_RUNTIME_CPU_FEATURE_X86_AVX2;
       }
-      else if (StringUtils::strieq(simdLevel, "avx512")) {
-        selectedCpuFeatures = BL_RUNTIME_CPU_FEATURE_X86_AVX512;
+      else if (StringUtils::strieq(simd_level, "avx512")) {
+        selected_cpu_features = BL_RUNTIME_CPU_FEATURE_X86_AVX512;
       }
 #elif defined(BL_JIT_ARCH_A64)
-      else if (strcmp(simdLevel, "asimd") == 0) {
+      else if (strcmp(simd_level, "asimd") == 0) {
         // Currently the default...
       }
 #endif
       else {
         printf("Failed to process command line arguments:\n");
-        printf("  Unknown simd-level '%s' - please use --help to list all available simd levels\n", simdLevel);
+        printf("  Unknown simd-level '%s' - please use --help to list all available simd levels\n", simd_level);
         return false;
       }
     }
@@ -165,116 +165,113 @@ public:
     return true;
   }
 
-  void stringifyFeatureId(BLString& out, uint32_t cpuFeatures) noexcept {
-    if (cpuFeatures)
-      out.assign(StringUtils::cpuX86FeatureToString(BLRuntimeCpuFeatures(cpuFeatures)));
+  void stringify_feature_id(BLString& out, uint32_t cpu_features) noexcept {
+    if (cpu_features)
+      out.assign(StringUtils::cpu_x86_feature_to_string(BLRuntimeCpuFeatures(cpu_features)));
     else
       out.assign("native");
   }
 
-  bool runWithFeatures(BLFormat format, uint32_t cpuFeatures) {
-    resetCounters();
-    stringifyFeatureId(_cpuFeaturesString, cpuFeatures);
+  bool run_with_features(BLFormat format, uint32_t cpu_features) {
+    reset_counters();
+    stringify_feature_id(_cpu_features_string, cpu_features);
 
-    BLString aTesterName;
-    BLString bTesterName;
+    ContextTester a_tester(test_cases, "ref");
+    ContextTester b_tester(test_cases, "jit");
 
-    ContextTester aTester(testCases, "ref");
-    ContextTester bTester(testCases, "jit");
+    a_tester.set_font_data(font_data);
+    b_tester.set_font_data(font_data);
 
-    aTester.setFontData(fontData);
-    bTester.setFontData(fontData);
+    a_tester.set_flush_sync(options.flush_sync);
+    b_tester.set_flush_sync(options.flush_sync);
 
-    aTester.setFlushSync(options.flushSync);
-    bTester.setFlushSync(options.flushSync);
+    BLContextCreateInfo a_create_info {};
+    BLContextCreateInfo b_create_info {};
 
-    BLContextCreateInfo aCreateInfo {};
-    BLContextCreateInfo bCreateInfo {};
+    a_create_info.flags = BL_CONTEXT_CREATE_FLAG_DISABLE_JIT;
 
-    aCreateInfo.flags = BL_CONTEXT_CREATE_FLAG_DISABLE_JIT;
-
-    if (cpuFeatures) {
-      bCreateInfo.flags = BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_RUNTIME |
+    if (cpu_features) {
+      b_create_info.flags = BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_RUNTIME |
                           BL_CONTEXT_CREATE_FLAG_OVERRIDE_CPU_FEATURES;
-      bCreateInfo.cpuFeatures = cpuFeatures;
+      b_create_info.cpu_features = cpu_features;
     }
 
-    if (aTester.init(int(options.width), int(options.height), format, aCreateInfo) != BL_SUCCESS ||
-        bTester.init(int(options.width), int(options.height), format, bCreateInfo) != BL_SUCCESS) {
+    if (a_tester.init(int(options.width), int(options.height), format, a_create_info) != BL_SUCCESS ||
+        b_tester.init(int(options.width), int(options.height), format, b_create_info) != BL_SUCCESS) {
       printf("Failed to initialize rendering contexts\n");
       return 1;
     }
 
     TestInfo info;
-    dispatchRuns([&](CommandId commandId, StyleId styleId, StyleOp styleOp, CompOp compOp, OpacityOp opacityOp) {
+    dispatch_runs([&](CommandId command_id, StyleId style_id, StyleOp style_op, CompOp comp_op, OpacityOp opacity_op) {
       BLString s0;
-      s0.appendFormat("%s/%s",
-        StringUtils::styleIdToString(styleId),
-        StringUtils::styleOpToString(styleOp));
+      s0.append_format("%s/%s",
+        StringUtils::style_id_to_string(style_id),
+        StringUtils::style_op_to_string(style_op));
 
       BLString s1;
-      s1.appendFormat("%s/%s",
-        StringUtils::compOpToString(compOp),
-        StringUtils::opacityOpToString(opacityOp));
+      s1.append_format("%s/%s",
+        StringUtils::comp_op_to_string(comp_op),
+        StringUtils::opacity_op_to_string(opacity_op));
 
-      info.name.assignFormat(
+      info.name.assign_format(
           "%-21s | fmt=%-7s| style+api=%-30s| comp+op=%-20s| simd-level=%-9s",
-          StringUtils::commandIdToString(commandId),
-          StringUtils::formatToString(format),
+          StringUtils::command_id_to_string(command_id),
+          StringUtils::format_to_string(format),
           s0.data(),
           s1.data(),
-          _cpuFeaturesString.data());
+          _cpu_features_string.data());
 
-      info.id.assignFormat("ctx-jit-%s-%s-%s-%s-%s-%s-%s",
-        StringUtils::formatToString(format),
-        StringUtils::commandIdToString(commandId),
-        StringUtils::styleIdToString(styleId),
-        StringUtils::styleOpToString(styleOp),
-        StringUtils::compOpToString(compOp),
-        StringUtils::opacityOpToString(opacityOp),
-        _cpuFeaturesString.data());
+      info.id.assign_format("ctx-jit-%s-%s-%s-%s-%s-%s-%s",
+        StringUtils::format_to_string(format),
+        StringUtils::command_id_to_string(command_id),
+        StringUtils::style_id_to_string(style_id),
+        StringUtils::style_op_to_string(style_op),
+        StringUtils::comp_op_to_string(comp_op),
+        StringUtils::opacity_op_to_string(opacity_op),
+        _cpu_features_string.data());
 
       if (!options.quiet) {
         printf("Running [%s]\n", info.name.data());
       }
 
-      aTester.setOptions(compOp, opacityOp, styleId, styleOp);
-      bTester.setOptions(compOp, opacityOp, styleId, styleOp);
+      a_tester.set_options(comp_op, opacity_op, style_id, style_op);
+      b_tester.set_options(comp_op, opacity_op, style_id, style_op);
 
-      uint32_t adjustedMaxDiff = maximumPixelDifference;
-      if (adjustedMaxDiff == 0xFFFFFFFFu) {
-        adjustedMaxDiff = maximumPixelDifferenceOf(styleId);
+      uint32_t adjusted_max_diff = maximum_pixel_difference;
+      if (adjusted_max_diff == 0xFFFFFFFFu) {
+        adjusted_max_diff = maximum_pixel_difference_of(style_id);
       }
 
-      if (runMultiple(commandId, info, aTester, bTester, adjustedMaxDiff))
-        passedCount++;
+      if (run_multiple(command_id, info, a_tester, b_tester, adjusted_max_diff))
+        passed_count++;
       else
-        failedCount++;
+        failed_count++;
     });
 
-    aTester.reset();
-    bTester.reset();
+    a_tester.reset();
+    b_tester.reset();
 
-    if (mismatchCount)
-      printf("Found %llu mismatches!\n\n", (unsigned long long)mismatchCount);
+    if (mismatch_count)
+      printf("Found %llu mismatches!\n\n", (unsigned long long)mismatch_count);
     else if (!options.quiet)
       printf("\n");
 
-    return !mismatchCount;
+    return !mismatch_count;
   }
 
-  int run(CmdLine cmdLine) {
-    printAppInfo("Blend2D JIT Rendering Context Tester", cmdLine.hasArg("--quiet"));
+  int run(CmdLine cmd_line) {
+    print_app_info("Blend2D JIT Rendering Context Tester", cmd_line.has_arg("--quiet"));
 
-    if (cmdLine.hasArg("--help"))
+    if (cmd_line.has_arg("--help"))
       return help();
 
-    if (!parseCommonOptions(cmdLine) || !parseJITOptions(cmdLine))
+    if (!parse_common_options(cmd_line) || !parse_jit_options(cmd_line))
       return 1;
 
-    if (iterateAllJitFeatures) {
+    if (iterate_all_jit_features) {
 #if defined(BL_JIT_ARCH_X86)
-      static constexpr uint32_t x86FeaturesList[] = {
+      static constexpr uint32_t x86_features_list[] = {
         BL_RUNTIME_CPU_FEATURE_X86_SSE2,
         BL_RUNTIME_CPU_FEATURE_X86_SSE3,
         BL_RUNTIME_CPU_FEATURE_X86_SSSE3,
@@ -285,41 +282,41 @@ public:
         BL_RUNTIME_CPU_FEATURE_X86_AVX512
       };
 
-      BLRuntimeSystemInfo systemInfo {};
-      BLRuntime::querySystemInfo(&systemInfo);
+      BLRuntimeSystemInfo system_info {};
+      BLRuntime::query_system_info(&system_info);
 
-      for (const uint32_t& feature : x86FeaturesList) {
-        if (!(systemInfo.cpuFeatures & feature))
+      for (const uint32_t& feature : x86_features_list) {
+        if (!(system_info.cpu_features & feature))
           break;
 
         if (options.quiet) {
-          stringifyFeatureId(_cpuFeaturesString, feature);
-          printf("Testing [%s] (quiet mode)\n", _cpuFeaturesString.data());
+          stringify_feature_id(_cpu_features_string, feature);
+          printf("Testing [%s] (quiet mode)\n", _cpu_features_string.data());
         }
 
-        for (BLFormat format : testCases.formatIds) {
-          runWithFeatures(format, feature);
+        for (BLFormat format : test_cases.format_ids) {
+          run_with_features(format, feature);
         }
       }
 #endif
 
       // Now run with all features if everything above has passed.
-      for (BLFormat format : testCases.formatIds) {
-        runWithFeatures(format, 0);
+      for (BLFormat format : test_cases.format_ids) {
+        run_with_features(format, 0);
       }
     }
     else {
-      for (BLFormat format : testCases.formatIds) {
-        runWithFeatures(format, selectedCpuFeatures);
+      for (BLFormat format : test_cases.format_ids) {
+        run_with_features(format, selected_cpu_features);
       }
     }
 
-    if (failedCount) {
-      printf("[FAILED] %u tests out of %u failed\n", failedCount, passedCount + failedCount);
+    if (failed_count) {
+      printf("[FAILED] %u tests out of %u failed\n", failed_count, passed_count + failed_count);
       return 1;
     }
     else {
-      printf("[PASSED] %u tests passed\n", passedCount);
+      printf("[PASSED] %u tests passed\n", passed_count);
       return 0;
     }
   }
@@ -328,7 +325,7 @@ public:
 } // {ContextTests}
 
 int main(int argc, char* argv[]) {
-  BLRuntimeScope rtScope;
+  BLRuntimeScope rt_scope;
   ContextTests::JITTestApp app;
 
   return app.run(CmdLine(argc, argv));

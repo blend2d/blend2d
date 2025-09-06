@@ -123,29 +123,29 @@ template<> struct Vec<16, uint64_t>;
 template<> struct Vec<16, float>;
 template<> struct Vec<16, double>;
 
-#define BL_DECLARE_SIMD_TYPE(typeName, width, simdType, elementType)              \
-template<>                                                                        \
-struct Vec<width, elementType> {                                                  \
-  static inline constexpr size_t kW = width;                                      \
-  static inline constexpr uint32_t kHalfVectorWidth = width > 8 ? width / 2u : 8; \
-                                                                                  \
-  static inline constexpr uint32_t kElementWidth = uint32_t(sizeof(elementType)); \
-  static inline constexpr uint32_t kElementCount = width / kElementWidth;         \
-                                                                                  \
-  using VectorType = Vec<width, elementType>;                                     \
-  using VectorHalfType = Vec<kHalfVectorWidth, elementType>;                      \
-  using Vector64Type = Vec<8, elementType>;                                       \
-  using Vector128Type = Vec<16, elementType>;                                     \
-                                                                                  \
-  using SimdType = simdType;                                                      \
-  using HalfSimdType = typename VectorHalfType::SimdType;                         \
-                                                                                  \
-  using ElementType = elementType;                                                \
-                                                                                  \
-  SimdType v;                                                                     \
-};                                                                                \
-                                                                                  \
-typedef Vec<width, elementType> typeName
+#define BL_DECLARE_SIMD_TYPE(type_name, width, simd_type, element_type)            \
+template<>                                                                         \
+struct Vec<width, element_type> {                                                  \
+  static inline constexpr size_t kW = width;                                       \
+  static inline constexpr uint32_t kHalfVectorWidth = width > 8 ? width / 2u : 8;  \
+                                                                                   \
+  static inline constexpr uint32_t kElementWidth = uint32_t(sizeof(element_type)); \
+  static inline constexpr uint32_t kElementCount = width / kElementWidth;          \
+                                                                                   \
+  using VectorType = Vec<width, element_type>;                                     \
+  using VectorHalfType = Vec<kHalfVectorWidth, element_type>;                      \
+  using Vector64Type = Vec<8, element_type>;                                       \
+  using Vector128Type = Vec<16, element_type>;                                     \
+                                                                                   \
+  using SimdType = simd_type;                                                      \
+  using HalfSimdType = typename VectorHalfType::SimdType;                          \
+                                                                                   \
+  using ElementType = element_type;                                                \
+                                                                                   \
+  SimdType v;                                                                      \
+};                                                                                 \
+                                                                                   \
+typedef Vec<width, element_type> type_name
 
 BL_DECLARE_SIMD_TYPE(Vec8xI8, 8, int8x8_t , int8_t);
 BL_DECLARE_SIMD_TYPE(Vec8xU8, 8, uint8x8_t, uint8_t);
@@ -708,10 +708,10 @@ BL_INLINE_NODEBUG int32x4_t simd_cvt_f32_i32(const float32x4_t& a) noexcept {
   constexpr float kMagic = 12582912; // pow(2, 23) + pow(2, 22);
 
   float32x4_t vMaxN = simd_make128_f32(kMaxN);
-  float32x4_t vMagic = simd_make128_f32(kMagic);
+  float32x4_t v_magic = simd_make128_f32(kMagic);
 
   uint32x4_t msk = vcgeq_f32(a, vMaxN);
-  float32x4_t pred = simd_f32(vandq_u32(msk, simd_u32(vMagic)));
+  float32x4_t pred = simd_f32(vandq_u32(msk, simd_u32(v_magic)));
 
   float32x4_t rounded = vsubq_f32(vaddq_f32(a, pred), pred);
   return vcvtq_s32_f32(rounded);

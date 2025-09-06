@@ -35,8 +35,8 @@ static constexpr uint32_t kCSR_RC_Mask      = 0x6000u;
 static constexpr uint32_t kCSR_FZ_Off       = 0x0000u;
 static constexpr uint32_t kCSR_FZ_Mask      = 0x8000u;
 
-static BL_INLINE_NODEBUG uint32_t readCSR() noexcept { return _mm_getcsr(); }
-static BL_INLINE_NODEBUG void writeCSR(uint32_t csr) noexcept { _mm_setcsr(csr); }
+static BL_INLINE_NODEBUG uint32_t read_csr() noexcept { return _mm_getcsr(); }
+static BL_INLINE_NODEBUG void write_csr(uint32_t csr) noexcept { _mm_setcsr(csr); }
 #endif
 
 #if defined(BL_RUNTIME_SCOPE_X87)
@@ -55,13 +55,13 @@ static constexpr uint32_t kFPU_PC_Mask      = 0x0300u;
 static constexpr uint32_t kFPU_RC_Nearest   = 0x0000u;
 static constexpr uint32_t kFPU_RC_Mask      = 0x0C00u;
 
-static BL_INLINE_NODEBUG uint16_t readFPUCW() noexcept {
+static BL_INLINE_NODEBUG uint16_t read_fpu_cw() noexcept {
   uint16_t cw = 0;
   __asm__ __volatile__("fstcw %w0" : "=m" (cw));
   return cw;
 }
 
-static BL_INLINE_NODEBUG void writeFPUCW(uint16_t cw) noexcept {
+static BL_INLINE_NODEBUG void write_fpu_cw(uint16_t cw) noexcept {
   __asm__ __volatile__("fldcw %w0" :: "m" (cw));
 }
 
@@ -74,13 +74,13 @@ static BL_INLINE_NODEBUG void writeFPUCW(uint16_t cw) noexcept {
 // ========================================
 
 #if BL_TARGET_ARCH_X86
-static BLResult blRuntimeScopeBegin_X86(BLRuntimeScopeCore* self) noexcept {
+static BLResult bl_runtime_scope_begin_x86(BLRuntimeScopeCore* self) noexcept {
   using namespace bl::FPU;
 
   self->data[0] = 0;
   self->data[1] = 0;
 
-  uint32_t prevCSR = readCSR();
+  uint32_t prevCSR = read_csr();
   uint32_t csr = prevCSR;
 
   // Mask all exceptions - branchless code doesn't like it.
@@ -98,8 +98,8 @@ static BLResult blRuntimeScopeBegin_X86(BLRuntimeScopeCore* self) noexcept {
   csr = (csr & ~kCSR_FZ_Mask) | kCSR_FZ_Off;
 
 #if defined(BL_RUNTIME_SCOPE_X87)
-  uint32_t prevFCW = readFPUCW();
-  uint32_t fcw = prevFCW;
+  uint32_t prev_fpu_cw = read_fpu_cw();
+  uint32_t fcw = prev_fpu_cw;
 
   // Mask all exceptions - branchless code doesn't like it.
   fcw = (fcw & ~kFPU_EM_Mask) | kFPU_EM_Invalid   |
@@ -118,19 +118,19 @@ static BLResult blRuntimeScopeBegin_X86(BLRuntimeScopeCore* self) noexcept {
   if ((fcw & kFPU_PC_Mask) == kFPU_PC_Float)
     fcw |= kFPU_PC_Double;
 
-  uint32_t prevState = (prevFCW << 16) | prevCSR;
-  uint32_t newState = (fcw << 16) | csr;
+  uint32_t prev_state = (prev_fpu_cw << 16) | prevCSR;
+  uint32_t new_state = (fcw << 16) | csr;
 
   // Don't update any states if we haven't changed anything.
-  if (prevState == newState) {
+  if (prev_state == new_state) {
     return BL_SUCCESS;
   }
 
-  self->data[0] = prevState;
+  self->data[0] = prev_state;
   self->data[1] = 0xC0000000u;
 
-  writeCSR(csr);
-  writeFPUCW(uint16_t(fcw));
+  write_csr(csr);
+  write_fpu_cw(uint16_t(fcw));
 #else
   // Don't update any states if we haven't changed anything.
   if (prevCSR == csr) {
@@ -140,13 +140,13 @@ static BLResult blRuntimeScopeBegin_X86(BLRuntimeScopeCore* self) noexcept {
   self->data[0] = prevCSR;
   self->data[1] = 0x40000000u;
 
-  writeCSR(csr);
+  write_csr(csr);
 #endif
 
   return BL_SUCCESS;
 }
 
-static BLResult blRuntimeScopeEnd_X86(BLRuntimeScopeCore* self) noexcept {
+static BLResult bl_runtime_scope_end_x86(BLRuntimeScopeCore* self) noexcept {
   using namespace bl::FPU;
 
   uint32_t state = self->data[0];
@@ -166,17 +166,17 @@ static BLResult blRuntimeScopeEnd_X86(BLRuntimeScopeCore* self) noexcept {
   uint32_t fcw = state >> 16;
 
   if (BL_UNLIKELY(tag != 0xC0000000u)) {
-    return blTraceError(BL_ERROR_INVALID_STATE);
+    return bl_trace_error(BL_ERROR_INVALID_STATE);
   }
 
-  writeCSR(csr);
-  writeFPUCW(uint16_t(fcw));
+  write_csr(csr);
+  write_fpu_cw(uint16_t(fcw));
 #else
   if (BL_UNLIKELY(tag != 0x40000000u)) {
-    return blTraceError(BL_ERROR_INVALID_STATE);
+    return bl_trace_error(BL_ERROR_INVALID_STATE);
   }
 
-  writeCSR(csr);
+  write_csr(csr);
 #endif
 
   return BL_SUCCESS;
@@ -186,9 +186,9 @@ static BLResult blRuntimeScopeEnd_X86(BLRuntimeScopeCore* self) noexcept {
 // BLRuntimeScope - API - Begin & End
 // ==================================
 
-BL_API_IMPL BLResult blRuntimeScopeBegin(BLRuntimeScopeCore* self) noexcept {
+BL_API_IMPL BLResult bl_runtime_scope_begin(BLRuntimeScopeCore* self) noexcept {
 #if BL_TARGET_ARCH_X86
-  return blRuntimeScopeBegin_X86(self);
+  return bl_runtime_scope_begin_x86(self);
 #else
   self->data[0] = 0u;
   self->data[1] = 0u;
@@ -196,9 +196,9 @@ BL_API_IMPL BLResult blRuntimeScopeBegin(BLRuntimeScopeCore* self) noexcept {
 #endif
 }
 
-BL_API_IMPL BLResult blRuntimeScopeEnd(BLRuntimeScopeCore* self) noexcept {
+BL_API_IMPL BLResult bl_runtime_scope_end(BLRuntimeScopeCore* self) noexcept {
 #if BL_TARGET_ARCH_X86
-  return blRuntimeScopeEnd_X86(self);
+  return bl_runtime_scope_end_x86(self);
 #else
   self->data[0] = 0u;
   self->data[1] = 0u;
@@ -206,7 +206,7 @@ BL_API_IMPL BLResult blRuntimeScopeEnd(BLRuntimeScopeCore* self) noexcept {
 #endif
 }
 
-BL_API_IMPL bool blRuntimeScopeIsActive(const BLRuntimeScopeCore* self) noexcept {
+BL_API_IMPL bool bl_runtime_scope_is_active(const BLRuntimeScopeCore* self) noexcept {
   // States saved are stored in MSB bits of data[1] - each platform has a different meaning, so just test the bits.
   return (self->data[1] & 0xC0000000u) != 0;
 }

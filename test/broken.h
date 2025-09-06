@@ -52,18 +52,18 @@ enum Flags : unsigned {
 
 struct Unit;
 
-bool hasArg(const char* name) noexcept;
+bool has_arg(const char* name) noexcept;
 
 //! Register a new unit test (called automatically by `AutoUnit` and `UNIT`).
-void addUnit(Unit* unit) noexcept;
+void add_unit(Unit* unit) noexcept;
 
 //! Set output file to a `file`.
-void setOutputFile(FILE* file) noexcept;
+void set_output_file(FILE* file) noexcept;
 
 //! Initialize `Broken` framework.
 //!
 //! Returns `true` if `run()` should be called.
-int run(int argc, const char* argv[], Entry onBeforeRun = nullptr, Entry onAfterRun = nullptr);
+int run(int argc, const char* argv[], Entry on_before_run = nullptr, Entry on_after_run = nullptr);
 
 //! Log message, adds automatically new line if not present.
 void info(const char* fmt, ...) noexcept;
@@ -92,7 +92,7 @@ public:
     this->priority = priority_;
     this->flags = 0;
     this->next = nullptr;
-    addUnit(this);
+    add_unit(this);
   }
 };
 
@@ -124,34 +124,34 @@ template<typename Result>
 static inline bool check(Result&& result) noexcept { return !!result; }
 
 template<typename LHS, typename RHS>
-static inline bool checkEq(LHS&& lhs, RHS&& rhs) noexcept { return lhs == rhs; }
+static inline bool check_eq(LHS&& lhs, RHS&& rhs) noexcept { return lhs == rhs; }
 
 template<typename LHS, typename RHS>
-static inline bool checkNe(LHS&& lhs, RHS&& rhs) noexcept { return lhs != rhs; }
+static inline bool check_ne(LHS&& lhs, RHS&& rhs) noexcept { return lhs != rhs; }
 
 template<typename LHS, typename RHS>
-static inline bool checkGt(LHS&& lhs, RHS&& rhs) noexcept { return lhs >  rhs; }
+static inline bool check_gt(LHS&& lhs, RHS&& rhs) noexcept { return lhs >  rhs; }
 
 template<typename LHS, typename RHS>
-static inline bool checkGe(LHS&& lhs, RHS&& rhs) noexcept { return lhs >= rhs; }
+static inline bool check_ge(LHS&& lhs, RHS&& rhs) noexcept { return lhs >= rhs; }
 
 template<typename LHS, typename RHS>
-static inline bool checkLt(LHS&& lhs, RHS&& rhs) noexcept { return lhs <  rhs; }
+static inline bool check_lt(LHS&& lhs, RHS&& rhs) noexcept { return lhs <  rhs; }
 
 template<typename LHS, typename RHS>
-static inline bool checkLe(LHS&& lhs, RHS&& rhs) noexcept { return lhs <= rhs; }
+static inline bool check_le(LHS&& lhs, RHS&& rhs) noexcept { return lhs <= rhs; }
 
 template<typename Result>
-static inline bool checkTrue(Result&& result) noexcept { return !!result; }
+static inline bool check_true(Result&& result) noexcept { return !!result; }
 
 template<typename Result>
-static inline bool checkFalse(Result&& result) noexcept { return !result; }
+static inline bool check_false(Result&& result) noexcept { return !result; }
 
 template<typename Result>
-static inline bool checkNull(Result&& result) noexcept { return result == nullptr; }
+static inline bool check_null(Result&& result) noexcept { return result == nullptr; }
 
 template<typename Result>
-static inline bool checkNotNull(Result&& result) noexcept { return result != nullptr; }
+static inline bool check_not_null(Result&& result) noexcept { return result != nullptr; }
 
 } // {BrokenAPI}
 
@@ -180,20 +180,20 @@ static inline bool checkNotNull(Result&& result) noexcept { return result != nul
 #define INFO(...) ::BrokenAPI::info(__VA_ARGS__)
 
 #define BROKEN_EXPECT_INTERNAL(file, line, expression, result) \
-  for (bool _testInternalResult = (result); !_testInternalResult; _testInternalResult = true) \
+  for (bool _test_internal_result = (result); !_test_internal_result; _test_internal_result = true) \
     ::BrokenAPI::Failure(file, line, expression)
 
 #define EXPECT(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT(" #__VA_ARGS__ ")", !!(__VA_ARGS__))
-#define EXPECT_EQ(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_EQ(" #__VA_ARGS__ ")", ::BrokenAPI::checkEq(__VA_ARGS__))
-#define EXPECT_NE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_NE(" #__VA_ARGS__ ")", ::BrokenAPI::checkNe(__VA_ARGS__))
-#define EXPECT_GT(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_GT(" #__VA_ARGS__ ")", ::BrokenAPI::checkGt(__VA_ARGS__))
-#define EXPECT_GE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_GE(" #__VA_ARGS__ ")", ::BrokenAPI::checkGe(__VA_ARGS__))
-#define EXPECT_LT(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_LT(" #__VA_ARGS__ ")", ::BrokenAPI::checkLt(__VA_ARGS__))
-#define EXPECT_LE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_LE(" #__VA_ARGS__ ")", ::BrokenAPI::checkLe(__VA_ARGS__))
-#define EXPECT_TRUE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_TRUE(" #__VA_ARGS__ ")", ::BrokenAPI::checkTrue(__VA_ARGS__))
-#define EXPECT_FALSE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_FALSE(" #__VA_ARGS__ ")", ::BrokenAPI::checkFalse(__VA_ARGS__))
-#define EXPECT_NULL(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_NULL(" #__VA_ARGS__ ")", ::BrokenAPI::checkNull(__VA_ARGS__))
-#define EXPECT_NOT_NULL(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_NOT_NULL(" #__VA_ARGS__ ")", ::BrokenAPI::checkNotNull(__VA_ARGS__))
+#define EXPECT_EQ(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_EQ(" #__VA_ARGS__ ")", ::BrokenAPI::check_eq(__VA_ARGS__))
+#define EXPECT_NE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_NE(" #__VA_ARGS__ ")", ::BrokenAPI::check_ne(__VA_ARGS__))
+#define EXPECT_GT(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_GT(" #__VA_ARGS__ ")", ::BrokenAPI::check_gt(__VA_ARGS__))
+#define EXPECT_GE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_GE(" #__VA_ARGS__ ")", ::BrokenAPI::check_ge(__VA_ARGS__))
+#define EXPECT_LT(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_LT(" #__VA_ARGS__ ")", ::BrokenAPI::check_lt(__VA_ARGS__))
+#define EXPECT_LE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_LE(" #__VA_ARGS__ ")", ::BrokenAPI::check_le(__VA_ARGS__))
+#define EXPECT_TRUE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_TRUE(" #__VA_ARGS__ ")", ::BrokenAPI::check_true(__VA_ARGS__))
+#define EXPECT_FALSE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_FALSE(" #__VA_ARGS__ ")", ::BrokenAPI::check_false(__VA_ARGS__))
+#define EXPECT_NULL(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_NULL(" #__VA_ARGS__ ")", ::BrokenAPI::check_null(__VA_ARGS__))
+#define EXPECT_NOT_NULL(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_NOT_NULL(" #__VA_ARGS__ ")", ::BrokenAPI::check_not_null(__VA_ARGS__))
 
 //! \endcond
 

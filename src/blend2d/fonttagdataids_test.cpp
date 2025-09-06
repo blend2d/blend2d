@@ -16,7 +16,7 @@ namespace Tests {
 
 typedef uint32_t (*TagToIdFunc)(BLTag tag);
 
-static void verifyTags(const char* category, const BLTag* tags, uint32_t count, TagToIdFunc tagToIdFunc) noexcept {
+static void verify_tags(const char* category, const BLTag* tags, uint32_t count, TagToIdFunc tag_to_id_func) noexcept {
   if (count == 0)
     return;
 
@@ -29,18 +29,18 @@ static void verifyTags(const char* category, const BLTag* tags, uint32_t count, 
 
   INFO("Verifying whether the %s tag to id translation is correct", category);
   for (uint32_t i = 0; i < count; i++) {
-    uint32_t id = tagToIdFunc(tags[i]);
+    uint32_t id = tag_to_id_func(tags[i]);
     EXPECT_EQ(id, i);
   }
 }
 
 UNIT(fonttagdata_ids, BL_TEST_GROUP_TEXT_OPENTYPE) {
-  verifyTags("tableId", FontTagData::tableIdToTagTable, FontTagData::kTableIdCount, FontTagData::tableTagToId);
-  verifyTags("scriptId", FontTagData::scriptIdToTagTable, FontTagData::kScriptIdCount, FontTagData::scriptTagToId);
-  verifyTags("languageId", FontTagData::languageIdToTagTable, FontTagData::kLanguageIdCount, FontTagData::languageTagToId);
-  verifyTags("featureId", FontTagData::featureIdToTagTable, FontTagData::kFeatureIdCount, FontTagData::featureTagToId);
-  verifyTags("baselineId", FontTagData::baselineIdToTagTable, FontTagData::kBaselineIdCount, FontTagData::baselineTagToId);
-  verifyTags("variationId", FontTagData::variationIdToTagTable, FontTagData::kVariationIdCount, FontTagData::variationTagToId);
+  verify_tags("table_id", FontTagData::table_id_to_tag_table, FontTagData::kTableIdCount, FontTagData::table_tag_to_id);
+  verify_tags("script_id", FontTagData::script_id_to_tag_table, FontTagData::kScriptIdCount, FontTagData::script_tag_to_id);
+  verify_tags("language_id", FontTagData::language_id_to_tag_table, FontTagData::kLanguageIdCount, FontTagData::language_tag_to_id);
+  verify_tags("feature_id", FontTagData::feature_id_to_tag_table, FontTagData::kFeatureIdCount, FontTagData::feature_tag_to_id);
+  verify_tags("baseline_id", FontTagData::baseline_id_to_tag_table, FontTagData::kBaselineIdCount, FontTagData::baseline_tag_to_id);
+  verify_tags("variation_id", FontTagData::variation_id_to_tag_table, FontTagData::kVariationIdCount, FontTagData::variation_tag_to_id);
 }
 
 } // {Tests}

@@ -432,11 +432,11 @@ struct BLGlyphMappingState {
   //! \{
 
   //! Number of glyphs or glyph-items on output.
-  size_t glyphCount;
+  size_t glyph_count;
   //! Index of the first undefined glyph (SIZE_MAX if none).
-  size_t undefinedFirst;
+  size_t undefined_first;
   //! Undefined glyph count (chars that have no mapping).
-  size_t undefinedCount;
+  size_t undefined_count;
 
   //! \}
 
@@ -450,10 +450,10 @@ struct BLGlyphMappingState {
 #endif
 };
 
-//! Information passed to a \ref BLPathSinkFunc sink by \ref BLFont::getGlyphOutlines().
+//! Information passed to a \ref BLPathSinkFunc sink by \ref BLFont::get_glyph_outlines().
 struct BLGlyphOutlineSinkInfo {
-  size_t glyphIndex;
-  size_t contourCount;
+  size_t glyph_index;
+  size_t contour_count;
 };
 
 //! Font coverage information struct provides information about ranges of unicode characters supported by a font-face.
@@ -474,29 +474,29 @@ struct BLFontCoverageInfo {
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLFontCoverageInfo{}; }
 
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool empty() const noexcept {
+  BL_INLINE_NODEBUG bool is_empty() const noexcept {
     return (data[0] | data[1] | data[2] | data[3]) == 0;
   }
 
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool hasBit(uint32_t index) const noexcept {
+  BL_INLINE_NODEBUG bool has_bit(uint32_t index) const noexcept {
     return ((data[index / 32u] >> (index % 32u)) & 0x1) != 0;
   }
 
-  BL_INLINE_NODEBUG void setBit(uint32_t index) noexcept {
+  BL_INLINE_NODEBUG void set_bit(uint32_t index) noexcept {
     data[index / 32u] |= uint32_t(1) << (index % 32u);
   }
 
-  BL_INLINE_NODEBUG void clearBit(uint32_t index) noexcept {
+  BL_INLINE_NODEBUG void clear_bit(uint32_t index) noexcept {
     data[index / 32u] &= ~(uint32_t(1) << (index % 32u));
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLFontCoverageInfo& other) const noexcept {
-    return BLInternal::bool_and(blEquals(data[0], other.data[0]),
-                                blEquals(data[1], other.data[1]),
-                                blEquals(data[2], other.data[2]),
-                                blEquals(data[3], other.data[3]));
+    return BLInternal::bool_and(bl_equals(data[0], other.data[0]),
+                                bl_equals(data[1], other.data[1]),
+                                bl_equals(data[2], other.data[2]),
+                                bl_equals(data[3], other.data[3]));
   }
 
   [[nodiscard]]
@@ -511,65 +511,65 @@ struct BLFontCoverageInfo {
 struct BLFontPanoseInfo {
   union {
     uint8_t data[10];
-    uint8_t familyKind;
+    uint8_t family_kind;
 
     struct {
-      uint8_t familyKind;
-      uint8_t serifStyle;
+      uint8_t family_kind;
+      uint8_t serif_style;
       uint8_t weight;
       uint8_t proportion;
       uint8_t contrast;
-      uint8_t strokeVariation;
-      uint8_t armStyle;
+      uint8_t stroke_variation;
+      uint8_t arm_style;
       uint8_t letterform;
       uint8_t midline;
-      uint8_t xHeight;
+      uint8_t x_height;
     } text;
 
     struct {
-      uint8_t familyKind;
-      uint8_t toolKind;
+      uint8_t family_kind;
+      uint8_t tool_kind;
       uint8_t weight;
       uint8_t spacing;
-      uint8_t aspectRatio;
+      uint8_t aspect_ratio;
       uint8_t contrast;
       uint8_t topology;
       uint8_t form;
       uint8_t finials;
-      uint8_t xAscent;
+      uint8_t x_ascent;
     } script;
 
     struct {
-      uint8_t familyKind;
-      uint8_t decorativeClass;
+      uint8_t family_kind;
+      uint8_t decorative_class;
       uint8_t weight;
       uint8_t aspect;
       uint8_t contrast;
-      uint8_t serifVariant;
+      uint8_t serif_variant;
       uint8_t treatment;
       uint8_t lining;
       uint8_t topology;
-      uint8_t characterRange;
+      uint8_t character_range;
     } decorative;
 
     struct {
-      uint8_t familyKind;
-      uint8_t symbolKind;
+      uint8_t family_kind;
+      uint8_t symbol_kind;
       uint8_t weight;
       uint8_t spacing;
-      uint8_t aspectRatioAndContrast;
-      uint8_t aspectRatio94;
-      uint8_t aspectRatio119;
-      uint8_t aspectRatio157;
-      uint8_t aspectRatio163;
-      uint8_t aspectRatio211;
+      uint8_t aspect_ratio_and_contrast;
+      uint8_t aspect_ratio_94;
+      uint8_t aspect_ratio_119;
+      uint8_t aspect_ratio_157;
+      uint8_t aspect_ratio_163;
+      uint8_t aspect_ratio_211;
     } symbol;
   };
 
 #ifdef __cplusplus
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLFontPanoseInfo{}; }
 
-  BL_INLINE_NODEBUG bool empty() const noexcept {
+  BL_INLINE_NODEBUG bool is_empty() const noexcept {
     return (data[0] | data[1] | data[2] | data[3] | data[4] |
             data[5] | data[6] | data[7] | data[8] | data[9] ) == 0;
   }
@@ -605,11 +605,11 @@ struct BLFontMatrix {
     m11 = 1.0;
   }
 
-  BL_INLINE_NODEBUG void reset(double m00Value, double m01Value, double m10Value, double m11Value) noexcept {
-    m00 = m00Value;
-    m01 = m01Value;
-    m10 = m10Value;
-    m11 = m11Value;
+  BL_INLINE_NODEBUG void reset(double m00_value, double m01_value, double m10_value, double m11_value) noexcept {
+    m00 = m00_value;
+    m01 = m01_value;
+    m10 = m10_value;
+    m11 = m11_value;
   }
 #endif
 };
@@ -624,43 +624,43 @@ struct BLFontMetrics {
       //! Font ascent (horizontal orientation).
       float ascent;
       //! Font ascent (vertical orientation).
-      float vAscent;
+      float v_ascent;
       //! Font descent (horizontal orientation).
       float descent;
       //! Font descent (vertical orientation).
-      float vDescent;
+      float v_descent;
     };
 
     struct {
-      float ascentByOrientation[2];
-      float descentByOrientation[2];
+      float ascent_by_orientation[2];
+      float descent_by_orientation[2];
     };
   };
 
   //! Line gap.
-  float lineGap;
+  float line_gap;
   //! Distance between the baseline and the mean line of lower-case letters.
-  float xHeight;
+  float x_height;
   //! Maximum height of a capital letter above the baseline.
-  float capHeight;
+  float cap_height;
 
   //! Minimum x, reported by the font.
-  float xMin;
+  float x_min;
   //! Minimum y, reported by the font.
-  float yMin;
+  float y_min;
   //! Maximum x, reported by the font.
-  float xMax;
+  float x_max;
   //! Maximum y, reported by the font.
-  float yMax;
+  float y_max;
 
   //! Text underline position.
-  float underlinePosition;
+  float underline_position;
   //! Text underline thickness.
-  float underlineThickness;
+  float underline_thickness;
   //! Text strikethrough position.
-  float strikethroughPosition;
+  float strikethrough_position;
   //! Text strikethrough thickness.
-  float strikethroughThickness;
+  float strikethrough_thickness;
 
 #ifdef __cplusplus
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLFontMetrics{}; }
@@ -676,67 +676,67 @@ struct BLFontMetrics {
 //! from \ref BLFontDesignMetrics including other members like transformation, etc...
 struct BLFontDesignMetrics {
   //! Units per EM square.
-  int unitsPerEm;
+  int units_per_em;
   //! Lowest readable size in pixels.
-  int lowestPPEM;
+  int lowest_ppem;
   //! Line gap.
-  int lineGap;
+  int line_gap;
   //! Distance between the baseline and the mean line of lower-case letters.
-  int xHeight;
+  int x_height;
   //! Maximum height of a capital letter above the baseline.
-  int capHeight;
+  int cap_height;
 
   union {
     struct {
       //! Ascent (horizontal layout).
       int ascent;
       //! Ascent (vertical layout).
-      int vAscent;
+      int v_ascent;
       //! Descent (horizontal layout).
       int descent;
       //! Descent (vertical layout).
-      int vDescent;
+      int v_descent;
       //! Minimum leading-side bearing (horizontal layout).
-      int hMinLSB;
+      int h_min_lsb;
       //! Minimum leading-side bearing (vertical layout).
-      int vMinLSB;
+      int v_min_lsb;
       //! Minimum trailing-side bearing (horizontal layout).
-      int hMinTSB;
+      int h_min_tsb;
       //! Minimum trailing-side bearing (vertical layout).
-      int vMinTSB;
+      int v_min_tsb;
       //! Maximum advance (horizontal layout).
-      int hMaxAdvance;
+      int h_max_advance;
       //! Maximum advance (vertical layout).
-      int vMaxAdvance;
+      int v_max_advance;
     };
 
     struct {
       //! Horizontal & vertical ascents.
-      int ascentByOrientation[2];
+      int ascent_by_orientation[2];
       //! Horizontal & vertical descents.
-      int descentByOrientation[2];
+      int descent_by_orientation[2];
       //! Minimum leading-side bearing (horizontal and vertical).
-      int minLSBByOrientation[2];
+      int min_lsb_by_orientation[2];
       //! Minimum trailing-side bearing (horizontal and vertical)..
-      int minTSBByOrientation[2];
+      int min_tsb_by_orientation[2];
       //! Maximum advance width (horizontal) and height (vertical).
-      int maxAdvanceByOrientation[2];
+      int max_advance_by_orientation[2];
     };
   };
 
   //! Aggregated bounding box of all glyphs in the font.
   //!
   //! \note This value is reported by the font data so it's not granted to be true.
-  BLBoxI glyphBoundingBox;
+  BLBoxI glyph_bounding_box;
 
   //! Text underline position.
-  int underlinePosition;
+  int underline_position;
   //! Text underline thickness.
-  int underlineThickness;
+  int underline_thickness;
   //! Text strikethrough position.
-  int strikethroughPosition;
+  int strikethrough_position;
   //! Text strikethrough thickness.
-  int strikethroughThickness;
+  int strikethrough_thickness;
 
 #ifdef __cplusplus
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLFontDesignMetrics{}; }
@@ -746,9 +746,9 @@ struct BLFontDesignMetrics {
 //! Text metrics.
 struct BLTextMetrics {
   BLPoint advance;
-  BLPoint leadingBearing;
-  BLPoint trailingBearing;
-  BLBox boundingBox;
+  BLPoint leading_bearing;
+  BLPoint trailing_bearing;
+  BLBox bounding_box;
 
 #ifdef __cplusplus
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLTextMetrics{}; }

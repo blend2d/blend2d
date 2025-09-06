@@ -10,8 +10,8 @@
 
 namespace bl::Png::Ops {
 
-void initFuncTable_AVX(FunctionTable& ft) noexcept {
-  initSimdFunctions(ft);
+void init_func_table_avx(FunctionTable& ft) noexcept {
+  init_simd_functions(ft);
 }
 
 } // {bl::Png::Ops}

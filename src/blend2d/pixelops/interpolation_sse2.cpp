@@ -14,19 +14,19 @@ namespace bl {
 namespace PixelOps {
 namespace Interpolation {
 
-void BL_CDECL interpolate_prgb32_sse2(uint32_t* dPtr, uint32_t dSize, const BLGradientStop* sPtr, size_t sSize) noexcept {
+void BL_CDECL interpolate_prgb32_sse2(uint32_t* d_ptr, uint32_t d_size, const BLGradientStop* s_ptr, size_t s_size) noexcept {
   using namespace SIMD;
 
-  BL_ASSERT(dPtr != nullptr);
-  BL_ASSERT(dSize > 0);
+  BL_ASSERT(d_ptr != nullptr);
+  BL_ASSERT(d_size > 0);
 
-  BL_ASSERT(sPtr != nullptr);
-  BL_ASSERT(sSize > 0);
+  BL_ASSERT(s_ptr != nullptr);
+  BL_ASSERT(s_size > 0);
 
-  uint32_t* dSpanPtr = dPtr;
-  uint32_t i = dSize;
+  uint32_t* dSpanPtr = d_ptr;
+  uint32_t i = d_size;
 
-  Vec8xU16 c0 = loada_64<Vec8xU16>(&sPtr[0].rgba);
+  Vec8xU16 c0 = loada_64<Vec8xU16>(&s_ptr[0].rgba);
   Vec8xU16 c1;
 
   Vec4xI32 half = make128_i32(1 << (23 - 1));
@@ -35,74 +35,74 @@ void BL_CDECL interpolate_prgb32_sse2(uint32_t* dPtr, uint32_t dSize, const BLGr
   uint32_t p0 = 0;
   uint32_t p1;
 
-  size_t sIndex = size_t(sPtr[0].offset == 0.0 && sSize > 1);
-  double fWidth = double(int32_t(--dSize) << 8);
+  size_t s_index = size_t(s_ptr[0].offset == 0.0 && s_size > 1);
+  double fWidth = double(int32_t(--d_size) << 8);
 
   do {
-    c1 = loada_64<Vec8xU16>(&sPtr[sIndex].rgba);
-    p1 = uint32_t(Math::roundToInt(sPtr[sIndex].offset * fWidth));
+    c1 = loada_64<Vec8xU16>(&s_ptr[s_index].rgba);
+    p1 = uint32_t(Math::round_to_int(s_ptr[s_index].offset * fWidth));
 
-    dSpanPtr = dPtr + (p0 >> 8);
+    dSpanPtr = d_ptr + (p0 >> 8);
     i = ((p1 >> 8) - (p0 >> 8));
     p0 = p1;
 
     if (i <= 1) {
-      Vec8xU16 cPix = interleave_lo_u64(c0, c1);
+      Vec8xU16 c_pix = interleave_lo_u64(c0, c1);
       c0 = c1;
-      cPix = srli_u16<8>(cPix);
+      c_pix = srli_u16<8>(c_pix);
 
-      Vec8xU16 cA = swizzle_u16<3, 3, 3, 3>(cPix);
-      cPix = div255_u16((cPix | argb64_a255) * cA);
-      cPix = packs_128_i16_u8(cPix);
-      storea_32(dSpanPtr, cPix);
+      Vec8xU16 cA = swizzle_u16<3, 3, 3, 3>(c_pix);
+      c_pix = div255_u16((c_pix | argb64_a255) * cA);
+      c_pix = packs_128_i16_u8(c_pix);
+      storea_32(dSpanPtr, c_pix);
       dSpanPtr++;
 
       if (i == 0)
         continue;
 
-      cPix = swizzle_u32<1, 1, 1, 1>(cPix);
-      storea_32(dSpanPtr, cPix);
+      c_pix = swizzle_u32<1, 1, 1, 1>(c_pix);
+      storea_32(dSpanPtr, c_pix);
       dSpanPtr++;
     }
     else {
       BL_SIMD_LOOP_32x4_INIT()
 
-      Vec4xI32 cI;
-      Vec4xI32 cD;
+      Vec4xI32 ci;
+      Vec4xI32 cd;
 
-      // Scale `cD` by taking advantage of SSE2-FP division.
+      // Scale `cd` by taking advantage of SSE2-FP division.
       {
         Vec2xF64 scale = div_1xf64(make128_f64(1 << 23), cvt_f64_from_scalar_i32(int(i)));
 
-        cI = vec_i32(interleave_lo_u8(c0, c0));
-        cD = vec_i32(interleave_lo_u8(c1, c1));
+        ci = vec_i32(interleave_lo_u8(c0, c0));
+        cd = vec_i32(interleave_lo_u8(c1, c1));
 
-        cI = srli_u32<24>(cI);
-        cD = srli_u32<24>(cD);
-        cD = sub_i32(cD, cI);
-        cI = slli_i32<23>(cI);
+        ci = srli_u32<24>(ci);
+        cd = srli_u32<24>(cd);
+        cd = sub_i32(cd, ci);
+        ci = slli_i32<23>(ci);
 
-        Vec2xF64 lo = cvt_2xi32_f64(vec_i32(cD));
-        cD = swap_u64(cD);
+        Vec2xF64 lo = cvt_2xi32_f64(vec_i32(cd));
+        cd = swap_u64(cd);
         scale = dup_lo_f64(scale);
 
-        Vec2xF64 hi = cvt_2xi32_f64(vec_i32(cD));
+        Vec2xF64 hi = cvt_2xi32_f64(vec_i32(cd));
         lo = lo * scale;
         hi = hi * scale;
-        cD = interleave_lo_u64(cvtt_f64_i32(lo), cvtt_f64_i32(hi));
+        cd = interleave_lo_u64(cvtt_f64_i32(lo), cvtt_f64_i32(hi));
       }
 
-      cI += half;
+      ci += half;
       i++;
 
       BL_SIMD_LOOP_32x4_MINI_BEGIN(Loop, dSpanPtr, i)
-        Vec8xU16 cPix = vec_u16(packs_128_i32_i16(srli_u32<23>(cI)));
-        Vec8xU16 cA = swizzle_u16<3, 3, 3, 3>(cPix);
-        cPix = div255_u16((cPix | argb64_a255) * cA);
-        cPix = packs_128_i16_u8(cPix);
-        storea_32(dSpanPtr, cPix);
+        Vec8xU16 c_pix = vec_u16(packs_128_i32_i16(srli_u32<23>(ci)));
+        Vec8xU16 cA = swizzle_u16<3, 3, 3, 3>(c_pix);
+        c_pix = div255_u16((c_pix | argb64_a255) * cA);
+        c_pix = packs_128_i16_u8(c_pix);
+        storea_32(dSpanPtr, c_pix);
 
-        cI += cD;
+        ci += cd;
         dSpanPtr++;
       BL_SIMD_LOOP_32x4_MINI_END(Loop)
 
@@ -110,15 +110,15 @@ void BL_CDECL interpolate_prgb32_sse2(uint32_t* dPtr, uint32_t dSize, const BLGr
         Vec8xU16 cPix0, cA0;
         Vec8xU16 cPix1, cA1;
 
-        cPix0 = vec_u16(srli_u32<23>(cI));
-        cI = add_i32(cI, cD);
-        cA0 = vec_u16(srli_u32<23>(cI));
-        cI = add_i32(cI, cD);
+        cPix0 = vec_u16(srli_u32<23>(ci));
+        ci = add_i32(ci, cd);
+        cA0 = vec_u16(srli_u32<23>(ci));
+        ci = add_i32(ci, cd);
 
-        cPix1 = vec_u16(srli_u32<23>(cI));
-        cI = add_i32(cI, cD);
-        cA1 = vec_u16(srli_u32<23>(cI));
-        cI = add_i32(cI, cD);
+        cPix1 = vec_u16(srli_u32<23>(ci));
+        ci = add_i32(ci, cd);
+        cA1 = vec_u16(srli_u32<23>(ci));
+        ci = add_i32(ci, cd);
 
         cPix0 = packs_128_i32_i16(cPix0, cA0);
         cPix1 = packs_128_i32_i16(cPix1, cA1);
@@ -136,15 +136,15 @@ void BL_CDECL interpolate_prgb32_sse2(uint32_t* dPtr, uint32_t dSize, const BLGr
 
       c0 = c1;
     }
-  } while (++sIndex < sSize);
+  } while (++s_index < s_size);
 
   // The last stop doesn't have to end at 1.0, in such case the remaining space
   // is filled by the last color stop (premultiplied).
   {
     Vec8xU16 cA;
-    i = uint32_t((size_t)((dPtr + dSize + 1) - dSpanPtr));
+    i = uint32_t((size_t)((d_ptr + d_size + 1) - dSpanPtr));
 
-    c0 = loadh_64(c0, &sPtr[0].rgba);
+    c0 = loadh_64(c0, &s_ptr[0].rgba);
     c0 = srli_u16<8>(c0);
 
     cA = swizzle_u16<3, 3, 3, 3>(c0);
@@ -164,7 +164,7 @@ void BL_CDECL interpolate_prgb32_sse2(uint32_t* dPtr, uint32_t dSize, const BLGr
   // of the stop colliding with the previous offset index - for example if multiple stops have the same offset [0.0]
   // the first pixel will be the last stop's color. This is easier to fix here as we don't need extra conditions in
   // the main loop.
-  storea_32(dPtr, swizzle_u32<1, 1, 1, 1>(c1));
+  storea_32(d_ptr, swizzle_u32<1, 1, 1, 1>(c1));
 }
 
 } // {Interpolation}

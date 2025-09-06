@@ -57,166 +57,166 @@ struct RenderJob {
   //! \name Job Data
   //! \{
 
-  RenderJobType _jobType;
-  RenderJobFlags _jobFlags;
-  uint8_t _payloadType;
-  uint8_t _metaTransformFixedType;
-  uint8_t _finalTransformFixedType;
+  RenderJobType _job_type;
+  RenderJobFlags _job_flags;
+  uint8_t _payload_type;
+  uint8_t _meta_transform_fixed_type;
+  uint8_t _final_transform_fixed_type;
   uint8_t _reserved;
-  uint16_t _commandIndex;
-  BLPoint _originFixed;
-  RenderCommandQueue* _commandQueue;
+  uint16_t _command_index;
+  BLPoint _origin_fixed;
+  RenderCommandQueue* _command_queue;
 
   //! \}
 
   //! \name Initialization
   //! \{
 
-  BL_INLINE void _initInternal(RenderJobType jobType, RenderCommandQueue* commandQueue, size_t commandIndex) noexcept {
-    _jobType = jobType;
-    _jobFlags = RenderJobFlags::kNoFlags;
-    _payloadType = 0;
-    _metaTransformFixedType = 0;
-    _finalTransformFixedType = 0;
-    _commandIndex = uint16_t(commandIndex);
-    _commandQueue = commandQueue;
+  BL_INLINE void _init_internal(RenderJobType job_type, RenderCommandQueue* command_queue, size_t command_index) noexcept {
+    _job_type = job_type;
+    _job_flags = RenderJobFlags::kNoFlags;
+    _payload_type = 0;
+    _meta_transform_fixed_type = 0;
+    _final_transform_fixed_type = 0;
+    _command_index = uint16_t(command_index);
+    _command_queue = command_queue;
   }
 
-  BL_INLINE_NODEBUG void setOriginFixed(const BLPoint& pt) noexcept { _originFixed = pt; }
+  BL_INLINE_NODEBUG void set_origin_fixed(const BLPoint& pt) noexcept { _origin_fixed = pt; }
 
   //! \}
 
   //! \name Accessors
   //! \{
 
-  BL_INLINE_NODEBUG RenderJobType jobType() const noexcept { return _jobType; }
+  BL_INLINE_NODEBUG RenderJobType job_type() const noexcept { return _job_type; }
 
-  BL_INLINE_NODEBUG RenderJobFlags jobFlags() const noexcept { return _jobFlags; }
-  BL_INLINE_NODEBUG bool hasJobFlag(RenderJobFlags flag) const noexcept { return blTestFlag(_jobFlags, flag); }
-  BL_INLINE_NODEBUG void addJobFlags(RenderJobFlags flags) noexcept { _jobFlags |= flags; }
+  BL_INLINE_NODEBUG RenderJobFlags job_flags() const noexcept { return _job_flags; }
+  BL_INLINE_NODEBUG bool has_job_flag(RenderJobFlags flag) const noexcept { return bl_test_flag(_job_flags, flag); }
+  BL_INLINE_NODEBUG void add_job_flags(RenderJobFlags flags) noexcept { _job_flags |= flags; }
 
-  BL_INLINE_NODEBUG RenderCommandQueue* commandQueue() const noexcept { return _commandQueue; }
+  BL_INLINE_NODEBUG RenderCommandQueue* command_queue() const noexcept { return _command_queue; }
 
-  BL_INLINE_NODEBUG size_t commandIndex() const noexcept { return _commandIndex; }
-  BL_INLINE_NODEBUG RenderCommand& command() const noexcept { return _commandQueue->at(_commandIndex); }
-  BL_INLINE_NODEBUG const BLPoint& originFixed() const noexcept { return _originFixed;}
+  BL_INLINE_NODEBUG size_t command_index() const noexcept { return _command_index; }
+  BL_INLINE_NODEBUG RenderCommand& command() const noexcept { return _command_queue->at(_command_index); }
+  BL_INLINE_NODEBUG const BLPoint& origin_fixed() const noexcept { return _origin_fixed;}
 
   //! \}
 };
 
 //! Base class for fill and stroke operations responsible for holding shared states.
 struct RenderJob_BaseOp : public RenderJob {
-  const SharedFillState* _sharedFillState;
-  const SharedBaseStrokeState* _sharedStrokeState;
+  const SharedFillState* _shared_fill_state;
+  const SharedBaseStrokeState* _shared_stroke_state;
 
-  BL_INLINE void initStates(const SharedFillState* sharedFillState, const SharedBaseStrokeState* sharedStrokeState = nullptr) noexcept {
-    _sharedFillState = sharedFillState;
-    _sharedStrokeState = sharedStrokeState;
+  BL_INLINE void init_states(const SharedFillState* shared_fill_state, const SharedBaseStrokeState* shared_stroke_state = nullptr) noexcept {
+    _shared_fill_state = shared_fill_state;
+    _shared_stroke_state = shared_stroke_state;
   }
 
-  BL_INLINE_NODEBUG const SharedFillState* fillState() const noexcept { return _sharedFillState; }
-  BL_INLINE_NODEBUG const SharedBaseStrokeState* strokeState() const noexcept { return _sharedStrokeState; }
+  BL_INLINE_NODEBUG const SharedFillState* fill_state() const noexcept { return _shared_fill_state; }
+  BL_INLINE_NODEBUG const SharedBaseStrokeState* stroke_state() const noexcept { return _shared_stroke_state; }
 
-  BL_INLINE_NODEBUG BLTransformType metaTransformFixedType() const noexcept { return BLTransformType(_metaTransformFixedType); }
-  BL_INLINE_NODEBUG BLTransformType finalTransformFixedType() const noexcept { return BLTransformType(_finalTransformFixedType); }
+  BL_INLINE_NODEBUG BLTransformType meta_transform_fixed_type() const noexcept { return BLTransformType(_meta_transform_fixed_type); }
+  BL_INLINE_NODEBUG BLTransformType final_transform_fixed_type() const noexcept { return BLTransformType(_final_transform_fixed_type); }
 
-  BL_INLINE_NODEBUG void setMetaTransformFixedType(BLTransformType type) noexcept { _metaTransformFixedType = uint8_t(type); }
-  BL_INLINE_NODEBUG void setFinalTransformFixedType(BLTransformType type) noexcept { _finalTransformFixedType = uint8_t(type); }
+  BL_INLINE_NODEBUG void set_meta_transform_fixed_type(BLTransformType type) noexcept { _meta_transform_fixed_type = uint8_t(type); }
+  BL_INLINE_NODEBUG void set_final_transform_fixed_type(BLTransformType type) noexcept { _final_transform_fixed_type = uint8_t(type); }
 };
 
 struct RenderJob_GeometryOp : public RenderJob_BaseOp {
-  BL_INLINE void initFillJob(RenderCommandQueue* commandQueue, size_t commandIndex) noexcept {
-    _initInternal(RenderJobType::kFillGeometry, commandQueue, commandIndex);
+  BL_INLINE void init_fill_job(RenderCommandQueue* command_queue, size_t command_index) noexcept {
+    _init_internal(RenderJobType::kFillGeometry, command_queue, command_index);
   }
 
-  BL_INLINE void initStrokeJob(RenderCommandQueue* commandQueue, size_t commandIndex) noexcept {
-    _initInternal(RenderJobType::kStrokeGeometry, commandQueue, commandIndex);
+  BL_INLINE void init_stroke_job(RenderCommandQueue* command_queue, size_t command_index) noexcept {
+    _init_internal(RenderJobType::kStrokeGeometry, command_queue, command_index);
   }
 
-  BL_INLINE_NODEBUG BLGeometryType geometryType() const noexcept { return (BLGeometryType)_payloadType; }
+  BL_INLINE_NODEBUG BLGeometryType geometry_type() const noexcept { return (BLGeometryType)_payload_type; }
 
-  BL_INLINE void setGeometryWithPath(const BLPathCore* path) noexcept {
-    _payloadType = uint8_t(BL_GEOMETRY_TYPE_PATH);
-    blObjectPrivateInitWeakTagged(geometryData<BLPathCore>(), path);
+  BL_INLINE void set_geometry_with_path(const BLPathCore* path) noexcept {
+    _payload_type = uint8_t(BL_GEOMETRY_TYPE_PATH);
+    bl_object_private_init_weak_tagged(geometry_data<BLPathCore>(), path);
   }
 
-  BL_INLINE void setGeometryWithShape(BLGeometryType geometryType, const void* srcDataPtr, size_t srcDataSize) noexcept {
-    _payloadType = uint8_t(geometryType);
-    memcpy(geometryData<void>(), srcDataPtr, srcDataSize);
+  BL_INLINE void set_geometry_with_shape(BLGeometryType geometry_type, const void* src_data_ptr, size_t src_data_size) noexcept {
+    _payload_type = uint8_t(geometry_type);
+    memcpy(geometry_data<void>(), src_data_ptr, src_data_size);
   }
 
-  BL_INLINE void setGeometry(BLGeometryType geometryType, const void* srcDataPtr, size_t srcDataSize) noexcept {
-    switch (geometryType) {
+  BL_INLINE void set_geometry(BLGeometryType geometry_type, const void* src_data_ptr, size_t src_data_size) noexcept {
+    switch (geometry_type) {
       case BL_GEOMETRY_TYPE_PATH:
-        setGeometryWithPath(static_cast<const BLPathCore*>(srcDataPtr));
+        set_geometry_with_path(static_cast<const BLPathCore*>(src_data_ptr));
         break;
 
       default:
-        setGeometryWithShape(geometryType, srcDataPtr, srcDataSize);
+        set_geometry_with_shape(geometry_type, src_data_ptr, src_data_size);
         break;
     }
   }
 
   template<typename T>
-  BL_INLINE_NODEBUG T* geometryData() noexcept { return reinterpret_cast<T*>(this + 1); }
+  BL_INLINE_NODEBUG T* geometry_data() noexcept { return reinterpret_cast<T*>(this + 1); }
 
   template<typename T>
-  BL_INLINE_NODEBUG const T* geometryData() const noexcept { return reinterpret_cast<const T*>(this + 1); }
+  BL_INLINE_NODEBUG const T* geometry_data() const noexcept { return reinterpret_cast<const T*>(this + 1); }
 };
 
 struct RenderJob_TextOp : public RenderJob_BaseOp {
   BLFontCore _font;
 
   union {
-    BLArrayView<uint8_t> _textData;
-    BLGlyphRun _glyphRun;
-    BLGlyphBufferCore _glyphBuffer;
+    BLArrayView<uint8_t> _text_data;
+    BLGlyphRun _glyph_run;
+    BLGlyphBufferCore _glyph_buffer;
   };
 
-  BL_INLINE void initFillJob(RenderCommandQueue* commandQueue, size_t commandIndex) noexcept {
-    _initInternal(RenderJobType::kFillText, commandQueue, commandIndex);
+  BL_INLINE void init_fill_job(RenderCommandQueue* command_queue, size_t command_index) noexcept {
+    _init_internal(RenderJobType::kFillText, command_queue, command_index);
   }
 
-  BL_INLINE void initStrokeJob(RenderCommandQueue* commandQueue, size_t commandIndex) noexcept {
-    _initInternal(RenderJobType::kStrokeText, commandQueue, commandIndex);
+  BL_INLINE void init_stroke_job(RenderCommandQueue* command_queue, size_t command_index) noexcept {
+    _init_internal(RenderJobType::kStrokeText, command_queue, command_index);
   }
 
   BL_INLINE void destroy() noexcept {
     _font.dcast().~BLFont();
-    if (_payloadType == kTextDataGlyphBuffer)
-      _glyphBuffer.dcast().~BLGlyphBuffer();
+    if (_payload_type == kTextDataGlyphBuffer)
+      _glyph_buffer.dcast().~BLGlyphBuffer();
   }
 
-  BL_INLINE void initFont(const BLFontCore& font) noexcept {
-    blObjectPrivateInitWeakTagged(&_font, &font);
+  BL_INLINE void init_font(const BLFontCore& font) noexcept {
+    bl_object_private_init_weak_tagged(&_font, &font);
   }
 
-  BL_INLINE void initTextData(const void* text, size_t size, BLTextEncoding encoding) noexcept {
-    _payloadType = uint8_t(encoding);
-    _textData.reset(static_cast<const uint8_t*>(text), size);
+  BL_INLINE void init_text_data(const void* text, size_t size, BLTextEncoding encoding) noexcept {
+    _payload_type = uint8_t(encoding);
+    _text_data.reset(static_cast<const uint8_t*>(text), size);
   }
 
-  BL_INLINE void initGlyphRun(void* glyphData, void* placementData, size_t size, uint32_t placementType, uint32_t flags) noexcept {
-    _payloadType = kTextDataGlyphRun;
-    _glyphRun.glyphData = glyphData;
-    _glyphRun.placementData = placementData;
-    _glyphRun.size = size;
-    _glyphRun.reserved = uint8_t(0);
-    _glyphRun.placementType = uint8_t(placementType);
-    _glyphRun.glyphAdvance = uint8_t(4);
-    _glyphRun.placementAdvance = uint8_t(16);
-    _glyphRun.flags = flags;
+  BL_INLINE void init_glyph_run(void* glyph_data, void* placement_data, size_t size, uint32_t placement_type, uint32_t flags) noexcept {
+    _payload_type = kTextDataGlyphRun;
+    _glyph_run.glyph_data = glyph_data;
+    _glyph_run.placement_data = placement_data;
+    _glyph_run.size = size;
+    _glyph_run.reserved = uint8_t(0);
+    _glyph_run.placement_type = uint8_t(placement_type);
+    _glyph_run.glyph_advance = uint8_t(4);
+    _glyph_run.placement_advance = uint8_t(16);
+    _glyph_run.flags = flags;
   }
 
-  BL_INLINE void initGlyphBuffer(BLGlyphBufferImpl* gbI) noexcept {
-    _payloadType = kTextDataGlyphBuffer;
-    _glyphBuffer.impl = gbI;
+  BL_INLINE void init_glyph_buffer(BLGlyphBufferImpl* gb_impl) noexcept {
+    _payload_type = kTextDataGlyphBuffer;
+    _glyph_buffer.impl = gb_impl;
   }
 
-  BL_INLINE_NODEBUG uint32_t textDataType() const noexcept { return _payloadType; }
-  BL_INLINE_NODEBUG const void* textData() const noexcept { return _textData.data; }
-  BL_INLINE_NODEBUG size_t textSize() const noexcept { return _textData.size; }
-  BL_INLINE_NODEBUG const BLGlyphBuffer& glyphBuffer() const noexcept { return _glyphBuffer.dcast(); }
+  BL_INLINE_NODEBUG uint32_t text_data_type() const noexcept { return _payload_type; }
+  BL_INLINE_NODEBUG const void* text_data() const noexcept { return _text_data.data; }
+  BL_INLINE_NODEBUG size_t text_size() const noexcept { return _text_data.size; }
+  BL_INLINE_NODEBUG const BLGlyphBuffer& glyph_buffer() const noexcept { return _glyph_buffer.dcast(); }
 };
 
 } // {bl::RasterEngine}

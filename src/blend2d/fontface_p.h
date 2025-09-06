@@ -28,107 +28,107 @@ struct OTFaceImpl;
 //! \{
 
 struct BLFontFacePrivateFuncs {
-  BLResult (BL_CDECL* mapTextToGlyphs)(
+  BLResult (BL_CDECL* map_text_to_glyphs)(
     const BLFontFaceImpl* impl,
     uint32_t* content,
     size_t count,
     BLGlyphMappingState* state) noexcept;
 
-  BLResult (BL_CDECL* getGlyphBounds)(
+  BLResult (BL_CDECL* get_glyph_bounds)(
     const BLFontFaceImpl* impl,
-    const uint32_t* glyphData,
-    intptr_t glyphAdvance,
+    const uint32_t* glyph_data,
+    intptr_t glyph_advance,
     BLBoxI* boxes,
     size_t count) noexcept;
 
-  BLResult (BL_CDECL* getGlyphAdvances)(
+  BLResult (BL_CDECL* get_glyph_advances)(
     const BLFontFaceImpl* impl,
-    const uint32_t* glyphData,
-    intptr_t glyphAdvance,
-    BLGlyphPlacement* placementData,
+    const uint32_t* glyph_data,
+    intptr_t glyph_advance,
+    BLGlyphPlacement* placement_data,
     size_t count) noexcept;
 
-  BLResult (BL_CDECL* getGlyphOutlines)(
+  BLResult (BL_CDECL* get_glyph_outlines)(
     const BLFontFaceImpl* impl,
-    BLGlyphId glyphId,
-    const BLMatrix2D* userTransform,
+    BLGlyphId glyph_id,
+    const BLMatrix2D* user_transform,
     BLPath* out,
-    size_t* contourCountOut,
-    bl::ScopedBuffer* tmpBuffer) noexcept;
+    size_t* contour_count_out,
+    bl::ScopedBuffer* tmp_buffer) noexcept;
 
-  BLResult (BL_CDECL* applyKern)(
-    const BLFontFaceImpl* faceI,
-    uint32_t* glyphData,
-    BLGlyphPlacement* placementData,
+  BLResult (BL_CDECL* apply_kern)(
+    const BLFontFaceImpl* face_impl,
+    uint32_t* glyph_data,
+    BLGlyphPlacement* placement_data,
     size_t count) noexcept;
 
-  BLResult (BL_CDECL* applyGSub)(
+  BLResult (BL_CDECL* apply_gsub)(
     const BLFontFaceImpl* impl,
     BLGlyphBuffer* gb,
-    const uint32_t* bitWords,
-    size_t bitWordCount) noexcept;
+    const uint32_t* bit_words,
+    size_t bit_word_count) noexcept;
 
-  BLResult (BL_CDECL* applyGPos)(
+  BLResult (BL_CDECL* apply_gpos)(
     const BLFontFaceImpl* impl,
     BLGlyphBuffer* gb,
-    const uint32_t* bitWords,
-    size_t bitWordCount) noexcept;
+    const uint32_t* bit_words,
+    size_t bit_word_count) noexcept;
 
-  BLResult (BL_CDECL* positionGlyphs)(
+  BLResult (BL_CDECL* position_glyphs)(
     const BLFontFaceImpl* impl,
-    uint32_t* glyphData,
-    BLGlyphPlacement* placementData,
+    uint32_t* glyph_data,
+    BLGlyphPlacement* placement_data,
     size_t count) noexcept;
 };
 
-BL_HIDDEN extern BLFontFacePrivateFuncs blNullFontFaceFuncs;
+BL_HIDDEN extern BLFontFacePrivateFuncs bl_null_font_face_funcs;
 
 struct BLFontFacePrivateImpl : public BLFontFaceImpl {
   BLFontFacePrivateFuncs funcs;
-  BLBitSetCore characterCoverage;
+  BLBitSetCore character_coverage;
 
-  bl::FontTagData::ScriptTagSet scriptTagSet;
-  bl::FontTagData::FeatureTagSet featureTagSet;
-  bl::FontTagData::VariationTagSet variationTagSet;
+  bl::FontTagData::ScriptTagSet script_tag_set;
+  bl::FontTagData::FeatureTagSet feature_tag_set;
+  bl::FontTagData::VariationTagSet variation_tag_set;
 };
 
 namespace bl {
 namespace FontFaceInternal {
 
 template<typename T = BLFontFacePrivateImpl>
-static BL_INLINE T* getImpl(const BLFontFaceCore* self) noexcept {
+static BL_INLINE T* get_impl(const BLFontFaceCore* self) noexcept {
   return static_cast<T*>(static_cast<BLFontFacePrivateImpl*>(self->_d.impl));
 }
 
 } // {FontFaceInternal}
 } // {bl}
 
-static BL_INLINE void blFontFaceImplCtor(BLFontFacePrivateImpl* impl, BLFontFaceVirt* virt, BLFontFacePrivateFuncs& funcs) noexcept {
+static BL_INLINE void bl_font_face_impl_ctor(BLFontFacePrivateImpl* impl, BLFontFaceVirt* virt, BLFontFacePrivateFuncs& funcs) noexcept {
   impl->virt = virt;
-  blCallCtor(impl->data.dcast());
-  blCallCtor(impl->fullName.dcast());
-  blCallCtor(impl->familyName.dcast());
-  blCallCtor(impl->subfamilyName.dcast());
-  blCallCtor(impl->postScriptName.dcast());
-  blCallCtor(impl->scriptTagSet);
-  blCallCtor(impl->featureTagSet);
-  blCallCtor(impl->variationTagSet);
-  blObjectAtomicContentInit(&impl->characterCoverage);
+  bl_call_ctor(impl->data.dcast());
+  bl_call_ctor(impl->full_name.dcast());
+  bl_call_ctor(impl->family_name.dcast());
+  bl_call_ctor(impl->subfamily_name.dcast());
+  bl_call_ctor(impl->post_script_name.dcast());
+  bl_call_ctor(impl->script_tag_set);
+  bl_call_ctor(impl->feature_tag_set);
+  bl_call_ctor(impl->variation_tag_set);
+  bl_object_atomic_content_init(&impl->character_coverage);
   impl->funcs = funcs;
 }
 
-static BL_INLINE void blFontFaceImplDtor(BLFontFacePrivateImpl* impl) noexcept {
-  if (blObjectAtomicContentTest(&impl->characterCoverage))
-    blCallDtor(impl->characterCoverage.dcast());
+static BL_INLINE void bl_font_face_impl_dtor(BLFontFacePrivateImpl* impl) noexcept {
+  if (bl_object_atomic_content_test(&impl->character_coverage))
+    bl_call_dtor(impl->character_coverage.dcast());
 
-  blCallDtor(impl->variationTagSet);
-  blCallDtor(impl->featureTagSet);
-  blCallDtor(impl->scriptTagSet);
-  blCallDtor(impl->postScriptName.dcast());
-  blCallDtor(impl->subfamilyName.dcast());
-  blCallDtor(impl->familyName.dcast());
-  blCallDtor(impl->fullName.dcast());
-  blCallDtor(impl->data.dcast());
+  bl_call_dtor(impl->variation_tag_set);
+  bl_call_dtor(impl->feature_tag_set);
+  bl_call_dtor(impl->script_tag_set);
+  bl_call_dtor(impl->post_script_name.dcast());
+  bl_call_dtor(impl->subfamily_name.dcast());
+  bl_call_dtor(impl->family_name.dcast());
+  bl_call_dtor(impl->full_name.dcast());
+  bl_call_dtor(impl->data.dcast());
 }
 
 //! \}

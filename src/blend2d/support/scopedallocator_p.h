@@ -23,21 +23,21 @@ public:
   struct Link { Link* next; };
 
   Link* links;
-  uint8_t* poolPtr;
-  uint8_t* poolMem;
-  uint8_t* poolEnd;
+  uint8_t* pool_ptr;
+  uint8_t* pool_mem;
+  uint8_t* pool_end;
 
   BL_INLINE ScopedAllocator() noexcept
     : links(nullptr),
-      poolPtr(nullptr),
-      poolMem(nullptr),
-      poolEnd(nullptr) {}
+      pool_ptr(nullptr),
+      pool_mem(nullptr),
+      pool_end(nullptr) {}
 
-  BL_INLINE ScopedAllocator(void* poolMem, size_t poolSize) noexcept
+  BL_INLINE ScopedAllocator(void* pool_mem, size_t pool_size) noexcept
     : links(nullptr),
-      poolPtr(static_cast<uint8_t*>(poolMem)),
-      poolMem(static_cast<uint8_t*>(poolMem)),
-      poolEnd(static_cast<uint8_t*>(poolMem) + poolSize) {}
+      pool_ptr(static_cast<uint8_t*>(pool_mem)),
+      pool_mem(static_cast<uint8_t*>(pool_mem)),
+      pool_end(static_cast<uint8_t*>(pool_mem) + pool_size) {}
 
   BL_INLINE ~ScopedAllocator() noexcept { reset(); }
 

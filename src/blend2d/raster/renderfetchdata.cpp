@@ -11,25 +11,25 @@ namespace bl::RasterEngine {
 // bl::RasterEngine - Fetch Data Utilities
 // =======================================
 
-BLResult computePendingFetchData(RenderFetchData* fetchData) noexcept {
+BLResult compute_pending_fetch_data(RenderFetchData* fetch_data) noexcept {
   // At the moment only gradients have support for pending fetch data calculation.
-  BL_ASSERT(fetchData->signature.isGradient());
+  BL_ASSERT(fetch_data->signature.is_gradient());
 
-  BLGradientPrivateImpl* gradientI = GradientInternal::getImpl(&fetchData->styleAs<BLGradientCore>());
-  uint32_t lutSize = fetchData->pipelineData.gradient.lut.size;
-  BLGradientQuality quality = BLGradientQuality(fetchData->extra.custom[0]);
+  BLGradientPrivateImpl* gradient_impl = GradientInternal::get_impl(&fetch_data->style_as<BLGradientCore>());
+  uint32_t lut_size = fetch_data->pipeline_data.gradient.lut.size;
+  BLGradientQuality quality = BLGradientQuality(fetch_data->extra.custom[0]);
 
   BLGradientLUT* lut;
   if (quality < BL_GRADIENT_QUALITY_DITHER)
-    lut = GradientInternal::ensureLut32(gradientI, lutSize);
+    lut = GradientInternal::ensure_lut32(gradient_impl, lut_size);
   else
-    lut = GradientInternal::ensureLut64(gradientI, lutSize);
+    lut = GradientInternal::ensure_lut64(gradient_impl, lut_size);
 
   if (BL_UNLIKELY(!lut))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-  fetchData->signature.clearPendingBit();
-  fetchData->pipelineData.gradient.lut.data = lut->data();
+  fetch_data->signature.clear_pending_bit();
+  fetch_data->pipeline_data.gradient.lut.data = lut->data();
 
   return BL_SUCCESS;
 }

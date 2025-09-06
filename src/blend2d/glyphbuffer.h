@@ -25,7 +25,7 @@ struct BLGlyphBufferImpl {
       //! Text (UCS4 code-points) or glyph content.
       uint32_t* content;
       //! Glyph placement data.
-      BLGlyphPlacement* placementData;
+      BLGlyphPlacement* placement_data;
       //! Number of either code points or glyph indexes in the glyph-buffer.
       size_t size;
       //! Reserved, used exclusively by BLGlyphRun.
@@ -36,14 +36,14 @@ struct BLGlyphBufferImpl {
 
     //! Glyph run data that can be passed directly to the rendering context.
     //!
-    //! Glyph run shares data with other members like `content`, `placementData`, `size`, and `flags`. When working
+    //! Glyph run shares data with other members like `content`, `placement_data`, `size`, and `flags`. When working
     //! with data it's better to access these members directly as they are typed, whereas \ref BLGlyphRun stores
     //! pointers as `const void*` as it offers more flexibility, which \ref BLGlyphRun doesn't need.
-    BLGlyphRun glyphRun;
+    BLGlyphRun glyph_run;
   };
 
   //! Glyph info data - additional information of each code-point or glyph.
-  BLGlyphInfo* infoData;
+  BLGlyphInfo* info_data;
 };
 
 //! Glyph buffer [C API].
@@ -55,22 +55,22 @@ struct BLGlyphBufferCore {
 
 BL_BEGIN_C_DECLS
 
-BL_API BLResult BL_CDECL blGlyphBufferInit(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferInitMove(BLGlyphBufferCore* self, BLGlyphBufferCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferDestroy(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferReset(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferClear(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blGlyphBufferGetSize(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API uint32_t BL_CDECL blGlyphBufferGetFlags(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const BLGlyphRun* BL_CDECL blGlyphBufferGetGlyphRun(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const uint32_t* BL_CDECL blGlyphBufferGetContent(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const BLGlyphInfo* BL_CDECL blGlyphBufferGetInfoData(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const BLGlyphPlacement* BL_CDECL blGlyphBufferGetPlacementData(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blGlyphBufferSetText(BLGlyphBufferCore* self, const void* textData, size_t size, BLTextEncoding encoding) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferSetGlyphs(BLGlyphBufferCore* self, const uint32_t* glyphData, size_t size) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferSetGlyphsFromStruct(BLGlyphBufferCore* self, const void* glyphData, size_t size, size_t glyphIdSize, intptr_t glyphIdAdvance) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferSetDebugSink(BLGlyphBufferCore* self, BLDebugMessageSinkFunc sink, void* userData) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferResetDebugSink(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_glyph_buffer_init(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_glyph_buffer_init_move(BLGlyphBufferCore* self, BLGlyphBufferCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_glyph_buffer_destroy(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_glyph_buffer_reset(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_glyph_buffer_clear(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL bl_glyph_buffer_get_size(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API uint32_t BL_CDECL bl_glyph_buffer_get_flags(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API const BLGlyphRun* BL_CDECL bl_glyph_buffer_get_glyph_run(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API const uint32_t* BL_CDECL bl_glyph_buffer_get_content(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API const BLGlyphInfo* BL_CDECL bl_glyph_buffer_get_info_data(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API const BLGlyphPlacement* BL_CDECL bl_glyph_buffer_get_placement_data(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API BLResult BL_CDECL bl_glyph_buffer_set_text(BLGlyphBufferCore* self, const void* text_data, size_t size, BLTextEncoding encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_glyph_buffer_set_glyphs(BLGlyphBufferCore* self, const uint32_t* glyph_data, size_t size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_glyph_buffer_set_glyphs_from_struct(BLGlyphBufferCore* self, const void* glyph_data, size_t size, size_t glyph_id_size, intptr_t glyph_id_advance) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_glyph_buffer_set_debug_sink(BLGlyphBufferCore* self, BLDebugMessageSinkFunc sink, void* user_data) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_glyph_buffer_reset_debug_sink(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
@@ -102,16 +102,16 @@ public:
   BL_INLINE_NODEBUG BLGlyphBuffer(const BLGlyphBuffer&) noexcept = delete;
   BL_INLINE_NODEBUG BLGlyphBuffer& operator=(const BLGlyphBuffer&) noexcept = delete;
 
-  BL_INLINE_NODEBUG BLGlyphBuffer() noexcept { blGlyphBufferInit(this); }
-  BL_INLINE_NODEBUG BLGlyphBuffer(BLGlyphBuffer&& other) noexcept { blGlyphBufferInitMove(this, &other); }
-  BL_INLINE_NODEBUG ~BLGlyphBuffer() noexcept { blGlyphBufferDestroy(this); }
+  BL_INLINE_NODEBUG BLGlyphBuffer() noexcept { bl_glyph_buffer_init(this); }
+  BL_INLINE_NODEBUG BLGlyphBuffer(BLGlyphBuffer&& other) noexcept { bl_glyph_buffer_init_move(this, &other); }
+  BL_INLINE_NODEBUG ~BLGlyphBuffer() noexcept { bl_glyph_buffer_destroy(this); }
 
   //! \}
 
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE_NODEBUG explicit operator bool() const noexcept { return !empty(); }
+  BL_INLINE_NODEBUG explicit operator bool() const noexcept { return !is_empty(); }
 
   //! \}
 
@@ -119,7 +119,7 @@ public:
   //! \{
 
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool empty() const noexcept { return impl->glyphRun.empty(); }
+  BL_INLINE_NODEBUG bool is_empty() const noexcept { return impl->glyph_run.is_empty(); }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG size_t size() const noexcept { return impl->size; }
@@ -131,37 +131,37 @@ public:
   BL_INLINE_NODEBUG uint32_t* content() const noexcept { return impl->content; }
 
   [[nodiscard]]
-  BL_INLINE_NODEBUG BLGlyphInfo* infoData() const noexcept { return impl->infoData; }
+  BL_INLINE_NODEBUG BLGlyphInfo* info_data() const noexcept { return impl->info_data; }
 
   [[nodiscard]]
-  BL_INLINE_NODEBUG BLGlyphPlacement* placementData() const noexcept { return impl->placementData; }
+  BL_INLINE_NODEBUG BLGlyphPlacement* placement_data() const noexcept { return impl->placement_data; }
 
   [[nodiscard]]
-  BL_INLINE_NODEBUG const BLGlyphRun& glyphRun() const noexcept { return impl->glyphRun; }
+  BL_INLINE_NODEBUG const BLGlyphRun& glyph_run() const noexcept { return impl->glyph_run; }
 
   //! Tests whether the glyph-buffer has `flag` set.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool hasFlag(uint32_t flag) const noexcept { return (impl->flags & flag) != 0; }
+  BL_INLINE_NODEBUG bool has_flag(uint32_t flag) const noexcept { return (impl->flags & flag) != 0; }
 
   //! Tests whether the buffer contains unicode data.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool hasText() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
+  BL_INLINE_NODEBUG bool has_text() const noexcept { return has_flag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
 
   //! Tests whether the buffer contains glyph-id data.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool hasGlyphs() const noexcept { return !hasFlag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
+  BL_INLINE_NODEBUG bool has_glyphs() const noexcept { return !has_flag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
 
   //! Tests whether the input string contained invalid characters (unicode encoding errors).
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool hasInvalidChars() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_INVALID_TEXT); }
+  BL_INLINE_NODEBUG bool has_invalid_chars() const noexcept { return has_flag(BL_GLYPH_RUN_FLAG_INVALID_TEXT); }
 
   //! Tests whether the input string contained undefined characters that weren't mapped properly to glyphs.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool hasUndefinedChars() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS); }
+  BL_INLINE_NODEBUG bool has_undefined_chars() const noexcept { return has_flag(BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS); }
 
   //! Tests whether one or more operation was terminated before completion because of invalid data in a font.
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool hasInvalidFontData() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_INVALID_FONT_DATA); }
+  BL_INLINE_NODEBUG bool has_invalid_font_data() const noexcept { return has_flag(BL_GLYPH_RUN_FLAG_INVALID_FONT_DATA); }
 
   //! \}
 
@@ -171,12 +171,12 @@ public:
   //! Resets the \ref BLGlyphBuffer into its default constructed state. The content will be cleared and allocated
   //! memory released.
   BL_INLINE_NODEBUG BLResult reset() noexcept {
-    return blGlyphBufferReset(this);
+    return bl_glyph_buffer_reset(this);
   }
 
   //! Clears the content of \ref BLGlyphBuffer without releasing internal buffers.
   BL_INLINE_NODEBUG BLResult clear() noexcept {
-    return blGlyphBufferClear(this);
+    return bl_glyph_buffer_clear(this);
   }
 
   //! Assigns a text content of this \ref BLGlyphBuffer.
@@ -187,54 +187,54 @@ public:
   //! respectively.
   //!
   //! Null-terminated string can be specified by passing `SIZE_MAX` as `size`.
-  BL_INLINE_NODEBUG BLResult setText(const void* textData, size_t size, BLTextEncoding encoding) noexcept {
-    return blGlyphBufferSetText(this, textData, size, encoding);
+  BL_INLINE_NODEBUG BLResult set_text(const void* text_data, size_t size, BLTextEncoding encoding) noexcept {
+    return bl_glyph_buffer_set_text(this, text_data, size, encoding);
   }
 
   //! Assigns a text content of this \ref BLGlyphBuffer from LATIN1 (ISO/IEC 8859-1) string.
-  BL_INLINE_NODEBUG BLResult setLatin1Text(const char* text, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_LATIN1);
+  BL_INLINE_NODEBUG BLResult set_latin1_text(const char* text, size_t size = SIZE_MAX) noexcept {
+    return bl_glyph_buffer_set_text(this, text, size, BL_TEXT_ENCODING_LATIN1);
   }
 
   //! Assigns a text content of this \ref BLGlyphBuffer from UTF-8 encoded string. The `size` parameter represents the
   //! length of the `text` in bytes.
-  BL_INLINE_NODEBUG BLResult setUtf8Text(const char* text, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF8);
+  BL_INLINE_NODEBUG BLResult set_utf8_text(const char* text, size_t size = SIZE_MAX) noexcept {
+    return bl_glyph_buffer_set_text(this, text, size, BL_TEXT_ENCODING_UTF8);
   }
   //! \overload
-  BL_INLINE_NODEBUG BLResult setUtf8Text(const uint8_t* text, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF8);
+  BL_INLINE_NODEBUG BLResult set_utf8_text(const uint8_t* text, size_t size = SIZE_MAX) noexcept {
+    return bl_glyph_buffer_set_text(this, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
   //! Assigns a text content of this \ref BLGlyphBuffer from UTF-16 encoded string. The `size` parameter represents the
   //! length of the `text` in 16-bit units.
-  BL_INLINE_NODEBUG BLResult setUtf16Text(const uint16_t* text, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF16);
+  BL_INLINE_NODEBUG BLResult set_utf16_text(const uint16_t* text, size_t size = SIZE_MAX) noexcept {
+    return bl_glyph_buffer_set_text(this, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
   //! Assigns a text content of this \ref BLGlyphBuffer from UTF-32 encoded string. The `size` parameter represents the
   //! length of the `text` in 32-bit units.
-  BL_INLINE_NODEBUG BLResult setUtf32Text(const uint32_t* text, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF32);
+  BL_INLINE_NODEBUG BLResult set_utf32_text(const uint32_t* text, size_t size = SIZE_MAX) noexcept {
+    return bl_glyph_buffer_set_text(this, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
   //! Assigns a text content of this \ref BLGlyphBuffer from `wchar_t` encoded string. The `size` parameter represents
   //! the length of the `text` in `wchar_t` units.
-  BL_INLINE_NODEBUG BLResult setWCharText(const wchar_t* text, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_WCHAR);
+  BL_INLINE_NODEBUG BLResult set_wchar_text(const wchar_t* text, size_t size = SIZE_MAX) noexcept {
+    return bl_glyph_buffer_set_text(this, text, size, BL_TEXT_ENCODING_WCHAR);
   }
 
-  //! Assigns a glyph content of this \ref BLGlyphBuffer from either the given `glyphData`.
-  BL_INLINE_NODEBUG BLResult setGlyphs(const uint32_t* glyphData, size_t size) noexcept {
-    return blGlyphBufferSetGlyphs(this, glyphData, size);
+  //! Assigns a glyph content of this \ref BLGlyphBuffer from either the given `glyph_data`.
+  BL_INLINE_NODEBUG BLResult set_glyphs(const uint32_t* glyph_data, size_t size) noexcept {
+    return bl_glyph_buffer_set_glyphs(this, glyph_data, size);
   }
 
   //! Assigns a glyph content of this \ref BLGlyphBuffer from an array of glyphs or from a foreign structure that
   //! contains glyphs and possibly other members that have to be skipped. The glyph size can be either 16-bit (2)
-  //! or 32-bit (4). The last parameter `glyphAdvance` specifies how many bytes to advance after a glyph value is
+  //! or 32-bit (4). The last parameter `glyph_advance` specifies how many bytes to advance after a glyph value is
   //! read.
-  BL_INLINE_NODEBUG BLResult setGlyphsFromStruct(const void* glyphData, size_t size, size_t glyphIdSize, intptr_t glyphAdvance) noexcept {
-    return blGlyphBufferSetGlyphsFromStruct(this, glyphData, size, glyphIdSize, glyphAdvance);
+  BL_INLINE_NODEBUG BLResult set_glyphs_from_struct(const void* glyph_data, size_t size, size_t glyph_id_size, intptr_t glyph_advance) noexcept {
+    return bl_glyph_buffer_set_glyphs_from_struct(this, glyph_data, size, glyph_id_size, glyph_advance);
   }
 
   //! \}
@@ -242,12 +242,12 @@ public:
   //! \name Debug Sink
   //! \{
 
-  BL_INLINE_NODEBUG BLResult setDebugSink(BLDebugMessageSinkFunc sink, void* userData = nullptr) noexcept {
-    return blGlyphBufferSetDebugSink(this, sink, userData);
+  BL_INLINE_NODEBUG BLResult set_debug_sink(BLDebugMessageSinkFunc sink, void* user_data = nullptr) noexcept {
+    return bl_glyph_buffer_set_debug_sink(this, sink, user_data);
   }
 
-  BL_INLINE_NODEBUG BLResult resetDebugSink() noexcept {
-    return blGlyphBufferResetDebugSink(this);
+  BL_INLINE_NODEBUG BLResult reset_debug_sink() noexcept {
+    return bl_glyph_buffer_reset_debug_sink(this);
   }
 
   //! \}

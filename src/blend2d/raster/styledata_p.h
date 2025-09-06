@@ -23,11 +23,11 @@ struct StyleData {
   //! \{
 
   //! Pointer to a fetch data - it points to either a separate `RenderFetchData` data or to `&solid` data in this
-  //! struct. Use `hasImplicitFetchData()` to check whether fetch data points to external fetch data or to &solid.
-  RenderFetchDataHeader* fetchData;
+  //! struct. Use `has_implicit_fetch_data()` to check whether fetch data points to external fetch data or to &solid.
+  RenderFetchDataHeader* fetch_data;
 
   struct SolidData : public RenderFetchDataSolid {
-    //! The original color passed to setStyle() API.
+    //! The original color passed to set_style() API.
     union {
       //! Solid color as passed to frontend (non-premultiplied RGBA float components).
       BLRgba rgba;
@@ -40,12 +40,12 @@ struct StyleData {
 
   struct NonSolidData {
     //! Style transformation matrix combined with the rendering context transformation matrix.
-    BLMatrix2D adjustedTransform;
+    BLMatrix2D adjusted_transform;
   };
 
   union {
     SolidData solid;
-    NonSolidData nonSolid;
+    NonSolidData non_solid;
   };
 
   //! \}
@@ -53,11 +53,11 @@ struct StyleData {
   //! \name Accessors
   //! \{
 
-  BL_INLINE_NODEBUG void makeFetchDataImplicit() noexcept { fetchData = &solid; }
-  BL_INLINE_NODEBUG bool hasImplicitFetchData() const noexcept { return fetchData == static_cast<const void*>(&solid); }
+  BL_INLINE_NODEBUG void make_fetch_data_implicit() noexcept { fetch_data = &solid; }
+  BL_INLINE_NODEBUG bool has_implicit_fetch_data() const noexcept { return fetch_data == static_cast<const void*>(&solid); }
 
-  BL_INLINE_NODEBUG bool hasFetchData() const noexcept { return !hasImplicitFetchData(); }
-  BL_INLINE_NODEBUG RenderFetchData* getRenderFetchData() const noexcept { return static_cast<RenderFetchData*>(fetchData); }
+  BL_INLINE_NODEBUG bool has_fetch_data() const noexcept { return !has_implicit_fetch_data(); }
+  BL_INLINE_NODEBUG RenderFetchData* get_render_fetch_data() const noexcept { return static_cast<RenderFetchData*>(fetch_data); }
 
   //! \}
 
@@ -65,22 +65,22 @@ struct StyleData {
   //! \{
 
   BL_INLINE void swap(StyleData& other) noexcept {
-    bool thisImplicit = hasImplicitFetchData();
-    bool otherImplicit = other.hasImplicitFetchData();
+    bool this_implicit = has_implicit_fetch_data();
+    bool other_implicit = other.has_implicit_fetch_data();
 
     BLInternal::swap(*this, other);
 
-    if (thisImplicit)
-      other.makeFetchDataImplicit();
+    if (this_implicit)
+      other.make_fetch_data_implicit();
 
-    if (otherImplicit)
-      makeFetchDataImplicit();
+    if (other_implicit)
+      make_fetch_data_implicit();
   }
 
-  BL_INLINE void copyFrom(const StyleData& other) noexcept {
+  BL_INLINE void copy_from(const StyleData& other) noexcept {
     memcpy(this, &other, sizeof(StyleData));
-    if (other.hasImplicitFetchData())
-      makeFetchDataImplicit();
+    if (other.has_implicit_fetch_data())
+      make_fetch_data_implicit();
   }
 
   //! \}

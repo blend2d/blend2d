@@ -25,14 +25,14 @@ public:
   BL_INLINE Encoder() noexcept : impl(nullptr) {}
   BL_INLINE ~Encoder() noexcept { reset(); }
 
-  BL_INLINE bool isInitialized() const noexcept { return impl != nullptr; }
+  BL_INLINE bool is_initialized() const noexcept { return impl != nullptr; }
 
-  BLResult init(FormatType format, uint32_t compressionLevel) noexcept;
+  BLResult init(FormatType format, uint32_t compression_level) noexcept;
   void reset() noexcept;
 
-  size_t minimumOutputBufferSize(size_t inputSize) const noexcept;
-  size_t compressTo(uint8_t* output, size_t outputSize, const uint8_t* input, size_t inputSize) noexcept;
-  BLResult compress(BLArray<uint8_t>& dst, BLModifyOp modifyOp, BLDataView input) noexcept;
+  size_t minimum_output_buffer_size(size_t input_size) const noexcept;
+  size_t compress_to(uint8_t* output, size_t output_size, const uint8_t* input, size_t input_size) noexcept;
+  BLResult compress(BLArray<uint8_t>& dst, BLModifyOp modify_op, BLDataView input) noexcept;
 };
 
 } // {bl::Compression::Deflate}

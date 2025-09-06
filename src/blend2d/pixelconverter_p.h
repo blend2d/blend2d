@@ -13,7 +13,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! Internal flags used by `BLPixelConverterData::internalFlags`.
+//! Internal flags used by `BLPixelConverterData::internal_flags`.
 enum BLPixelConverterInternalFlags : uint8_t {
   //! The pixel converter is initialized.
   BL_PIXEL_CONVERTER_INTERNAL_FLAG_INITIALIZED = 0x01u,
@@ -27,18 +27,18 @@ enum BLPixelConverterInternalFlags : uint8_t {
   //! Set when the pixel converter is a multi-step converter.
   BL_PIXEL_CONVERTER_INTERNAL_FLAG_MULTI_STEP = 0x40u,
 
-  //! The pixel converter contains data in `dataPtr` that is dynamic and must be freed. To allow reference-counting
-  //! it also contains a pointer to `refCount`, which was allocated together with `dataPtr`. Since `refCount` is part
-  //! of `dataPtr` it's freed with it.
+  //! The pixel converter contains data in `data_ptr` that is dynamic and must be freed. To allow reference-counting
+  //! it also contains a pointer to `ref_count`, which was allocated together with `data_ptr`. Since `ref_count` is part
+  //! of `data_ptr` it's freed with it.
   BL_PIXEL_CONVERTER_INTERNAL_FLAG_DYNAMIC_DATA = 0x80u
 };
 
-BL_HIDDEN extern const BLPixelConverterOptions blPixelConverterDefaultOptions;
+BL_HIDDEN extern const BLPixelConverterOptions bl_pixel_converter_default_options;
 
 //! Internal initialized that accepts already sanitized `di` and `si` info.
-BL_HIDDEN BLResult blPixelConverterInitInternal(
+BL_HIDDEN BLResult bl_pixel_converter_init_internal(
   BLPixelConverterCore* self,
-  const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags createFlags) noexcept;
+  const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags create_flags) noexcept;
 
 // Number of bytes used by the intermediate buffer. This number is adjustable, but it's not a good idea to increase
 // it so much as when it gets close to a page size the C++ compiler would have to generate stack probes so the stack
@@ -47,7 +47,7 @@ static constexpr uint32_t BL_PIXEL_CONVERTER_MULTISTEP_BUFFER_SIZE = 2048 + 1024
 
 // TODO: Implement multi-step converter.
 struct BLPixelConverterMultiStepContext {
-  size_t refCount;
+  size_t ref_count;
   BLPixelConverterCore first;
   BLPixelConverterCore second;
 };
@@ -55,23 +55,23 @@ struct BLPixelConverterMultiStepContext {
 //! Internal data mapped to `BLPixelConverter::data`.
 struct BLPixelConverterData {
   struct MultiStepData {
-    BLPixelConverterFunc convertFunc;
-    uint8_t internalFlags;
-    uint8_t dstBytesPerPixel;
-    uint8_t srcBytesPerPixel;
-    uint8_t intermediateBytesPerPixel;
-    uint32_t intermediatePixelCount;
+    BLPixelConverterFunc convert_func;
+    uint8_t internal_flags;
+    uint8_t dst_bytes_per_pixel;
+    uint8_t src_bytes_per_pixel;
+    uint8_t intermediate_bytes_per_pixel;
+    uint32_t intermediate_pixel_count;
 
     BLPixelConverterMultiStepContext* ctx;
-    size_t* refCount;
+    size_t* ref_count;
   };
 
   //! Data used to convert an indexed format to a non-indexed format.
   struct IndexedData {
-    BLPixelConverterFunc convertFunc;
-    uint8_t internalFlags;
+    BLPixelConverterFunc convert_func;
+    uint8_t internal_flags;
     uint8_t reserved[3];
-    uint32_t alphaMask;
+    uint32_t alpha_mask;
 
     struct DynamicData {
       union {
@@ -80,7 +80,7 @@ struct BLPixelConverterData {
         uint16_t* table16;
         uint32_t* table32;
       };
-      size_t* refCount;
+      size_t* ref_count;
     };
 
     union EmbeddedData {
@@ -99,59 +99,59 @@ struct BLPixelConverterData {
   //!
   //! Used by 'copy' and 'copy_or' converters.
   struct MemCopyData {
-    BLPixelConverterFunc convertFunc;
-    uint8_t internalFlags;
-    uint8_t bytesPerPixel;            // Only used by generic implementations.
-    uint8_t reserved[2];              // Alignment only.
-    uint32_t fillMask;                // Only used by copy-or implementations.
+    BLPixelConverterFunc convert_func;
+    uint8_t internal_flags;
+    uint8_t bytes_per_pixel;           // Only used by generic implementations.
+    uint8_t reserved[2];               // Alignment only.
+    uint32_t fill_mask;                // Only used by copy-or implementations.
   };
 
   //! A8 From ARGB32/PRGB32 data
   struct X8FromRgb32Data {
-    BLPixelConverterFunc convertFunc;
-    uint8_t internalFlags;
-    uint8_t bytesPerPixel;
-    uint8_t alphaShift;
+    BLPixelConverterFunc convert_func;
+    uint8_t internal_flags;
+    uint8_t bytes_per_pixel;
+    uint8_t alpha_shift;
     uint8_t reserved[2];
   };
 
   //! RGB32 from A8/L8 data.
   //!
   //! Can be used to convert both A8 to RGB32 or L8 (greyscale) to RGB32 - the
-  //! only thing needed is to specify proper `andMask` and `fillMask`.
+  //! only thing needed is to specify proper `and_mask` and `fill_mask`.
   struct Rgb32FromX8Data {
-    BLPixelConverterFunc convertFunc;
-    uint8_t internalFlags;
-    uint8_t reserved[3];              // Alignment only.
-    uint32_t fillMask;                // Destination fill-mask (to fill alpha/undefined bits).
-    uint32_t zeroMask;                // Destination zero-mask (to clear RGB channels).
+    BLPixelConverterFunc convert_func;
+    uint8_t internal_flags;
+    uint8_t reserved[3];               // Alignment only.
+    uint32_t fill_mask;                // Destination fill-mask (to fill alpha/undefined bits).
+    uint32_t zero_mask;                // Destination zero-mask (to clear RGB channels).
   };
 
   //! Data used by byte shuffles.
   struct ShufbData {
-    BLPixelConverterFunc convertFunc;
-    uint8_t internalFlags;
+    BLPixelConverterFunc convert_func;
+    uint8_t internal_flags;
     uint8_t reserved[3];
-    uint32_t fillMask;
-    uint32_t shufbPredicate[4];
+    uint32_t fill_mask;
+    uint32_t shufb_predicate[4];
   };
 
   struct PremultiplyData {
-    BLPixelConverterFunc convertFunc;
-    uint8_t internalFlags;
-    uint8_t alphaShift;               // Not always used.
-    uint8_t reserved[2];              // Alignment only.
-    uint32_t fillMask;                // Destination fill-mask (to fill alpha/undefined bits).
-    uint32_t shufbPredicate[4];       // Shuffle predicate for implementations using PSHUFB.
+    BLPixelConverterFunc convert_func;
+    uint8_t internal_flags;
+    uint8_t alpha_shift;               // Not always used.
+    uint8_t reserved[2];               // Alignment only.
+    uint32_t fill_mask;                // Destination fill-mask (to fill alpha/undefined bits).
+    uint32_t shufb_predicate[4];       // Shuffle predicate for implementations using PSHUFB.
   };
 
   //! Data used to convert ANY pixel format to native XRGB/PRGB.
   struct NativeFromForeign {
-    BLPixelConverterFunc convertFunc;
-    uint8_t internalFlags;
+    BLPixelConverterFunc convert_func;
+    uint8_t internal_flags;
     uint8_t reserved[3];
-    uint32_t fillMask;
-    uint32_t shufbPredicate[4];
+    uint32_t fill_mask;
+    uint32_t shufb_predicate[4];
 
     uint8_t shifts[4];
     uint32_t masks[4];
@@ -159,11 +159,11 @@ struct BLPixelConverterData {
   };
 
   struct ForeignFromNative {
-    BLPixelConverterFunc convertFunc;
-    uint8_t internalFlags;
+    BLPixelConverterFunc convert_func;
+    uint8_t internal_flags;
     uint8_t reserved[3];
-    uint32_t fillMask;
-    uint32_t shufbPredicate[4];
+    uint32_t fill_mask;
+    uint32_t shufb_predicate[4];
 
     uint8_t shifts[4];
     uint32_t masks[4];
@@ -171,37 +171,37 @@ struct BLPixelConverterData {
 
   union {
     struct {
-      BLPixelConverterFunc convertFunc;
-      uint8_t internalFlags;
+      BLPixelConverterFunc convert_func;
+      uint8_t internal_flags;
       uint8_t reserved[7];
 
-      void* dataPtr;
-      size_t* refCount;
+      void* data_ptr;
+      size_t* ref_count;
     };
 
-    MultiStepData multiStepData;
-    IndexedData indexedData;
-    MemCopyData memCopyData;
+    MultiStepData multi_step_data;
+    IndexedData indexed_data;
+    MemCopyData mem_copy_data;
     X8FromRgb32Data x8FromRgb32Data;
     Rgb32FromX8Data rgb32FromX8Data;
-    ShufbData shufbData;
-    PremultiplyData premultiplyData;
-    NativeFromForeign nativeFromForeign;
-    ForeignFromNative foreignFromNative;
+    ShufbData shufb_data;
+    PremultiplyData premultiply_data;
+    NativeFromForeign native_from_foreign;
+    ForeignFromNative foreign_from_native;
   };
 };
 
 BL_STATIC_ASSERT(sizeof(BLPixelConverterData) <= sizeof(BLPixelConverterCore));
 
-static BL_INLINE BLPixelConverterData* blPixelConverterGetData(BLPixelConverterCore* self) noexcept {
+static BL_INLINE BLPixelConverterData* bl_pixel_converter_get_data(BLPixelConverterCore* self) noexcept {
   return reinterpret_cast<BLPixelConverterData*>(self->data);
 }
 
-static BL_INLINE const BLPixelConverterData* blPixelConverterGetData(const BLPixelConverterCore* self) noexcept {
+static BL_INLINE const BLPixelConverterData* bl_pixel_converter_get_data(const BLPixelConverterCore* self) noexcept {
   return reinterpret_cast<const BLPixelConverterData*>(self->data);
 }
 
-static BL_INLINE uint8_t* blPixelConverterFillGap(uint8_t* data, size_t size) noexcept {
+static BL_INLINE uint8_t* bl_pixel_converter_fill_gap(uint8_t* data, size_t size) noexcept {
   uint8_t* end = data + size;
   BL_NOUNROLL
   while (data != end)
@@ -215,8 +215,8 @@ static BL_INLINE uint8_t* blPixelConverterFillGap(uint8_t* data, size_t size) no
 #define BL_DECLARE_CONVERTER_BASE(NAME)                                       \
   BL_HIDDEN BLResult BL_CDECL NAME(                                           \
     const BLPixelConverterCore* self,                                         \
-    uint8_t* dstData, intptr_t dstStride,                                     \
-    const uint8_t* srcData, intptr_t srcStride,                               \
+    uint8_t* dst_data, intptr_t dst_stride,                                     \
+    const uint8_t* src_data, intptr_t src_stride,                               \
     uint32_t w, uint32_t h, const BLPixelConverterOptions* options) noexcept;
 
 #ifdef BL_BUILD_OPT_SSE2

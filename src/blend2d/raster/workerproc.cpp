@@ -21,46 +21,46 @@ namespace bl::RasterEngine {
 namespace WorkerProc {
 
 // TODO: [Rendering Context] HARDCODED.
-static const uint32_t fpScale = 256;
+static const uint32_t fp_scale = 256;
 
 // bl::RasterEngine::WorkerProc - ProcessJobs
 // ==========================================
 
-static BL_NOINLINE void processJobs(WorkData* workData, RenderBatch* batch) noexcept {
-  size_t jobCount = batch->jobCount();
+static BL_NOINLINE void process_jobs(WorkData* work_data, RenderBatch* batch) noexcept {
+  size_t job_count = batch->job_count();
 
-  if (!jobCount) {
-    workData->synchronization->noJobsToWaitFor();
+  if (!job_count) {
+    work_data->synchronization->no_jobs_to_wait_for();
     return;
   }
 
-  const RenderJobQueue* queue = batch->jobList().first();
+  const RenderJobQueue* queue = batch->job_list().first();
   BL_ASSERT(queue != nullptr);
 
-  size_t queueIndex = 0;
-  size_t queueEnd = queueIndex + queue->size();
+  size_t queue_index = 0;
+  size_t queue_end = queue_index + queue->size();
 
   for (;;) {
-    size_t jobIndex = batch->nextJobIndex();
-    if (jobIndex >= jobCount)
+    size_t job_index = batch->next_job_index();
+    if (job_index >= job_count)
       break;
 
-    while (jobIndex >= queueEnd) {
+    while (job_index >= queue_end) {
       queue = queue->next();
       BL_ASSERT(queue != nullptr);
 
-      queueIndex = queueEnd;
-      queueEnd = queueIndex + queue->size();
+      queue_index = queue_end;
+      queue_end = queue_index + queue->size();
     }
 
-    RenderJob* job = queue->at(jobIndex - queueIndex);
+    RenderJob* job = queue->at(job_index - queue_index);
     BL_ASSERT(job != nullptr);
 
-    JobProc::processJob(workData, job);
+    JobProc::process_job(work_data, job);
   }
 
-  workData->avoidCacheLineSharing();
-  workData->synchronization->waitForJobsToFinish();
+  work_data->avoid_cache_line_sharing();
+  work_data->synchronization->wait_for_jobs_to_finish();
 }
 
 // bl::RasterEngine::WorkerProc - ProcessBand
@@ -163,36 +163,36 @@ struct CommandMatcher {
 
 }
 
-static void processBand(CommandProcAsync::ProcData& procData, uint32_t currentBandId, uint32_t prevBandId, uint32_t nextBandId) noexcept {
+static void process_band(CommandProcAsync::ProcData& proc_data, uint32_t current_band_id, uint32_t prev_band_id, uint32_t next_band_id) noexcept {
   // Should not happen.
-  if (!procData.pendingCommandBitSetSize())
+  if (!proc_data.pending_command_bit_set_size())
     return;
 
   typedef PrivateBitWordOps BitOps;
 
-  RenderBatch* batch = procData.batch();
-  WorkData* workData = procData.workData();
+  RenderBatch* batch = proc_data.batch();
+  WorkData* work_data = proc_data.work_data();
 
-  // Initialize the `procData` with the current band.
-  procData.initBand(currentBandId, workData->bandHeight(), fpScale);
+  // Initialize the `proc_data` with the current band.
+  proc_data.init_band(current_band_id, work_data->band_height(), fp_scale);
 
-  BLBitWord* bitSetPtr = procData.pendingCommandBitSetData();
-  BLBitWord* bitSetEndMinus1 = procData.pendingCommandBitSetEnd() - 1;
-  BLBitWord pendingGlobalMask = procData.pendingCommandBitSetMask();
+  BLBitWord* bit_set_ptr = proc_data.pending_command_bit_set_data();
+  BLBitWord* bitSetEndMinus1 = proc_data.pending_command_bit_set_end() - 1;
+  BLBitWord pending_global_mask = proc_data.pending_command_bit_set_mask();
 
-  const RenderCommandQueue* commandQueue = batch->_commandList.first();
-  const RenderCommand* commandData = commandQueue->data();
-  const RenderCommand* commandDataEnd = commandQueue->end();
-  const uint8_t* commandQuantizedY0 = commandQueue->_quantizedY0;
+  const RenderCommandQueue* command_queue = batch->_command_list.first();
+  const RenderCommand* command_data = command_queue->data();
+  const RenderCommand* command_data_end = command_queue->end();
+  const uint8_t* commandQuantizedY0 = command_queue->_quantizedY0;
 
-  int32_t prevBandFy1 = int32_t(prevBandId + 1u) * int32_t(workData->bandHeightFixed()) - 1;
-  int32_t nextBandFy0 = int32_t(nextBandId     ) * int32_t(workData->bandHeightFixed());
+  int32_t prevBandFy1 = int32_t(prev_band_id + 1u) * int32_t(work_data->band_height_fixed()) - 1;
+  int32_t nextBandFy0 = int32_t(next_band_id     ) * int32_t(work_data->band_height_fixed());
 
-  if (currentBandId == prevBandId) {
+  if (current_band_id == prev_band_id) {
     prevBandFy1 = -1;
   }
 
-  uint32_t bandQy0 = uint8_t(procData.bandY0() >> workData->commandQuantizationShiftAA());
+  uint32_t bandQy0 = uint8_t(proc_data.bandY0() >> work_data->command_quantization_shift_aa());
 #if (BL_TARGET_ARCH_X86 || BL_TARGET_ARCH_ARM) && BL_SIMD_WIDTH_I
   CommandMatcher matcher(static_cast<uint8_t>(bandQy0));
 #endif
@@ -200,144 +200,144 @@ static void processBand(CommandProcAsync::ProcData& procData, uint32_t currentBa
   for (;;) {
 #ifdef __SANITIZE_ADDRESS__
     // We know it's uninitialized, that's why we use the mask, which is either all ones or all zeros.
-    BLBitWord pendingMask = !pendingGlobalMask ? *bitSetPtr : pendingGlobalMask;
+    BLBitWord pending_mask = !pending_global_mask ? *bit_set_ptr : pending_global_mask;
 #else
-    BLBitWord pendingMask = pendingGlobalMask | *bitSetPtr;
+    BLBitWord pending_mask = pending_global_mask | *bit_set_ptr;
 #endif
 
-    if (pendingMask) {
+    if (pending_mask) {
 #if (BL_TARGET_ARCH_X86 || BL_TARGET_ARCH_ARM) && BL_SIMD_WIDTH_I
-      BLBitWord processMask = pendingMask & matcher.match(commandQuantizedY0);
-      BitOps::BitIterator it(processMask);
+      BLBitWord process_mask = pending_mask & matcher.match(commandQuantizedY0);
+      BitOps::BitIterator it(process_mask);
 
-      while (it.hasNext()) {
-        uint32_t bitIndex = it.next();
-        const RenderCommand& command = commandData[bitIndex];
+      while (it.has_next()) {
+        uint32_t bit_index = it.next();
+        const RenderCommand& command = command_data[bit_index];
 
-        CommandProcAsync::CommandStatus status = CommandProcAsync::processCommand(procData, command, prevBandFy1, nextBandFy0);
-        pendingMask ^= BitOps::indexAsMask(bitIndex, status);
+        CommandProcAsync::CommandStatus status = CommandProcAsync::process_command(proc_data, command, prevBandFy1, nextBandFy0);
+        pending_mask ^= BitOps::index_as_mask(bit_index, status);
       }
 #else
-      BitOps::BitIterator it(pendingMask);
+      BitOps::BitIterator it(pending_mask);
 
-      while (it.hasNext()) {
-        uint32_t bitIndex = it.next();
-        if (bandQy0 >= commandQuantizedY0[bitIndex]) {
-          const RenderCommand& command = commandData[bitIndex];
-          CommandProcAsync::CommandStatus status = CommandProcAsync::processCommand(procData, command, prevBandFy1, nextBandFy0);
-          pendingMask ^= BitOps::indexAsMask(bitIndex, status);
+      while (it.has_next()) {
+        uint32_t bit_index = it.next();
+        if (bandQy0 >= commandQuantizedY0[bit_index]) {
+          const RenderCommand& command = command_data[bit_index];
+          CommandProcAsync::CommandStatus status = CommandProcAsync::process_command(proc_data, command, prevBandFy1, nextBandFy0);
+          pending_mask ^= BitOps::index_as_mask(bit_index, status);
         }
       }
 #endif
-      *bitSetPtr = pendingMask;
+      *bit_set_ptr = pending_mask;
     }
 
-    if (++bitSetPtr >= bitSetEndMinus1) {
-      pendingGlobalMask = 0;
-      if (bitSetPtr > bitSetEndMinus1)
+    if (++bit_set_ptr >= bitSetEndMinus1) {
+      pending_global_mask = 0;
+      if (bit_set_ptr > bitSetEndMinus1)
         break;
     }
 
-    commandData += IntOps::bitSizeOf<BLBitWord>();
-    commandQuantizedY0 += IntOps::bitSizeOf<BLBitWord>();
+    command_data += IntOps::bit_size_of<BLBitWord>();
+    commandQuantizedY0 += IntOps::bit_size_of<BLBitWord>();
 
-    if (commandData == commandDataEnd) {
-      commandQueue = commandQueue->next();
-      BL_ASSERT(commandQueue != nullptr);
+    if (command_data == command_data_end) {
+      command_queue = command_queue->next();
+      BL_ASSERT(command_queue != nullptr);
 
-      commandData = commandQueue->data();
-      commandDataEnd = commandQueue->end();
-      commandQuantizedY0 = commandQueue->_quantizedY0;
+      command_data = command_queue->data();
+      command_data_end = command_queue->end();
+      commandQuantizedY0 = command_queue->_quantizedY0;
     }
   }
 
-  procData.clearPendingCommandBitSetMask();
+  proc_data.clear_pending_command_bit_set_mask();
 }
 
 // bl::RasterEngine::WorkerProc - ProcessCommands
 // ==============================================
 
-static void processCommands(WorkData* workData, RenderBatch* batch) noexcept {
-  ArenaAllocator::StatePtr zoneState = workData->workZone.saveState();
-  CommandProcAsync::ProcData procData(workData, batch);
+static void process_commands(WorkData* work_data, RenderBatch* batch) noexcept {
+  ArenaAllocator::StatePtr zone_state = work_data->work_zone.save_state();
+  CommandProcAsync::ProcData proc_data(work_data, batch);
 
-  BLResult result = procData.initProcData();
+  BLResult result = proc_data.init_proc_data();
   if (result != BL_SUCCESS) {
-    workData->accumulateError(result);
+    work_data->accumulate_error(result);
     return;
   }
 
-  uint32_t workerCount = batch->workerCount();
-  uint32_t bandCount = batch->bandCount();
+  uint32_t worker_count = batch->worker_count();
+  uint32_t band_count = batch->band_count();
 
   // We can process several consecutive bands at once when there is enough of bands for all the threads.
   //
   // TODO: [Rendering Context] At the moment this feature is not used as it regressed bl_bench using 4+ threads.
-  uint32_t consecutiveBandCount = 1;
+  uint32_t consecutive_band_count = 1;
 
-  uint32_t bandId = workData->workerId() * consecutiveBandCount;
-  uint32_t consecutiveIndex = 0;
+  uint32_t band_id = work_data->worker_id() * consecutive_band_count;
+  uint32_t consecutive_index = 0;
 
-  uint32_t currentBandId = bandId + consecutiveIndex;
-  uint32_t prevBandId = currentBandId;
+  uint32_t current_band_id = band_id + consecutive_index;
+  uint32_t prev_band_id = current_band_id;
 
-  while (currentBandId < bandCount) {
-    // Calculate the next band so we can pass it to `processBand()`.
-    if (++consecutiveIndex == consecutiveBandCount) {
-      consecutiveIndex = 0;
-      bandId += workerCount * consecutiveBandCount;
+  while (current_band_id < band_count) {
+    // Calculate the next band so we can pass it to `process_band()`.
+    if (++consecutive_index == consecutive_band_count) {
+      consecutive_index = 0;
+      band_id += worker_count * consecutive_band_count;
     }
 
-    uint32_t nextBandId = bandId + consecutiveIndex;
-    processBand(procData, currentBandId, prevBandId, nextBandId);
+    uint32_t next_band_id = band_id + consecutive_index;
+    process_band(proc_data, current_band_id, prev_band_id, next_band_id);
 
-    prevBandId = currentBandId;
-    currentBandId = nextBandId;
+    prev_band_id = current_band_id;
+    current_band_id = next_band_id;
   }
 
-  workData->workZone.restoreState(zoneState);
+  work_data->work_zone.restore_state(zone_state);
 }
 
 // bl::RasterEngine::WorkerProc - Finished
 // =======================================
 
-static void finished(WorkData* workData, RenderBatch* batch) noexcept {
-  workData->resetBatch();
+static void finished(WorkData* work_data, RenderBatch* batch) noexcept {
+  work_data->reset_batch();
 
-  if (workData->isSync())
+  if (work_data->is_sync())
     return;
 
-  uint32_t accumulatedErrorFlags = workData->accumulatedErrorFlags();
-  if (!accumulatedErrorFlags)
+  uint32_t accumulated_error_flags = work_data->accumulated_error_flags();
+  if (!accumulated_error_flags)
     return;
 
-  batch->accumulateErrorFlags(accumulatedErrorFlags);
-  workData->cleanAccumulatedErrorFlags();
+  batch->accumulate_error_flags(accumulated_error_flags);
+  work_data->clean_accumulated_error_flags();
 }
 
 // bl::RasterEngine::WorkerProc - ProcessWorkData
 // ==============================================
 
 // Can be also called by the rendering context from user thread.
-void processWorkData(WorkData* workData, RenderBatch* batch) noexcept {
+void process_work_data(WorkData* work_data, RenderBatch* batch) noexcept {
   // NOTE: The zone must be cleared when the worker thread starts processing jobs and commands. The reason is that
   // once we finish job processing other threads can still use data produced by such job, so even when we are done
   // we cannot really clear the allocator, we must wait until all threads are done with the current batch, and that
   // is basically only guaranteed when we enter the proc again (or by the rendering context once it finishes).
-  if (!workData->isSync())
-    workData->startOver();
+  if (!work_data->is_sync())
+    work_data->start_over();
 
   // Fix the alignment of the arena allocator in case it's currently not aligned - this prevents possible sharing of
   // a cache line that was used for something that could be used by all worker threads with a possible allocation
   // that is only intended to be used by the worker - for a memory region that the worker can write to frequently
   // (like active edges during rasterization).
-  workData->avoidCacheLineSharing();
+  work_data->avoid_cache_line_sharing();
 
   // Pass 1 - Process jobs.
   //
   // Once the thread acquires a job to process no other thread can have that job. Jobs can be processed in any order,
   // however, we just use atomics to increment the job counter and each thread acquires the next in the queue.
-  processJobs(workData, batch);
+  process_jobs(work_data, batch);
 
   // Pass 2 - Process commands.
   //
@@ -345,24 +345,24 @@ void processWorkData(WorkData* workData, RenderBatch* batch) noexcept {
   // process all commands in a band and then move to the next available band. This ensures that even when there is
   // something more complicated in one band than in all other bands the distribution of threads should be fair as
   // other threads won't wait for a particular band to be rendered.
-  processCommands(workData, batch);
+  process_commands(work_data, batch);
 
   // Propagates accumulated error flags into the batch.
-  finished(workData, batch);
+  finished(work_data, batch);
 }
 
 // bl::RasterEngine::WorkerProc - WorkerThreadEntry
 // ================================================
 
-void workerThreadEntry(BLThread* thread, void* data) noexcept {
-  blUnused(thread);
+void worker_thread_entry(BLThread* thread, void* data) noexcept {
+  bl_unused(thread);
 
-  WorkData* workData = static_cast<WorkData*>(data);
-  WorkerSynchronization* synchronization = workData->synchronization;
+  WorkData* work_data = static_cast<WorkData*>(data);
+  WorkerSynchronization* synchronization = work_data->synchronization;
 
-  synchronization->threadStarted();
-  processWorkData(workData, workData->acquireBatch());
-  synchronization->threadDone();
+  synchronization->thread_started();
+  process_work_data(work_data, work_data->acquire_batch());
+  synchronization->thread_done();
 }
 
 } // {WorkerProc}

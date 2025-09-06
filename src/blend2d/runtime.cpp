@@ -24,12 +24,12 @@
 // BLRuntime - Runtime Context
 // ===========================
 
-BLRuntimeContext blRuntimeContext;
+BLRuntimeContext bl_runtime_context;
 
 // BLRuntime - Build Information
 // =============================
 
-static const BLRuntimeBuildInfo blRuntimeBuildInfo = {
+static const BLRuntimeBuildInfo bl_runtime_build_info = {
   // Blend2D major version.
   (BL_VERSION >> 16),
   // Blend2D minor version.
@@ -125,84 +125,84 @@ static const BLRuntimeBuildInfo blRuntimeBuildInfo = {
 // ==============================
 
 #ifndef BL_BUILD_NO_JIT
-static BL_INLINE uint32_t blRuntimeDetectCpuFeatures(const asmjit::CpuInfo& asmCpuInfo) noexcept {
+static BL_INLINE uint32_t bl_runtime_detect_cpu_features(const asmjit::CpuInfo& asm_cpu_info) noexcept {
   uint32_t features = 0;
 
 #if BL_TARGET_ARCH_X86
-  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE2  )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE2;
-  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE3  )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE3;
-  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSSE3 )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSSE3;
-  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE4_1)) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_1;
+  if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kSSE2  )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE2;
+  if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kSSE3  )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE3;
+  if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kSSSE3 )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSSE3;
+  if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kSSE4_1)) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_1;
 
-  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE4_2) &&
-      asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kPCLMULQDQ)) {
+  if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kSSE4_2) &&
+      asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kPCLMULQDQ)) {
     features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_2;
 
-    if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX)) {
+    if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX)) {
       features |= BL_RUNTIME_CPU_FEATURE_X86_AVX;
 
-      if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX2) &&
-          asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kBMI) &&
-          asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kBMI2) &&
-          asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kPOPCNT)) {
+      if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX2) &&
+          asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kBMI) &&
+          asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kBMI2) &&
+          asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kPOPCNT)) {
         features |= BL_RUNTIME_CPU_FEATURE_X86_AVX2;
 
-        if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_F) &&
-            asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_BW) &&
-            asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_CD) &&
-            asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_DQ) &&
-            asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_VL)) {
+        if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_F) &&
+            asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_BW) &&
+            asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_CD) &&
+            asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_DQ) &&
+            asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_VL)) {
           features |= BL_RUNTIME_CPU_FEATURE_X86_AVX512;
         }
       }
     }
   }
 #elif BL_TARGET_ARCH_ARM
-  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::ARM::kCRC32)) features |= BL_RUNTIME_CPU_FEATURE_ARM_CRC32;
-  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::ARM::kPMULL)) features |= BL_RUNTIME_CPU_FEATURE_ARM_PMULL;
+  if (asm_cpu_info.has_feature(asmjit::CpuFeatures::ARM::kCRC32)) features |= BL_RUNTIME_CPU_FEATURE_ARM_CRC32;
+  if (asm_cpu_info.has_feature(asmjit::CpuFeatures::ARM::kPMULL)) features |= BL_RUNTIME_CPU_FEATURE_ARM_PMULL;
 #else
-  blUnused(asmCpuInfo);
+  bl_unused(asm_cpu_info);
 #endif
 
   return features;
 }
 #endif
 
-static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeContext* rt) noexcept {
-  BLRuntimeSystemInfo& info = rt->systemInfo;
+static BL_INLINE void bl_runtime_init_system_info(BLRuntimeContext* rt) noexcept {
+  BLRuntimeSystemInfo& info = rt->system_info;
 
-  info.cpuArch = BL_TARGET_ARCH_X86  ? BL_RUNTIME_CPU_ARCH_X86  :
+  info.cpu_arch = BL_TARGET_ARCH_X86  ? BL_RUNTIME_CPU_ARCH_X86  :
                  BL_TARGET_ARCH_ARM  ? BL_RUNTIME_CPU_ARCH_ARM  :
                  BL_TARGET_ARCH_MIPS ? BL_RUNTIME_CPU_ARCH_MIPS : BL_RUNTIME_CPU_ARCH_UNKNOWN;
 
 #ifndef BL_BUILD_NO_JIT
-  const asmjit::CpuInfo& asmCpuInfo = asmjit::CpuInfo::host();
-  info.cpuFeatures = blRuntimeDetectCpuFeatures(asmCpuInfo);
-  info.coreCount = asmCpuInfo.hwThreadCount();
-  info.threadCount = asmCpuInfo.hwThreadCount();
-  memcpy(info.cpuVendor, asmCpuInfo.vendor(), blMin(sizeof(info.cpuVendor), sizeof(asmCpuInfo._vendor)));
-  memcpy(info.cpuBrand, asmCpuInfo.brand(), blMin(sizeof(info.cpuBrand), sizeof(asmCpuInfo._brand)));
+  const asmjit::CpuInfo& asm_cpu_info = asmjit::CpuInfo::host();
+  info.cpu_features = bl_runtime_detect_cpu_features(asm_cpu_info);
+  info.core_count = asm_cpu_info.hw_thread_count();
+  info.thread_count = asm_cpu_info.hw_thread_count();
+  memcpy(info.cpu_vendor, asm_cpu_info.vendor(), bl_min(sizeof(info.cpu_vendor), sizeof(asm_cpu_info._vendor)));
+  memcpy(info.cpu_brand, asm_cpu_info.brand(), bl_min(sizeof(info.cpu_brand), sizeof(asm_cpu_info._brand)));
 #endif
 
 #ifdef _WIN32
   SYSTEM_INFO si;
   GetSystemInfo(&si);
-  info.threadStackSize = si.dwAllocationGranularity;
-  info.allocationGranularity = si.dwAllocationGranularity;
+  info.thread_stack_size = si.dwAllocationGranularity;
+  info.allocation_granularity = si.dwAllocationGranularity;
 #else
 # if defined(_SC_PAGESIZE)
-  info.allocationGranularity = uint32_t(sysconf(_SC_PAGESIZE));
+  info.allocation_granularity = uint32_t(sysconf(_SC_PAGESIZE));
 # else
-  info.allocationGranularity = uint32_t(getpagesize());
+  info.allocation_granularity = uint32_t(getpagesize());
 # endif
 
 # if defined(PTHREAD_STACK_MIN)
-  info.threadStackSize = uint32_t(PTHREAD_STACK_MIN);
+  info.thread_stack_size = uint32_t(PTHREAD_STACK_MIN);
 # elif defined(_SC_THREAD_STACK_MIN)
-  info.threadStackSize = uint32_t(sysconf(_SC_THREAD_STACK_MIN));
+  info.thread_stack_size = uint32_t(sysconf(_SC_THREAD_STACK_MIN));
 # else
-# pragma message("Missing 'BLRuntimeSystemInfo::minStackSize' implementation")
-  info.threadStackSize = blMax<uint32_t>(info.allocationGranularity, 65536u);
+# pragma message("Missing 'BLRuntimeSystemInfo::min_stack_size' implementation")
+  info.thread_stack_size = bl_max<uint32_t>(info.allocation_granularity, 65536u);
 # endif
 #endif
 
@@ -218,37 +218,37 @@ static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeContext* rt) noexcept {
   constexpr uint32_t kMinStackKiB = 128;
 #endif
 
-  info.threadStackSize = bl::IntOps::alignUp(blMax<uint32_t>(info.threadStackSize, kMinStackKiB * 1024u), info.allocationGranularity);
+  info.thread_stack_size = bl::IntOps::align_up(bl_max<uint32_t>(info.thread_stack_size, kMinStackKiB * 1024u), info.allocation_granularity);
 }
 
-static BL_INLINE void blRuntimeInitOptimizationInfo(BLRuntimeContext* rt) noexcept {
+static BL_INLINE void bl_runtime_init_optimization_info(BLRuntimeContext* rt) noexcept {
   // Maybe unused.
-  blUnused(rt);
+  bl_unused(rt);
 
 #ifndef BL_BUILD_NO_JIT
 
 #if BL_TARGET_ARCH_X86
-  BLRuntimeOptimizationInfo& info = rt->optimizationInfo;
-  const asmjit::CpuInfo& asmCpuInfo = asmjit::CpuInfo::host();
+  BLRuntimeOptimizationInfo& info = rt->optimization_info;
+  const asmjit::CpuInfo& asm_cpu_info = asmjit::CpuInfo::host();
 
-  if (asmCpuInfo.isVendor("AMD")) {
-    info.cpuVendor = BL_RUNTIME_CPU_VENDOR_AMD;
-    info.cpuHints |= BL_RUNTIME_CPU_HINT_FAST_PSHUFB;
-    info.cpuHints |= BL_RUNTIME_CPU_HINT_FAST_PMULLD;
+  if (asm_cpu_info.is_vendor("AMD")) {
+    info.cpu_vendor = BL_RUNTIME_CPU_VENDOR_AMD;
+    info.cpu_hints |= BL_RUNTIME_CPU_HINT_FAST_PSHUFB;
+    info.cpu_hints |= BL_RUNTIME_CPU_HINT_FAST_PMULLD;
   }
-  else if (asmCpuInfo.isVendor("INTEL")) {
-    info.cpuVendor = BL_RUNTIME_CPU_VENDOR_INTEL;
-    info.cpuHints |= BL_RUNTIME_CPU_HINT_FAST_PSHUFB;
+  else if (asm_cpu_info.is_vendor("INTEL")) {
+    info.cpu_vendor = BL_RUNTIME_CPU_VENDOR_INTEL;
+    info.cpu_hints |= BL_RUNTIME_CPU_HINT_FAST_PSHUFB;
   }
-  else if (asmCpuInfo.isVendor("VIA")) {
-    info.cpuVendor = BL_RUNTIME_CPU_VENDOR_VIA;
-    info.cpuHints |= BL_RUNTIME_CPU_HINT_FAST_PSHUFB;
-    info.cpuHints |= BL_RUNTIME_CPU_HINT_FAST_PMULLD;
+  else if (asm_cpu_info.is_vendor("VIA")) {
+    info.cpu_vendor = BL_RUNTIME_CPU_VENDOR_VIA;
+    info.cpu_hints |= BL_RUNTIME_CPU_HINT_FAST_PSHUFB;
+    info.cpu_hints |= BL_RUNTIME_CPU_HINT_FAST_PMULLD;
   }
   else {
     // Assume all other CPUs are okay.
-    info.cpuHints |= BL_RUNTIME_CPU_HINT_FAST_PSHUFB;
-    info.cpuHints |= BL_RUNTIME_CPU_HINT_FAST_PMULLD;
+    info.cpu_hints |= BL_RUNTIME_CPU_HINT_FAST_PSHUFB;
+    info.cpu_hints |= BL_RUNTIME_CPU_HINT_FAST_PMULLD;
   }
 #endif
 
@@ -258,117 +258,117 @@ static BL_INLINE void blRuntimeInitOptimizationInfo(BLRuntimeContext* rt) noexce
 // BLRuntime - API - Initialization & Shutdown
 // ===========================================
 
-BL_API_IMPL BLResult blRuntimeInit() noexcept {
-  BLRuntimeContext* rt = &blRuntimeContext;
-  if (blAtomicFetchAddStrong(&rt->refCount) != 0)
+BL_API_IMPL BLResult bl_runtime_init() noexcept {
+  BLRuntimeContext* rt = &bl_runtime_context;
+  if (bl_atomic_fetch_add_strong(&rt->ref_count) != 0)
     return BL_SUCCESS;
 
   // Initializes system information - we need this first so we can properly initialize everything that relies
   // on system or CPU features (futex, thread-pool, SIMD optimized operations, etc...).
-  blRuntimeInitSystemInfo(rt);
+  bl_runtime_init_system_info(rt);
 
   // Initialize optimization information.
-  blRuntimeInitOptimizationInfo(rt);
+  bl_runtime_init_optimization_info(rt);
 
   // Call "Runtime Registration" handlers - These would automatically install shutdown handlers when necessary.
-  blFuxexRtInit(rt);
-  blThreadRtInit(rt);
-  blThreadPoolRtInit(rt);
-  blZeroAllocatorRtInit(rt);
+  bl_fuxex_rt_init(rt);
+  bl_thread_rt_init(rt);
+  bl_thread_pool_rt_init(rt);
+  bl_zero_allocator_rt_init(rt);
 
-  blCompressionRtInit(rt);
-  blPixelOpsRtInit(rt);
-  blBitArrayRtInit(rt);
-  blBitSetRtInit(rt);
-  blArrayRtInit(rt);
-  blStringRtInit(rt);
-  blTransformRtInit(rt);
-  blPath2DRtInit(rt);
-  blImageRtInit(rt);
-  blImageCodecRtInit(rt);
-  blImageDecoderRtInit(rt);
-  blImageEncoderRtInit(rt);
-  blImageScaleRtInit(rt);
-  blPatternRtInit(rt);
-  blGradientRtInit(rt);
-  blFontFeatureSettingsRtInit(rt);
-  blFontVariationSettingsRtInit(rt);
-  blFontDataRtInit(rt);
-  blFontFaceRtInit(rt);
-  blOpenTypeRtInit(rt);
-  blFontRtInit(rt);
-  blFontManagerRtInit(rt);
-  blStaticPipelineRtInit(rt);
+  bl_compression_rt_init(rt);
+  bl_pixel_ops_rt_init(rt);
+  bl_bit_array_rt_init(rt);
+  bl_bit_set_rt_init(rt);
+  bl_array_rt_init(rt);
+  bl_string_rt_init(rt);
+  bl_transform_rt_init(rt);
+  bl_path_rt_init(rt);
+  bl_image_rt_init(rt);
+  bl_image_codec_rt_init(rt);
+  bl_image_decoder_rt_init(rt);
+  bl_image_encoder_rt_init(rt);
+  bl_image_scale_rt_init(rt);
+  bl_pattern_rt_init(rt);
+  bl_gradient_rt_init(rt);
+  bl_font_feature_settings_rt_init(rt);
+  bl_font_variation_settings_rt_init(rt);
+  bl_font_data_rt_init(rt);
+  bl_font_face_rt_init(rt);
+  bl_open_type_rt_init(rt);
+  bl_font_rt_init(rt);
+  bl_font_manager_rt_init(rt);
+  bl_static_pipeline_rt_init(rt);
 
 #if !defined(BL_BUILD_NO_JIT)
-  blDynamicPipelineRtInit(rt);
+  bl_dynamic_pipeline_rt_init(rt);
 #endif
 
-  blContextRtInit(rt);
-  blRegisterBuiltInCodecs(rt);
+  bl_context_rt_init(rt);
+  bl_register_built_in_codecs(rt);
 
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blRuntimeShutdown() noexcept {
-  BLRuntimeContext* rt = &blRuntimeContext;
-  if (blAtomicFetchSubStrong(&rt->refCount) != 1)
+BL_API_IMPL BLResult bl_runtime_shutdown() noexcept {
+  BLRuntimeContext* rt = &bl_runtime_context;
+  if (bl_atomic_fetch_sub_strong(&rt->ref_count) != 1)
     return BL_SUCCESS;
 
-  rt->shutdownHandlers.callInReverseOrder(rt);
-  rt->shutdownHandlers.reset();
-  rt->cleanupHandlers.reset();
-  rt->resourceInfoHandlers.reset();
+  rt->shutdown_handlers.call_in_reverse_order(rt);
+  rt->shutdown_handlers.reset();
+  rt->cleanup_handlers.reset();
+  rt->resource_info_handlers.reset();
 
   return BL_SUCCESS;
 }
 
-static BL_RUNTIME_INITIALIZER BLRuntimeInitializer blRuntimeAutoInit;
+static BL_RUNTIME_INITIALIZER BLRuntimeInitializer bl_runtime_auto_init;
 
 // BLRuntime - API - Cleanup
 // =========================
 
-BL_API_IMPL BLResult blRuntimeCleanup(BLRuntimeCleanupFlags cleanupFlags) noexcept {
-  BLRuntimeContext* rt = &blRuntimeContext;
-  rt->cleanupHandlers.call(rt, cleanupFlags);
+BL_API_IMPL BLResult bl_runtime_cleanup(BLRuntimeCleanupFlags cleanup_flags) noexcept {
+  BLRuntimeContext* rt = &bl_runtime_context;
+  rt->cleanup_handlers.call(rt, cleanup_flags);
   return BL_SUCCESS;
 }
 
 // BLRuntime - API - Query Info
 // ============================
 
-BL_API_IMPL BLResult blRuntimeQueryInfo(BLRuntimeInfoType infoType, void* infoOut) noexcept {
-  BLRuntimeContext* rt = &blRuntimeContext;
+BL_API_IMPL BLResult bl_runtime_query_info(BLRuntimeInfoType info_type, void* info_out) noexcept {
+  BLRuntimeContext* rt = &bl_runtime_context;
 
-  switch (infoType) {
+  switch (info_type) {
     case BL_RUNTIME_INFO_TYPE_BUILD: {
-      BLRuntimeBuildInfo* buildInfo = static_cast<BLRuntimeBuildInfo*>(infoOut);
-      memcpy(buildInfo, &blRuntimeBuildInfo, sizeof(BLRuntimeBuildInfo));
+      BLRuntimeBuildInfo* build_info = static_cast<BLRuntimeBuildInfo*>(info_out);
+      memcpy(build_info, &bl_runtime_build_info, sizeof(BLRuntimeBuildInfo));
       return BL_SUCCESS;
     }
 
     case BL_RUNTIME_INFO_TYPE_SYSTEM: {
-      BLRuntimeSystemInfo* systemInfo = static_cast<BLRuntimeSystemInfo*>(infoOut);
-      memcpy(systemInfo, &rt->systemInfo, sizeof(BLRuntimeSystemInfo));
+      BLRuntimeSystemInfo* system_info = static_cast<BLRuntimeSystemInfo*>(info_out);
+      memcpy(system_info, &rt->system_info, sizeof(BLRuntimeSystemInfo));
       return BL_SUCCESS;
     }
 
     case BL_RUNTIME_INFO_TYPE_RESOURCE: {
-      BLRuntimeResourceInfo* resourceInfo = static_cast<BLRuntimeResourceInfo*>(infoOut);
-      resourceInfo->reset();
-      rt->resourceInfoHandlers.call(rt, resourceInfo);
+      BLRuntimeResourceInfo* resource_info = static_cast<BLRuntimeResourceInfo*>(info_out);
+      resource_info->reset();
+      rt->resource_info_handlers.call(rt, resource_info);
       return BL_SUCCESS;
     }
 
     default:
-      return blTraceError(BL_ERROR_INVALID_VALUE);
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
   }
 }
 
 // BLRuntime - API - Message
 // =========================
 
-BL_API_IMPL BLResult blRuntimeMessageOut(const char* msg) noexcept {
+BL_API_IMPL BLResult bl_runtime_message_out(const char* msg) noexcept {
 #if defined(_WIN32)
   // Support both Console and GUI applications on Windows.
   OutputDebugStringA(msg);
@@ -378,35 +378,35 @@ BL_API_IMPL BLResult blRuntimeMessageOut(const char* msg) noexcept {
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blRuntimeMessageFmt(const char* fmt, ...) noexcept {
+BL_API_IMPL BLResult bl_runtime_message_fmt(const char* fmt, ...) noexcept {
   va_list ap;
   va_start(ap, fmt);
-  BLResult result = blRuntimeMessageVFmt(fmt, ap);
+  BLResult result = bl_runtime_message_vfmt(fmt, ap);
   va_end(ap);
 
   return result;
 }
 
-BL_API_IMPL BLResult blRuntimeMessageVFmt(const char* fmt, va_list ap) noexcept {
+BL_API_IMPL BLResult bl_runtime_message_vfmt(const char* fmt, va_list ap) noexcept {
   char buf[1024];
   vsnprintf(buf, BL_ARRAY_SIZE(buf), fmt, ap);
-  return blRuntimeMessageOut(buf);
+  return bl_runtime_message_out(buf);
 }
 
 // BLRuntime - API - Failure
 // =========================
 
-void blRuntimeFailure(const char* fmt, ...) noexcept {
+void bl_runtime_failure(const char* fmt, ...) noexcept {
   va_list ap;
   va_start(ap, fmt);
-  blRuntimeMessageVFmt(fmt, ap);
+  bl_runtime_message_vfmt(fmt, ap);
   va_end(ap);
 
   abort();
 }
 
-BL_API_IMPL void blRuntimeAssertionFailure(const char* file, int line, const char* msg) noexcept {
-  blRuntimeMessageFmt("[Blend2D] ASSERTION FAILURE: '%s' at '%s' [line %d]\n", msg, file, line);
+BL_API_IMPL void bl_runtime_assertion_failure(const char* file, int line, const char* msg) noexcept {
+  bl_runtime_message_fmt("[Blend2D] ASSERTION FAILURE: '%s' at '%s' [line %d]\n", msg, file, line);
   abort();
 }
 
@@ -420,7 +420,7 @@ BL_API_IMPL void blRuntimeAssertionFailure(const char* file, int line, const cha
   #define ERROR_DISK_QUOTA_EXCEEDED 0x0000050F
 #endif
 
-BL_API_IMPL BLResult blResultFromWinError(uint32_t e) noexcept {
+BL_API_IMPL BLResult bl_result_from_win_error(uint32_t e) noexcept {
   switch (e) {
     case ERROR_SUCCESS                : return BL_SUCCESS;                       // 0x00000000
     case ERROR_INVALID_FUNCTION       : return BL_ERROR_NOT_PERMITTED;           // 0x00000001
@@ -499,7 +499,7 @@ BL_API_IMPL BLResult blResultFromWinError(uint32_t e) noexcept {
 
 #else
 
-BL_API_IMPL BLResult blResultFromPosixError(int e) noexcept {
+BL_API_IMPL BLResult bl_result_from_posix_error(int e) noexcept {
   #define MAP(C_ERROR, BL_ERROR) case C_ERROR: return BL_ERROR
 
   switch (e) {

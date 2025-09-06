@@ -26,12 +26,12 @@ struct KernTable {
 
   struct WinTableHeader {
     UInt16 version;
-    UInt16 tableCount;
+    UInt16 table_count;
   };
 
   struct MacTableHeader {
     F16x16 version;
-    UInt32 tableCount;
+    UInt32 table_count;
   };
 
   struct WinGroupHeader {
@@ -60,7 +60,7 @@ struct KernTable {
     UInt32 length;
     UInt8 coverage;
     UInt8 format;
-    UInt16 tupleIndex;
+    UInt16 tuple_index;
   };
 
   struct Pair {
@@ -75,15 +75,15 @@ struct KernTable {
   };
 
   struct Format0 {
-    UInt16 pairCount;
-    UInt16 searchRange;
-    UInt16 entrySelector;
-    UInt16 rangeShift;
+    UInt16 pair_count;
+    UInt16 search_range;
+    UInt16 entry_selector;
+    UInt16 range_shift;
     /*
-    Pair pairArray[pairCount];
+    Pair pair_array[pair_count];
     */
 
-    BL_INLINE const Pair* pairArray() const noexcept { return PtrOps::offset<const Pair>(this, 8); }
+    BL_INLINE const Pair* pair_array() const noexcept { return PtrOps::offset<const Pair>(this, 8); }
   };
 
   struct Format1 {
@@ -94,44 +94,44 @@ struct KernTable {
     };
 
     struct StateHeader {
-      UInt16 stateSize;
-      Offset16 classTable;
-      Offset16 stateArray;
-      Offset16 entryTable;
+      UInt16 state_size;
+      Offset16 class_table;
+      Offset16 state_array;
+      Offset16 entry_table;
     };
 
-    StateHeader stateHeader;
-    Offset16 valueTable;
+    StateHeader state_header;
+    Offset16 value_table;
   };
 
   struct Format2 {
     struct ClassTable {
-      UInt16 firstGlyph;
-      UInt16 glyphCount;
+      UInt16 first_glyph;
+      UInt16 glyph_count;
       /*
-      Offset16 offsetArray[glyphCount];
+      Offset16 offset_array[glyph_count];
       */
 
-      BL_INLINE const Offset16* offsetArray() const noexcept { return PtrOps::offset<const Offset16>(this, 4); }
+      BL_INLINE const Offset16* offset_array() const noexcept { return PtrOps::offset<const Offset16>(this, 4); }
     };
 
-    UInt16 rowWidth;
-    Offset16 leftClassTable;
-    Offset16 rightClassTable;
-    Offset16 kerningArray;
+    UInt16 row_width;
+    Offset16 left_class_table;
+    Offset16 right_class_table;
+    Offset16 kerning_array;
   };
 
   struct Format3 {
-    UInt16 glyphCount;
-    UInt8 kernValueCount;
-    UInt8 leftClassCount;
-    UInt8 rightClassCount;
+    UInt16 glyph_count;
+    UInt8 kern_value_count;
+    UInt8 left_class_count;
+    UInt8 right_class_count;
     UInt8 flags;
     /*
-    FWord kernValue[kernValueCount];
-    UInt8 leftClass[glyphCount];
-    UInt8 rightClass[glyphCount];
-    UInt8 kernIndex[leftClassCount * rightClassCount];
+    FWord kern_value[kern_value_count];
+    UInt8 left_class[glyph_count];
+    UInt8 right_class[glyph_count];
+    UInt8 kern_index[left_class_count * right_class_count];
     */
   };
 
@@ -151,33 +151,33 @@ struct KernGroup {
     kFlagsMask       = 0x0Fu
   };
 
-  size_t packedData;
+  size_t packed_data;
 
   union {
-    uintptr_t dataOffset;
-    void* dataPtr;
+    uintptr_t data_offset;
+    void* data_ptr;
   };
 
-  BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (packedData & flag) != 0u; }
-  BL_INLINE bool isSynthesized() const noexcept { return hasFlag(kFlagSynthesized); }
-  BL_INLINE bool isMinimum() const noexcept { return hasFlag(kFlagMinimum); }
-  BL_INLINE bool isCrossStream() const noexcept { return hasFlag(kFlagCrossStream); }
-  BL_INLINE bool isOverride() const noexcept { return hasFlag(kFlagOverride); }
+  BL_INLINE bool has_flag(uint32_t flag) const noexcept { return (packed_data & flag) != 0u; }
+  BL_INLINE bool is_synthesized() const noexcept { return has_flag(kFlagSynthesized); }
+  BL_INLINE bool is_minimum() const noexcept { return has_flag(kFlagMinimum); }
+  BL_INLINE bool is_cross_stream() const noexcept { return has_flag(kFlagCrossStream); }
+  BL_INLINE bool is_override() const noexcept { return has_flag(kFlagOverride); }
 
-  BL_INLINE uint32_t format() const noexcept { return uint32_t((packedData >> 4u) & 3u); }
-  BL_INLINE uint32_t flags() const noexcept { return uint32_t(packedData & 0xFu); }
-  BL_INLINE size_t dataSize() const noexcept { return packedData >> 6u; }
+  BL_INLINE uint32_t format() const noexcept { return uint32_t((packed_data >> 4u) & 3u); }
+  BL_INLINE uint32_t flags() const noexcept { return uint32_t(packed_data & 0xFu); }
+  BL_INLINE size_t data_size() const noexcept { return packed_data >> 6u; }
 
-  BL_INLINE const void* calcDataPtr(const void* basePtr) const noexcept {
-    return isSynthesized() ? dataPtr : static_cast<const void*>(static_cast<const uint8_t*>(basePtr) + dataOffset);
+  BL_INLINE const void* calc_data_ptr(const void* base_ptr) const noexcept {
+    return is_synthesized() ? data_ptr : static_cast<const void*>(static_cast<const uint8_t*>(base_ptr) + data_offset);
   }
 
-  static BL_INLINE KernGroup makeReferenced(uint32_t format, uint32_t flags, uintptr_t dataOffset, uint32_t dataSize) noexcept {
-    return KernGroup { flags | (format << 2) | (dataSize << 6), { dataOffset } };
+  static BL_INLINE KernGroup make_referenced(uint32_t format, uint32_t flags, uintptr_t data_offset, uint32_t data_size) noexcept {
+    return KernGroup { flags | (format << 2) | (data_size << 6), { data_offset } };
   }
 
-  static BL_INLINE KernGroup makeSynthesized(uint32_t format, uint32_t flags, void* dataPtr, uint32_t dataSize) noexcept {
-    return KernGroup { flags | (format << 2) | (dataSize << 6) | kFlagSynthesized, { (uintptr_t)dataPtr } };
+  static BL_INLINE KernGroup make_synthesized(uint32_t format, uint32_t flags, void* data_ptr, uint32_t data_size) noexcept {
+    return KernGroup { flags | (format << 2) | (data_size << 6) | kFlagSynthesized, { (uintptr_t)data_ptr } };
   }
 };
 
@@ -188,21 +188,21 @@ public:
   BLArray<KernGroup> groups;
 
   BL_INLINE KernCollection() noexcept = default;
-  BL_INLINE ~KernCollection() noexcept { releaseData(); }
+  BL_INLINE ~KernCollection() noexcept { release_data(); }
 
-  BL_INLINE bool empty() const noexcept { return groups.empty(); }
+  BL_INLINE bool is_empty() const noexcept { return groups.is_empty(); }
 
   BL_INLINE void reset() noexcept {
-    releaseData();
+    release_data();
     groups.reset();
   }
 
-  void releaseData() noexcept {
+  void release_data() noexcept {
     size_t count = groups.size();
     for (size_t i = 0; i < count; i++) {
       const KernGroup& group = groups[i];
-      if (group.isSynthesized())
-        free(group.dataPtr);
+      if (group.is_synthesized())
+        free(group.data_ptr);
     }
   }
 };
@@ -218,8 +218,8 @@ public:
   };
 
   RawTable table {};
-  uint8_t headerType {};
-  uint8_t headerSize {};
+  uint8_t header_type {};
+  uint8_t header_size {};
   uint8_t reserved[6] {};
   KernCollection collection[2];
 
@@ -227,7 +227,7 @@ public:
 };
 
 namespace KernImpl {
-BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
+BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept;
 } // {KernImpl}
 
 } // {bl::OpenType}

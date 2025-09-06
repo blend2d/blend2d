@@ -22,8 +22,8 @@ struct BLImagePrivateImpl : public BLImageImpl {
   //! Count of writers that write to this image.
   //!
   //! Writers don't increase the reference count of the image to keep it mutable. However, we must keep
-  //! a counter that would tell the BLImage destructor that it's not the time if `writerCount > 0`.
-  size_t writerCount;
+  //! a counter that would tell the BLImage destructor that it's not the time if `writer_count > 0`.
+  size_t writer_count;
 };
 
 //! \}
@@ -34,15 +34,15 @@ namespace ImageInternal {
 //! \name BLImage - Internals - Common Functionality (Impl)
 //! \{
 
-static BL_INLINE bool isImplMutable(const BLImageImpl* impl) noexcept {
-  return ObjectInternal::isImplMutable(impl);
+static BL_INLINE bool is_impl_mutable(const BLImageImpl* impl) noexcept {
+  return ObjectInternal::is_impl_mutable(impl);
 }
 
-BL_HIDDEN BLResult freeImpl(BLImagePrivateImpl* impl) noexcept;
+BL_HIDDEN BLResult free_impl(BLImagePrivateImpl* impl) noexcept;
 
 template<RCMode kRCMode>
-static BL_INLINE BLResult releaseImpl(BLImageImpl* impl) noexcept {
-  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(static_cast<BLImagePrivateImpl*>(impl)) : BLResult(BL_SUCCESS);
+static BL_INLINE BLResult release_impl(BLImageImpl* impl) noexcept {
+  return ObjectInternal::deref_impl_and_test<kRCMode>(impl) ? free_impl(static_cast<BLImagePrivateImpl*>(impl)) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -50,24 +50,24 @@ static BL_INLINE BLResult releaseImpl(BLImageImpl* impl) noexcept {
 //! \name BLImage - Internals - Common Functionality (Instance)
 //! \{
 
-static BL_INLINE_NODEBUG BLImagePrivateImpl* getImpl(const BLImageCore* self) noexcept {
+static BL_INLINE_NODEBUG BLImagePrivateImpl* get_impl(const BLImageCore* self) noexcept {
   return static_cast<BLImagePrivateImpl*>(self->_d.impl);
 }
 
-static BL_INLINE BLResult retainInstance(const BLImageCore* self, size_t n = 1) noexcept {
-  BL_ASSERT(self->_d.isImage());
-  return ObjectInternal::retainInstance(self, n);
+static BL_INLINE BLResult retain_instance(const BLImageCore* self, size_t n = 1) noexcept {
+  BL_ASSERT(self->_d.is_image());
+  return ObjectInternal::retain_instance(self, n);
 }
 
-static BL_INLINE BLResult releaseInstance(BLImageCore* self) noexcept {
-  BL_ASSERT(self->_d.isImage());
-  return releaseImpl<RCMode::kMaybe>(getImpl(self));
+static BL_INLINE BLResult release_instance(BLImageCore* self) noexcept {
+  BL_ASSERT(self->_d.is_image());
+  return release_impl<RCMode::kMaybe>(get_impl(self));
 }
 
-static BL_INLINE BLResult replaceInstance(BLImageCore* self, const BLImageCore* other) noexcept {
-  BLImagePrivateImpl* impl = getImpl(self);
+static BL_INLINE BLResult replace_instance(BLImageCore* self, const BLImageCore* other) noexcept {
+  BLImagePrivateImpl* impl = get_impl(self);
   self->_d = other->_d;
-  return releaseImpl<RCMode::kMaybe>(impl);
+  return release_impl<RCMode::kMaybe>(impl);
 }
 
 //! \}

@@ -41,8 +41,8 @@ public:
   //! \name Members
   //! \{
 
-  const OTFaceImpl* _faceI;
-  LookupKind _lookupKind;
+  const OTFaceImpl* _ot_face_impl;
+  LookupKind _lookup_kind;
   Trace _trace;
 
   //! \}
@@ -50,17 +50,17 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE_NODEBUG ValidationContext(const OTFaceImpl* faceI, LookupKind lookupKind) noexcept
-    : _faceI(faceI),
-      _lookupKind(lookupKind) {}
+  BL_INLINE_NODEBUG ValidationContext(const OTFaceImpl* ot_face_impl, LookupKind lookup_kind) noexcept
+    : _ot_face_impl(ot_face_impl),
+      _lookup_kind(lookup_kind) {}
 
   //! \}
 
   //! \name Accessors
   //! \{
 
-  BL_INLINE_NODEBUG const OTFaceImpl* faceImpl() const noexcept { return _faceI; }
-  BL_INLINE_NODEBUG LookupKind lookupKind() const noexcept { return _lookupKind; }
+  BL_INLINE_NODEBUG const OTFaceImpl* ot_face_impl() const noexcept { return _ot_face_impl; }
+  BL_INLINE_NODEBUG LookupKind lookup_kind() const noexcept { return _lookup_kind; }
 
   //! \}
 
@@ -82,32 +82,32 @@ public:
   template<typename... Args>
   BL_INLINE bool fail(Args&&... args) noexcept { return _trace.fail(BLInternal::forward<Args>(args)...); }
 
-  BL_NOINLINE bool tableEmpty(const char* tableName) noexcept {
-    return fail("%s cannot be empty", tableName);
+  BL_NOINLINE bool table_empty(const char* table_name) noexcept {
+    return fail("%s cannot be empty", table_name);
   }
 
-  BL_NOINLINE bool invalidTableSize(const char* tableName, uint32_t tableSize, uint32_t requiredSize) noexcept {
-    return fail("%s is truncated (size=%u, required=%u)", tableName, tableSize, requiredSize);
+  BL_NOINLINE bool invalid_table_size(const char* table_name, uint32_t table_size, uint32_t required_size) noexcept {
+    return fail("%s is truncated (size=%u, required=%u)", table_name, table_size, required_size);
   }
 
-  BL_NOINLINE bool invalidTableFormat(const char* tableName, uint32_t format) noexcept {
-    return fail("%s has invalid format (%u)", tableName, format);
+  BL_NOINLINE bool invalid_table_format(const char* table_name, uint32_t format) noexcept {
+    return fail("%s has invalid format (%u)", table_name, format);
   }
 
-  BL_NOINLINE bool invalidFieldValue(const char* tableName, const char* field, uint32_t value) noexcept {
-    return fail("%s has invalid %s (%u)", tableName, value);
+  BL_NOINLINE bool invalid_field_value(const char* table_name, const char* field, uint32_t value) noexcept {
+    return fail("%s has invalid %s (%u)", table_name, value);
   }
 
-  BL_NOINLINE bool invalidFieldOffset(const char* tableName, const char* field, uint32_t offset, OffsetRange range) noexcept {
-    return fail("%s.%s has invalid offset (%u), valid range=[%u:%u]", tableName, field, offset, range.start, range.end);
+  BL_NOINLINE bool invalid_field_offset(const char* table_name, const char* field, uint32_t offset, OffsetRange range) noexcept {
+    return fail("%s.%s has invalid offset (%u), valid range=[%u:%u]", table_name, field, offset, range.start, range.end);
   }
 
-  BL_NOINLINE bool invalidOffsetArray(const char* tableName, uint32_t i, uint32_t offset, OffsetRange range) noexcept {
-    return fail("%s has invalid offset at #%u: Offset=%u, ValidRange=[%u:%u]", tableName, i, offset, range.start, range.end);
+  BL_NOINLINE bool invalid_offset_array(const char* table_name, uint32_t i, uint32_t offset, OffsetRange range) noexcept {
+    return fail("%s has invalid offset at #%u: Offset=%u, ValidRange=[%u:%u]", table_name, i, offset, range.start, range.end);
   }
 
-  BL_NOINLINE bool invalidOffsetEntry(const char* tableName, const char* field, uint32_t i, uint32_t offset, OffsetRange range) noexcept {
-    return fail("%s has invalid offset of %s at #%u: Offset=%u, ValidRange=[%u:%u]", tableName, field, i, offset, range.start, range.end);
+  BL_NOINLINE bool invalid_offset_entry(const char* table_name, const char* field, uint32_t i, uint32_t offset, OffsetRange range) noexcept {
+    return fail("%s has invalid offset of %s at #%u: Offset=%u, ValidRange=[%u:%u]", table_name, field, i, offset, range.start, range.end);
   }
 
   //! \}
@@ -116,56 +116,56 @@ public:
 // bl::OpenType::LayoutImpl - GDEF - Init
 // ======================================
 
-static BL_NOINLINE BLResult initGDef(OTFaceImpl* faceI, Table<GDefTable> gdef) noexcept {
+static BL_NOINLINE BLResult initGDef(OTFaceImpl* ot_face_impl, Table<GDefTable> gdef) noexcept {
   if (!gdef.fits())
     return BL_SUCCESS;
 
   uint32_t version = gdef->v1_0()->version();
-  uint32_t headerSize = GDefTable::HeaderV1_0::kBaseSize;
+  uint32_t header_size = GDefTable::HeaderV1_0::kBaseSize;
 
   if (version >= 0x00010002u)
-    headerSize = GDefTable::HeaderV1_2::kBaseSize;
+    header_size = GDefTable::HeaderV1_2::kBaseSize;
 
   if (version >= 0x00010003u)
-    headerSize = GDefTable::HeaderV1_3::kBaseSize;
+    header_size = GDefTable::HeaderV1_3::kBaseSize;
 
   if (BL_UNLIKELY(version < 0x00010000u || version > 0x00010003u))
     return BL_SUCCESS;
 
-  if (BL_UNLIKELY(gdef.size < headerSize))
+  if (BL_UNLIKELY(gdef.size < header_size))
     return BL_SUCCESS;
 
-  uint32_t glyphClassDefOffset = gdef->v1_0()->glyphClassDefOffset();
-  uint32_t attachListOffset = gdef->v1_0()->attachListOffset();
-  uint32_t ligCaretListOffset = gdef->v1_0()->ligCaretListOffset();
-  uint32_t markAttachClassDefOffset = gdef->v1_0()->markAttachClassDefOffset();
-  uint32_t markGlyphSetsDefOffset = version >= 0x00010002u ? uint32_t(gdef->v1_2()->markGlyphSetsDefOffset()) : uint32_t(0);
-  uint32_t itemVarStoreOffset = version >= 0x00010003u ? uint32_t(gdef->v1_3()->itemVarStoreOffset()) : uint32_t(0);
+  uint32_t glyph_class_def_offset = gdef->v1_0()->glyph_class_def_offset();
+  uint32_t attach_list_offset = gdef->v1_0()->attach_list_offset();
+  uint32_t lig_caret_list_offset = gdef->v1_0()->lig_caret_list_offset();
+  uint32_t mark_attach_class_def_offset = gdef->v1_0()->mark_attach_class_def_offset();
+  uint32_t mark_glyph_sets_def_offset = version >= 0x00010002u ? uint32_t(gdef->v1_2()->mark_glyph_sets_def_offset()) : uint32_t(0);
+  uint32_t item_var_store_offset = version >= 0x00010003u ? uint32_t(gdef->v1_3()->item_var_store_offset()) : uint32_t(0);
 
   // TODO: [OpenType] Unfinished.
-  blUnused(attachListOffset, ligCaretListOffset, markGlyphSetsDefOffset, itemVarStoreOffset);
+  bl_unused(attach_list_offset, lig_caret_list_offset, mark_glyph_sets_def_offset, item_var_store_offset);
 
   // Some fonts have incorrect value of `GlyphClassDefOffset` set to 10. This collides with the header which is
   // 12 bytes. It's probably a result of some broken tool used to write such fonts in the past. We simply fix
-  // this issue by changing the `headerSize` to 10 and ignoring `markAttachClassDefOffset`.
-  if (glyphClassDefOffset == 10 && version == 0x00010000u) {
-    headerSize = 10;
-    markAttachClassDefOffset = 0;
+  // this issue by changing the `header_size` to 10 and ignoring `mark_attach_class_def_offset`.
+  if (glyph_class_def_offset == 10 && version == 0x00010000u) {
+    header_size = 10;
+    mark_attach_class_def_offset = 0;
   }
 
-  if (glyphClassDefOffset) {
-    if (glyphClassDefOffset >= headerSize && glyphClassDefOffset < gdef.size) {
-      faceI->otFlags |= OTFaceFlags::kGlyphClassDef;
+  if (glyph_class_def_offset) {
+    if (glyph_class_def_offset >= header_size && glyph_class_def_offset < gdef.size) {
+      ot_face_impl->ot_flags |= OTFaceFlags::kGlyphClassDef;
     }
   }
 
-  if (markAttachClassDefOffset) {
-    if (markAttachClassDefOffset >= headerSize && markAttachClassDefOffset < gdef.size) {
-      faceI->otFlags |= OTFaceFlags::kMarkAttachClassDef;
+  if (mark_attach_class_def_offset) {
+    if (mark_attach_class_def_offset >= header_size && mark_attach_class_def_offset < gdef.size) {
+      ot_face_impl->ot_flags |= OTFaceFlags::kMarkAttachClassDef;
     }
   }
 
-  faceI->layout.tables[2] = gdef;
+  ot_face_impl->layout.tables[2] = gdef;
   return BL_SUCCESS;
 }
 
@@ -213,8 +213,8 @@ enum class FormatBits4X : uint32_t {
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Metadata
 // =================================================
 
-static BL_NOINLINE const char* gsubLookupName(uint32_t lookupType) noexcept {
-  static const char lookupNames[] = {
+static BL_NOINLINE const char* gsub_lookup_name(uint32_t lookup_type) noexcept {
+  static const char lookup_names[] = {
     "<INVALID>\0"
     "SingleSubst\0"
     "MultipleSubst\0"
@@ -226,7 +226,7 @@ static BL_NOINLINE const char* gsubLookupName(uint32_t lookupType) noexcept {
     "ReverseChainedContextSubst\0"
   };
 
-  static const uint8_t lookupIndex[] = {
+  static const uint8_t lookup_index[] = {
     0,   // "<INVALID>"
     10,  // "SingleSubst"
     22,  // "MultipleSubst"
@@ -238,14 +238,14 @@ static BL_NOINLINE const char* gsubLookupName(uint32_t lookupType) noexcept {
     108  // "ReverseChainedContextSubst"
   };
 
-  if (lookupType >= BL_ARRAY_SIZE(lookupIndex))
-    lookupType = 0;
+  if (lookup_type >= BL_ARRAY_SIZE(lookup_index))
+    lookup_type = 0;
 
-  return lookupNames + lookupIndex[lookupType];
+  return lookup_names + lookup_index[lookup_type];
 }
 
-static BL_NOINLINE const char* gposLookupName(uint32_t lookupType) noexcept {
-  static const char lookupNames[] = {
+static BL_NOINLINE const char* gpos_lookup_name(uint32_t lookup_type) noexcept {
+  static const char lookup_names[] = {
     "<INVALID>\0"
     "SingleAdjustment\0"
     "PairAdjustment\0"
@@ -258,7 +258,7 @@ static BL_NOINLINE const char* gposLookupName(uint32_t lookupType) noexcept {
     "Extension\0"
   };
 
-  static const uint8_t lookupIndex[] = {
+  static const uint8_t lookup_index[] = {
     0,   // "<INVALID>"
     10,  // "SingleAdjustment"
     27,  // "PairAdjustment"
@@ -271,13 +271,13 @@ static BL_NOINLINE const char* gposLookupName(uint32_t lookupType) noexcept {
     172  // "Extension"
   };
 
-  if (lookupType >= BL_ARRAY_SIZE(lookupIndex))
-    lookupType = 0;
+  if (lookup_type >= BL_ARRAY_SIZE(lookup_index))
+    lookup_type = 0;
 
-  return lookupNames + lookupIndex[lookupType];
+  return lookup_names + lookup_index[lookup_type];
 }
 
-static const GSubGPosLookupInfo gsubLookupInfoTable = {
+static const GSubGPosLookupInfo gsub_lookup_info_table = {
   // Lookup type maximum value:
   GSubTable::kLookupMaxValue,
 
@@ -297,7 +297,7 @@ static const GSubGPosLookupInfo gsubLookupInfoTable = {
     { 1, uint8_t(GSubLookupAndFormat::kType8Format1) }  // Lookup Type 8 - Reverse Chained Context Substitution.
   },
 
-  // Lookup type, format, headerSize.
+  // Lookup type, format, header_size.
   {
     { 0, 0, uint8_t(0)                                                }, // Lookup Type 0 - Invalid.
     { 1, 1, uint8_t(GSubTable::SingleSubst1::kBaseSize)               }, // Lookup Type 1 - Format 1.
@@ -315,7 +315,7 @@ static const GSubGPosLookupInfo gsubLookupInfoTable = {
   }
 };
 
-static const GSubGPosLookupInfo gposLookupInfoTable = {
+static const GSubGPosLookupInfo gpos_lookup_info_table = {
   // Lookup type maximum value:
   GPosTable::kLookupMaxValue,
 
@@ -336,7 +336,7 @@ static const GSubGPosLookupInfo gposLookupInfoTable = {
     { 1, uint8_t(GPosLookupAndFormat::kNone)         }  // Lookup Type 9 - Extension.
   },
 
-  // Lookup type, format, headerSize.
+  // Lookup type, format, header_size.
   {
     { 0, 0, uint8_t(0)                                                }, // Lookup Type 0 - Invalid.
     { 1, 1, uint8_t(GPosTable::SingleAdjustment1::kBaseSize)          }, // Lookup Type 1 - Format 1.
@@ -361,45 +361,45 @@ static const GSubGPosLookupInfo gposLookupInfoTable = {
 
 // TODO: [OpenType] REMOVE?
 /*
-static bool validateRawOffsetArray(ValidationContext& validator, RawTable data, const char* tableName) noexcept {
+static bool validate_raw_offset_array(ValidationContext& validator, RawTable data, const char* table_name) noexcept {
   if (data.size < 2u)
-    return validator.invalidTableSize(tableName, data.size, 2u);
+    return validator.invalid_table_size(table_name, data.size, 2u);
 
-  uint32_t count = data.dataAs<Array16<UInt16>>()->count();
-  uint32_t headerSize = 2u + count * 2u;
+  uint32_t count = data.data_as<Array16<UInt16>>()->count();
+  uint32_t header_size = 2u + count * 2u;
 
-  if (data.size < headerSize)
-    return validator.invalidTableSize(tableName, data.size, headerSize);
+  if (data.size < header_size)
+    return validator.invalid_table_size(table_name, data.size, header_size);
 
-  const UInt16* array = data.dataAs<Array16<Offset16>>()->array();
-  OffsetRange range{headerSize, uint32_t(data.size)};
+  const UInt16* array = data.data_as<Array16<Offset16>>()->array();
+  OffsetRange range{header_size, uint32_t(data.size)};
 
   for (uint32_t i = 0; i < count; i++) {
     uint32_t offset = array[i].value();
     if (!range.contains(offset))
-      return validator.invalidOffsetArray(tableName, i, offset, range);
+      return validator.invalid_offset_array(table_name, i, offset, range);
   }
 
   return true;
 }
 
-static bool validateTagRef16Array(ValidationContext& validator, RawTable data, const char* tableName) noexcept {
+static bool validateTagRef16Array(ValidationContext& validator, RawTable data, const char* table_name) noexcept {
   if (data.size < 2u)
-    return validator.invalidTableSize(tableName, data.size, 2u);
+    return validator.invalid_table_size(table_name, data.size, 2u);
 
-  uint32_t count = data.dataAs<Array16<UInt16>>()->count();
-  uint32_t headerSize = 2u + count * uint32_t(sizeof(TagRef16));
+  uint32_t count = data.data_as<Array16<UInt16>>()->count();
+  uint32_t header_size = 2u + count * uint32_t(sizeof(TagRef16));
 
-  if (data.size < headerSize)
-    return validator.invalidTableSize(tableName, data.size, headerSize);
+  if (data.size < header_size)
+    return validator.invalid_table_size(table_name, data.size, header_size);
 
-  const TagRef16* array = data.dataAs<Array16<TagRef16>>()->array();
-  OffsetRange range{headerSize, uint32_t(data.size)};
+  const TagRef16* array = data.data_as<Array16<TagRef16>>()->array();
+  OffsetRange range{header_size, uint32_t(data.size)};
 
   for (uint32_t i = 0; i < count; i++) {
     uint32_t offset = array[i].offset.value();
     if (!range.contains(offset))
-      return validator.invalidOffsetArray(tableName, i, offset, range);
+      return validator.invalid_offset_array(table_name, i, offset, range);
   }
 
   return true;
@@ -413,7 +413,7 @@ static bool validateTagRef16Array(ValidationContext& validator, RawTable data, c
 struct ApplyIndex {
   size_t _index;
 
-  BL_INLINE_CONSTEXPR bool isRange() const noexcept { return false; }
+  BL_INLINE_CONSTEXPR bool is_range() const noexcept { return false; }
   BL_INLINE_NODEBUG size_t index() const noexcept { return _index; }
   BL_INLINE_NODEBUG size_t end() const noexcept { return _index + 1; }
   BL_INLINE_NODEBUG size_t size() const noexcept { return 1; }
@@ -427,38 +427,38 @@ struct ApplyRange {
   size_t _index;
   size_t _end;
 
-  BL_INLINE_CONSTEXPR bool isRange() const noexcept { return true; }
+  BL_INLINE_CONSTEXPR bool is_range() const noexcept { return true; }
   BL_INLINE_NODEBUG size_t index() const noexcept { return _index; }
   BL_INLINE_NODEBUG size_t end() const noexcept { return _end; }
   BL_INLINE_NODEBUG size_t size() const noexcept { return _end - _index; }
 
   BL_INLINE void intersect(size_t index, size_t end) noexcept {
-    _index = blMax(_index, index);
-    _end = blMin(_end, end);
+    _index = bl_max(_index, index);
+    _end = bl_min(_end, end);
   }
 };
 
 // bl::OpenType::LayoutImpl - GSUB & GPOS - ClassDef Validation
 // ============================================================
 
-static BL_NOINLINE bool validateClassDefTable(ValidationContext& validator, Table<ClassDefTable> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validate_class_def_table(ValidationContext& validator, Table<ClassDefTable> table, const char* table_name) noexcept {
   // Ignore if it doesn't fit.
   if (!table.fits())
-    return validator.invalidTableSize(tableName, table.size, ClassDefTable::kBaseSize);
+    return validator.invalid_table_size(table_name, table.size, ClassDefTable::kBaseSize);
 
   uint32_t format = table->format();
   switch (format) {
     case 1: {
-      uint32_t headerSize = ClassDefTable::Format1::kBaseSize;
-      if (!table.fits(headerSize))
-        return validator.invalidTableSize(tableName, table.size, headerSize);
+      uint32_t header_size = ClassDefTable::Format1::kBaseSize;
+      if (!table.fits(header_size))
+        return validator.invalid_table_size(table_name, table.size, header_size);
 
       const ClassDefTable::Format1* f = table->format1();
-      uint32_t count = f->classValues.count();
+      uint32_t count = f->class_values.count();
 
-      headerSize += count * 2u;
-      if (!table.fits(headerSize))
-        return validator.invalidTableSize(tableName, table.size, headerSize);
+      header_size += count * 2u;
+      if (!table.fits(header_size))
+        return validator.invalid_table_size(table_name, table.size, header_size);
 
       // We won't fail, but we won't consider we have a ClassDef either.
       // If the ClassDef is required by other tables then we will fail later.
@@ -469,9 +469,9 @@ static BL_NOINLINE bool validateClassDefTable(ValidationContext& validator, Tabl
     }
 
     case 2: {
-      uint32_t headerSize = ClassDefTable::Format2::kBaseSize;
-      if (!table.fits(headerSize))
-        return validator.invalidTableSize(tableName, table.size, headerSize);
+      uint32_t header_size = ClassDefTable::Format2::kBaseSize;
+      if (!table.fits(header_size))
+        return validator.invalid_table_size(table_name, table.size, header_size);
 
       const ClassDefTable::Format2* f = table->format2();
       uint32_t count = f->ranges.count();
@@ -480,133 +480,133 @@ static BL_NOINLINE bool validateClassDefTable(ValidationContext& validator, Tabl
       if (!count)
         return validator.warn("No range specified, ignoring...");
 
-      headerSize = ClassDefTable::Format2::kBaseSize + count * uint32_t(sizeof(ClassDefTable::Range));
-      if (!table.fits(headerSize))
-        return validator.invalidTableSize(tableName, table.size, headerSize);
+      header_size = ClassDefTable::Format2::kBaseSize + count * uint32_t(sizeof(ClassDefTable::Range));
+      if (!table.fits(header_size))
+        return validator.invalid_table_size(table_name, table.size, header_size);
 
-      const ClassDefTable::Range* rangeArray = f->ranges.array();
-      uint32_t lastGlyph = rangeArray[0].lastGlyph();
+      const ClassDefTable::Range* range_array = f->ranges.array();
+      uint32_t last_glyph = range_array[0].last_glyph();
 
-      if (rangeArray[0].firstGlyph() > lastGlyph)
-        return validator.fail("%s Range[%u] firstGlyph (%u) greater than lastGlyph (%u)", tableName, 0, rangeArray[0].firstGlyph(), lastGlyph);
+      if (range_array[0].first_glyph() > last_glyph)
+        return validator.fail("%s Range[%u] first_glyph (%u) greater than last_glyph (%u)", table_name, 0, range_array[0].first_glyph(), last_glyph);
 
       for (uint32_t i = 1; i < count; i++) {
-        const ClassDefTable::Range& range = rangeArray[i];
-        uint32_t firstGlyph = range.firstGlyph();
+        const ClassDefTable::Range& range = range_array[i];
+        uint32_t first_glyph = range.first_glyph();
 
-        if (firstGlyph <= lastGlyph)
-          return validator.fail("%s Range[%u] firstGlyph (%u) not greater than previous lastFlyph (%u)", tableName, i, firstGlyph, lastGlyph);
+        if (first_glyph <= last_glyph)
+          return validator.fail("%s Range[%u] first_glyph (%u) not greater than previous last_flyph (%u)", table_name, i, first_glyph, last_glyph);
 
-        lastGlyph = range.lastGlyph();
-        if (firstGlyph > lastGlyph)
-          return validator.fail("%s Range[%u] firstGlyph (%u) greater than lastGlyph (%u)", tableName, i, firstGlyph, lastGlyph);
+        last_glyph = range.last_glyph();
+        if (first_glyph > last_glyph)
+          return validator.fail("%s Range[%u] first_glyph (%u) greater than last_glyph (%u)", table_name, i, first_glyph, last_glyph);
       }
 
       return true;
     }
 
     default:
-      return validator.invalidTableFormat(tableName, format);
+      return validator.invalid_table_format(table_name, format);
   }
 }
 
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Coverage Validation
 // ============================================================
 
-static BL_NOINLINE bool validateCoverageTable(ValidationContext& validator, Table<CoverageTable> coverageTable, uint32_t& coverageCount) noexcept {
-  const char* tableName = "CoverageTable";
+static BL_NOINLINE bool validate_coverage_table(ValidationContext& validator, Table<CoverageTable> coverage_table, uint32_t& coverage_count) noexcept {
+  const char* table_name = "CoverageTable";
 
-  coverageCount = 0;
-  if (!coverageTable.fits())
-    return validator.invalidTableSize(tableName, coverageTable.size, CoverageTable::kBaseSize);
+  coverage_count = 0;
+  if (!coverage_table.fits())
+    return validator.invalid_table_size(table_name, coverage_table.size, CoverageTable::kBaseSize);
 
-  uint32_t format = coverageTable->format();
+  uint32_t format = coverage_table->format();
   switch (format) {
     case 1: {
-      const CoverageTable::Format1* format1 = coverageTable->format1();
+      const CoverageTable::Format1* format1 = coverage_table->format1();
 
-      uint32_t glyphCount = format1->glyphs.count();
-      uint32_t headerSize = CoverageTable::Format1::kBaseSize + glyphCount * 2u;
+      uint32_t glyph_count = format1->glyphs.count();
+      uint32_t header_size = CoverageTable::Format1::kBaseSize + glyph_count * 2u;
 
-      if (!coverageTable.fits(headerSize))
-        return validator.invalidTableSize(tableName, coverageTable.size, headerSize);
+      if (!coverage_table.fits(header_size))
+        return validator.invalid_table_size(table_name, coverage_table.size, header_size);
 
-      if (!glyphCount)
-        return validator.tableEmpty(tableName);
+      if (!glyph_count)
+        return validator.table_empty(table_name);
 
-      coverageCount = glyphCount;
+      coverage_count = glyph_count;
       return true;
     }
 
     case 2: {
-      const CoverageTable::Format2* format2 = coverageTable->format2();
+      const CoverageTable::Format2* format2 = coverage_table->format2();
 
-      uint32_t rangeCount = format2->ranges.count();
-      uint32_t headerSize = CoverageTable::Format2::kBaseSize + rangeCount * uint32_t(sizeof(CoverageTable::Range));
+      uint32_t range_count = format2->ranges.count();
+      uint32_t header_size = CoverageTable::Format2::kBaseSize + range_count * uint32_t(sizeof(CoverageTable::Range));
 
-      if (!coverageTable.fits(headerSize))
-        return validator.invalidTableSize(tableName, coverageTable.size, headerSize);
+      if (!coverage_table.fits(header_size))
+        return validator.invalid_table_size(table_name, coverage_table.size, header_size);
 
-      if (!rangeCount)
-        return validator.tableEmpty(tableName);
+      if (!range_count)
+        return validator.table_empty(table_name);
 
-      const CoverageTable::Range* rangeArray = format2->ranges.array();
+      const CoverageTable::Range* range_array = format2->ranges.array();
 
-      uint32_t firstGlyph = rangeArray[0].firstGlyph();
-      uint32_t lastGlyph = rangeArray[0].lastGlyph();
-      uint32_t currentCoverageIndex = rangeArray[0].startCoverageIndex();
+      uint32_t first_glyph = range_array[0].first_glyph();
+      uint32_t last_glyph = range_array[0].last_glyph();
+      uint32_t current_coverage_index = range_array[0].start_coverage_index();
 
-      if (firstGlyph > lastGlyph)
-        return validator.fail("Range[%u]: firstGlyph (%u) is greater than lastGlyph (%u)", 0, firstGlyph, lastGlyph);
+      if (first_glyph > last_glyph)
+        return validator.fail("Range[%u]: first_glyph (%u) is greater than last_glyph (%u)", 0, first_glyph, last_glyph);
 
-      if (currentCoverageIndex)
-        return validator.fail("Range[%u]: initial startCoverageIndex %u must be zero", 0, currentCoverageIndex);
+      if (current_coverage_index)
+        return validator.fail("Range[%u]: initial start_coverage_index %u must be zero", 0, current_coverage_index);
 
-      currentCoverageIndex += lastGlyph - firstGlyph + 1u;
-      for (uint32_t i = 1; i < rangeCount; i++) {
-        const CoverageTable::Range& range = rangeArray[i];
+      current_coverage_index += last_glyph - first_glyph + 1u;
+      for (uint32_t i = 1; i < range_count; i++) {
+        const CoverageTable::Range& range = range_array[i];
 
-        firstGlyph = range.firstGlyph();
-        if (firstGlyph <= lastGlyph)
-          return validator.fail("Range[%u]: firstGlyph (%u) is not greater than previous lastGlyph (%u)", i, firstGlyph, lastGlyph);
+        first_glyph = range.first_glyph();
+        if (first_glyph <= last_glyph)
+          return validator.fail("Range[%u]: first_glyph (%u) is not greater than previous last_glyph (%u)", i, first_glyph, last_glyph);
 
-        lastGlyph = range.lastGlyph();
-        if (firstGlyph > lastGlyph)
-          return validator.fail("Range[%u]: firstGlyph (%u) is greater than lastGlyph (%u)", i, firstGlyph, lastGlyph);
+        last_glyph = range.last_glyph();
+        if (first_glyph > last_glyph)
+          return validator.fail("Range[%u]: first_glyph (%u) is greater than last_glyph (%u)", i, first_glyph, last_glyph);
 
-        uint32_t startCoverageIndex = range.startCoverageIndex();
-        if (startCoverageIndex != currentCoverageIndex)
-          return validator.fail("Range[%u]: startCoverageIndex (%u) doesnt' match currentCoverageIndex (%u)", i, startCoverageIndex, currentCoverageIndex);
+        uint32_t start_coverage_index = range.start_coverage_index();
+        if (start_coverage_index != current_coverage_index)
+          return validator.fail("Range[%u]: start_coverage_index (%u) doesnt' match current_coverage_index (%u)", i, start_coverage_index, current_coverage_index);
 
-        currentCoverageIndex += lastGlyph - firstGlyph + 1u;
+        current_coverage_index += last_glyph - first_glyph + 1u;
       }
 
-      coverageCount = currentCoverageIndex;
+      coverage_count = current_coverage_index;
       return true;
     }
 
     default:
-      return validator.invalidTableFormat(tableName, format);
+      return validator.invalid_table_format(table_name, format);
   }
 }
 
-static BL_NOINLINE bool validateCoverageTables(
+static BL_NOINLINE bool validate_coverage_tables(
   ValidationContext& validator,
   RawTable table,
-  const char* tableName,
-  const char* coverageName,
-  const UInt16* offsets, uint32_t count, OffsetRange offsetRange) noexcept {
+  const char* table_name,
+  const char* coverage_name,
+  const UInt16* offsets, uint32_t count, OffsetRange offset_range) noexcept {
 
   for (uint32_t i = 0; i < count; i++) {
     uint32_t offset = offsets[i].value();
     if (!offset)
       continue;
 
-    if (!offsetRange.contains(offset))
-      return validator.fail("%s.%s[%u] offset (%u) is out of range [%u:%u]", tableName, coverageName, i, offset, offsetRange.start, offsetRange.end);
+    if (!offset_range.contains(offset))
+      return validator.fail("%s.%s[%u] offset (%u) is out of range [%u:%u]", table_name, coverage_name, i, offset, offset_range.start, offset_range.end);
 
-    uint32_t unusedCoverageCount;
-    if (!validateCoverageTable(validator, table.subTable<CoverageTable>(offset), unusedCoverageCount))
+    uint32_t unused_coverage_count;
+    if (!validate_coverage_table(validator, table.sub_table<CoverageTable>(offset), unused_coverage_count))
       return false;
   }
 
@@ -616,96 +616,96 @@ static BL_NOINLINE bool validateCoverageTables(
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Lookup Table Validation
 // ================================================================
 
-static BL_NOINLINE bool validateLookupWithCoverage(ValidationContext& validator, RawTable data, const char* tableName, uint32_t headerSize, uint32_t& coverageCount) noexcept {
-  if (!data.fits(headerSize))
-    return validator.invalidTableSize(tableName, data.size, headerSize);
+static BL_NOINLINE bool validate_lookup_with_coverage(ValidationContext& validator, RawTable data, const char* table_name, uint32_t header_size, uint32_t& coverage_count) noexcept {
+  if (!data.fits(header_size))
+    return validator.invalid_table_size(table_name, data.size, header_size);
 
-  uint32_t coverageOffset = data.dataAs<GSubGPosTable::LookupHeaderWithCoverage>()->coverageOffset();
-  if (coverageOffset < headerSize || coverageOffset >= data.size)
-    return validator.fail("%s.coverage offset (%u) is out of range [%u:%u]", tableName, coverageOffset, headerSize, data.size);
+  uint32_t coverage_offset = data.data_as<GSubGPosTable::LookupHeaderWithCoverage>()->coverage_offset();
+  if (coverage_offset < header_size || coverage_offset >= data.size)
+    return validator.fail("%s.coverage offset (%u) is out of range [%u:%u]", table_name, coverage_offset, header_size, data.size);
 
-  return validateCoverageTable(validator, data.subTable(coverageOffset), coverageCount);
+  return validate_coverage_table(validator, data.sub_table(coverage_offset), coverage_count);
 }
 
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Sequence Context Validation
 // ====================================================================
 
-static BL_NOINLINE bool validateSequenceLookupRecordArray(ValidationContext& validator, const GSubGPosTable::SequenceLookupRecord* lookupRecordArray, uint32_t lookupRecordCount) noexcept {
-  const LayoutData& layoutData = validator.faceImpl()->layout;
-  uint32_t lookupCount = layoutData.byKind(validator.lookupKind()).lookupCount;
+static BL_NOINLINE bool validate_sequence_lookup_record_array(ValidationContext& validator, const GSubGPosTable::SequenceLookupRecord* lookup_record_array, uint32_t lookup_record_count) noexcept {
+  const LayoutData& layout_data = validator.ot_face_impl()->layout;
+  uint32_t lookup_count = layout_data.by_kind(validator.lookup_kind()).lookup_count;
 
-  for (uint32_t i = 0; i < lookupRecordCount; i++) {
-    const GSubGPosTable::SequenceLookupRecord& lookupRecord = lookupRecordArray[i];
-    uint32_t lookupIndex = lookupRecord.lookupIndex();
+  for (uint32_t i = 0; i < lookup_record_count; i++) {
+    const GSubGPosTable::SequenceLookupRecord& lookup_record = lookup_record_array[i];
+    uint32_t lookup_index = lookup_record.lookup_index();
 
-    if (lookupIndex >= lookupCount)
-      return validator.fail("SequenceLookupRecord[%u] has invalid lookupIndex (%u) (lookupCount=%u)", i, lookupIndex, lookupCount);
+    if (lookup_index >= lookup_count)
+      return validator.fail("SequenceLookupRecord[%u] has invalid lookup_index (%u) (lookup_count=%u)", i, lookup_index, lookup_count);
   }
 
   return true;
 }
 
 template<typename SequenceLookupTable>
-static BL_NOINLINE bool validateContextFormat1_2(ValidationContext& validator, Table<SequenceLookupTable> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validate_context_format1_2(ValidationContext& validator, Table<SequenceLookupTable> table, const char* table_name) noexcept {
   typedef GSubGPosTable::SequenceRule SequenceRule;
   typedef GSubGPosTable::SequenceRuleSet SequenceRuleSet;
 
-  uint32_t coverageCount;
-  if (!validateLookupWithCoverage(validator, table, tableName, SequenceLookupTable::kBaseSize, coverageCount))
+  uint32_t coverage_count;
+  if (!validate_lookup_with_coverage(validator, table, table_name, SequenceLookupTable::kBaseSize, coverage_count))
     return false;
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  uint32_t headerSize = SequenceLookupTable::kBaseSize + ruleSetCount * 2u;
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  uint32_t header_size = SequenceLookupTable::kBaseSize + rule_set_count * 2u;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
-  const Offset16* ruleSetOffsetArray = table->ruleSetOffsets.array();
-  OffsetRange ruleSetOffsetRange{headerSize, table.size - 4u};
+  const Offset16* rule_set_offset_array = table->rule_set_offsets.array();
+  OffsetRange rule_set_offset_range{header_size, table.size - 4u};
 
-  for (uint32_t i = 0; i < ruleSetCount; i++) {
-    uint32_t ruleSetOffset = ruleSetOffsetArray[i].value();
+  for (uint32_t i = 0; i < rule_set_count; i++) {
+    uint32_t rule_set_offset = rule_set_offset_array[i].value();
 
     // Offsets are allowed to be null - this means that that SequenceRuleSet must be ignored.
-    if (!ruleSetOffset)
+    if (!rule_set_offset)
       continue;
 
-    if (!ruleSetOffsetRange.contains(ruleSetOffset))
-      return validator.invalidOffsetEntry(tableName, "sequenceRuleSetOffset", i, ruleSetOffset, ruleSetOffsetRange);
+    if (!rule_set_offset_range.contains(rule_set_offset))
+      return validator.invalid_offset_entry(table_name, "sequence_rule_set_offset", i, rule_set_offset, rule_set_offset_range);
 
-    Table<SequenceRuleSet> ruleSet(table.subTable(ruleSetOffset));
-    uint32_t ruleCount = ruleSet->count();
+    Table<SequenceRuleSet> rule_set(table.sub_table(rule_set_offset));
+    uint32_t rule_count = rule_set->count();
 
-    if (!ruleCount)
-      return validator.fail("%s.ruleSet[%u] cannot be empty", tableName, i);
+    if (!rule_count)
+      return validator.fail("%s.rule_set[%u] cannot be empty", table_name, i);
 
-    uint32_t ruleSetHeaderSize = 2u + ruleCount * 2u;
-    if (!ruleSet.fits(ruleSetHeaderSize))
-      return validator.fail("%s.ruleSet[%u] is truncated (size=%u, required=%u)", tableName, i, ruleSet.size, ruleSetHeaderSize);
+    uint32_t rule_set_header_size = 2u + rule_count * 2u;
+    if (!rule_set.fits(rule_set_header_size))
+      return validator.fail("%s.rule_set[%u] is truncated (size=%u, required=%u)", table_name, i, rule_set.size, rule_set_header_size);
 
-    const Offset16* ruleOffsetArray = ruleSet->array();
-    OffsetRange ruleOffsetRange{ruleSetHeaderSize, ruleSet.size - SequenceRule::kBaseSize};
+    const Offset16* rule_offset_array = rule_set->array();
+    OffsetRange rule_offset_range{rule_set_header_size, rule_set.size - SequenceRule::kBaseSize};
 
-    for (uint32_t ruleIndex = 0; ruleIndex < ruleCount; ruleIndex++) {
-      uint32_t ruleOffset = ruleOffsetArray[ruleIndex].value();
-      if (!ruleOffsetRange.contains(ruleOffset))
-        return validator.fail("%s.ruleSet[%u].rule[%u] offset (%u) is out of range [%u:%u]", tableName, i, ruleIndex, ruleOffset, ruleOffsetRange.start, ruleOffsetRange.end);
+    for (uint32_t rule_index = 0; rule_index < rule_count; rule_index++) {
+      uint32_t rule_offset = rule_offset_array[rule_index].value();
+      if (!rule_offset_range.contains(rule_offset))
+        return validator.fail("%s.rule_set[%u].rule[%u] offset (%u) is out of range [%u:%u]", table_name, i, rule_index, rule_offset, rule_offset_range.start, rule_offset_range.end);
 
-      Table<SequenceRule> rule = ruleSet.subTable(ruleOffset);
-      uint32_t glyphCount = rule->glyphCount();
-      uint32_t lookupRecordCount = rule->lookupRecordCount();
-      uint32_t ruleTableSize = 4u + (lookupRecordCount + glyphCount - 1) * 2u;
+      Table<SequenceRule> rule = rule_set.sub_table(rule_offset);
+      uint32_t glyph_count = rule->glyph_count();
+      uint32_t lookup_record_count = rule->lookup_record_count();
+      uint32_t rule_table_size = 4u + (lookup_record_count + glyph_count - 1) * 2u;
 
-      if (!rule.fits(ruleTableSize))
-        return validator.fail("%s.ruleSet[%u].rule[%u] is truncated (size=%u, required=%u)", tableName, i, ruleIndex, rule.size, ruleTableSize);
+      if (!rule.fits(rule_table_size))
+        return validator.fail("%s.rule_set[%u].rule[%u] is truncated (size=%u, required=%u)", table_name, i, rule_index, rule.size, rule_table_size);
 
-      if (glyphCount < 2)
-        return validator.fail("%s.ruleSet[%u].rule[%u] has invalid glyphCount (%u)", tableName, i, ruleIndex, glyphCount);
+      if (glyph_count < 2)
+        return validator.fail("%s.rule_set[%u].rule[%u] has invalid glyph_count (%u)", table_name, i, rule_index, glyph_count);
 
-      if (!lookupRecordCount)
-        return validator.fail("%s.ruleSet[%u].rule[%u] has invalid lookupRecordCount (%u)", tableName, i, ruleIndex, lookupRecordCount);
+      if (!lookup_record_count)
+        return validator.fail("%s.rule_set[%u].rule[%u] has invalid lookup_record_count (%u)", table_name, i, rule_index, lookup_record_count);
 
-      if (!validateSequenceLookupRecordArray(validator, rule->lookupRecordArray(glyphCount), lookupRecordCount))
+      if (!validate_sequence_lookup_record_array(validator, rule->lookup_record_array(glyph_count), lookup_record_count))
         return false;
     }
   }
@@ -713,107 +713,107 @@ static BL_NOINLINE bool validateContextFormat1_2(ValidationContext& validator, T
   return true;
 }
 
-static BL_INLINE bool validateContextFormat1(ValidationContext& validator, Table<GSubGPosTable::SequenceContext1> table, const char* tableName) noexcept {
-  return validateContextFormat1_2<GSubGPosTable::SequenceContext1>(validator, table, tableName);
+static BL_INLINE bool validate_context_format1(ValidationContext& validator, Table<GSubGPosTable::SequenceContext1> table, const char* table_name) noexcept {
+  return validate_context_format1_2<GSubGPosTable::SequenceContext1>(validator, table, table_name);
 }
 
-static BL_NOINLINE bool validateContextFormat2(ValidationContext& validator, Table<GSubGPosTable::SequenceContext2> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validate_context_format2(ValidationContext& validator, Table<GSubGPosTable::SequenceContext2> table, const char* table_name) noexcept {
   if (!table.fits())
-    return validator.invalidTableSize(tableName, table.size, GSubGPosTable::SequenceContext2::kBaseSize);
+    return validator.invalid_table_size(table_name, table.size, GSubGPosTable::SequenceContext2::kBaseSize);
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  uint32_t headerSize = GSubGPosTable::SequenceContext2::kBaseSize + ruleSetCount * 2u;
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  uint32_t header_size = GSubGPosTable::SequenceContext2::kBaseSize + rule_set_count * 2u;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
-  uint32_t classDefOffset = table.dataAs<GSubGPosTable::SequenceContext2>()->classDefOffset();
-  OffsetRange offsetRange{headerSize, table.size};
+  uint32_t class_def_offset = table.data_as<GSubGPosTable::SequenceContext2>()->class_def_offset();
+  OffsetRange offset_range{header_size, table.size};
 
-  if (!offsetRange.contains(classDefOffset))
-    return validator.invalidFieldOffset(tableName, "classDefOffset", classDefOffset, offsetRange);
+  if (!offset_range.contains(class_def_offset))
+    return validator.invalid_field_offset(table_name, "class_def_offset", class_def_offset, offset_range);
 
-  if (!validateClassDefTable(validator, table.subTableUnchecked(classDefOffset), "ClassDef"))
+  if (!validate_class_def_table(validator, table.sub_table_unchecked(class_def_offset), "ClassDef"))
     return false;
 
-  return validateContextFormat1_2<GSubGPosTable::SequenceContext2>(validator, table, tableName);
+  return validate_context_format1_2<GSubGPosTable::SequenceContext2>(validator, table, table_name);
 }
 
-static BL_NOINLINE bool validateContextFormat3(ValidationContext& validator, Table<GSubGPosTable::SequenceContext3> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validate_context_format3(ValidationContext& validator, Table<GSubGPosTable::SequenceContext3> table, const char* table_name) noexcept {
   if (!table.fits())
-    return validator.invalidTableSize(tableName, table.size, GSubGPosTable::SequenceContext3::kBaseSize);
+    return validator.invalid_table_size(table_name, table.size, GSubGPosTable::SequenceContext3::kBaseSize);
 
-  uint32_t glyphCount = table->glyphCount();
-  uint32_t lookupRecordCount = table->lookupRecordCount();
-  uint32_t headerSize = GSubGPosTable::SequenceContext3::kBaseSize + glyphCount * 2u + lookupRecordCount * GPosTable::SequenceLookupRecord::kBaseSize;
+  uint32_t glyph_count = table->glyph_count();
+  uint32_t lookup_record_count = table->lookup_record_count();
+  uint32_t header_size = GSubGPosTable::SequenceContext3::kBaseSize + glyph_count * 2u + lookup_record_count * GPosTable::SequenceLookupRecord::kBaseSize;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
-  if (!glyphCount)
-    return validator.invalidFieldValue(tableName, "glyphCount", glyphCount);
+  if (!glyph_count)
+    return validator.invalid_field_value(table_name, "glyph_count", glyph_count);
 
-  if (!lookupRecordCount)
-    return validator.invalidFieldValue(tableName, "lookupRecordCount", lookupRecordCount);
+  if (!lookup_record_count)
+    return validator.invalid_field_value(table_name, "lookup_record_count", lookup_record_count);
 
-  OffsetRange subTableOffsetRange{headerSize, table.size};
-  const UInt16* coverageOffsetArray = table->coverageOffsetArray();
+  OffsetRange sub_table_offset_range{header_size, table.size};
+  const UInt16* coverage_offset_array = table->coverage_offset_array();
 
-  for (uint32_t coverageTableIndex = 0; coverageTableIndex < glyphCount; coverageTableIndex++) {
-    uint32_t coverageTableOffset = coverageOffsetArray[coverageTableIndex].value();
-    if (!subTableOffsetRange.contains(coverageTableOffset))
-      return validator.invalidOffsetEntry(tableName, "coverageOffset", coverageTableIndex, coverageTableOffset, subTableOffsetRange);
+  for (uint32_t coverage_table_index = 0; coverage_table_index < glyph_count; coverage_table_index++) {
+    uint32_t coverage_table_offset = coverage_offset_array[coverage_table_index].value();
+    if (!sub_table_offset_range.contains(coverage_table_offset))
+      return validator.invalid_offset_entry(table_name, "coverage_offset", coverage_table_index, coverage_table_offset, sub_table_offset_range);
 
-    uint32_t coverageCount;
-    if (!validateCoverageTable(validator, table.subTable<CoverageTable>(coverageTableOffset), coverageCount))
+    uint32_t coverage_count;
+    if (!validate_coverage_table(validator, table.sub_table<CoverageTable>(coverage_table_offset), coverage_count))
       return false;
   }
 
-  return validateSequenceLookupRecordArray(validator, table->lookupRecordArray(glyphCount), lookupRecordCount);
+  return validate_sequence_lookup_record_array(validator, table->lookup_record_array(glyph_count), lookup_record_count);
 }
 
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Sequence Context Utilities
 // ===================================================================
 
 struct SequenceMatch {
-  uint32_t glyphCount;
-  uint32_t lookupRecordCount;
-  const GSubGPosTable::SequenceLookupRecord* lookupRecords;
+  uint32_t glyph_count;
+  uint32_t lookup_record_count;
+  const GSubGPosTable::SequenceLookupRecord* lookup_records;
 };
 
-static BL_INLINE bool matchSequenceRuleFormat1(Table<Array16<Offset16>> ruleOffsets, uint32_t ruleCount, const BLGlyphId* glyphData, size_t maxGlyphCount, SequenceMatch* matchOut) noexcept {
-  size_t maxGlyphCountMinus1 = maxGlyphCount - 1u;
-  for (uint32_t ruleIndex = 0; ruleIndex < ruleCount; ruleIndex++) {
-    uint32_t ruleOffset = ruleOffsets->array()[ruleIndex].value();
-    BL_ASSERT_VALIDATED(ruleOffset <= ruleOffsets.size - 4u);
+static BL_INLINE bool match_sequence_rule_format1(Table<Array16<Offset16>> rule_offsets, uint32_t rule_count, const BLGlyphId* glyph_data, size_t max_glyph_count, SequenceMatch* match_out) noexcept {
+  size_t maxGlyphCountMinus1 = max_glyph_count - 1u;
+  for (uint32_t rule_index = 0; rule_index < rule_count; rule_index++) {
+    uint32_t rule_offset = rule_offsets->array()[rule_index].value();
+    BL_ASSERT_VALIDATED(rule_offset <= rule_offsets.size - 4u);
 
-    const GSubGPosTable::SequenceRule* rule = PtrOps::offset<const GSubGPosTable::SequenceRule>(ruleOffsets.data, ruleOffset);
-    uint32_t glyphCount = rule->glyphCount();
-    uint32_t glyphCountMinus1 = glyphCount - 1u;
+    const GSubGPosTable::SequenceRule* rule = PtrOps::offset<const GSubGPosTable::SequenceRule>(rule_offsets.data, rule_offset);
+    uint32_t glyph_count = rule->glyph_count();
+    uint32_t glyphCountMinus1 = glyph_count - 1u;
 
     if (glyphCountMinus1 > maxGlyphCountMinus1)
       continue;
 
-    // This is safe - a single SequenceRule is 4 bytes that is followed by `GlyphId[glyphCount - 1]` and then
-    // by `SequenceLookupRecord[sequenceLookupCount]`. Since we don't know whether we have a match or not we will
-    // only check bounds required by matching and postponing `sequenceLookupCount` until we have an actual match.
-    BL_ASSERT_VALIDATED(ruleOffset + glyphCountMinus1 * 2u <= ruleOffsets.size - 4u);
+    // This is safe - a single SequenceRule is 4 bytes that is followed by `GlyphId[glyph_count - 1]` and then
+    // by `SequenceLookupRecord[sequence_lookup_count]`. Since we don't know whether we have a match or not we will
+    // only check bounds required by matching and postponing `sequence_lookup_count` until we have an actual match.
+    BL_ASSERT_VALIDATED(rule_offset + glyphCountMinus1 * 2u <= rule_offsets.size - 4u);
 
-    uint32_t glyphIndex = 0;
+    uint32_t glyph_index = 0;
     for (;;) {
-      BLGlyphId glyphA = rule->inputSequence()[glyphIndex].value();
-      BLGlyphId glyphB = glyphData[++glyphIndex];
+      BLGlyphId glyphA = rule->input_sequence()[glyph_index].value();
+      BLGlyphId glyphB = glyph_data[++glyph_index];
 
       if (glyphA != glyphB)
         break;
 
-      if (glyphIndex < glyphCountMinus1)
+      if (glyph_index < glyphCountMinus1)
         continue;
 
-      BL_ASSERT_VALIDATED(rule->lookupRecordCount() > 0);
-      BL_ASSERT_VALIDATED(ruleOffset + glyphCountMinus1 * 2u + rule->lookupRecordCount() * 4u <= ruleOffsets.size - 4u);
+      BL_ASSERT_VALIDATED(rule->lookup_record_count() > 0);
+      BL_ASSERT_VALIDATED(rule_offset + glyphCountMinus1 * 2u + rule->lookup_record_count() * 4u <= rule_offsets.size - 4u);
 
-      *matchOut = SequenceMatch{glyphCount, rule->lookupRecordCount(), rule->lookupRecordArray(glyphCount)};
+      *match_out = SequenceMatch{glyph_count, rule->lookup_record_count(), rule->lookup_record_array(glyph_count)};
       return true;
     }
   }
@@ -822,39 +822,39 @@ static BL_INLINE bool matchSequenceRuleFormat1(Table<Array16<Offset16>> ruleOffs
 }
 
 template<uint32_t kCDFmt>
-static BL_INLINE bool matchSequenceRuleFormat2(Table<Array16<Offset16>> ruleOffsets, uint32_t ruleCount, const BLGlyphId* glyphData, size_t maxGlyphCount, const ClassDefTableIterator& cdIt, SequenceMatch* matchOut) noexcept {
-  size_t maxGlyphCountMinus1 = maxGlyphCount - 1u;
-  for (uint32_t ruleIndex = 0; ruleIndex < ruleCount; ruleIndex++) {
-    uint32_t ruleOffset = ruleOffsets->array()[ruleIndex].value();
-    BL_ASSERT_VALIDATED(ruleOffset <= ruleOffsets.size - 4u);
+static BL_INLINE bool match_sequence_rule_format2(Table<Array16<Offset16>> rule_offsets, uint32_t rule_count, const BLGlyphId* glyph_data, size_t max_glyph_count, const ClassDefTableIterator& cd_it, SequenceMatch* match_out) noexcept {
+  size_t maxGlyphCountMinus1 = max_glyph_count - 1u;
+  for (uint32_t rule_index = 0; rule_index < rule_count; rule_index++) {
+    uint32_t rule_offset = rule_offsets->array()[rule_index].value();
+    BL_ASSERT_VALIDATED(rule_offset <= rule_offsets.size - 4u);
 
-    const GSubGPosTable::SequenceRule* rule = PtrOps::offset<const GSubGPosTable::SequenceRule>(ruleOffsets.data, ruleOffset);
-    uint32_t glyphCount = rule->glyphCount();
-    uint32_t glyphCountMinus1 = glyphCount - 1u;
+    const GSubGPosTable::SequenceRule* rule = PtrOps::offset<const GSubGPosTable::SequenceRule>(rule_offsets.data, rule_offset);
+    uint32_t glyph_count = rule->glyph_count();
+    uint32_t glyphCountMinus1 = glyph_count - 1u;
 
     if (glyphCountMinus1 > maxGlyphCountMinus1)
       continue;
 
-    // This is safe - a single ClassSequenceRule is 4 bytes that is followed by `GlyphId[glyphCount - 1]` and then
-    // by `SequenceLookupRecord[sequenceLookupCount]`. Since we don't know whether we have a match or not we will
-    // only check bounds required by matching and postponing `sequenceLookupCount` until we have an actual match.
-    BL_ASSERT_VALIDATED(ruleOffset + glyphCountMinus1 * 2u <= ruleOffsets.size - 4u);
+    // This is safe - a single ClassSequenceRule is 4 bytes that is followed by `GlyphId[glyph_count - 1]` and then
+    // by `SequenceLookupRecord[sequence_lookup_count]`. Since we don't know whether we have a match or not we will
+    // only check bounds required by matching and postponing `sequence_lookup_count` until we have an actual match.
+    BL_ASSERT_VALIDATED(rule_offset + glyphCountMinus1 * 2u <= rule_offsets.size - 4u);
 
-    uint32_t glyphIndex = 0;
+    uint32_t glyph_index = 0;
     for (;;) {
-      uint32_t classValue = rule->inputSequence()[glyphIndex].value();
-      BLGlyphId glyphId = glyphData[++glyphIndex];
+      uint32_t class_value = rule->input_sequence()[glyph_index].value();
+      BLGlyphId glyph_id = glyph_data[++glyph_index];
 
-      if (!cdIt.matchGlyphClass<kCDFmt>(glyphId, classValue))
+      if (!cd_it.match_glyph_class<kCDFmt>(glyph_id, class_value))
         break;
 
-      if (glyphIndex < glyphCountMinus1)
+      if (glyph_index < glyphCountMinus1)
         continue;
 
-      BL_ASSERT_VALIDATED(rule->lookupRecordCount() > 0u);
-      BL_ASSERT_VALIDATED(ruleOffset + glyphCountMinus1 * 2u + rule->lookupRecordCount() * 4u <= ruleOffsets.size - 4u);
+      BL_ASSERT_VALIDATED(rule->lookup_record_count() > 0u);
+      BL_ASSERT_VALIDATED(rule_offset + glyphCountMinus1 * 2u + rule->lookup_record_count() * 4u <= rule_offsets.size - 4u);
 
-      *matchOut = SequenceMatch{glyphCount, rule->lookupRecordCount(), rule->lookupRecordArray(glyphCount)};
+      *match_out = SequenceMatch{glyph_count, rule->lookup_record_count(), rule->lookup_record_array(glyph_count)};
       return true;
     }
   }
@@ -863,84 +863,84 @@ static BL_INLINE bool matchSequenceRuleFormat2(Table<Array16<Offset16>> ruleOffs
 }
 
 template<uint32_t kCovFmt>
-static BL_INLINE bool matchSequenceFormat1(Table<GSubGPosTable::SequenceContext1> table, uint32_t ruleSetCount, GlyphRange firstGlyphRange, const CoverageTableIterator& covIt, const BLGlyphId* glyphPtr, size_t maxGlyphCount, SequenceMatch* matchOut) noexcept {
-  BLGlyphId glyphId = glyphPtr[0];
-  if (!firstGlyphRange.contains(glyphId))
+static BL_INLINE bool match_sequence_format1(Table<GSubGPosTable::SequenceContext1> table, uint32_t rule_set_count, GlyphRange first_glyph_range, const CoverageTableIterator& cov_it, const BLGlyphId* glyph_ptr, size_t max_glyph_count, SequenceMatch* match_out) noexcept {
+  BLGlyphId glyph_id = glyph_ptr[0];
+  if (!first_glyph_range.contains(glyph_id))
     return false;
 
-  uint32_t coverageIndex;
-  if (!covIt.find<kCovFmt>(glyphId, coverageIndex) || coverageIndex >= ruleSetCount)
+  uint32_t coverage_index;
+  if (!cov_it.find<kCovFmt>(glyph_id, coverage_index) || coverage_index >= rule_set_count)
     return false;
 
-  uint32_t ruleSetOffset = table->ruleSetOffsets.array()[coverageIndex].value();
-  BL_ASSERT_VALIDATED(ruleSetOffset <= table.size - 2u);
+  uint32_t rule_set_offset = table->rule_set_offsets.array()[coverage_index].value();
+  BL_ASSERT_VALIDATED(rule_set_offset <= table.size - 2u);
 
-  Table<Array16<Offset16>> ruleOffsets(table.subTableUnchecked(ruleSetOffset));
-  uint32_t ruleCount = ruleOffsets->count();
-  BL_ASSERT_VALIDATED(ruleCount && ruleSetOffset + ruleCount * 2u <= table.size - 2u);
+  Table<Array16<Offset16>> rule_offsets(table.sub_table_unchecked(rule_set_offset));
+  uint32_t rule_count = rule_offsets->count();
+  BL_ASSERT_VALIDATED(rule_count && rule_set_offset + rule_count * 2u <= table.size - 2u);
 
-  return matchSequenceRuleFormat1(ruleOffsets, ruleCount, glyphPtr, maxGlyphCount, matchOut);
+  return match_sequence_rule_format1(rule_offsets, rule_count, glyph_ptr, max_glyph_count, match_out);
 }
 
 template<uint32_t kCovFmt, uint32_t kCDFmt>
-static BL_INLINE bool matchSequenceFormat2(
+static BL_INLINE bool match_sequence_format2(
   Table<GSubGPosTable::SequenceContext2> table,
-  uint32_t ruleSetCount,
-  GlyphRange firstGlyphRange,
-  const CoverageTableIterator& covIt,
-  const ClassDefTableIterator& cdIt,
-  const BLGlyphId* glyphPtr,
-  size_t maxGlyphCount,
-  SequenceMatch* matchOut) noexcept {
+  uint32_t rule_set_count,
+  GlyphRange first_glyph_range,
+  const CoverageTableIterator& cov_it,
+  const ClassDefTableIterator& cd_it,
+  const BLGlyphId* glyph_ptr,
+  size_t max_glyph_count,
+  SequenceMatch* match_out) noexcept {
 
-  BLGlyphId glyphId = glyphPtr[0];
-  if (!firstGlyphRange.contains(glyphId))
+  BLGlyphId glyph_id = glyph_ptr[0];
+  if (!first_glyph_range.contains(glyph_id))
     return false;
 
-  uint32_t unusedCoverageIndex;
-  if (!covIt.find<kCovFmt>(glyphId, unusedCoverageIndex))
+  uint32_t unused_coverage_index;
+  if (!cov_it.find<kCovFmt>(glyph_id, unused_coverage_index))
     return false;
 
-  uint32_t classIndex = cdIt.classOfGlyph<kCDFmt>(glyphId);
-  if (classIndex >= ruleSetCount)
+  uint32_t class_index = cd_it.class_of_glyph<kCDFmt>(glyph_id);
+  if (class_index >= rule_set_count)
     return false;
 
-  uint32_t ruleSetOffset = table->ruleSetOffsets.array()[classIndex].value();
-  BL_ASSERT_VALIDATED(ruleSetOffset <= table.size - 2u);
+  uint32_t rule_set_offset = table->rule_set_offsets.array()[class_index].value();
+  BL_ASSERT_VALIDATED(rule_set_offset <= table.size - 2u);
 
-  Table<Array16<Offset16>> ruleOffsets(table.subTableUnchecked(ruleSetOffset));
-  uint32_t ruleCount = ruleOffsets->count();
-  BL_ASSERT_VALIDATED(ruleCount && ruleSetOffset + ruleCount * 2u <= table.size - 2u);
+  Table<Array16<Offset16>> rule_offsets(table.sub_table_unchecked(rule_set_offset));
+  uint32_t rule_count = rule_offsets->count();
+  BL_ASSERT_VALIDATED(rule_count && rule_set_offset + rule_count * 2u <= table.size - 2u);
 
-  return matchSequenceRuleFormat2<kCDFmt>(ruleOffsets, ruleCount, glyphPtr, maxGlyphCount, cdIt, matchOut);
+  return match_sequence_rule_format2<kCDFmt>(rule_offsets, rule_count, glyph_ptr, max_glyph_count, cd_it, match_out);
 }
 
-static BL_INLINE bool matchSequenceFormat3(
+static BL_INLINE bool match_sequence_format3(
   Table<GSubGPosTable::SequenceContext3> table,
-  const UInt16* coverageOffsetArray,
-  GlyphRange firstGlyphRange,
-  const CoverageTableIterator& cov0It,
-  uint32_t cov0Fmt,
-  const BLGlyphId* glyphPtr,
-  size_t glyphCount) noexcept {
+  const UInt16* coverage_offset_array,
+  GlyphRange first_glyph_range,
+  const CoverageTableIterator& cov0_it,
+  uint32_t cov0_fmt,
+  const BLGlyphId* glyph_ptr,
+  size_t glyph_count) noexcept {
 
-  BLGlyphId glyphId = glyphPtr[0];
-  if (!firstGlyphRange.contains(glyphId))
+  BLGlyphId glyph_id = glyph_ptr[0];
+  if (!first_glyph_range.contains(glyph_id))
     return false;
 
   uint32_t unusedCoverageIndex0;
-  if (!cov0It.findWithFormat(cov0Fmt, glyphId, unusedCoverageIndex0))
+  if (!cov0_it.find_with_format(cov0_fmt, glyph_id, unusedCoverageIndex0))
     return false;
 
-  for (size_t i = 1; i < glyphCount; i++) {
+  for (size_t i = 1; i < glyph_count; i++) {
     CoverageTableIterator covItN;
-    uint32_t covFmtN = covItN.init(table.subTableUnchecked(coverageOffsetArray[i].value()));
-    GlyphRange glyphRangeN = covItN.glyphRangeWithFormat(covFmtN);
+    uint32_t covFmtN = covItN.init(table.sub_table_unchecked(coverage_offset_array[i].value()));
+    GlyphRange glyphRangeN = covItN.glyph_range_with_format(covFmtN);
 
-    uint32_t glyphIdN = glyphPtr[i];
+    uint32_t glyphIdN = glyph_ptr[i];
     uint32_t unusedCoverageIndexN;
 
-    if (!glyphRangeN.contains(glyphIdN) || !covItN.findWithFormat(covFmtN, glyphIdN, unusedCoverageIndexN))
+    if (!glyphRangeN.contains(glyphIdN) || !covItN.find_with_format(covFmtN, glyphIdN, unusedCoverageIndexN))
       return false;
   }
 
@@ -951,80 +951,80 @@ static BL_INLINE bool matchSequenceFormat3(
 // ============================================================================
 
 template<typename ChainedSequenceLookupTable>
-static BL_NOINLINE bool validateChainedContextFormat1_2(ValidationContext& validator, Table<ChainedSequenceLookupTable> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validate_chained_context_format1_2(ValidationContext& validator, Table<ChainedSequenceLookupTable> table, const char* table_name) noexcept {
   typedef GSubGPosTable::ChainedSequenceRule ChainedSequenceRule;
   typedef GSubGPosTable::ChainedSequenceRuleSet ChainedSequenceRuleSet;
 
-  uint32_t coverageCount;
-  if (!validateLookupWithCoverage(validator, table, tableName, ChainedSequenceLookupTable::kBaseSize, coverageCount))
+  uint32_t coverage_count;
+  if (!validate_lookup_with_coverage(validator, table, table_name, ChainedSequenceLookupTable::kBaseSize, coverage_count))
     return false;
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  uint32_t headerSize = ChainedSequenceLookupTable::kBaseSize + ruleSetCount * 2u;
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  uint32_t header_size = ChainedSequenceLookupTable::kBaseSize + rule_set_count * 2u;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
-  const Offset16* ruleSetOffsetArray = table->ruleSetOffsets.array();
-  OffsetRange ruleSetOffsetRange{headerSize, table.size - 4u};
+  const Offset16* rule_set_offset_array = table->rule_set_offsets.array();
+  OffsetRange rule_set_offset_range{header_size, table.size - 4u};
 
-  for (uint32_t i = 0; i < ruleSetCount; i++) {
-    uint32_t ruleSetOffset = ruleSetOffsetArray[i].value();
+  for (uint32_t i = 0; i < rule_set_count; i++) {
+    uint32_t rule_set_offset = rule_set_offset_array[i].value();
 
     // Offsets are allowed to be null - this means that that ChainedSequenceRuleSet must be ignored.
-    if (!ruleSetOffset)
+    if (!rule_set_offset)
       continue;
 
-    if (!ruleSetOffsetRange.contains(ruleSetOffset))
-      return validator.invalidOffsetEntry(tableName, "ruleSetOffset", i, ruleSetOffset, ruleSetOffsetRange);
+    if (!rule_set_offset_range.contains(rule_set_offset))
+      return validator.invalid_offset_entry(table_name, "rule_set_offset", i, rule_set_offset, rule_set_offset_range);
 
-    Table<ChainedSequenceRuleSet> ruleSet(table.subTable(ruleSetOffset));
-    uint32_t ruleCount = ruleSet->count();
+    Table<ChainedSequenceRuleSet> rule_set(table.sub_table(rule_set_offset));
+    uint32_t rule_count = rule_set->count();
 
-    if (!ruleCount)
-      return validator.fail("%s.ruleSet[%u] cannot be empty", tableName, i);
+    if (!rule_count)
+      return validator.fail("%s.rule_set[%u] cannot be empty", table_name, i);
 
-    uint32_t ruleSetHeaderSize = 2u + ruleCount * 2u;
-    if (!ruleSet.fits(ruleSetHeaderSize))
-      return validator.fail("%s.ruleSet[%u] is truncated (size=%u, required=%u)", tableName, i, ruleSet.size, ruleSetHeaderSize);
+    uint32_t rule_set_header_size = 2u + rule_count * 2u;
+    if (!rule_set.fits(rule_set_header_size))
+      return validator.fail("%s.rule_set[%u] is truncated (size=%u, required=%u)", table_name, i, rule_set.size, rule_set_header_size);
 
-    const Offset16* ruleOffsetArray = ruleSet->array();
-    OffsetRange ruleOffsetRange{ruleSetHeaderSize, ruleSet.size - ChainedSequenceRule::kBaseSize};
+    const Offset16* rule_offset_array = rule_set->array();
+    OffsetRange rule_offset_range{rule_set_header_size, rule_set.size - ChainedSequenceRule::kBaseSize};
 
-    for (uint32_t ruleIndex = 0; ruleIndex < ruleCount; ruleIndex++) {
-      uint32_t ruleOffset = ruleOffsetArray[ruleIndex].value();
-      if (!ruleOffsetRange.contains(ruleOffset))
-        return validator.fail("%s.ruleSet[%u].rule[%u] offset (%u) is out of range [%u:%u]", tableName, i, ruleIndex, ruleOffset, ruleOffsetRange.start, ruleOffsetRange.end);
+    for (uint32_t rule_index = 0; rule_index < rule_count; rule_index++) {
+      uint32_t rule_offset = rule_offset_array[rule_index].value();
+      if (!rule_offset_range.contains(rule_offset))
+        return validator.fail("%s.rule_set[%u].rule[%u] offset (%u) is out of range [%u:%u]", table_name, i, rule_index, rule_offset, rule_offset_range.start, rule_offset_range.end);
 
-      Table<ChainedSequenceRule> rule = ruleSet.subTable(ruleOffset);
-      uint32_t backtrackGlyphCount = rule->backtrackGlyphCount();
+      Table<ChainedSequenceRule> rule = rule_set.sub_table(rule_offset);
+      uint32_t backtrack_glyph_count = rule->backtrack_glyph_count();
 
-      // Verify there is a room for `backgrackGlyphCount + backtrackSequence + inputGlyphCount`.
-      uint32_t inputGlyphOffset = 2u + backtrackGlyphCount * 2u;
-      if (!rule.fits(inputGlyphOffset + 2u))
-        return validator.fail("%s.ruleSet[%u].rule[%u] is truncated (size=%u, required=%u)", tableName, i, ruleIndex, rule.size, inputGlyphOffset + 2u);
+      // Verify there is a room for `backgrack_glyph_count + backtrack_sequence + input_glyph_count`.
+      uint32_t input_glyph_offset = 2u + backtrack_glyph_count * 2u;
+      if (!rule.fits(input_glyph_offset + 2u))
+        return validator.fail("%s.rule_set[%u].rule[%u] is truncated (size=%u, required=%u)", table_name, i, rule_index, rule.size, input_glyph_offset + 2u);
 
-      uint32_t inputGlyphCount = rule.readU16(inputGlyphOffset);
-      if (!inputGlyphCount)
-        return validator.fail("%s.ruleSet[%u].rule[%u] has invalid inputGlyphCount (%u)", tableName, i, ruleIndex, inputGlyphCount);
+      uint32_t input_glyph_count = rule.readU16(input_glyph_offset);
+      if (!input_glyph_count)
+        return validator.fail("%s.rule_set[%u].rule[%u] has invalid input_glyph_count (%u)", table_name, i, rule_index, input_glyph_count);
 
-      // Verify there is a room for `inputGlyphCount + inputSequence + lookaheadGlyphCount`.
-      uint32_t lookaheadOffset = inputGlyphOffset + 2u + (inputGlyphCount - 1u) * 2u;
-      if (!rule.fits(lookaheadOffset + 2u))
-        return validator.fail("%s.ruleSet[%u].rule[%u] is truncated (size=%u, required=%u)", tableName, i, ruleIndex, rule.size, lookaheadOffset + 2u);
+      // Verify there is a room for `input_glyph_count + input_sequence + lookahead_glyph_count`.
+      uint32_t lookahead_offset = input_glyph_offset + 2u + (input_glyph_count - 1u) * 2u;
+      if (!rule.fits(lookahead_offset + 2u))
+        return validator.fail("%s.rule_set[%u].rule[%u] is truncated (size=%u, required=%u)", table_name, i, rule_index, rule.size, lookahead_offset + 2u);
 
-      // Verify there is a room for `lookaheadSequence + lookupRecordCount`.
-      uint32_t lookaheadGlyphCount = rule.readU16(lookaheadOffset);
-      uint32_t lookupRecordOffset = lookaheadOffset + lookaheadGlyphCount * 2u;
-      if (!rule.fits(lookupRecordOffset + 2u))
-        return validator.fail("%s.ruleSet[%u].rule[%u] is truncated (size=%u, required=%u)", tableName, i, ruleIndex, rule.size, lookupRecordOffset + 2u);
+      // Verify there is a room for `lookahead_sequence + lookup_record_count`.
+      uint32_t lookahead_glyph_count = rule.readU16(lookahead_offset);
+      uint32_t lookup_record_offset = lookahead_offset + lookahead_glyph_count * 2u;
+      if (!rule.fits(lookup_record_offset + 2u))
+        return validator.fail("%s.rule_set[%u].rule[%u] is truncated (size=%u, required=%u)", table_name, i, rule_index, rule.size, lookup_record_offset + 2u);
 
-      uint32_t lookupRecordCount = rule.readU16(lookupRecordOffset);
-      if (!lookupRecordCount)
-        return validator.fail("%s.ruleSet[%u].rule[%u] has invalid lookupRecordCount (%u)", tableName, i, ruleIndex, lookupRecordCount);
+      uint32_t lookup_record_count = rule.readU16(lookup_record_offset);
+      if (!lookup_record_count)
+        return validator.fail("%s.rule_set[%u].rule[%u] has invalid lookup_record_count (%u)", table_name, i, rule_index, lookup_record_count);
 
-      const GSubGPosTable::SequenceLookupRecord* lookupRecordArray = PtrOps::offset<const GSubGPosTable::SequenceLookupRecord>(rule.data, lookupRecordOffset + 2u);
-      if (!validateSequenceLookupRecordArray(validator, lookupRecordArray, lookupRecordCount))
+      const GSubGPosTable::SequenceLookupRecord* lookup_record_array = PtrOps::offset<const GSubGPosTable::SequenceLookupRecord>(rule.data, lookup_record_offset + 2u);
+      if (!validate_sequence_lookup_record_array(validator, lookup_record_array, lookup_record_count))
         return false;
     }
   }
@@ -1032,94 +1032,94 @@ static BL_NOINLINE bool validateChainedContextFormat1_2(ValidationContext& valid
   return true;
 }
 
-static BL_INLINE bool validateChainedContextFormat1(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext1> table, const char* tableName) noexcept {
-  return validateChainedContextFormat1_2(validator, table, tableName);
+static BL_INLINE bool validate_chained_context_format1(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext1> table, const char* table_name) noexcept {
+  return validate_chained_context_format1_2(validator, table, table_name);
 }
 
-static BL_NOINLINE bool validateChainedContextFormat2(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext2> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validate_chained_context_format2(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext2> table, const char* table_name) noexcept {
   if (!table.fits())
-    return validator.invalidTableSize(tableName, table.size, GSubGPosTable::SequenceContext2::kBaseSize);
+    return validator.invalid_table_size(table_name, table.size, GSubGPosTable::SequenceContext2::kBaseSize);
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  uint32_t headerSize = GSubGPosTable::SequenceContext2::kBaseSize + ruleSetCount * 2u;
-  OffsetRange offsetRange{headerSize, table.size};
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  uint32_t header_size = GSubGPosTable::SequenceContext2::kBaseSize + rule_set_count * 2u;
+  OffsetRange offset_range{header_size, table.size};
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
-  uint32_t backtrackClassDefOffset = table->backtrackClassDefOffset();
-  uint32_t inputClassDefOffset = table->inputClassDefOffset();
-  uint32_t lookaheadClassDefOffset = table->lookaheadClassDefOffset();
+  uint32_t backtrack_class_def_offset = table->backtrack_class_def_offset();
+  uint32_t input_class_def_offset = table->input_class_def_offset();
+  uint32_t lookahead_class_def_offset = table->lookahead_class_def_offset();
 
-  if (!offsetRange.contains(backtrackClassDefOffset))
-    return validator.invalidFieldOffset(tableName, "backtrackClassDefOffset", backtrackClassDefOffset, offsetRange);
+  if (!offset_range.contains(backtrack_class_def_offset))
+    return validator.invalid_field_offset(table_name, "backtrack_class_def_offset", backtrack_class_def_offset, offset_range);
 
-  if (!offsetRange.contains(inputClassDefOffset))
-    return validator.invalidFieldOffset(tableName, "inputClassDefOffset", inputClassDefOffset, offsetRange);
+  if (!offset_range.contains(input_class_def_offset))
+    return validator.invalid_field_offset(table_name, "input_class_def_offset", input_class_def_offset, offset_range);
 
-  if (!offsetRange.contains(lookaheadClassDefOffset))
-    return validator.invalidFieldOffset(tableName, "lookaheadClassDefOffset", lookaheadClassDefOffset, offsetRange);
+  if (!offset_range.contains(lookahead_class_def_offset))
+    return validator.invalid_field_offset(table_name, "lookahead_class_def_offset", lookahead_class_def_offset, offset_range);
 
-  if (!validateClassDefTable(validator, table.subTableUnchecked(backtrackClassDefOffset), "backtrackClassDef"))
+  if (!validate_class_def_table(validator, table.sub_table_unchecked(backtrack_class_def_offset), "backtrack_class_def"))
     return false;
 
-  if (!validateClassDefTable(validator, table.subTableUnchecked(inputClassDefOffset), "inputClassDef"))
+  if (!validate_class_def_table(validator, table.sub_table_unchecked(input_class_def_offset), "input_class_def"))
     return false;
 
-  if (!validateClassDefTable(validator, table.subTableUnchecked(lookaheadClassDefOffset), "lookaheadClassDef"))
+  if (!validate_class_def_table(validator, table.sub_table_unchecked(lookahead_class_def_offset), "lookahead_class_def"))
     return false;
 
-  return validateChainedContextFormat1_2(validator, table, tableName);
+  return validate_chained_context_format1_2(validator, table, table_name);
 }
 
-static BL_NOINLINE bool validateChainedContextFormat3(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext3> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validate_chained_context_format3(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext3> table, const char* table_name) noexcept {
   if (!table.fits())
-    return validator.invalidTableSize(tableName, table.size, GSubGPosTable::ChainedSequenceContext3::kBaseSize);
+    return validator.invalid_table_size(table_name, table.size, GSubGPosTable::ChainedSequenceContext3::kBaseSize);
 
-  uint32_t backtrackGlyphCount = table->backtrackGlyphCount();
-  uint32_t inputGlyphCountOffset = 4u + backtrackGlyphCount * 2u;
+  uint32_t backtrack_glyph_count = table->backtrack_glyph_count();
+  uint32_t input_glyph_count_offset = 4u + backtrack_glyph_count * 2u;
 
-  if (!table.fits(inputGlyphCountOffset + 2u))
-    return validator.invalidTableSize(tableName, table.size, inputGlyphCountOffset + 2u);
+  if (!table.fits(input_glyph_count_offset + 2u))
+    return validator.invalid_table_size(table_name, table.size, input_glyph_count_offset + 2u);
 
-  uint32_t inputGlyphCount = table.readU16(inputGlyphCountOffset);
-  uint32_t lookaheadGlyphCountOffset = inputGlyphCountOffset + 2u + inputGlyphCount * 2u;
+  uint32_t input_glyph_count = table.readU16(input_glyph_count_offset);
+  uint32_t lookahead_glyph_count_offset = input_glyph_count_offset + 2u + input_glyph_count * 2u;
 
-  if (!table.fits(lookaheadGlyphCountOffset + 2u))
-    return validator.invalidTableSize(tableName, table.size, lookaheadGlyphCountOffset + 2u);
+  if (!table.fits(lookahead_glyph_count_offset + 2u))
+    return validator.invalid_table_size(table_name, table.size, lookahead_glyph_count_offset + 2u);
 
-  uint32_t lookaheadGlyphCount = table.readU16(lookaheadGlyphCountOffset);
-  uint32_t lookupRecordCountOffset = lookaheadGlyphCountOffset + 2u + lookaheadGlyphCount * 2u;
+  uint32_t lookahead_glyph_count = table.readU16(lookahead_glyph_count_offset);
+  uint32_t lookup_record_count_offset = lookahead_glyph_count_offset + 2u + lookahead_glyph_count * 2u;
 
-  if (!table.fits(lookupRecordCountOffset + 2u))
-    return validator.invalidTableSize(tableName, table.size, lookupRecordCountOffset + 2u);
+  if (!table.fits(lookup_record_count_offset + 2u))
+    return validator.invalid_table_size(table_name, table.size, lookup_record_count_offset + 2u);
 
-  uint32_t lookupRecordCount = table.readU16(lookupRecordCountOffset);
-  uint32_t headerSize = lookupRecordCountOffset + 2u + lookupRecordCount * GSubGPosTable::SequenceLookupRecord::kBaseSize;
+  uint32_t lookup_record_count = table.readU16(lookup_record_count_offset);
+  uint32_t header_size = lookup_record_count_offset + 2u + lookup_record_count * GSubGPosTable::SequenceLookupRecord::kBaseSize;
 
-  if (!lookupRecordCount)
-    return validator.fail("%s has no lookup records", tableName);
+  if (!lookup_record_count)
+    return validator.fail("%s has no lookup records", table_name);
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
-  OffsetRange offsetRange{headerSize, table.size - 2u};
+  OffsetRange offset_range{header_size, table.size - 2u};
 
-  const UInt16* backtrackCoverageOffsets = table->backtrackCoverageOffsets();
-  const UInt16* inputGlyphCoverageOffsets = PtrOps::offset<const UInt16>(table.data, inputGlyphCountOffset + 2u);
-  const UInt16* lookaheadCoverageOffsets = PtrOps::offset<const UInt16>(table.data, lookaheadGlyphCountOffset + 2u);
+  const UInt16* backtrack_coverage_offsets = table->backtrack_coverage_offsets();
+  const UInt16* input_glyph_coverage_offsets = PtrOps::offset<const UInt16>(table.data, input_glyph_count_offset + 2u);
+  const UInt16* lookahead_coverage_offsets = PtrOps::offset<const UInt16>(table.data, lookahead_glyph_count_offset + 2u);
 
-  if (!validateCoverageTables(validator, table, tableName, "backtrack", backtrackCoverageOffsets, backtrackGlyphCount, offsetRange))
+  if (!validate_coverage_tables(validator, table, table_name, "backtrack", backtrack_coverage_offsets, backtrack_glyph_count, offset_range))
     return false;
 
-  if (!validateCoverageTables(validator, table, tableName, "input", inputGlyphCoverageOffsets, inputGlyphCount, offsetRange))
+  if (!validate_coverage_tables(validator, table, table_name, "input", input_glyph_coverage_offsets, input_glyph_count, offset_range))
     return false;
 
-  if (!validateCoverageTables(validator, table, tableName, "lookahead", lookaheadCoverageOffsets, lookaheadGlyphCount, offsetRange))
+  if (!validate_coverage_tables(validator, table, table_name, "lookahead", lookahead_coverage_offsets, lookahead_glyph_count, offset_range))
     return false;
 
-  const GSubGPosTable::SequenceLookupRecord* lookupRecordArray = PtrOps::offset<const GSubGPosTable::SequenceLookupRecord>(table.data, lookupRecordCountOffset + 2u);
-  return validateSequenceLookupRecordArray(validator, lookupRecordArray, lookupRecordCount);
+  const GSubGPosTable::SequenceLookupRecord* lookup_record_array = PtrOps::offset<const GSubGPosTable::SequenceLookupRecord>(table.data, lookup_record_count_offset + 2u);
+  return validate_sequence_lookup_record_array(validator, lookup_record_array, lookup_record_count);
 }
 
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Chained Sequence Context Lookup
@@ -1127,60 +1127,60 @@ static BL_NOINLINE bool validateChainedContextFormat3(ValidationContext& validat
 
 struct ChainedMatchContext {
   RawTable table;
-  GlyphRange firstGlyphRange;
+  GlyphRange first_glyph_range;
 
-  BLGlyphId* backGlyphPtr;
-  BLGlyphId* aheadGlyphPtr;
+  BLGlyphId* back_glyph_ptr;
+  BLGlyphId* ahead_glyph_ptr;
 
-  size_t backGlyphCount;
-  size_t aheadGlyphCount;
+  size_t back_glyph_count;
+  size_t ahead_glyph_count;
 };
 
-static BL_INLINE bool matchBackGlyphsFormat1(const BLGlyphId* glyphPtr, const UInt16* matchSequence, size_t count) noexcept {
-  const BLGlyphId* glyphStart = glyphPtr - count;
+static BL_INLINE bool match_back_glyphs_format1(const BLGlyphId* glyph_ptr, const UInt16* match_sequence, size_t count) noexcept {
+  const BLGlyphId* glyph_start = glyph_ptr - count;
 
-  while (glyphPtr != glyphStart) {
-    if (glyphPtr[-1] != matchSequence[0].value())
+  while (glyph_ptr != glyph_start) {
+    if (glyph_ptr[-1] != match_sequence[0].value())
       return false;
-    glyphPtr--;
-    matchSequence++;
+    glyph_ptr--;
+    match_sequence++;
   }
 
   return true;
 }
 
 template<uint32_t kCDFmt>
-static BL_INLINE bool matchBackGlyphsFormat2(const BLGlyphId* glyphPtr, const UInt16* matchSequence, size_t count, const ClassDefTableIterator& cdIt) noexcept {
-  const BLGlyphId* glyphStart = glyphPtr - count;
+static BL_INLINE bool match_back_glyphs_format2(const BLGlyphId* glyph_ptr, const UInt16* match_sequence, size_t count, const ClassDefTableIterator& cd_it) noexcept {
+  const BLGlyphId* glyph_start = glyph_ptr - count;
 
-  while (glyphPtr != glyphStart) {
-    BLGlyphId glyphId = glyphPtr[-1];
-    uint32_t classValue = matchSequence[0].value();
+  while (glyph_ptr != glyph_start) {
+    BLGlyphId glyph_id = glyph_ptr[-1];
+    uint32_t class_value = match_sequence[0].value();
 
-    if (!cdIt.matchGlyphClass<kCDFmt>(glyphId, classValue))
+    if (!cd_it.match_glyph_class<kCDFmt>(glyph_id, class_value))
       return false;
 
-    glyphPtr--;
-    matchSequence++;
+    glyph_ptr--;
+    match_sequence++;
   }
 
   return true;
 }
 
-static BL_INLINE bool matchBackGlyphsFormat3(RawTable mainTable, const BLGlyphId* glyphPtr, const Offset16* backtrackCoverageOffsetArray, size_t count) noexcept {
-  for (size_t i = 0; i < count; i++, glyphPtr--) {
-    CoverageTableIterator covIt;
-    uint32_t covFmt = covIt.init(mainTable.subTableUnchecked(backtrackCoverageOffsetArray[i].value()));
-    BLGlyphId glyphId = glyphPtr[0];
+static BL_INLINE bool match_back_glyphs_format3(RawTable main_table, const BLGlyphId* glyph_ptr, const Offset16* backtrack_coverage_offset_array, size_t count) noexcept {
+  for (size_t i = 0; i < count; i++, glyph_ptr--) {
+    CoverageTableIterator cov_it;
+    uint32_t cov_fmt = cov_it.init(main_table.sub_table_unchecked(backtrack_coverage_offset_array[i].value()));
+    BLGlyphId glyph_id = glyph_ptr[0];
 
-    if (covFmt == 1) {
-      uint32_t unusedCoverageIndex;
-      if (!covIt.glyphRange<1>().contains(glyphId) || !covIt.find<1>(glyphId, unusedCoverageIndex))
+    if (cov_fmt == 1) {
+      uint32_t unused_coverage_index;
+      if (!cov_it.glyph_range<1>().contains(glyph_id) || !cov_it.find<1>(glyph_id, unused_coverage_index))
         return false;
     }
     else {
-      uint32_t unusedCoverageIndex;
-      if (!covIt.glyphRange<2>().contains(glyphId) || !covIt.find<2>(glyphId, unusedCoverageIndex))
+      uint32_t unused_coverage_index;
+      if (!cov_it.glyph_range<2>().contains(glyph_id) || !cov_it.find<2>(glyph_id, unused_coverage_index))
         return false;
     }
   }
@@ -1188,39 +1188,39 @@ static BL_INLINE bool matchBackGlyphsFormat3(RawTable mainTable, const BLGlyphId
   return true;
 }
 
-static BL_INLINE bool matchAheadGlyphsFormat1(const BLGlyphId* glyphPtr, const UInt16* matchSequence, size_t count) noexcept {
+static BL_INLINE bool match_ahead_glyphs_format1(const BLGlyphId* glyph_ptr, const UInt16* match_sequence, size_t count) noexcept {
   for (size_t i = 0; i < count; i++)
-    if (glyphPtr[i] != matchSequence[i].value())
+    if (glyph_ptr[i] != match_sequence[i].value())
       return false;
   return true;
 }
 
 template<uint32_t kCDFmt>
-static BL_INLINE bool matchAheadGlyphsFormat2(const BLGlyphId* glyphPtr, const UInt16* matchSequence, size_t count, const ClassDefTableIterator& cdIt) noexcept {
+static BL_INLINE bool match_ahead_glyphs_format2(const BLGlyphId* glyph_ptr, const UInt16* match_sequence, size_t count, const ClassDefTableIterator& cd_it) noexcept {
   for (size_t i = 0; i < count; i++) {
-    BLGlyphId glyphId = glyphPtr[i];
-    uint32_t classValue = matchSequence[i].value();
+    BLGlyphId glyph_id = glyph_ptr[i];
+    uint32_t class_value = match_sequence[i].value();
 
-    if (!cdIt.matchGlyphClass<kCDFmt>(glyphId, classValue))
+    if (!cd_it.match_glyph_class<kCDFmt>(glyph_id, class_value))
       return false;
   }
   return true;
 }
 
-static BL_INLINE bool matchAheadGlyphsFormat3(RawTable mainTable, const BLGlyphId* glyphPtr, const Offset16* lookaheadCoverageOffsetArray, size_t count) noexcept {
+static BL_INLINE bool match_ahead_glyphs_format3(RawTable main_table, const BLGlyphId* glyph_ptr, const Offset16* lookahead_coverage_offset_array, size_t count) noexcept {
   for (size_t i = 0; i < count; i++) {
-    CoverageTableIterator covIt;
-    uint32_t covFmt = covIt.init(mainTable.subTableUnchecked(lookaheadCoverageOffsetArray[i].value()));
-    BLGlyphId glyphId = glyphPtr[i];
+    CoverageTableIterator cov_it;
+    uint32_t cov_fmt = cov_it.init(main_table.sub_table_unchecked(lookahead_coverage_offset_array[i].value()));
+    BLGlyphId glyph_id = glyph_ptr[i];
 
-    if (covFmt == 1) {
-      uint32_t unusedCoverageIndex;
-      if (!covIt.glyphRange<1>().contains(glyphId) || !covIt.find<1>(glyphId, unusedCoverageIndex))
+    if (cov_fmt == 1) {
+      uint32_t unused_coverage_index;
+      if (!cov_it.glyph_range<1>().contains(glyph_id) || !cov_it.find<1>(glyph_id, unused_coverage_index))
         return false;
     }
     else {
-      uint32_t unusedCoverageIndex;
-      if (!covIt.glyphRange<2>().contains(glyphId) || !covIt.find<2>(glyphId, unusedCoverageIndex))
+      uint32_t unused_coverage_index;
+      if (!cov_it.glyph_range<2>().contains(glyph_id) || !cov_it.find<2>(glyph_id, unused_coverage_index))
         return false;
     }
   }
@@ -1228,50 +1228,50 @@ static BL_INLINE bool matchAheadGlyphsFormat3(RawTable mainTable, const BLGlyphI
   return true;
 }
 
-static BL_INLINE bool matchChainedSequenceRuleFormat1(
+static BL_INLINE bool match_chained_sequence_rule_format1(
   ChainedMatchContext& mCtx,
-  Table<Array16<Offset16>> ruleOffsets, uint32_t ruleCount,
-  SequenceMatch* matchOut) noexcept {
+  Table<Array16<Offset16>> rule_offsets, uint32_t rule_count,
+  SequenceMatch* match_out) noexcept {
 
-  for (uint32_t ruleIndex = 0; ruleIndex < ruleCount; ruleIndex++) {
-    uint32_t ruleOffset = ruleOffsets->array()[ruleIndex].value();
-    BL_ASSERT_VALIDATED(ruleOffset <= ruleOffsets.size - GSubGPosTable::ChainedSequenceRule::kBaseSize);
+  for (uint32_t rule_index = 0; rule_index < rule_count; rule_index++) {
+    uint32_t rule_offset = rule_offsets->array()[rule_index].value();
+    BL_ASSERT_VALIDATED(rule_offset <= rule_offsets.size - GSubGPosTable::ChainedSequenceRule::kBaseSize);
 
-    Table<GSubGPosTable::ChainedSequenceRule> rule = ruleOffsets.subTableUnchecked(ruleOffset);
-    uint32_t backtrackGlyphCount = rule->backtrackGlyphCount();
+    Table<GSubGPosTable::ChainedSequenceRule> rule = rule_offsets.sub_table_unchecked(rule_offset);
+    uint32_t backtrack_glyph_count = rule->backtrack_glyph_count();
 
-    uint32_t inputGlyphOffset = 2u + backtrackGlyphCount * 2u;
-    BL_ASSERT_VALIDATED(rule.fits(inputGlyphOffset + 2u));
+    uint32_t input_glyph_offset = 2u + backtrack_glyph_count * 2u;
+    BL_ASSERT_VALIDATED(rule.fits(input_glyph_offset + 2u));
 
-    uint32_t inputGlyphCount = rule.readU16(inputGlyphOffset);
-    BL_ASSERT_VALIDATED(inputGlyphCount != 0u);
+    uint32_t input_glyph_count = rule.readU16(input_glyph_offset);
+    BL_ASSERT_VALIDATED(input_glyph_count != 0u);
 
-    uint32_t lookaheadOffset = inputGlyphOffset + 2u + inputGlyphCount * 2u - 2u;
-    BL_ASSERT_VALIDATED(rule.fits(lookaheadOffset + 2u));
+    uint32_t lookahead_offset = input_glyph_offset + 2u + input_glyph_count * 2u - 2u;
+    BL_ASSERT_VALIDATED(rule.fits(lookahead_offset + 2u));
 
     // Multiple conditions merged into a single one that results in a branch.
-    uint32_t lookaheadGlyphCount = rule.readU16(lookaheadOffset);
-    if (unsigned(mCtx.backGlyphCount < backtrackGlyphCount) | unsigned(mCtx.aheadGlyphCount < inputGlyphCount + lookaheadGlyphCount))
+    uint32_t lookahead_glyph_count = rule.readU16(lookahead_offset);
+    if (unsigned(mCtx.back_glyph_count < backtrack_glyph_count) | unsigned(mCtx.ahead_glyph_count < input_glyph_count + lookahead_glyph_count))
       continue;
 
     // Match backtrack glyphs, which are stored in reverse order in backtrack array, index 0 describes the last glyph).
-    if (!matchBackGlyphsFormat1(mCtx.backGlyphPtr + mCtx.backGlyphCount, rule->backtrackSequence(), backtrackGlyphCount))
+    if (!match_back_glyphs_format1(mCtx.back_glyph_ptr + mCtx.back_glyph_count, rule->backtrack_sequence(), backtrack_glyph_count))
       continue;
 
     // Match input and lookahead glyphs.
-    if (!matchAheadGlyphsFormat1(mCtx.aheadGlyphPtr, rule.dataAs<UInt16>(inputGlyphOffset + 2u), inputGlyphCount - 1u))
+    if (!match_ahead_glyphs_format1(mCtx.ahead_glyph_ptr, rule.data_as<UInt16>(input_glyph_offset + 2u), input_glyph_count - 1u))
       continue;
 
-    if (!matchAheadGlyphsFormat1(mCtx.aheadGlyphPtr + inputGlyphCount - 1u, rule.dataAs<UInt16>(lookaheadOffset + 2u), lookaheadGlyphCount))
+    if (!match_ahead_glyphs_format1(mCtx.ahead_glyph_ptr + input_glyph_count - 1u, rule.data_as<UInt16>(lookahead_offset + 2u), lookahead_glyph_count))
       continue;
 
-    uint32_t lookupRecordOffset = lookaheadOffset + lookaheadGlyphCount * 2u;
-    BL_ASSERT_VALIDATED(rule.fits(lookupRecordOffset + 2u));
+    uint32_t lookup_record_offset = lookahead_offset + lookahead_glyph_count * 2u;
+    BL_ASSERT_VALIDATED(rule.fits(lookup_record_offset + 2u));
 
-    uint32_t lookupRecordCount = rule.readU16(lookupRecordOffset);
-    BL_ASSERT_VALIDATED(rule.fits(lookupRecordOffset + 2u + lookupRecordCount * GSubGPosTable::SequenceLookupRecord::kBaseSize));
+    uint32_t lookup_record_count = rule.readU16(lookup_record_offset);
+    BL_ASSERT_VALIDATED(rule.fits(lookup_record_offset + 2u + lookup_record_count * GSubGPosTable::SequenceLookupRecord::kBaseSize));
 
-    *matchOut = SequenceMatch{inputGlyphCount, lookupRecordCount, rule.dataAs<GSubGPosTable::SequenceLookupRecord>(lookupRecordOffset + 2u)};
+    *match_out = SequenceMatch{input_glyph_count, lookup_record_count, rule.data_as<GSubGPosTable::SequenceLookupRecord>(lookup_record_offset + 2u)};
     return true;
   }
 
@@ -1279,51 +1279,51 @@ static BL_INLINE bool matchChainedSequenceRuleFormat1(
 }
 
 template<uint32_t kCD1Fmt, uint32_t kCD2Fmt, uint32_t kCD3Fmt>
-static BL_INLINE bool matchChainedSequenceRuleFormat2(
+static BL_INLINE bool match_chained_sequence_rule_format2(
   ChainedMatchContext& mCtx,
-  Table<Array16<Offset16>> ruleOffsets, uint32_t ruleCount,
-  const ClassDefTableIterator& cd1It, const ClassDefTableIterator& cd2It, const ClassDefTableIterator& cd3It,
-  SequenceMatch* matchOut) noexcept {
+  Table<Array16<Offset16>> rule_offsets, uint32_t rule_count,
+  const ClassDefTableIterator& cd1_it, const ClassDefTableIterator& cd2_it, const ClassDefTableIterator& cd3_it,
+  SequenceMatch* match_out) noexcept {
 
-  for (uint32_t ruleIndex = 0; ruleIndex < ruleCount; ruleIndex++) {
-    uint32_t ruleOffset = ruleOffsets->array()[ruleIndex].value();
-    BL_ASSERT_VALIDATED(ruleOffset <= ruleOffsets.size - GSubGPosTable::ChainedSequenceRule::kBaseSize);
+  for (uint32_t rule_index = 0; rule_index < rule_count; rule_index++) {
+    uint32_t rule_offset = rule_offsets->array()[rule_index].value();
+    BL_ASSERT_VALIDATED(rule_offset <= rule_offsets.size - GSubGPosTable::ChainedSequenceRule::kBaseSize);
 
-    Table<GSubGPosTable::ChainedSequenceRule> rule = ruleOffsets.subTableUnchecked(ruleOffset);
-    uint32_t backtrackGlyphCount = rule->backtrackGlyphCount();
+    Table<GSubGPosTable::ChainedSequenceRule> rule = rule_offsets.sub_table_unchecked(rule_offset);
+    uint32_t backtrack_glyph_count = rule->backtrack_glyph_count();
 
-    uint32_t inputGlyphOffset = 2u + backtrackGlyphCount * 2u;
-    BL_ASSERT_VALIDATED(rule.fits(inputGlyphOffset + 2u));
+    uint32_t input_glyph_offset = 2u + backtrack_glyph_count * 2u;
+    BL_ASSERT_VALIDATED(rule.fits(input_glyph_offset + 2u));
 
-    uint32_t inputGlyphCount = rule.readU16(inputGlyphOffset);
-    BL_ASSERT_VALIDATED(inputGlyphCount != 0u);
+    uint32_t input_glyph_count = rule.readU16(input_glyph_offset);
+    BL_ASSERT_VALIDATED(input_glyph_count != 0u);
 
-    uint32_t lookaheadOffset = inputGlyphOffset + 2u + inputGlyphCount * 2u - 2u;
-    BL_ASSERT_VALIDATED(rule.fits(lookaheadOffset + 2u));
+    uint32_t lookahead_offset = input_glyph_offset + 2u + input_glyph_count * 2u - 2u;
+    BL_ASSERT_VALIDATED(rule.fits(lookahead_offset + 2u));
 
     // Multiple conditions merged into a single one that results in a branch.
-    uint32_t lookaheadGlyphCount = rule.readU16(lookaheadOffset);
-    if (unsigned(mCtx.backGlyphCount < backtrackGlyphCount) | unsigned(mCtx.aheadGlyphCount < inputGlyphCount + lookaheadGlyphCount))
+    uint32_t lookahead_glyph_count = rule.readU16(lookahead_offset);
+    if (unsigned(mCtx.back_glyph_count < backtrack_glyph_count) | unsigned(mCtx.ahead_glyph_count < input_glyph_count + lookahead_glyph_count))
       continue;
 
     // Match backtrack glyphs, which are stored in reverse order in backtrack array, index 0 describes the last glyph).
-    if (!matchBackGlyphsFormat2<kCD1Fmt>(mCtx.backGlyphPtr + mCtx.backGlyphCount, rule->backtrackSequence(), backtrackGlyphCount, cd1It))
+    if (!match_back_glyphs_format2<kCD1Fmt>(mCtx.back_glyph_ptr + mCtx.back_glyph_count, rule->backtrack_sequence(), backtrack_glyph_count, cd1_it))
       continue;
 
     // Match input and lookahead glyphs.
-    if (!matchAheadGlyphsFormat2<kCD2Fmt>(mCtx.aheadGlyphPtr, rule.dataAs<UInt16>(inputGlyphOffset + 2u), inputGlyphCount - 1u, cd2It))
+    if (!match_ahead_glyphs_format2<kCD2Fmt>(mCtx.ahead_glyph_ptr, rule.data_as<UInt16>(input_glyph_offset + 2u), input_glyph_count - 1u, cd2_it))
       continue;
 
-    if (!matchAheadGlyphsFormat2<kCD3Fmt>(mCtx.aheadGlyphPtr + inputGlyphCount - 1u, rule.dataAs<UInt16>(lookaheadOffset + 2u), lookaheadGlyphCount, cd3It))
+    if (!match_ahead_glyphs_format2<kCD3Fmt>(mCtx.ahead_glyph_ptr + input_glyph_count - 1u, rule.data_as<UInt16>(lookahead_offset + 2u), lookahead_glyph_count, cd3_it))
       continue;
 
-    uint32_t lookupRecordOffset = lookaheadOffset + lookaheadGlyphCount * 2u;
-    BL_ASSERT_VALIDATED(rule.fits(lookupRecordOffset + 2u));
+    uint32_t lookup_record_offset = lookahead_offset + lookahead_glyph_count * 2u;
+    BL_ASSERT_VALIDATED(rule.fits(lookup_record_offset + 2u));
 
-    uint32_t lookupRecordCount = rule.readU16(lookupRecordOffset);
-    BL_ASSERT_VALIDATED(rule.fits(lookupRecordOffset + 2u + lookupRecordCount * GSubGPosTable::SequenceLookupRecord::kBaseSize));
+    uint32_t lookup_record_count = rule.readU16(lookup_record_offset);
+    BL_ASSERT_VALIDATED(rule.fits(lookup_record_offset + 2u + lookup_record_count * GSubGPosTable::SequenceLookupRecord::kBaseSize));
 
-    *matchOut = SequenceMatch{inputGlyphCount, lookupRecordCount, rule.dataAs<GSubGPosTable::SequenceLookupRecord>(lookupRecordOffset + 2u)};
+    *match_out = SequenceMatch{input_glyph_count, lookup_record_count, rule.data_as<GSubGPosTable::SequenceLookupRecord>(lookup_record_offset + 2u)};
     return true;
   }
 
@@ -1331,115 +1331,115 @@ static BL_INLINE bool matchChainedSequenceRuleFormat2(
 }
 
 template<uint32_t kCovFmt>
-static BL_INLINE bool matchChainedSequenceFormat1(
+static BL_INLINE bool match_chained_sequence_format1(
   ChainedMatchContext& mCtx,
-  const Offset16* ruleSetOffsets, uint32_t ruleSetCount,
-  const CoverageTableIterator& covIt,
-  SequenceMatch* matchOut) noexcept {
+  const Offset16* rule_set_offsets, uint32_t rule_set_count,
+  const CoverageTableIterator& cov_it,
+  SequenceMatch* match_out) noexcept {
 
-  BLGlyphId glyphId = mCtx.aheadGlyphPtr[0];
-  if (!mCtx.firstGlyphRange.contains(glyphId))
+  BLGlyphId glyph_id = mCtx.ahead_glyph_ptr[0];
+  if (!mCtx.first_glyph_range.contains(glyph_id))
     return false;
 
-  uint32_t coverageIndex;
-  if (!covIt.find<kCovFmt>(glyphId, coverageIndex) || coverageIndex >= ruleSetCount)
+  uint32_t coverage_index;
+  if (!cov_it.find<kCovFmt>(glyph_id, coverage_index) || coverage_index >= rule_set_count)
     return false;
 
-  uint32_t ruleSetOffset = ruleSetOffsets[coverageIndex].value();
-  BL_ASSERT_VALIDATED(ruleSetOffset <= mCtx.table.size - 2u);
+  uint32_t rule_set_offset = rule_set_offsets[coverage_index].value();
+  BL_ASSERT_VALIDATED(rule_set_offset <= mCtx.table.size - 2u);
 
-  Table<Array16<Offset16>> ruleOffsets(mCtx.table.subTableUnchecked(ruleSetOffset));
-  uint32_t ruleCount = ruleOffsets->count();
-  BL_ASSERT_VALIDATED(ruleCount && ruleSetOffset + ruleCount * 2u <= mCtx.table.size - 2u);
+  Table<Array16<Offset16>> rule_offsets(mCtx.table.sub_table_unchecked(rule_set_offset));
+  uint32_t rule_count = rule_offsets->count();
+  BL_ASSERT_VALIDATED(rule_count && rule_set_offset + rule_count * 2u <= mCtx.table.size - 2u);
 
-  return matchChainedSequenceRuleFormat1(mCtx, ruleOffsets, ruleCount, matchOut);
+  return match_chained_sequence_rule_format1(mCtx, rule_offsets, rule_count, match_out);
 }
 
 template<uint32_t kCovFmt, uint32_t kCD1Fmt, uint32_t kCD2Fmt, uint32_t kCD3Fmt>
-static BL_INLINE bool matchChainedSequenceFormat2(
+static BL_INLINE bool match_chained_sequence_format2(
   ChainedMatchContext& mCtx,
-  const Offset16* ruleSetOffsets, uint32_t ruleSetCount,
-  const CoverageTableIterator& covIt, const ClassDefTableIterator& cd1It, const ClassDefTableIterator& cd2It, const ClassDefTableIterator& cd3It,
-  SequenceMatch* matchOut) noexcept {
+  const Offset16* rule_set_offsets, uint32_t rule_set_count,
+  const CoverageTableIterator& cov_it, const ClassDefTableIterator& cd1_it, const ClassDefTableIterator& cd2_it, const ClassDefTableIterator& cd3_it,
+  SequenceMatch* match_out) noexcept {
 
-  BLGlyphId glyphId = mCtx.aheadGlyphPtr[0];
-  if (!mCtx.firstGlyphRange.contains(glyphId))
+  BLGlyphId glyph_id = mCtx.ahead_glyph_ptr[0];
+  if (!mCtx.first_glyph_range.contains(glyph_id))
     return false;
 
-  uint32_t coverageIndex;
-  if (!covIt.find<kCovFmt>(glyphId, coverageIndex) || coverageIndex >= ruleSetCount)
+  uint32_t coverage_index;
+  if (!cov_it.find<kCovFmt>(glyph_id, coverage_index) || coverage_index >= rule_set_count)
     return false;
 
-  uint32_t ruleSetOffset = ruleSetOffsets[coverageIndex].value();
-  BL_ASSERT_VALIDATED(ruleSetOffset <= mCtx.table.size - 2u);
+  uint32_t rule_set_offset = rule_set_offsets[coverage_index].value();
+  BL_ASSERT_VALIDATED(rule_set_offset <= mCtx.table.size - 2u);
 
-  Table<Array16<Offset16>> ruleOffsets(mCtx.table.subTableUnchecked(ruleSetOffset));
-  uint32_t ruleCount = ruleOffsets->count();
-  BL_ASSERT_VALIDATED(ruleCount && ruleSetOffset + ruleCount * 2u <= mCtx.table.size - 2u);
+  Table<Array16<Offset16>> rule_offsets(mCtx.table.sub_table_unchecked(rule_set_offset));
+  uint32_t rule_count = rule_offsets->count();
+  BL_ASSERT_VALIDATED(rule_count && rule_set_offset + rule_count * 2u <= mCtx.table.size - 2u);
 
-  return matchChainedSequenceRuleFormat2<kCD1Fmt, kCD2Fmt, kCD3Fmt>(mCtx, ruleOffsets, ruleCount, cd1It, cd2It, cd3It, matchOut);
+  return match_chained_sequence_rule_format2<kCD1Fmt, kCD2Fmt, kCD3Fmt>(mCtx, rule_offsets, rule_count, cd1_it, cd2_it, cd3_it, match_out);
 }
 
-static BL_INLINE bool matchChainedSequenceFormat3(
+static BL_INLINE bool match_chained_sequence_format3(
   ChainedMatchContext& mCtx,
-  const UInt16* backtrackCoverageOffsetArray, uint32_t backtrackGlyphCount,
-  const UInt16* inputCoverageOffsetArray, uint32_t inputGlyphCount,
-  const UInt16* lookaheadCoverageOffsetArray, uint32_t lookaheadGlyphCount,
-  GlyphRange firstGlyphRange,
-  CoverageTableIterator& cov0It, uint32_t cov0Fmt) noexcept {
+  const UInt16* backtrack_coverage_offset_array, uint32_t backtrack_glyph_count,
+  const UInt16* input_coverage_offset_array, uint32_t input_glyph_count,
+  const UInt16* lookahead_coverage_offset_array, uint32_t lookahead_glyph_count,
+  GlyphRange first_glyph_range,
+  CoverageTableIterator& cov0_it, uint32_t cov0_fmt) noexcept {
 
-  BL_ASSERT(mCtx.backGlyphCount >= backtrackGlyphCount);
-  BL_ASSERT(mCtx.aheadGlyphCount >= inputGlyphCount + lookaheadGlyphCount);
+  BL_ASSERT(mCtx.back_glyph_count >= backtrack_glyph_count);
+  BL_ASSERT(mCtx.ahead_glyph_count >= input_glyph_count + lookahead_glyph_count);
 
-  BLGlyphId glyphId = mCtx.aheadGlyphPtr[0];
-  if (!firstGlyphRange.contains(glyphId))
+  BLGlyphId glyph_id = mCtx.ahead_glyph_ptr[0];
+  if (!first_glyph_range.contains(glyph_id))
     return false;
 
   uint32_t unusedCoverageIndex0;
-  if (!cov0It.findWithFormat(cov0Fmt, glyphId, unusedCoverageIndex0))
+  if (!cov0_it.find_with_format(cov0_fmt, glyph_id, unusedCoverageIndex0))
     return false;
 
-  for (uint32_t i = 1; i < inputGlyphCount; i++) {
+  for (uint32_t i = 1; i < input_glyph_count; i++) {
     CoverageTableIterator covItN;
-    uint32_t covFmtN = covItN.init(mCtx.table.subTableUnchecked(inputCoverageOffsetArray[i].value()));
-    GlyphRange glyphRangeN = covItN.glyphRangeWithFormat(covFmtN);
+    uint32_t covFmtN = covItN.init(mCtx.table.sub_table_unchecked(input_coverage_offset_array[i].value()));
+    GlyphRange glyphRangeN = covItN.glyph_range_with_format(covFmtN);
 
-    uint32_t glyphIdN = mCtx.aheadGlyphPtr[i];
+    uint32_t glyphIdN = mCtx.ahead_glyph_ptr[i];
     uint32_t unusedCoverageIndexN;
 
-    if (!glyphRangeN.contains(glyphIdN) || !covItN.findWithFormat(covFmtN, glyphIdN, unusedCoverageIndexN))
+    if (!glyphRangeN.contains(glyphIdN) || !covItN.find_with_format(covFmtN, glyphIdN, unusedCoverageIndexN))
       return false;
   }
 
-  return matchBackGlyphsFormat3(mCtx.table, mCtx.backGlyphPtr + mCtx.backGlyphCount - 1u, backtrackCoverageOffsetArray, backtrackGlyphCount) &&
-         matchAheadGlyphsFormat3(mCtx.table, mCtx.aheadGlyphPtr + inputGlyphCount, lookaheadCoverageOffsetArray, lookaheadGlyphCount);
+  return match_back_glyphs_format3(mCtx.table, mCtx.back_glyph_ptr + mCtx.back_glyph_count - 1u, backtrack_coverage_offset_array, backtrack_glyph_count) &&
+         match_ahead_glyphs_format3(mCtx.table, mCtx.ahead_glyph_ptr + input_glyph_count, lookahead_coverage_offset_array, lookahead_glyph_count);
 }
 
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #1 - Single Substitution Validation
 // =================================================================================
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType1Format1(ValidationContext& validator, Table<GSubTable::SingleSubst1> table) noexcept {
-  const char* tableName = "SingleSubst1";
-  uint32_t unusedCoverageCount;
-  return validateLookupWithCoverage(validator, table, tableName, GSubTable::SingleSubst1::kBaseSize, unusedCoverageCount);
+static BL_INLINE_IF_NOT_DEBUG bool validate_gsub_lookup_type1_format1(ValidationContext& validator, Table<GSubTable::SingleSubst1> table) noexcept {
+  const char* table_name = "SingleSubst1";
+  uint32_t unused_coverage_count;
+  return validate_lookup_with_coverage(validator, table, table_name, GSubTable::SingleSubst1::kBaseSize, unused_coverage_count);
 }
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType1Format2(ValidationContext& validator, Table<GSubTable::SingleSubst2> table) noexcept {
-  const char* tableName = "SingleSubst2";
+static BL_INLINE_IF_NOT_DEBUG bool validate_gsub_lookup_type1_format2(ValidationContext& validator, Table<GSubTable::SingleSubst2> table) noexcept {
+  const char* table_name = "SingleSubst2";
 
-  uint32_t coverageCount;
-  if (!validateLookupWithCoverage(validator, table, tableName, GSubTable::SingleSubst2::kBaseSize, coverageCount))
+  uint32_t coverage_count;
+  if (!validate_lookup_with_coverage(validator, table, table_name, GSubTable::SingleSubst2::kBaseSize, coverage_count))
     return false;
 
-  const GSubTable::SingleSubst2* lookup = table.dataAs<GSubTable::SingleSubst2>();
-  uint32_t glyphCount = lookup->glyphs.count();
-  uint32_t headerSize = GSubTable::SingleSubst2::kBaseSize + glyphCount * 2u;
+  const GSubTable::SingleSubst2* lookup = table.data_as<GSubTable::SingleSubst2>();
+  uint32_t glyph_count = lookup->glyphs.count();
+  uint32_t header_size = GSubTable::SingleSubst2::kBaseSize + glyph_count * 2u;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
-  if (glyphCount < coverageCount)
-    validator.warn("%s has less glyphs (%u) than coverage entries (%u)", tableName, glyphCount, coverageCount);
+  if (glyph_count < coverage_count)
+    validator.warn("%s has less glyphs (%u) than coverage entries (%u)", table_name, glyph_count, coverage_count);
 
   return true;
 }
@@ -1448,55 +1448,55 @@ static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType1Format2(ValidationCont
 // =============================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType1Format1(GSubContext& ctx, Table<GSubTable::SingleSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type1_format1(GSubContext& ctx, Table<GSubTable::SingleSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  BLGlyphId* glyphPtr = ctx.glyphData() + scope.index();
-  BLGlyphId* glyphEnd = ctx.glyphData() + scope.end();
+  BLGlyphId* glyph_ptr = ctx.glyph_data() + scope.index();
+  BLGlyphId* glyph_end = ctx.glyph_data() + scope.end();
 
   // Cannot apply a lookup if there is no data to be processed.
-  BL_ASSERT(glyphPtr != glyphEnd);
+  BL_ASSERT(glyph_ptr != glyph_end);
 
-  uint32_t glyphDelta = uint16_t(table->deltaGlyphId());
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
+  uint32_t glyph_delta = uint16_t(table->delta_glyph_id());
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
 
   do {
-    BLGlyphId glyphId = glyphPtr[0];
-    if (glyphRange.contains(glyphId)) {
-      uint32_t unusedCoverageIndex;
-      if (covIt.find<kCovFmt>(glyphId, unusedCoverageIndex))
-        glyphPtr[0] = (glyphId + glyphDelta) & 0xFFFFu;
+    BLGlyphId glyph_id = glyph_ptr[0];
+    if (glyph_range.contains(glyph_id)) {
+      uint32_t unused_coverage_index;
+      if (cov_it.find<kCovFmt>(glyph_id, unused_coverage_index))
+        glyph_ptr[0] = (glyph_id + glyph_delta) & 0xFFFFu;
     }
-  } while (scope.isRange() && ++glyphPtr != glyphEnd);
+  } while (scope.is_range() && ++glyph_ptr != glyph_end);
 
   return BL_SUCCESS;
 }
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType1Format2(GSubContext& ctx, Table<GSubTable::SingleSubst2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type1_format2(GSubContext& ctx, Table<GSubTable::SingleSubst2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  BLGlyphId* glyphPtr = ctx.glyphData() + scope.index();
-  BLGlyphId* glyphEnd = ctx.glyphData() + scope.end();
+  BLGlyphId* glyph_ptr = ctx.glyph_data() + scope.index();
+  BLGlyphId* glyph_end = ctx.glyph_data() + scope.end();
 
   // Cannot apply a lookup if there is no data to be processed.
-  BL_ASSERT(glyphPtr != glyphEnd);
+  BL_ASSERT(glyph_ptr != glyph_end);
 
-  uint32_t substCount = table->glyphs.count();
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
-  BL_ASSERT_VALIDATED(table.fits(GSubTable::SingleSubst2::kBaseSize + substCount * 2u));
+  uint32_t subst_count = table->glyphs.count();
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
+  BL_ASSERT_VALIDATED(table.fits(GSubTable::SingleSubst2::kBaseSize + subst_count * 2u));
 
   do {
-    BLGlyphId glyphId = glyphPtr[0];
-    if (glyphRange.contains(glyphId)) {
-      uint32_t coverageIndex;
-      if (covIt.find<kCovFmt>(glyphId, coverageIndex) && coverageIndex < substCount) {
-        glyphPtr[0] = table->glyphs.array()[coverageIndex].value();
+    BLGlyphId glyph_id = glyph_ptr[0];
+    if (glyph_range.contains(glyph_id)) {
+      uint32_t coverage_index;
+      if (cov_it.find<kCovFmt>(glyph_id, coverage_index) && coverage_index < subst_count) {
+        glyph_ptr[0] = table->glyphs.array()[coverage_index].value();
       }
     }
-  } while (scope.isRange() && ++glyphPtr != glyphEnd);
+  } while (scope.is_range() && ++glyph_ptr != glyph_end);
 
   return BL_SUCCESS;
 }
@@ -1504,40 +1504,40 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType1Format2(GSubContext& 
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #2 - Multiple Substitution Validation
 // ===================================================================================
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType2Format1(ValidationContext& validator, Table<GSubTable::MultipleSubst1> table) noexcept {
-  const char* tableName = "MultipleSubst1";
+static BL_INLINE_IF_NOT_DEBUG bool validate_gsub_lookup_type2_format1(ValidationContext& validator, Table<GSubTable::MultipleSubst1> table) noexcept {
+  const char* table_name = "MultipleSubst1";
 
-  uint32_t coverageCount;
-  if (!validateLookupWithCoverage(validator, table, tableName, GSubTable::MultipleSubst1::kBaseSize, coverageCount))
+  uint32_t coverage_count;
+  if (!validate_lookup_with_coverage(validator, table, table_name, GSubTable::MultipleSubst1::kBaseSize, coverage_count))
     return false;
 
-  uint32_t sequenceSetCount = table->sequenceOffsets.count();
-  uint32_t headerSize = GSubTable::MultipleSubst1::kBaseSize + sequenceSetCount * 2u;
+  uint32_t sequence_set_count = table->sequence_offsets.count();
+  uint32_t header_size = GSubTable::MultipleSubst1::kBaseSize + sequence_set_count * 2u;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
-  if (sequenceSetCount < coverageCount)
-    validator.warn("%s has less sequence sets (%u) than coverage entries (%u)", tableName, sequenceSetCount, coverageCount);
+  if (sequence_set_count < coverage_count)
+    validator.warn("%s has less sequence sets (%u) than coverage entries (%u)", table_name, sequence_set_count, coverage_count);
 
   // Offsets to glyph sequences.
-  const Offset16* offsetArray = table->sequenceOffsets.array();
-  OffsetRange offsetRange{headerSize, table.size - 4u};
+  const Offset16* offset_array = table->sequence_offsets.array();
+  OffsetRange offset_range{header_size, table.size - 4u};
 
-  for (uint32_t i = 0; i < sequenceSetCount; i++) {
-    uint32_t sequenceOffset = offsetArray[i].value();
-    if (!offsetRange.contains(sequenceOffset))
-      return validator.invalidOffsetEntry(tableName, "sequenceOffsets", i, sequenceOffset, offsetRange);
+  for (uint32_t i = 0; i < sequence_set_count; i++) {
+    uint32_t sequence_offset = offset_array[i].value();
+    if (!offset_range.contains(sequence_offset))
+      return validator.invalid_offset_entry(table_name, "sequence_offsets", i, sequence_offset, offset_range);
 
-    Table<Array16<UInt16>> sequence(table.subTable(sequenceOffset));
+    Table<Array16<UInt16>> sequence(table.sub_table(sequence_offset));
 
     // NOTE: The OpenType specification explicitly forbids empty sequences (aka removing glyphs), however,
     // this is actually used in practice (actually by fonts from MS), so we just allow it as others do...
-    uint32_t sequenceLength = sequence->count();
-    uint32_t sequenceTableSize = 2u + sequenceLength * 2u;
+    uint32_t sequence_length = sequence->count();
+    uint32_t sequence_table_size = 2u + sequence_length * 2u;
 
-    if (sequence.fits(sequenceTableSize))
-      return validator.fail("%s.sequence[%u] is truncated (size=%u, required=%u)", tableName, i, sequence.size, sequenceTableSize);
+    if (sequence.fits(sequence_table_size))
+      return validator.fail("%s.sequence[%u] is truncated (size=%u, required=%u)", table_name, i, sequence.size, sequence_table_size);
   }
 
   return true;
@@ -1548,124 +1548,124 @@ static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType2Format1(ValidationCont
 
 // TODO: [OpenType] [SECURITY] What if the glyph contains kSeqMask???
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType2Format1(GSubContext& ctx, Table<GSubTable::MultipleSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type2_format1(GSubContext& ctx, Table<GSubTable::MultipleSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
   constexpr BLGlyphId kSequenceMarker = 0x80000000u;
 
-  BLGlyphId* glyphInPtr = ctx.glyphData() + scope.index();
-  BLGlyphId* glyphInEnd = ctx.glyphData() + scope.end();
+  BLGlyphId* glyph_in_ptr = ctx.glyph_data() + scope.index();
+  BLGlyphId* glyph_in_end = ctx.glyph_data() + scope.end();
 
   // Cannot apply a lookup if there is no data to be processed.
-  BL_ASSERT(glyphInPtr != glyphInEnd);
+  BL_ASSERT(glyph_in_ptr != glyph_in_end);
 
-  uint32_t sequenceSetCount = table->sequenceOffsets.count();
-  BL_ASSERT_VALIDATED(table.fits(GSubTable::MultipleSubst1::kBaseSize + sequenceSetCount * 2u));
+  uint32_t sequence_set_count = table->sequence_offsets.count();
+  BL_ASSERT_VALIDATED(table.fits(GSubTable::MultipleSubst1::kBaseSize + sequence_set_count * 2u));
 
-  size_t replacedGlyphCount = 0;
-  size_t replacedSequenceSize = 0;
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
+  size_t replaced_glyph_count = 0;
+  size_t replaced_sequence_size = 0;
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
 
   do {
-    BLGlyphId glyphId = glyphInPtr[0];
-    if (glyphRange.contains(glyphId)) {
-      uint32_t coverageIndex;
-      if (covIt.find<kCovFmt>(glyphId, coverageIndex) && coverageIndex < sequenceSetCount) {
-        uint32_t sequenceOffset = table->sequenceOffsets.array()[coverageIndex].value();
-        BL_ASSERT_VALIDATED(sequenceOffset <= table.size - 2u);
+    BLGlyphId glyph_id = glyph_in_ptr[0];
+    if (glyph_range.contains(glyph_id)) {
+      uint32_t coverage_index;
+      if (cov_it.find<kCovFmt>(glyph_id, coverage_index) && coverage_index < sequence_set_count) {
+        uint32_t sequence_offset = table->sequence_offsets.array()[coverage_index].value();
+        BL_ASSERT_VALIDATED(sequence_offset <= table.size - 2u);
 
-        uint32_t sequenceLength = MemOps::readU16uBE(table.data + sequenceOffset);
-        BL_ASSERT_VALIDATED(sequenceOffset + sequenceLength * 2u <= table.size - 2u);
+        uint32_t sequence_length = MemOps::readU16uBE(table.data + sequence_offset);
+        BL_ASSERT_VALIDATED(sequence_offset + sequence_length * 2u <= table.size - 2u);
 
-        glyphInPtr[0] = sequenceOffset | kSequenceMarker;
-        replacedGlyphCount++;
-        replacedSequenceSize += sequenceLength;
+        glyph_in_ptr[0] = sequence_offset | kSequenceMarker;
+        replaced_glyph_count++;
+        replaced_sequence_size += sequence_length;
       }
     }
-  } while (scope.isRange() && ++glyphInPtr != glyphInEnd);
+  } while (scope.is_range() && ++glyph_in_ptr != glyph_in_end);
 
   // Not a single match if zero.
-  if (!replacedGlyphCount)
+  if (!replaced_glyph_count)
     return BL_SUCCESS;
 
-  // We could be only processing a range withing the work buffer, thus it's not safe to reuse `glyphInPtr`.
-  glyphInPtr = ctx.glyphData() + ctx.size();
+  // We could be only processing a range withing the work buffer, thus it's not safe to reuse `glyph_in_ptr`.
+  glyph_in_ptr = ctx.glyph_data() + ctx.size();
 
-  BLGlyphId* glyphInStart = ctx.glyphData();
-  BLGlyphInfo* infoInPtr = ctx.infoData() + ctx.size();
+  BLGlyphId* glyph_in_start = ctx.glyph_data();
+  BLGlyphInfo* info_in_ptr = ctx.info_data() + ctx.size();
 
-  size_t sizeAfter = ctx.size() - replacedGlyphCount + replacedSequenceSize;
-  BL_PROPAGATE(ctx.ensureWorkBuffer(sizeAfter));
+  size_t size_after = ctx.size() - replaced_glyph_count + replaced_sequence_size;
+  BL_PROPAGATE(ctx.ensure_work_buffer(size_after));
 
-  BLGlyphId* glyphOutPtr = ctx.glyphData() + sizeAfter;
-  BLGlyphInfo* infoOutPtr = ctx.infoData() + sizeAfter;
+  BLGlyphId* glyph_out_ptr = ctx.glyph_data() + size_after;
+  BLGlyphInfo* info_out_ptr = ctx.info_data() + size_after;
 
   // Second loop applies all matches that were found and marked.
   do {
-    BLGlyphId glyphId = *--glyphInPtr;
-    *--glyphOutPtr = glyphId;
-    *--infoOutPtr = *--infoInPtr;
+    BLGlyphId glyph_id = *--glyph_in_ptr;
+    *--glyph_out_ptr = glyph_id;
+    *--info_out_ptr = *--info_in_ptr;
 
-    if (glyphId & kSequenceMarker) {
-      size_t sequenceOffset = glyphId & ~kSequenceMarker;
-      size_t sequenceLength = MemOps::readU16uBE(table.data + sequenceOffset);
-      const UInt16* sequenceData = table.dataAs<UInt16>(sequenceOffset + 2u);
+    if (glyph_id & kSequenceMarker) {
+      size_t sequence_offset = glyph_id & ~kSequenceMarker;
+      size_t sequence_length = MemOps::readU16uBE(table.data + sequence_offset);
+      const UInt16* sequence_data = table.data_as<UInt16>(sequence_offset + 2u);
 
-      glyphOutPtr -= sequenceLength;
-      infoOutPtr -= sequenceLength;
+      glyph_out_ptr -= sequence_length;
+      info_out_ptr -= sequence_length;
 
-      while (sequenceLength) {
-        sequenceLength--;
-        glyphOutPtr[sequenceLength] = sequenceData[sequenceLength].value();
-        infoOutPtr[sequenceLength] = *infoInPtr;
+      while (sequence_length) {
+        sequence_length--;
+        glyph_out_ptr[sequence_length] = sequence_data[sequence_length].value();
+        info_out_ptr[sequence_length] = *info_in_ptr;
       }
     }
-  } while (glyphInPtr != glyphInStart);
+  } while (glyph_in_ptr != glyph_in_start);
 
-  BL_ASSERT(glyphOutPtr == ctx.glyphData());
+  BL_ASSERT(glyph_out_ptr == ctx.glyph_data());
   return BL_SUCCESS;
 }
 
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #3 - Alternate Substitution Validation
 // ====================================================================================
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType3Format1(ValidationContext& validator, RawTable table) noexcept {
-  const char* tableName = "AlternateSubst1";
+static BL_INLINE_IF_NOT_DEBUG bool validate_gsub_lookup_type3_format1(ValidationContext& validator, RawTable table) noexcept {
+  const char* table_name = "AlternateSubst1";
 
-  uint32_t coverageCount;
-  if (!validateLookupWithCoverage(validator, table, tableName, GSubTable::AlternateSubst1::kBaseSize, coverageCount))
+  uint32_t coverage_count;
+  if (!validate_lookup_with_coverage(validator, table, table_name, GSubTable::AlternateSubst1::kBaseSize, coverage_count))
     return false;
 
-  const GSubTable::AlternateSubst1* lookup = table.dataAs<GSubTable::AlternateSubst1>();
-  uint32_t alternateSetCount = lookup->alternateSetOffsets.count();
-  uint32_t headerSize = GSubTable::AlternateSubst1::kBaseSize + alternateSetCount * 2u;
+  const GSubTable::AlternateSubst1* lookup = table.data_as<GSubTable::AlternateSubst1>();
+  uint32_t alternate_set_count = lookup->alternate_set_offsets.count();
+  uint32_t header_size = GSubTable::AlternateSubst1::kBaseSize + alternate_set_count * 2u;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
   // Offsets to AlternateSet tables.
-  const Offset16* offsetArray = lookup->alternateSetOffsets.array();
-  OffsetRange offsetRange{headerSize, table.size - 4u};
+  const Offset16* offset_array = lookup->alternate_set_offsets.array();
+  OffsetRange offset_range{header_size, table.size - 4u};
 
-  if (alternateSetCount < coverageCount)
-    validator.warn("%s has less AlternateSet records (%u) than coverage entries (%u)", tableName, alternateSetCount, coverageCount);
+  if (alternate_set_count < coverage_count)
+    validator.warn("%s has less AlternateSet records (%u) than coverage entries (%u)", table_name, alternate_set_count, coverage_count);
 
-  for (uint32_t i = 0; i < alternateSetCount; i++) {
-    uint32_t offset = offsetArray[i].value();
-    if (!offsetRange.contains(offset))
-      return validator.invalidOffsetEntry(tableName, "alternateSetOffsets", i, offset, offsetRange);
+  for (uint32_t i = 0; i < alternate_set_count; i++) {
+    uint32_t offset = offset_array[i].value();
+    if (!offset_range.contains(offset))
+      return validator.invalid_offset_entry(table_name, "alternate_set_offsets", i, offset, offset_range);
 
-    const Array16<UInt16>* alternateSet = PtrOps::offset<const Array16<UInt16>>(table.data, offset);
-    uint32_t alternateSetLength = alternateSet->count();
+    const Array16<UInt16>* alternate_set = PtrOps::offset<const Array16<UInt16>>(table.data, offset);
+    uint32_t alternate_set_length = alternate_set->count();
 
     // Specification forbids an empty AlternateSet.
-    if (!alternateSetLength)
-      return validator.fail("%s.alternateSet[%u] cannot be empty", tableName, i);
+    if (!alternate_set_length)
+      return validator.fail("%s.alternate_set[%u] cannot be empty", table_name, i);
 
-    uint32_t alternateSetTableEnd = offset + 2u + alternateSetLength * 2u;
-    if (alternateSetTableEnd > table.size)
-      return validator.fail("%s.alternateSet[%u] overflows table size by %u bytes", tableName, i, table.size - alternateSetTableEnd);
+    uint32_t alternate_set_table_end = offset + 2u + alternate_set_length * 2u;
+    if (alternate_set_table_end > table.size)
+      return validator.fail("%s.alternate_set[%u] overflows table size by %u bytes", table_name, i, table.size - alternate_set_table_end);
   }
 
   return true;
@@ -1675,40 +1675,40 @@ static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType3Format1(ValidationCont
 // ================================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType3Format1(GSubContext& ctx, Table<GSubTable::AlternateSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type3_format1(GSubContext& ctx, Table<GSubTable::AlternateSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  BLGlyphId* glyphPtr = ctx.glyphData() + scope.index();
-  BLGlyphId* glyphEnd = ctx.glyphData() + scope.end();
+  BLGlyphId* glyph_ptr = ctx.glyph_data() + scope.index();
+  BLGlyphId* glyph_end = ctx.glyph_data() + scope.end();
 
   // Cannot apply a lookup if there is no data to be processed.
-  BL_ASSERT(glyphPtr != glyphEnd);
+  BL_ASSERT(glyph_ptr != glyph_end);
 
-  uint32_t alternateSetCount = table->alternateSetOffsets.count();
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
-  BL_ASSERT_VALIDATED(table.fits(GSubTable::AlternateSubst1::kBaseSize + alternateSetCount * 2u));
+  uint32_t alternate_set_count = table->alternate_set_offsets.count();
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
+  BL_ASSERT_VALIDATED(table.fits(GSubTable::AlternateSubst1::kBaseSize + alternate_set_count * 2u));
 
   // TODO: [OpenType] Not sure how the index should be selected (AlternateSubst1).
-  uint32_t selectedIndex = 0u;
+  uint32_t selected_index = 0u;
 
   do {
-    BLGlyphId glyphId = glyphPtr[0];
-    if (glyphRange.contains(glyphId)) {
-      uint32_t coverageIndex;
-      if (covIt.find<kCovFmt>(glyphId, coverageIndex) && coverageIndex < alternateSetCount) {
-        uint32_t alternateSetOffset = table->alternateSetOffsets.array()[coverageIndex].value();
-        BL_ASSERT_VALIDATED(alternateSetOffset <= table.size - 2u);
+    BLGlyphId glyph_id = glyph_ptr[0];
+    if (glyph_range.contains(glyph_id)) {
+      uint32_t coverage_index;
+      if (cov_it.find<kCovFmt>(glyph_id, coverage_index) && coverage_index < alternate_set_count) {
+        uint32_t alternate_set_offset = table->alternate_set_offsets.array()[coverage_index].value();
+        BL_ASSERT_VALIDATED(alternate_set_offset <= table.size - 2u);
 
-        const UInt16* alts = reinterpret_cast<const UInt16*>(table.data + alternateSetOffset + 2u);
-        uint32_t altGlyphCount = alts[-1].value();
-        BL_ASSERT_VALIDATED(altGlyphCount != 0u && alternateSetOffset + altGlyphCount * 2u <= table.size - 2u);
+        const UInt16* alts = reinterpret_cast<const UInt16*>(table.data + alternate_set_offset + 2u);
+        uint32_t alt_glyph_count = alts[-1].value();
+        BL_ASSERT_VALIDATED(alt_glyph_count != 0u && alternate_set_offset + alt_glyph_count * 2u <= table.size - 2u);
 
-        uint32_t altGlyphIndex = (selectedIndex % altGlyphCount);
-        glyphPtr[0] = alts[altGlyphIndex].value();
+        uint32_t alt_glyph_index = (selected_index % alt_glyph_count);
+        glyph_ptr[0] = alts[alt_glyph_index].value();
       }
     }
-  } while (scope.isRange() && ++glyphPtr != glyphEnd);
+  } while (scope.is_range() && ++glyph_ptr != glyph_end);
 
   return BL_SUCCESS;
 }
@@ -1716,58 +1716,58 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType3Format1(GSubContext& 
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #4 - Ligature Substitution Validation
 // ===================================================================================
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType4Format1(ValidationContext& validator, Table<GSubTable::LigatureSubst1> table) noexcept {
-  const char* tableName = "LigatureSubst1";
+static BL_INLINE_IF_NOT_DEBUG bool validate_gsub_lookup_type4_format1(ValidationContext& validator, Table<GSubTable::LigatureSubst1> table) noexcept {
+  const char* table_name = "LigatureSubst1";
 
-  uint32_t coverageCount;
-  if (!validateLookupWithCoverage(validator, table, tableName, GSubTable::LigatureSubst1::kBaseSize, coverageCount))
+  uint32_t coverage_count;
+  if (!validate_lookup_with_coverage(validator, table, table_name, GSubTable::LigatureSubst1::kBaseSize, coverage_count))
     return false;
 
-  const GSubTable::LigatureSubst1* lookup = table.dataAs<GSubTable::LigatureSubst1>();
-  uint32_t ligatureSetCount = lookup->ligatureSetOffsets.count();
-  uint32_t headerSize = GSubTable::LigatureSubst1::kBaseSize + ligatureSetCount * 2u;
+  const GSubTable::LigatureSubst1* lookup = table.data_as<GSubTable::LigatureSubst1>();
+  uint32_t ligature_set_count = lookup->ligature_set_offsets.count();
+  uint32_t header_size = GSubTable::LigatureSubst1::kBaseSize + ligature_set_count * 2u;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
-  if (ligatureSetCount < coverageCount)
-    validator.warn("%s has less LigatureSet records (%u) than coverage entries (%u)", tableName, ligatureSetCount, coverageCount);
+  if (ligature_set_count < coverage_count)
+    validator.warn("%s has less LigatureSet records (%u) than coverage entries (%u)", table_name, ligature_set_count, coverage_count);
 
   // Offsets to LigatureSet tables.
-  const Offset16* ligatureSetOffsetArray = lookup->ligatureSetOffsets.array();
-  OffsetRange ligatureSetOffsetRange{headerSize, table.size-4u};
+  const Offset16* ligature_set_offset_array = lookup->ligature_set_offsets.array();
+  OffsetRange ligature_set_offset_range{header_size, table.size-4u};
 
-  for (uint32_t i = 0; i < ligatureSetCount; i++) {
-    uint32_t ligatureSetOffset = ligatureSetOffsetArray[i].value();
-    if (!ligatureSetOffsetRange.contains(ligatureSetOffset))
-      return validator.invalidOffsetEntry(tableName, "ligatureSetOffsets", i, ligatureSetOffset, ligatureSetOffsetRange);
+  for (uint32_t i = 0; i < ligature_set_count; i++) {
+    uint32_t ligature_set_offset = ligature_set_offset_array[i].value();
+    if (!ligature_set_offset_range.contains(ligature_set_offset))
+      return validator.invalid_offset_entry(table_name, "ligature_set_offsets", i, ligature_set_offset, ligature_set_offset_range);
 
-    Table<Array16<UInt16>> ligatureSet(table.subTable(ligatureSetOffset));
+    Table<Array16<UInt16>> ligature_set(table.sub_table(ligature_set_offset));
 
-    uint32_t ligatureCount = ligatureSet->count();
-    if (!ligatureCount)
-      return validator.fail("%s.ligatureSet[%u] cannot be empty", tableName, i);
+    uint32_t ligature_count = ligature_set->count();
+    if (!ligature_count)
+      return validator.fail("%s.ligature_set[%u] cannot be empty", table_name, i);
 
-    uint32_t ligatureSetHeaderSize = 2u + ligatureCount * 2u;
-    if (!ligatureSet.fits(ligatureSetHeaderSize))
-      return validator.fail("%s.ligatureSet[%u] overflows the table size by [%u] bytes", tableName, i, ligatureSetHeaderSize - ligatureSet.size);
+    uint32_t ligature_set_header_size = 2u + ligature_count * 2u;
+    if (!ligature_set.fits(ligature_set_header_size))
+      return validator.fail("%s.ligature_set[%u] overflows the table size by [%u] bytes", table_name, i, ligature_set_header_size - ligature_set.size);
 
-    const Offset16* ligatureOffsetArray = ligatureSet->array();
-    OffsetRange ligatureOffsetRange{ligatureSetHeaderSize, ligatureSet.size - 6u};
+    const Offset16* ligature_offset_array = ligature_set->array();
+    OffsetRange ligature_offset_range{ligature_set_header_size, ligature_set.size - 6u};
 
-    for (uint32_t ligatureIndex = 0; ligatureIndex < ligatureCount; ligatureIndex++) {
-      uint32_t ligatureOffset = ligatureOffsetArray[ligatureIndex].value();
-      if (!ligatureOffsetRange.contains(ligatureOffset))
-        return validator.fail("%s.ligatureSet[%u] ligature[%u] offset (%u) is out of range [%u:%u]", tableName, i, ligatureIndex, ligatureOffset, headerSize, table.size);
+    for (uint32_t ligature_index = 0; ligature_index < ligature_count; ligature_index++) {
+      uint32_t ligature_offset = ligature_offset_array[ligature_index].value();
+      if (!ligature_offset_range.contains(ligature_offset))
+        return validator.fail("%s.ligature_set[%u] ligature[%u] offset (%u) is out of range [%u:%u]", table_name, i, ligature_index, ligature_offset, header_size, table.size);
 
-      Table<GSubTable::Ligature> ligature = ligatureSet.subTable(ligatureOffset);
-      uint32_t componentCount = ligature->glyphs.count();
-      if (componentCount < 2u)
-        return validator.fail("%s.ligatureSet[%u].ligature[%u] must have at least 2 glyphs, not %u", tableName, i, ligatureIndex, componentCount);
+      Table<GSubTable::Ligature> ligature = ligature_set.sub_table(ligature_offset);
+      uint32_t component_count = ligature->glyphs.count();
+      if (component_count < 2u)
+        return validator.fail("%s.ligature_set[%u].ligature[%u] must have at least 2 glyphs, not %u", table_name, i, ligature_index, component_count);
 
-      uint32_t ligatureTableSize = 2u + componentCount * 2u;
-      if (!ligature.fits(ligatureTableSize))
-        return validator.fail("%s.ligatureSet[%u].ligature[%u] is truncated (size=%u, required=%u)", tableName, i, ligatureIndex, ligature.size, ligatureTableSize);
+      uint32_t ligature_table_size = 2u + component_count * 2u;
+      if (!ligature.fits(ligature_table_size))
+        return validator.fail("%s.ligature_set[%u].ligature[%u] is truncated (size=%u, required=%u)", table_name, i, ligature_index, ligature.size, ligature_table_size);
     }
   }
 
@@ -1777,40 +1777,40 @@ static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType4Format1(ValidationCont
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #4 - Ligature Substitution Lookup
 // ===============================================================================
 
-static BL_INLINE bool matchLigature(
-  Table<Array16<Offset16>> ligatureOffsets,
-  uint32_t ligatureCount,
-  const BLGlyphId* inGlyphData,
-  size_t maxGlyphCount,
-  uint32_t& ligatureGlyphIdOut,
-  uint32_t& ligatureGlyphCount) noexcept {
+static BL_INLINE bool match_ligature(
+  Table<Array16<Offset16>> ligature_offsets,
+  uint32_t ligature_count,
+  const BLGlyphId* in_glyph_data,
+  size_t max_glyph_count,
+  uint32_t& ligature_glyph_id_out,
+  uint32_t& ligature_glyph_count) noexcept {
 
   // Ligatures are ordered by preference. This means we have to go one by one.
-  for (uint32_t i = 0; i < ligatureCount; i++) {
-    uint32_t ligatureOffset = ligatureOffsets->array()[i].value();
-    BL_ASSERT_VALIDATED(ligatureOffset <= ligatureOffsets.size - 4u);
+  for (uint32_t i = 0; i < ligature_count; i++) {
+    uint32_t ligature_offset = ligature_offsets->array()[i].value();
+    BL_ASSERT_VALIDATED(ligature_offset <= ligature_offsets.size - 4u);
 
-    const GSubTable::Ligature* ligature = PtrOps::offset<const GSubTable::Ligature>(ligatureOffsets.data, ligatureOffset);
-    ligatureGlyphCount = uint32_t(ligature->glyphs.count());
-    if (ligatureGlyphCount > maxGlyphCount)
+    const GSubTable::Ligature* ligature = PtrOps::offset<const GSubTable::Ligature>(ligature_offsets.data, ligature_offset);
+    ligature_glyph_count = uint32_t(ligature->glyphs.count());
+    if (ligature_glyph_count > max_glyph_count)
       continue;
 
-    // This is safe - a single Ligature is 4 bytes + GlyphId[ligatureGlyphCount - 1]. MaxLigOffset is 4 bytes less than
-    // the end to include the header, so we only have to include `ligatureGlyphCount * 2u` to verify we won't read beyond.
-    BL_ASSERT_VALIDATED(ligatureOffset + ligatureGlyphCount * 2u <= ligatureOffsets.size - 4u);
+    // This is safe - a single Ligature is 4 bytes + GlyphId[ligature_glyph_count - 1]. MaxLigOffset is 4 bytes less than
+    // the end to include the header, so we only have to include `ligature_glyph_count * 2u` to verify we won't read beyond.
+    BL_ASSERT_VALIDATED(ligature_offset + ligature_glyph_count * 2u <= ligature_offsets.size - 4u);
 
-    uint32_t glyphIndex = 1;
+    uint32_t glyph_index = 1;
     for (;;) {
-      BLGlyphId glyphA = ligature->glyphs.array()[glyphIndex-1].value();
-      BLGlyphId glyphB = inGlyphData[glyphIndex];
+      BLGlyphId glyphA = ligature->glyphs.array()[glyph_index-1].value();
+      BLGlyphId glyphB = in_glyph_data[glyph_index];
 
       if (glyphA != glyphB)
         break;
 
-      if (++glyphIndex < ligatureGlyphCount)
+      if (++glyph_index < ligature_glyph_count)
         continue;
 
-      ligatureGlyphIdOut = ligature->ligatureGlyphId();
+      ligature_glyph_id_out = ligature->ligature_glyph_id();
       return true;
     }
   }
@@ -1819,209 +1819,209 @@ static BL_INLINE bool matchLigature(
 }
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType4Format1(GSubContext& ctx, Table<GSubTable::LigatureSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type4_format1(GSubContext& ctx, Table<GSubTable::LigatureSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  BLGlyphId* glyphInPtr = ctx.glyphData() + scope.index();
-  BLGlyphId* glyphInEnd = ctx.glyphData() + ctx.size();
-  BLGlyphId* glyphInEndScope = ctx.glyphData() + scope.end();
+  BLGlyphId* glyph_in_ptr = ctx.glyph_data() + scope.index();
+  BLGlyphId* glyph_in_end = ctx.glyph_data() + ctx.size();
+  BLGlyphId* glyph_in_end_scope = ctx.glyph_data() + scope.end();
 
   // Cannot apply a lookup if there is no data to be processed.
-  BL_ASSERT(glyphInPtr != glyphInEndScope);
+  BL_ASSERT(glyph_in_ptr != glyph_in_end_scope);
 
-  uint32_t ligatureSetCount = table->ligatureSetOffsets.count();
-  BL_ASSERT_VALIDATED(table.fits(GSubTable::LigatureSubst1::kBaseSize + ligatureSetCount * 2u));
+  uint32_t ligature_set_count = table->ligature_set_offsets.count();
+  BL_ASSERT_VALIDATED(table.fits(GSubTable::LigatureSubst1::kBaseSize + ligature_set_count * 2u));
 
   // Find the first ligature - if no ligature is matched, no buffer operation will be performed.
-  BLGlyphId* glyphOutPtr = nullptr;
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
+  BLGlyphId* glyph_out_ptr = nullptr;
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
 
   for (;;) {
-    BLGlyphId glyphId = glyphInPtr[0];
-    if (glyphRange.contains(glyphId)) {
-      uint32_t coverageIndex;
-      if (covIt.find<kCovFmt>(glyphId, coverageIndex) && coverageIndex < ligatureSetCount) {
-        uint32_t ligatureSetOffset = table->ligatureSetOffsets.array()[coverageIndex].value();
-        BL_ASSERT_VALIDATED(ligatureSetOffset <= table.size - 2u);
+    BLGlyphId glyph_id = glyph_in_ptr[0];
+    if (glyph_range.contains(glyph_id)) {
+      uint32_t coverage_index;
+      if (cov_it.find<kCovFmt>(glyph_id, coverage_index) && coverage_index < ligature_set_count) {
+        uint32_t ligature_set_offset = table->ligature_set_offsets.array()[coverage_index].value();
+        BL_ASSERT_VALIDATED(ligature_set_offset <= table.size - 2u);
 
-        Table<Array16<Offset16>> ligatureOffsets(table.subTableUnchecked(ligatureSetOffset));
-        uint32_t ligatureCount = ligatureOffsets->count();
-        BL_ASSERT_VALIDATED(ligatureCount && ligatureSetOffset + ligatureCount * 2u <= table.size - 2u);
+        Table<Array16<Offset16>> ligature_offsets(table.sub_table_unchecked(ligature_set_offset));
+        uint32_t ligature_count = ligature_offsets->count();
+        BL_ASSERT_VALIDATED(ligature_count && ligature_set_offset + ligature_count * 2u <= table.size - 2u);
 
-        BLGlyphId ligatureGlyphId;
-        uint32_t ligatureGlyphCount;
+        BLGlyphId ligature_glyph_id;
+        uint32_t ligature_glyph_count;
 
-        if (matchLigature(ligatureOffsets, ligatureCount, glyphInPtr, (size_t)(glyphInEnd - glyphInPtr), ligatureGlyphId, ligatureGlyphCount)) {
-          *glyphInPtr = ligatureGlyphId;
-          glyphOutPtr = glyphInPtr + 1u;
+        if (match_ligature(ligature_offsets, ligature_count, glyph_in_ptr, (size_t)(glyph_in_end - glyph_in_ptr), ligature_glyph_id, ligature_glyph_count)) {
+          *glyph_in_ptr = ligature_glyph_id;
+          glyph_out_ptr = glyph_in_ptr + 1u;
 
-          glyphInPtr += ligatureGlyphCount;
+          glyph_in_ptr += ligature_glyph_count;
           break;
         }
       }
     }
 
-    if (++glyphInPtr == glyphInEndScope)
+    if (++glyph_in_ptr == glyph_in_end_scope)
       return BL_SUCCESS;
   }
 
   // Secondary loop - applies the replacement in-place - the buffer will end up having less glyphs.
-  size_t inIndex = size_t(glyphInPtr - ctx.glyphData());
-  size_t outIndex = size_t(glyphOutPtr - ctx.glyphData());
+  size_t in_index = size_t(glyph_in_ptr - ctx.glyph_data());
+  size_t out_index = size_t(glyph_out_ptr - ctx.glyph_data());
 
-  BLGlyphInfo* infoInPtr = ctx.infoData() + inIndex;
-  BLGlyphInfo* infoOutPtr = ctx.infoData() + outIndex;
+  BLGlyphInfo* info_in_ptr = ctx.info_data() + in_index;
+  BLGlyphInfo* info_out_ptr = ctx.info_data() + out_index;
 
   // These is only a single possible match if the scope is only a single index (nested lookups).
-  if (scope.isRange()) {
-    while (glyphInPtr != glyphInEndScope) {
-      BLGlyphId glyphId = glyphInPtr[0];
-      if (glyphRange.contains(glyphId)) {
-        uint32_t coverageIndex;
-        if (covIt.find<kCovFmt>(glyphId, coverageIndex) && coverageIndex < ligatureSetCount) {
-          uint32_t ligatureSetOffset = table->ligatureSetOffsets.array()[coverageIndex].value();
-          BL_ASSERT_VALIDATED(ligatureSetOffset <= table.size - 2u);
+  if (scope.is_range()) {
+    while (glyph_in_ptr != glyph_in_end_scope) {
+      BLGlyphId glyph_id = glyph_in_ptr[0];
+      if (glyph_range.contains(glyph_id)) {
+        uint32_t coverage_index;
+        if (cov_it.find<kCovFmt>(glyph_id, coverage_index) && coverage_index < ligature_set_count) {
+          uint32_t ligature_set_offset = table->ligature_set_offsets.array()[coverage_index].value();
+          BL_ASSERT_VALIDATED(ligature_set_offset <= table.size - 2u);
 
-          Table<Array16<Offset16>> ligatureOffsets(table.subTableUnchecked(ligatureSetOffset));
-          uint32_t ligatureCount = ligatureOffsets->count();
-          BL_ASSERT_VALIDATED(ligatureCount && ligatureSetOffset + ligatureCount * 2u <= table.size - 2u);
+          Table<Array16<Offset16>> ligature_offsets(table.sub_table_unchecked(ligature_set_offset));
+          uint32_t ligature_count = ligature_offsets->count();
+          BL_ASSERT_VALIDATED(ligature_count && ligature_set_offset + ligature_count * 2u <= table.size - 2u);
 
-          BLGlyphId ligatureGlyphId;
-          uint32_t ligatureGlyphCount;
+          BLGlyphId ligature_glyph_id;
+          uint32_t ligature_glyph_count;
 
-          if (matchLigature(ligatureOffsets, ligatureCount, glyphInPtr, (size_t)(glyphInEnd - glyphInPtr), ligatureGlyphId, ligatureGlyphCount)) {
-            *glyphOutPtr++ = ligatureGlyphId;
-            *infoOutPtr++ = *infoInPtr;
+          if (match_ligature(ligature_offsets, ligature_count, glyph_in_ptr, (size_t)(glyph_in_end - glyph_in_ptr), ligature_glyph_id, ligature_glyph_count)) {
+            *glyph_out_ptr++ = ligature_glyph_id;
+            *info_out_ptr++ = *info_in_ptr;
 
-            glyphInPtr += ligatureGlyphCount;
-            infoInPtr += ligatureGlyphCount;
+            glyph_in_ptr += ligature_glyph_count;
+            info_in_ptr += ligature_glyph_count;
             continue;
           }
         }
       }
 
-      *glyphOutPtr++ = glyphId;
-      *infoOutPtr++ = *infoInPtr;
+      *glyph_out_ptr++ = glyph_id;
+      *info_out_ptr++ = *info_in_ptr;
 
-      glyphInPtr++;
-      infoInPtr++;
+      glyph_in_ptr++;
+      info_in_ptr++;
     }
   }
 
-  while (glyphInPtr != glyphInEnd) {
-    *glyphOutPtr++ = *glyphInPtr++;
-    *infoOutPtr++ = *infoInPtr++;
+  while (glyph_in_ptr != glyph_in_end) {
+    *glyph_out_ptr++ = *glyph_in_ptr++;
+    *info_out_ptr++ = *info_in_ptr++;
   }
 
-  ctx.truncate(size_t(glyphOutPtr - ctx._workBuffer.glyphData));
+  ctx.truncate(size_t(glyph_out_ptr - ctx._work_buffer.glyph_data));
   return BL_SUCCESS;
 }
 
 // bl::OpenType::LayoutImpl - GSUB - Nested Lookups
 // ================================================
 
-static void applyGSubNestedLookup(GSubContext& ctx) noexcept {
+static void apply_gsubNestedLookup(GSubContext& ctx) noexcept {
   // TODO: [OpenType] GSUB nested lookups
 }
 
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #5 - Context Substitution Validation
 // ==================================================================================
 
-static BL_INLINE bool validateGSubLookupType5Format1(ValidationContext& validator, Table<GSubTable::SequenceContext1> table) noexcept {
-  return validateContextFormat1(validator, table, "ContextSubst1");
+static BL_INLINE bool validate_gsub_lookup_type5_format1(ValidationContext& validator, Table<GSubTable::SequenceContext1> table) noexcept {
+  return validate_context_format1(validator, table, "ContextSubst1");
 }
 
-static BL_INLINE bool validateGSubLookupType5Format2(ValidationContext& validator, Table<GSubTable::SequenceContext2> table) noexcept {
-  return validateContextFormat2(validator, table, "ContextSubst2");
+static BL_INLINE bool validate_gsub_lookup_type5_format2(ValidationContext& validator, Table<GSubTable::SequenceContext2> table) noexcept {
+  return validate_context_format2(validator, table, "ContextSubst2");
 }
 
-static BL_INLINE bool validateGSubLookupType5Format3(ValidationContext& validator, Table<GSubTable::SequenceContext3> table) noexcept {
-  return validateContextFormat3(validator, table, "ContextSubst3");
+static BL_INLINE bool validate_gsub_lookup_type5_format3(ValidationContext& validator, Table<GSubTable::SequenceContext3> table) noexcept {
+  return validate_context_format3(validator, table, "ContextSubst3");
 }
 
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #5 - Context Substitution Lookup
 // ==============================================================================
 
 template<uint32_t kCovFmt>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType5Format1(GSubContext& ctx, Table<GSubTable::SequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type5_format1(GSubContext& ctx, Table<GSubTable::SequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  BL_ASSERT_VALIDATED(table.fits(GSubTable::SequenceContext1::kBaseSize + ruleSetCount * 2u));
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  BL_ASSERT_VALIDATED(table.fits(GSubTable::SequenceContext1::kBaseSize + rule_set_count * 2u));
 
-  BLGlyphId* glyphInPtr = ctx.glyphData() + scope.index();
-  BLGlyphId* glyphInEnd = ctx.glyphData() + scope.end();
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
+  BLGlyphId* glyph_in_ptr = ctx.glyph_data() + scope.index();
+  BLGlyphId* glyph_in_end = ctx.glyph_data() + scope.end();
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
 
-  while (glyphInPtr != glyphInEnd) {
+  while (glyph_in_ptr != glyph_in_end) {
     SequenceMatch match;
-    if (matchSequenceFormat1<kCovFmt>(table, ruleSetCount, glyphRange, covIt, glyphInPtr, size_t(glyphInEnd - glyphInPtr), &match)) {
+    if (match_sequence_format1<kCovFmt>(table, rule_set_count, glyph_range, cov_it, glyph_in_ptr, size_t(glyph_in_end - glyph_in_ptr), &match)) {
       // TODO: [OpenType] Context MATCH
     }
 
-    glyphInPtr++;
+    glyph_in_ptr++;
   }
 
   return BL_SUCCESS;
 }
 
 template<uint32_t kCovFmt, uint32_t kCDFmt>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType5Format2(GSubContext& ctx, Table<GSubTable::SequenceContext2> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt, const ClassDefTableIterator& cdIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type5_format2(GSubContext& ctx, Table<GSubTable::SequenceContext2> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& cov_it, const ClassDefTableIterator& cd_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  BL_ASSERT_VALIDATED(table.fits(GSubTable::SequenceContext2::kBaseSize + ruleSetCount * 2u));
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  BL_ASSERT_VALIDATED(table.fits(GSubTable::SequenceContext2::kBaseSize + rule_set_count * 2u));
 
-  BLGlyphId* glyphInPtr = ctx.glyphData() + scope.index();
-  BLGlyphId* glyphInEnd = ctx.glyphData() + scope.end();
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
+  BLGlyphId* glyph_in_ptr = ctx.glyph_data() + scope.index();
+  BLGlyphId* glyph_in_end = ctx.glyph_data() + scope.end();
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
 
-  while (glyphInPtr != glyphInEnd) {
+  while (glyph_in_ptr != glyph_in_end) {
     SequenceMatch match;
-    if (matchSequenceFormat2<kCovFmt, kCDFmt>(table, ruleSetCount, glyphRange, covIt, cdIt, glyphInPtr, size_t(glyphInEnd - glyphInPtr), &match)) {
+    if (match_sequence_format2<kCovFmt, kCDFmt>(table, rule_set_count, glyph_range, cov_it, cd_it, glyph_in_ptr, size_t(glyph_in_end - glyph_in_ptr), &match)) {
       // TODO: [OpenType] Context MATCH
     }
 
-    glyphInEnd++;
+    glyph_in_end++;
   }
 
   return BL_SUCCESS;
 }
 
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType5Format3(GSubContext& ctx, Table<GSubTable::SequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type5_format3(GSubContext& ctx, Table<GSubTable::SequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t glyphCount = table->glyphCount();
-  if (glyphCount < scope.size())
+  uint32_t glyph_count = table->glyph_count();
+  if (glyph_count < scope.size())
     return BL_SUCCESS;
 
-  uint32_t lookupRecordCount = table->lookupRecordCount();
-  const UInt16* coverageOffsetArray = table->coverageOffsetArray();
+  uint32_t lookup_record_count = table->lookup_record_count();
+  const UInt16* coverage_offset_array = table->coverage_offset_array();
 
-  BL_ASSERT_VALIDATED(glyphCount > 0);
-  BL_ASSERT_VALIDATED(lookupRecordCount > 0);
-  BL_ASSERT_VALIDATED(table.fits(GSubTable::SequenceContext3::kBaseSize + glyphCount * 2u + lookupRecordCount * GPosTable::SequenceLookupRecord::kBaseSize));
+  BL_ASSERT_VALIDATED(glyph_count > 0);
+  BL_ASSERT_VALIDATED(lookup_record_count > 0);
+  BL_ASSERT_VALIDATED(table.fits(GSubTable::SequenceContext3::kBaseSize + glyph_count * 2u + lookup_record_count * GPosTable::SequenceLookupRecord::kBaseSize));
 
-  CoverageTableIterator cov0It;
-  uint32_t cov0Fmt = cov0It.init(table.subTableUnchecked(coverageOffsetArray[0].value()));
-  GlyphRange glyphRange = cov0It.glyphRangeWithFormat(cov0Fmt);
-  const GSubTable::SequenceLookupRecord* lookupRecordArray = table->lookupRecordArray(glyphCount);
+  CoverageTableIterator cov0_it;
+  uint32_t cov0_fmt = cov0_it.init(table.sub_table_unchecked(coverage_offset_array[0].value()));
+  GlyphRange glyph_range = cov0_it.glyph_range_with_format(cov0_fmt);
+  const GSubTable::SequenceLookupRecord* lookup_record_array = table->lookup_record_array(glyph_count);
 
-  BLGlyphId* glyphInPtr = ctx.glyphData() + scope.index();
-  BLGlyphId* glyphInEnd = ctx.glyphData() + scope.end();
-  BLGlyphId* glyphInEndMinusN = glyphInEnd - glyphCount;
+  BLGlyphId* glyph_in_ptr = ctx.glyph_data() + scope.index();
+  BLGlyphId* glyph_in_end = ctx.glyph_data() + scope.end();
+  BLGlyphId* glyphInEndMinusN = glyph_in_end - glyph_count;
 
   do {
-    if (matchSequenceFormat3(table, coverageOffsetArray, glyphRange, cov0It, cov0Fmt, glyphInPtr, glyphCount)) {
+    if (match_sequence_format3(table, coverage_offset_array, glyph_range, cov0_it, cov0_fmt, glyph_in_ptr, glyph_count)) {
       // TODO: [OpenType] Context MATCH
-      blUnused(lookupRecordArray, lookupRecordCount);
+      bl_unused(lookup_record_array, lookup_record_count);
     }
-    glyphInPtr++;
-  } while (glyphInPtr != glyphInEndMinusN);
+    glyph_in_ptr++;
+  } while (glyph_in_ptr != glyphInEndMinusN);
 
   return BL_SUCCESS;
 }
@@ -2029,146 +2029,146 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType5Format3(GSubContext& 
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #6 - Chained Context Substitution Validation
 // ==========================================================================================
 
-static BL_INLINE bool validateGSubLookupType6Format1(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext1> table) noexcept {
-  return validateChainedContextFormat1(validator, table, "ChainedContextSubst1");
+static BL_INLINE bool validate_gsub_lookup_type6_format1(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext1> table) noexcept {
+  return validate_chained_context_format1(validator, table, "ChainedContextSubst1");
 }
 
-static BL_INLINE bool validateGSubLookupType6Format2(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext2> table) noexcept {
-  return validateChainedContextFormat2(validator, table, "ChainedContextSubst2");
+static BL_INLINE bool validate_gsub_lookup_type6_format2(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext2> table) noexcept {
+  return validate_chained_context_format2(validator, table, "ChainedContextSubst2");
 }
 
-static BL_INLINE bool validateGSubLookupType6Format3(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext3> table) noexcept {
-  return validateChainedContextFormat3(validator, table, "ChainedContextSubst3");
+static BL_INLINE bool validate_gsub_lookup_type6_format3(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext3> table) noexcept {
+  return validate_chained_context_format3(validator, table, "ChainedContextSubst3");
 }
 
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #6 - Chained Context Substitution Lookup
 // ======================================================================================
 
 template<uint32_t kCovFmt>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType6Format1(GSubContext& ctx, Table<GSubTable::ChainedSequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type6_format1(GSubContext& ctx, Table<GSubTable::ChainedSequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT(scope.index() < scope.end());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  BL_ASSERT_VALIDATED(table.fits(GSubTable::ChainedSequenceContext1::kBaseSize + ruleSetCount * 2u));
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  BL_ASSERT_VALIDATED(table.fits(GSubTable::ChainedSequenceContext1::kBaseSize + rule_set_count * 2u));
 
   ChainedMatchContext mCtx;
   mCtx.table = table;
-  mCtx.firstGlyphRange = covIt.glyphRange<kCovFmt>();
-  mCtx.backGlyphPtr = ctx.glyphData();
-  mCtx.aheadGlyphPtr = ctx.glyphData() + scope.index();
-  mCtx.backGlyphCount = scope.index();
-  mCtx.aheadGlyphCount = scope.size();
+  mCtx.first_glyph_range = cov_it.glyph_range<kCovFmt>();
+  mCtx.back_glyph_ptr = ctx.glyph_data();
+  mCtx.ahead_glyph_ptr = ctx.glyph_data() + scope.index();
+  mCtx.back_glyph_count = scope.index();
+  mCtx.ahead_glyph_count = scope.size();
 
-  const Offset16* ruleSetOffsets = table->ruleSetOffsets.array();
+  const Offset16* rule_set_offsets = table->rule_set_offsets.array();
   do {
     SequenceMatch match;
-    if (matchChainedSequenceFormat1<kCovFmt>(mCtx, ruleSetOffsets, ruleSetCount, covIt, &match)) {
+    if (match_chained_sequence_format1<kCovFmt>(mCtx, rule_set_offsets, rule_set_count, cov_it, &match)) {
       // TODO: [OpenType] Context MATCH
     }
-    mCtx.aheadGlyphPtr++;
-    mCtx.backGlyphCount++;
-  } while (--mCtx.aheadGlyphCount != 0);
+    mCtx.ahead_glyph_ptr++;
+    mCtx.back_glyph_count++;
+  } while (--mCtx.ahead_glyph_count != 0);
 
   return BL_SUCCESS;
 }
 
 template<uint32_t kCovFmt, uint32_t kCD1Fmt, uint32_t kCD2Fmt, uint32_t kCD3Fmt>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType6Format2(
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type6_format2(
   GSubContext& ctx,
   Table<GSubTable::ChainedSequenceContext2> table,
   ApplyRange scope,
   LookupFlags flags,
-  const CoverageTableIterator& covIt, const ClassDefTableIterator& cd1It, const ClassDefTableIterator& cd2It, const ClassDefTableIterator& cd3It) noexcept {
+  const CoverageTableIterator& cov_it, const ClassDefTableIterator& cd1_it, const ClassDefTableIterator& cd2_it, const ClassDefTableIterator& cd3_it) noexcept {
 
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT(scope.index() < scope.end());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  BL_ASSERT_VALIDATED(table.fits(GSubTable::ChainedSequenceContext2::kBaseSize + ruleSetCount * 2u));
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  BL_ASSERT_VALIDATED(table.fits(GSubTable::ChainedSequenceContext2::kBaseSize + rule_set_count * 2u));
 
   ChainedMatchContext mCtx;
   mCtx.table = table;
-  mCtx.firstGlyphRange = covIt.glyphRange<kCovFmt>();
-  mCtx.backGlyphPtr = ctx.glyphData();
-  mCtx.aheadGlyphPtr = ctx.glyphData() + scope.index();
-  mCtx.backGlyphCount = scope.index();
-  mCtx.aheadGlyphCount = scope.size();
+  mCtx.first_glyph_range = cov_it.glyph_range<kCovFmt>();
+  mCtx.back_glyph_ptr = ctx.glyph_data();
+  mCtx.ahead_glyph_ptr = ctx.glyph_data() + scope.index();
+  mCtx.back_glyph_count = scope.index();
+  mCtx.ahead_glyph_count = scope.size();
 
-  const Offset16* ruleSetOffsets = table->ruleSetOffsets.array();
+  const Offset16* rule_set_offsets = table->rule_set_offsets.array();
   do {
     SequenceMatch match;
-    if (matchChainedSequenceFormat2<kCovFmt, kCD1Fmt, kCD2Fmt, kCD3Fmt>(mCtx, ruleSetOffsets, ruleSetCount, covIt, cd1It, cd2It, cd3It, &match)) {
+    if (match_chained_sequence_format2<kCovFmt, kCD1Fmt, kCD2Fmt, kCD3Fmt>(mCtx, rule_set_offsets, rule_set_count, cov_it, cd1_it, cd2_it, cd3_it, &match)) {
       // TODO: [OpenType] Context MATCH
     }
-    mCtx.aheadGlyphPtr++;
-    mCtx.backGlyphCount++;
-  } while (--mCtx.aheadGlyphCount != 0);
+    mCtx.ahead_glyph_ptr++;
+    mCtx.back_glyph_count++;
+  } while (--mCtx.ahead_glyph_count != 0);
 
   return BL_SUCCESS;
 }
 
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType6Format3(GSubContext& ctx, Table<GSubTable::ChainedSequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type6_format3(GSubContext& ctx, Table<GSubTable::ChainedSequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t backtrackGlyphCount = table->backtrackGlyphCount();
-  uint32_t inputOffset = 4u + backtrackGlyphCount * 2u;
-  BL_ASSERT_VALIDATED(table.fits(inputOffset + 2u));
+  uint32_t backtrack_glyph_count = table->backtrack_glyph_count();
+  uint32_t input_offset = 4u + backtrack_glyph_count * 2u;
+  BL_ASSERT_VALIDATED(table.fits(input_offset + 2u));
 
-  uint32_t inputGlyphCount = table.readU16(inputOffset);
-  uint32_t lookaheadOffset = inputOffset + 2u + inputGlyphCount * 2u;
-  BL_ASSERT_VALIDATED(inputGlyphCount > 0);
-  BL_ASSERT_VALIDATED(table.fits(lookaheadOffset + 2u));
+  uint32_t input_glyph_count = table.readU16(input_offset);
+  uint32_t lookahead_offset = input_offset + 2u + input_glyph_count * 2u;
+  BL_ASSERT_VALIDATED(input_glyph_count > 0);
+  BL_ASSERT_VALIDATED(table.fits(lookahead_offset + 2u));
 
-  uint32_t lookaheadGlyphCount = table.readU16(lookaheadOffset);
-  uint32_t lookupOffset = lookaheadOffset + 2u + lookaheadGlyphCount * 2u;
-  BL_ASSERT_VALIDATED(table.fits(lookupOffset + 2u));
+  uint32_t lookahead_glyph_count = table.readU16(lookahead_offset);
+  uint32_t lookup_offset = lookahead_offset + 2u + lookahead_glyph_count * 2u;
+  BL_ASSERT_VALIDATED(table.fits(lookup_offset + 2u));
 
-  uint32_t lookupRecordCount = table.readU16(lookupOffset);
-  BL_ASSERT_VALIDATED(lookupRecordCount > 0);
-  BL_ASSERT_VALIDATED(table.fits(lookupOffset + 2u + lookupRecordCount * GSubGPosTable::SequenceLookupRecord::kBaseSize));
+  uint32_t lookup_record_count = table.readU16(lookup_offset);
+  BL_ASSERT_VALIDATED(lookup_record_count > 0);
+  BL_ASSERT_VALIDATED(table.fits(lookup_offset + 2u + lookup_record_count * GSubGPosTable::SequenceLookupRecord::kBaseSize));
 
   // Restrict scope in a way so we would never underflow/overflow glyph buffer when matching backtrack/lookahead glyphs.
-  uint32_t inputAndLookaheadGlyphCount = inputGlyphCount + lookaheadGlyphCount;
-  scope.intersect(backtrackGlyphCount, ctx.size() - inputAndLookaheadGlyphCount);
+  uint32_t input_and_lookahead_glyph_count = input_glyph_count + lookahead_glyph_count;
+  scope.intersect(backtrack_glyph_count, ctx.size() - input_and_lookahead_glyph_count);
 
   // Bail if the buffer or the scope is too small for this chained context substitution.
-  if (scope.size() < inputAndLookaheadGlyphCount || scope.index() >= scope.end())
+  if (scope.size() < input_and_lookahead_glyph_count || scope.index() >= scope.end())
     return BL_SUCCESS;
 
-  const Offset16* backtrackCoverageOffsets = table->backtrackCoverageOffsets();
-  const Offset16* inputCoverageOffsets = table.dataAs<Offset16>(inputOffset + 2u);
-  const Offset16* lookaheadCoverageOffsets = table.dataAs<Offset16>(lookaheadOffset + 2u);
+  const Offset16* backtrack_coverage_offsets = table->backtrack_coverage_offsets();
+  const Offset16* input_coverage_offsets = table.data_as<Offset16>(input_offset + 2u);
+  const Offset16* lookahead_coverage_offsets = table.data_as<Offset16>(lookahead_offset + 2u);
 
-  CoverageTableIterator cov0It;
-  uint32_t cov0Fmt = cov0It.init(table.subTableUnchecked(inputCoverageOffsets[0].value()));
-  GlyphRange firstGlyphRange = cov0It.glyphRangeWithFormat(cov0Fmt);
+  CoverageTableIterator cov0_it;
+  uint32_t cov0_fmt = cov0_it.init(table.sub_table_unchecked(input_coverage_offsets[0].value()));
+  GlyphRange first_glyph_range = cov0_it.glyph_range_with_format(cov0_fmt);
 
   ChainedMatchContext mCtx;
   mCtx.table = table;
-  mCtx.firstGlyphRange = cov0It.glyphRangeWithFormat(cov0Fmt);
-  mCtx.backGlyphPtr = ctx.glyphData();
-  mCtx.aheadGlyphPtr = ctx.glyphData() + scope.index();
-  mCtx.backGlyphCount = scope.index();
-  mCtx.aheadGlyphCount = scope.size();
+  mCtx.first_glyph_range = cov0_it.glyph_range_with_format(cov0_fmt);
+  mCtx.back_glyph_ptr = ctx.glyph_data();
+  mCtx.ahead_glyph_ptr = ctx.glyph_data() + scope.index();
+  mCtx.back_glyph_count = scope.index();
+  mCtx.ahead_glyph_count = scope.size();
 
   do {
-    if (matchChainedSequenceFormat3(mCtx,
-        backtrackCoverageOffsets, backtrackGlyphCount,
-        inputCoverageOffsets, inputGlyphCount,
-        lookaheadCoverageOffsets, lookaheadGlyphCount,
-        firstGlyphRange,
-        cov0It, cov0Fmt)) {
-      const GSubTable::SequenceLookupRecord* lookupRecordArray = table.dataAs<GSubTable::SequenceLookupRecord>(lookupOffset + 2u);
+    if (match_chained_sequence_format3(mCtx,
+        backtrack_coverage_offsets, backtrack_glyph_count,
+        input_coverage_offsets, input_glyph_count,
+        lookahead_coverage_offsets, lookahead_glyph_count,
+        first_glyph_range,
+        cov0_it, cov0_fmt)) {
+      const GSubTable::SequenceLookupRecord* lookup_record_array = table.data_as<GSubTable::SequenceLookupRecord>(lookup_offset + 2u);
       // TODO: [OpenType] Context MATCH
-      blUnused(lookupRecordArray, lookupRecordCount);
+      bl_unused(lookup_record_array, lookup_record_count);
     }
-    mCtx.backGlyphCount++;
-    mCtx.aheadGlyphPtr++;
-  } while (--mCtx.aheadGlyphCount >= inputAndLookaheadGlyphCount);
+    mCtx.back_glyph_count++;
+    mCtx.ahead_glyph_ptr++;
+  } while (--mCtx.ahead_glyph_count >= input_and_lookahead_glyph_count);
 
   return BL_SUCCESS;
 }
@@ -2176,47 +2176,47 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType6Format3(GSubContext& 
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #8 - Reverse Chained Context Validation
 // =====================================================================================
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType8Format1(ValidationContext& validator, Table<GSubTable::ReverseChainedSingleSubst1> table) noexcept {
-  const char* tableName = "ReverseChainedSingleSubst1";
+static BL_INLINE_IF_NOT_DEBUG bool validate_gsub_lookup_type8_format1(ValidationContext& validator, Table<GSubTable::ReverseChainedSingleSubst1> table) noexcept {
+  const char* table_name = "ReverseChainedSingleSubst1";
 
   if (!table.fits())
-    return validator.invalidTableSize(tableName, table.size, GSubTable::ReverseChainedSingleSubst1::kBaseSize);
+    return validator.invalid_table_size(table_name, table.size, GSubTable::ReverseChainedSingleSubst1::kBaseSize);
 
-  uint32_t backtrackGlyphCount = table->backtrackGlyphCount();
-  uint32_t lookaheadOffset = 6u + backtrackGlyphCount * 2u;
+  uint32_t backtrack_glyph_count = table->backtrack_glyph_count();
+  uint32_t lookahead_offset = 6u + backtrack_glyph_count * 2u;
 
-  if (!table.fits(lookaheadOffset + 2u))
-    return validator.invalidTableSize(tableName, table.size, lookaheadOffset + 2u);
+  if (!table.fits(lookahead_offset + 2u))
+    return validator.invalid_table_size(table_name, table.size, lookahead_offset + 2u);
 
-  uint32_t lookaheadGlyphCount = table.readU16(lookaheadOffset);
-  uint32_t substOffset = lookaheadOffset + 2u + lookaheadGlyphCount * 2u;
+  uint32_t lookahead_glyph_count = table.readU16(lookahead_offset);
+  uint32_t subst_offset = lookahead_offset + 2u + lookahead_glyph_count * 2u;
 
-  if (!table.fits(substOffset + 2u))
-    return validator.invalidTableSize(tableName, table.size, substOffset + 2u);
+  if (!table.fits(subst_offset + 2u))
+    return validator.invalid_table_size(table_name, table.size, subst_offset + 2u);
 
-  uint32_t substGlyphCount = table.readU16(substOffset);
-  uint32_t headerSize = substOffset + 2u + substGlyphCount * 2u;
+  uint32_t subst_glyph_count = table.readU16(subst_offset);
+  uint32_t header_size = subst_offset + 2u + subst_glyph_count * 2u;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
-  OffsetRange subTableOffsetRange{headerSize, table.size};
-  uint32_t coverageOffset = table->coverageOffset();
+  OffsetRange sub_table_offset_range{header_size, table.size};
+  uint32_t coverage_offset = table->coverage_offset();
 
-  if (!subTableOffsetRange.contains(coverageOffset))
-    return validator.invalidFieldOffset(tableName, "coverageTable", coverageOffset, subTableOffsetRange);
+  if (!sub_table_offset_range.contains(coverage_offset))
+    return validator.invalid_field_offset(table_name, "coverage_table", coverage_offset, sub_table_offset_range);
 
-  uint32_t coverageCount;
-  if (!validateCoverageTable(validator, table.subTable(coverageOffset), coverageCount))
+  uint32_t coverage_count;
+  if (!validate_coverage_table(validator, table.sub_table(coverage_offset), coverage_count))
     return false;
 
-  if (coverageCount != substGlyphCount)
-    return validator.fail("%s must have coverageCount (%u) equal to substGlyphCount (%u)", tableName, coverageCount, substGlyphCount);
+  if (coverage_count != subst_glyph_count)
+    return validator.fail("%s must have coverage_count (%u) equal to subst_glyph_count (%u)", table_name, coverage_count, subst_glyph_count);
 
-  if (!validateCoverageTables(validator, table, tableName, "backtrackCoverages", table->backtrackCoverageOffsets(), backtrackGlyphCount, subTableOffsetRange))
+  if (!validate_coverage_tables(validator, table, table_name, "backtrack_coverages", table->backtrack_coverage_offsets(), backtrack_glyph_count, sub_table_offset_range))
     return false;
 
-  if (!validateCoverageTables(validator, table, tableName, "lookaheadCoverages", table.dataAs<Offset16>(lookaheadOffset + 2u), lookaheadGlyphCount, subTableOffsetRange))
+  if (!validate_coverage_tables(validator, table, table_name, "lookahead_coverages", table.data_as<Offset16>(lookahead_offset + 2u), lookahead_glyph_count, sub_table_offset_range))
     return false;
 
   return true;
@@ -2225,55 +2225,55 @@ static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType8Format1(ValidationCont
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #8 - Reverse Chained Context Lookup
 // =================================================================================
 
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType8Format1(GSubContext& ctx, Table<GSubTable::ReverseChainedSingleSubst1> table, ApplyRange scope, LookupFlags flags) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup_type8_format1(GSubContext& ctx, Table<GSubTable::ReverseChainedSingleSubst1> table, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t backtrackGlyphCount = table->backtrackGlyphCount();
-  uint32_t lookaheadOffset = 6u + backtrackGlyphCount * 2u;
-  BL_ASSERT_VALIDATED(table.fits(lookaheadOffset + 2u));
+  uint32_t backtrack_glyph_count = table->backtrack_glyph_count();
+  uint32_t lookahead_offset = 6u + backtrack_glyph_count * 2u;
+  BL_ASSERT_VALIDATED(table.fits(lookahead_offset + 2u));
 
-  uint32_t lookaheadGlyphCount = table.readU16(lookaheadOffset);
-  uint32_t substOffset = lookaheadOffset + 2u + lookaheadGlyphCount * 2u;
-  BL_ASSERT_VALIDATED(table.fits(substOffset + 2u));
+  uint32_t lookahead_glyph_count = table.readU16(lookahead_offset);
+  uint32_t subst_offset = lookahead_offset + 2u + lookahead_glyph_count * 2u;
+  BL_ASSERT_VALIDATED(table.fits(subst_offset + 2u));
 
   // Restrict scope in a way so we would never underflow/overflow glyph buffer when matching backtrack/lookahead glyphs.
-  scope.intersect(backtrackGlyphCount, ctx.size() - lookaheadGlyphCount - 1u);
+  scope.intersect(backtrack_glyph_count, ctx.size() - lookahead_glyph_count - 1u);
 
   // Bail if the buffer or the scope is too small for this chained context substitution.
-  if (ctx.size() < lookaheadGlyphCount || scope.index() >= scope.end())
+  if (ctx.size() < lookahead_glyph_count || scope.index() >= scope.end())
     return BL_SUCCESS;
 
-  uint32_t substGlyphCount = table.readU16(substOffset);
-  BL_ASSERT_VALIDATED(table.fits(substOffset + 2u + substGlyphCount * 2u));
+  uint32_t subst_glyph_count = table.readU16(subst_offset);
+  BL_ASSERT_VALIDATED(table.fits(subst_offset + 2u + subst_glyph_count * 2u));
 
-  const Offset16* backtrackCoverageOffsets = table->backtrackCoverageOffsets();
-  const Offset16* lookaheadCoverageOffsets = table.dataAs<Offset16>(lookaheadOffset + 2u);
-  const UInt16* substGlyphIds = table.dataAs<UInt16>(substOffset + 2u);
+  const Offset16* backtrack_coverage_offsets = table->backtrack_coverage_offsets();
+  const Offset16* lookahead_coverage_offsets = table.data_as<Offset16>(lookahead_offset + 2u);
+  const UInt16* subst_glyph_ids = table.data_as<UInt16>(subst_offset + 2u);
 
-  CoverageTableIterator covIt;
-  uint32_t covFmt = covIt.init(table.subTableUnchecked(table->coverageOffset()));
-  GlyphRange glyphRange = covIt.glyphRangeWithFormat(covFmt);
+  CoverageTableIterator cov_it;
+  uint32_t cov_fmt = cov_it.init(table.sub_table_unchecked(table->coverage_offset()));
+  GlyphRange glyph_range = cov_it.glyph_range_with_format(cov_fmt);
 
-  BLGlyphId* glyphData = ctx.glyphData();
+  BLGlyphId* glyph_data = ctx.glyph_data();
   size_t i = scope.end();
-  size_t scopeBegin = scope.index();
+  size_t scope_begin = scope.index();
 
   do {
-    BLGlyphId glyphId = glyphData[--i];
-    uint32_t coverageIndex;
+    BLGlyphId glyph_id = glyph_data[--i];
+    uint32_t coverage_index;
 
-    if (!glyphRange.contains(glyphId) || !covIt.findWithFormat(covFmt, glyphId, coverageIndex) || coverageIndex >= substGlyphCount)
+    if (!glyph_range.contains(glyph_id) || !cov_it.find_with_format(cov_fmt, glyph_id, coverage_index) || coverage_index >= subst_glyph_count)
       continue;
 
-    if (!matchBackGlyphsFormat3(table, glyphData + i - 1u, backtrackCoverageOffsets, backtrackGlyphCount))
+    if (!match_back_glyphs_format3(table, glyph_data + i - 1u, backtrack_coverage_offsets, backtrack_glyph_count))
       continue;
 
-    if (!matchAheadGlyphsFormat3(table, glyphData + i + 1u, lookaheadCoverageOffsets, lookaheadGlyphCount))
+    if (!match_ahead_glyphs_format3(table, glyph_data + i + 1u, lookahead_coverage_offsets, lookahead_glyph_count))
       continue;
 
-    glyphData[i] = substGlyphIds[coverageIndex].value();
-  } while (i != scopeBegin);
+    glyph_data[i] = subst_glyph_ids[coverage_index].value();
+  } while (i != scope_begin);
 
   return BL_SUCCESS;
 }
@@ -2281,135 +2281,135 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType8Format1(GSubContext& 
 // bl::OpenType::LayoutImpl - GSUB - Dispatch
 // ==========================================
 
-static BL_NOINLINE bool validateGSubLookup(ValidationContext& validator, RawTable table, GSubLookupAndFormat typeAndFormat) noexcept {
-  switch (typeAndFormat) {
-    case GSubLookupAndFormat::kType1Format1: return validateGSubLookupType1Format1(validator, table);
-    case GSubLookupAndFormat::kType1Format2: return validateGSubLookupType1Format2(validator, table);
-    case GSubLookupAndFormat::kType2Format1: return validateGSubLookupType2Format1(validator, table);
-    case GSubLookupAndFormat::kType3Format1: return validateGSubLookupType3Format1(validator, table);
-    case GSubLookupAndFormat::kType4Format1: return validateGSubLookupType4Format1(validator, table);
-    case GSubLookupAndFormat::kType5Format1: return validateGSubLookupType5Format1(validator, table);
-    case GSubLookupAndFormat::kType5Format2: return validateGSubLookupType5Format2(validator, table);
-    case GSubLookupAndFormat::kType5Format3: return validateGSubLookupType5Format3(validator, table);
-    case GSubLookupAndFormat::kType6Format1: return validateGSubLookupType6Format1(validator, table);
-    case GSubLookupAndFormat::kType6Format2: return validateGSubLookupType6Format2(validator, table);
-    case GSubLookupAndFormat::kType6Format3: return validateGSubLookupType6Format3(validator, table);
-    case GSubLookupAndFormat::kType8Format1: return validateGSubLookupType8Format1(validator, table);
+static BL_NOINLINE bool validateGSubLookup(ValidationContext& validator, RawTable table, GSubLookupAndFormat type_and_format) noexcept {
+  switch (type_and_format) {
+    case GSubLookupAndFormat::kType1Format1: return validate_gsub_lookup_type1_format1(validator, table);
+    case GSubLookupAndFormat::kType1Format2: return validate_gsub_lookup_type1_format2(validator, table);
+    case GSubLookupAndFormat::kType2Format1: return validate_gsub_lookup_type2_format1(validator, table);
+    case GSubLookupAndFormat::kType3Format1: return validate_gsub_lookup_type3_format1(validator, table);
+    case GSubLookupAndFormat::kType4Format1: return validate_gsub_lookup_type4_format1(validator, table);
+    case GSubLookupAndFormat::kType5Format1: return validate_gsub_lookup_type5_format1(validator, table);
+    case GSubLookupAndFormat::kType5Format2: return validate_gsub_lookup_type5_format2(validator, table);
+    case GSubLookupAndFormat::kType5Format3: return validate_gsub_lookup_type5_format3(validator, table);
+    case GSubLookupAndFormat::kType6Format1: return validate_gsub_lookup_type6_format1(validator, table);
+    case GSubLookupAndFormat::kType6Format2: return validate_gsub_lookup_type6_format2(validator, table);
+    case GSubLookupAndFormat::kType6Format3: return validate_gsub_lookup_type6_format3(validator, table);
+    case GSubLookupAndFormat::kType8Format1: return validate_gsub_lookup_type8_format1(validator, table);
     default:
-      return validator.fail("Unknown lookup type+format (%u)", uint32_t(typeAndFormat));
+      return validator.fail("Unknown lookup type+format (%u)", uint32_t(type_and_format));
   }
 }
 
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookup(GSubContext& ctx, RawTable table, GSubLookupAndFormat typeAndFormat, ApplyRange scope, LookupFlags flags) noexcept {
-  BL_ASSERT_VALIDATED(table.fits(gsubLookupInfoTable.lookupInfo[size_t(typeAndFormat)].headerSize));
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gsub_lookup(GSubContext& ctx, RawTable table, GSubLookupAndFormat type_and_format, ApplyRange scope, LookupFlags flags) noexcept {
+  BL_ASSERT_VALIDATED(table.fits(gsub_lookup_info_table.lookup_info[size_t(type_and_format)].header_size));
 
   #define BL_APPLY_WITH_COVERAGE(FN, TABLE)                                        \
-    CoverageTableIterator covIt;                                                   \
-    if (covIt.init(table.subTable(table.dataAs<TABLE>()->coverageOffset())) == 1u) \
-      result = FN<1>(ctx, table, scope, flags, covIt);                             \
+    CoverageTableIterator cov_it;                                                   \
+    if (cov_it.init(table.sub_table(table.data_as<TABLE>()->coverage_offset())) == 1u) \
+      result = FN<1>(ctx, table, scope, flags, cov_it);                             \
     else                                                                           \
-      result = FN<2>(ctx, table, scope, flags, covIt);
+      result = FN<2>(ctx, table, scope, flags, cov_it);
 
   BLResult result = BL_SUCCESS;
 
-  switch (typeAndFormat) {
+  switch (type_and_format) {
     case GSubLookupAndFormat::kType1Format1: {
-      BL_APPLY_WITH_COVERAGE(applyGSubLookupType1Format1, GSubTable::SingleSubst1)
+      BL_APPLY_WITH_COVERAGE(apply_gsub_lookup_type1_format1, GSubTable::SingleSubst1)
       break;
     }
 
     case GSubLookupAndFormat::kType1Format2: {
-      BL_APPLY_WITH_COVERAGE(applyGSubLookupType1Format2, GSubTable::MultipleSubst1)
+      BL_APPLY_WITH_COVERAGE(apply_gsub_lookup_type1_format2, GSubTable::MultipleSubst1)
       break;
     }
 
     case GSubLookupAndFormat::kType2Format1: {
-      BL_APPLY_WITH_COVERAGE(applyGSubLookupType2Format1, GSubTable::MultipleSubst1)
+      BL_APPLY_WITH_COVERAGE(apply_gsub_lookup_type2_format1, GSubTable::MultipleSubst1)
       break;
     }
 
     case GSubLookupAndFormat::kType3Format1: {
-      BL_APPLY_WITH_COVERAGE(applyGSubLookupType3Format1, GSubTable::AlternateSubst1)
+      BL_APPLY_WITH_COVERAGE(apply_gsub_lookup_type3_format1, GSubTable::AlternateSubst1)
       break;
     }
 
     case GSubLookupAndFormat::kType4Format1: {
-      BL_APPLY_WITH_COVERAGE(applyGSubLookupType4Format1, GSubTable::LigatureSubst1)
+      BL_APPLY_WITH_COVERAGE(apply_gsub_lookup_type4_format1, GSubTable::LigatureSubst1)
       break;
     }
 
     case GSubLookupAndFormat::kType5Format1: {
-      BL_APPLY_WITH_COVERAGE(applyGSubLookupType5Format1, GSubTable::SequenceContext1)
+      BL_APPLY_WITH_COVERAGE(apply_gsub_lookup_type5_format1, GSubTable::SequenceContext1)
       break;
     }
 
     case GSubLookupAndFormat::kType5Format2: {
-      CoverageTableIterator covIt;
-      ClassDefTableIterator cdIt;
+      CoverageTableIterator cov_it;
+      ClassDefTableIterator cd_it;
 
-      FormatBits2X fmtBits = FormatBits2X(
-        ((covIt.init(table.subTable(table.dataAs<GSubTable::SequenceContext2>()->coverageOffset())) - 1u) << 1) |
-        ((cdIt.init(table.subTable(table.dataAs<GSubTable::SequenceContext2>()->classDefOffset()))  - 1u) << 0));
+      FormatBits2X fmt_bits = FormatBits2X(
+        ((cov_it.init(table.sub_table(table.data_as<GSubTable::SequenceContext2>()->coverage_offset())) - 1u) << 1) |
+        ((cd_it.init(table.sub_table(table.data_as<GSubTable::SequenceContext2>()->class_def_offset()))  - 1u) << 0));
 
-      switch (fmtBits) {
-        case FormatBits2X::k11: return applyGSubLookupType5Format2<1, 1>(ctx, table, scope, flags, covIt, cdIt);
-        case FormatBits2X::k12: return applyGSubLookupType5Format2<1, 2>(ctx, table, scope, flags, covIt, cdIt);
-        case FormatBits2X::k21: return applyGSubLookupType5Format2<2, 1>(ctx, table, scope, flags, covIt, cdIt);
-        case FormatBits2X::k22: return applyGSubLookupType5Format2<2, 2>(ctx, table, scope, flags, covIt, cdIt);
+      switch (fmt_bits) {
+        case FormatBits2X::k11: return apply_gsub_lookup_type5_format2<1, 1>(ctx, table, scope, flags, cov_it, cd_it);
+        case FormatBits2X::k12: return apply_gsub_lookup_type5_format2<1, 2>(ctx, table, scope, flags, cov_it, cd_it);
+        case FormatBits2X::k21: return apply_gsub_lookup_type5_format2<2, 1>(ctx, table, scope, flags, cov_it, cd_it);
+        case FormatBits2X::k22: return apply_gsub_lookup_type5_format2<2, 2>(ctx, table, scope, flags, cov_it, cd_it);
       }
       break;
     }
 
     case GSubLookupAndFormat::kType5Format3: {
-      result = applyGSubLookupType5Format3(ctx, table, scope, flags);
+      result = apply_gsub_lookup_type5_format3(ctx, table, scope, flags);
       break;
     }
 
     case GSubLookupAndFormat::kType6Format1: {
-      BL_APPLY_WITH_COVERAGE(applyGSubLookupType6Format1, GSubTable::ChainedSequenceContext1)
+      BL_APPLY_WITH_COVERAGE(apply_gsub_lookup_type6_format1, GSubTable::ChainedSequenceContext1)
       break;
     }
 
     case GSubLookupAndFormat::kType6Format2: {
-      CoverageTableIterator covIt;
-      ClassDefTableIterator cd1It;
-      ClassDefTableIterator cd2It;
-      ClassDefTableIterator cd3It;
+      CoverageTableIterator cov_it;
+      ClassDefTableIterator cd1_it;
+      ClassDefTableIterator cd2_it;
+      ClassDefTableIterator cd3_it;
 
-      FormatBits4X fmtBits = FormatBits4X(
-        ((covIt.init(table.subTable(table.dataAs<GPosTable::ChainedSequenceContext2>()->coverageOffset()         )) - 1u) << 3) |
-        ((cd1It.init(table.subTable(table.dataAs<GPosTable::ChainedSequenceContext2>()->backtrackClassDefOffset())) - 1u) << 2) |
-        ((cd2It.init(table.subTable(table.dataAs<GPosTable::ChainedSequenceContext2>()->inputClassDefOffset()    )) - 1u) << 1) |
-        ((cd3It.init(table.subTable(table.dataAs<GPosTable::ChainedSequenceContext2>()->lookaheadClassDefOffset())) - 1u) << 0));
+      FormatBits4X fmt_bits = FormatBits4X(
+        ((cov_it.init(table.sub_table(table.data_as<GPosTable::ChainedSequenceContext2>()->coverage_offset()         )) - 1u) << 3) |
+        ((cd1_it.init(table.sub_table(table.data_as<GPosTable::ChainedSequenceContext2>()->backtrack_class_def_offset())) - 1u) << 2) |
+        ((cd2_it.init(table.sub_table(table.data_as<GPosTable::ChainedSequenceContext2>()->input_class_def_offset()    )) - 1u) << 1) |
+        ((cd3_it.init(table.sub_table(table.data_as<GPosTable::ChainedSequenceContext2>()->lookahead_class_def_offset())) - 1u) << 0));
 
-      switch (fmtBits) {
-        case FormatBits4X::k1111: result = applyGSubLookupType6Format2<1, 1, 1, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1112: result = applyGSubLookupType6Format2<1, 1, 1, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1121: result = applyGSubLookupType6Format2<1, 1, 2, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1122: result = applyGSubLookupType6Format2<1, 1, 2, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1211: result = applyGSubLookupType6Format2<1, 2, 1, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1212: result = applyGSubLookupType6Format2<1, 2, 1, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1221: result = applyGSubLookupType6Format2<1, 2, 2, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1222: result = applyGSubLookupType6Format2<1, 2, 2, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2111: result = applyGSubLookupType6Format2<2, 1, 1, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2112: result = applyGSubLookupType6Format2<2, 1, 1, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2121: result = applyGSubLookupType6Format2<2, 1, 2, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2122: result = applyGSubLookupType6Format2<2, 1, 2, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2211: result = applyGSubLookupType6Format2<2, 2, 1, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2212: result = applyGSubLookupType6Format2<2, 2, 1, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2221: result = applyGSubLookupType6Format2<2, 2, 2, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2222: result = applyGSubLookupType6Format2<2, 2, 2, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
+      switch (fmt_bits) {
+        case FormatBits4X::k1111: result = apply_gsub_lookup_type6_format2<1, 1, 1, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1112: result = apply_gsub_lookup_type6_format2<1, 1, 1, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1121: result = apply_gsub_lookup_type6_format2<1, 1, 2, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1122: result = apply_gsub_lookup_type6_format2<1, 1, 2, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1211: result = apply_gsub_lookup_type6_format2<1, 2, 1, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1212: result = apply_gsub_lookup_type6_format2<1, 2, 1, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1221: result = apply_gsub_lookup_type6_format2<1, 2, 2, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1222: result = apply_gsub_lookup_type6_format2<1, 2, 2, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2111: result = apply_gsub_lookup_type6_format2<2, 1, 1, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2112: result = apply_gsub_lookup_type6_format2<2, 1, 1, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2121: result = apply_gsub_lookup_type6_format2<2, 1, 2, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2122: result = apply_gsub_lookup_type6_format2<2, 1, 2, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2211: result = apply_gsub_lookup_type6_format2<2, 2, 1, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2212: result = apply_gsub_lookup_type6_format2<2, 2, 1, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2221: result = apply_gsub_lookup_type6_format2<2, 2, 2, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2222: result = apply_gsub_lookup_type6_format2<2, 2, 2, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
       }
       break;
     }
 
     case GSubLookupAndFormat::kType6Format3: {
-      result = applyGSubLookupType6Format3(ctx, table, scope, flags);
+      result = apply_gsub_lookup_type6_format3(ctx, table, scope, flags);
       break;
     }
 
     case GSubLookupAndFormat::kType8Format1: {
-      result = applyGSubLookupType8Format1(ctx, table, scope, flags);
+      result = apply_gsub_lookup_type8_format1(ctx, table, scope, flags);
       break;
     }
 
@@ -2426,94 +2426,94 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookup(GSubContext& ctx, RawTabl
 // ===========================================
 
 // struct ValueRecords {
-//   ?[Int16 xPlacement]
-//   ?[Int16 yPlacement]
-//   ?[Int16 xAdvance]
-//   ?[Int16 yAdvance]
+//   ?[Int16 x_placement]
+//   ?[Int16 y_placement]
+//   ?[Int16 x_advance]
+//   ?[Int16 y_advance]
 //   ?[UInt16 xPlacementDeviceOffset]
 //   ?[UInt16 yPlacementDeviceOffset]
 //   ?[UInt16 xAdvanceDeviceOffset]
 //   ?[UInt16 yAdvanceDeviceOffset]
 // }
-static BL_INLINE uint32_t sizeOfValueRecordByFormat(uint32_t valueFormat) noexcept {
-  return uint32_t(bitCountByteTable[valueFormat & 0xFFu]) * 2u;
+static BL_INLINE uint32_t size_of_value_record_by_format(uint32_t value_format) noexcept {
+  return uint32_t(bit_count_byte_table[value_format & 0xFFu]) * 2u;
 }
 
 template<typename T>
-static BL_INLINE const uint8_t* binarySearchGlyphIdInVarStruct(const uint8_t* array, size_t itemSize, size_t arraySize, BLGlyphId glyphId, size_t offset = 0) noexcept {
-  if (!arraySize)
+static BL_INLINE const uint8_t* binary_search_glyph_id_in_var_struct(const uint8_t* array, size_t item_size, size_t array_size, BLGlyphId glyph_id, size_t offset = 0) noexcept {
+  if (!array_size)
     return nullptr;
 
   const uint8_t* ptr = array;
-  while (size_t half = arraySize / 2u) {
-    const uint8_t* middlePtr = ptr + half * itemSize;
-    arraySize -= half;
-    if (glyphId >= reinterpret_cast<const T*>(middlePtr + offset)->value())
-      ptr = middlePtr;
+  while (size_t half = array_size / 2u) {
+    const uint8_t* middle_ptr = ptr + half * item_size;
+    array_size -= half;
+    if (glyph_id >= reinterpret_cast<const T*>(middle_ptr + offset)->value())
+      ptr = middle_ptr;
   }
 
-  if (glyphId != reinterpret_cast<const T*>(ptr + offset)->value())
+  if (glyph_id != reinterpret_cast<const T*>(ptr + offset)->value())
     ptr = nullptr;
 
   return ptr;
 }
 
-static BL_INLINE const Int16* applyGPosValue(const Int16* p, uint32_t valueFormat, BLGlyphPlacement* glyphPlacement) noexcept {
+static BL_INLINE const Int16* apply_gposValue(const Int16* p, uint32_t value_format, BLGlyphPlacement* glyph_placement) noexcept {
   int32_t v;
-  if (valueFormat & GPosTable::kValueXPlacement      ) { v = p->value(); p++; glyphPlacement->placement.x += v; }
-  if (valueFormat & GPosTable::kValueYPlacement      ) { v = p->value(); p++; glyphPlacement->placement.y += v; }
-  if (valueFormat & GPosTable::kValueXAdvance        ) { v = p->value(); p++; glyphPlacement->advance.x += v; }
-  if (valueFormat & GPosTable::kValueYAdvance        ) { v = p->value(); p++; glyphPlacement->advance.y += v; }
-  if (valueFormat & GPosTable::kValueXPlacementDevice) { v = p->value(); p++; }
-  if (valueFormat & GPosTable::kValueYPlacementDevice) { v = p->value(); p++; }
-  if (valueFormat & GPosTable::kValueXAdvanceDevice  ) { v = p->value(); p++; }
-  if (valueFormat & GPosTable::kValueYAdvanceDevice  ) { v = p->value(); p++; }
+  if (value_format & GPosTable::kValueXPlacement      ) { v = p->value(); p++; glyph_placement->placement.x += v; }
+  if (value_format & GPosTable::kValueYPlacement      ) { v = p->value(); p++; glyph_placement->placement.y += v; }
+  if (value_format & GPosTable::kValueXAdvance        ) { v = p->value(); p++; glyph_placement->advance.x += v; }
+  if (value_format & GPosTable::kValueYAdvance        ) { v = p->value(); p++; glyph_placement->advance.y += v; }
+  if (value_format & GPosTable::kValueXPlacementDevice) { v = p->value(); p++; }
+  if (value_format & GPosTable::kValueYPlacementDevice) { v = p->value(); p++; }
+  if (value_format & GPosTable::kValueXAdvanceDevice  ) { v = p->value(); p++; }
+  if (value_format & GPosTable::kValueYAdvanceDevice  ) { v = p->value(); p++; }
   return p;
 }
 
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #1 - Single Adjustment Validation
 // ===============================================================================
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType1Format1(ValidationContext& validator, Table<GPosTable::SingleAdjustment1> table) noexcept {
-  const char* tableName = "SingleAdjustment1";
+static BL_INLINE_IF_NOT_DEBUG bool validate_gpos_lookup_type1_format1(ValidationContext& validator, Table<GPosTable::SingleAdjustment1> table) noexcept {
+  const char* table_name = "SingleAdjustment1";
 
-  uint32_t coverageCount;
-  if (!validateLookupWithCoverage(validator, table, tableName, GPosTable::SingleAdjustment1::kBaseSize, coverageCount))
+  uint32_t coverage_count;
+  if (!validate_lookup_with_coverage(validator, table, table_name, GPosTable::SingleAdjustment1::kBaseSize, coverage_count))
     return false;
 
-  uint32_t valueFormat = table->valueFormat();
-  if (!valueFormat)
-    return validator.invalidFieldValue(tableName, "valueFormat", valueFormat);
+  uint32_t value_format = table->value_format();
+  if (!value_format)
+    return validator.invalid_field_value(table_name, "value_format", value_format);
 
-  uint32_t recordSize = sizeOfValueRecordByFormat(valueFormat);
-  uint32_t headerSize = GPosTable::SingleAdjustment1::kBaseSize + recordSize;
+  uint32_t record_size = size_of_value_record_by_format(value_format);
+  uint32_t header_size = GPosTable::SingleAdjustment1::kBaseSize + record_size;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
   return true;
 }
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType1Format2(ValidationContext& validator, Table<GPosTable::SingleAdjustment2> table) noexcept {
-  const char* tableName = "SingleAdjustment2";
+static BL_INLINE_IF_NOT_DEBUG bool validate_gpos_lookup_type1_format2(ValidationContext& validator, Table<GPosTable::SingleAdjustment2> table) noexcept {
+  const char* table_name = "SingleAdjustment2";
 
-  uint32_t coverageCount;
-  if (!validateLookupWithCoverage(validator, table, tableName, GPosTable::SingleAdjustment2::kBaseSize, coverageCount))
+  uint32_t coverage_count;
+  if (!validate_lookup_with_coverage(validator, table, table_name, GPosTable::SingleAdjustment2::kBaseSize, coverage_count))
     return false;
 
-  uint32_t valueFormat = table->valueFormat();
-  if (!valueFormat)
-    return validator.invalidFieldValue(tableName, "valueFormat", valueFormat);
+  uint32_t value_format = table->value_format();
+  if (!value_format)
+    return validator.invalid_field_value(table_name, "value_format", value_format);
 
-  uint32_t valueCount = table->valueCount();
-  if (!valueCount)
-    return validator.invalidFieldValue(tableName, "valueCount", valueCount);
+  uint32_t value_count = table->value_count();
+  if (!value_count)
+    return validator.invalid_field_value(table_name, "value_count", value_count);
 
-  uint32_t recordSize = sizeOfValueRecordByFormat(valueFormat);
-  uint32_t headerSize = GPosTable::SingleAdjustment2::kBaseSize + recordSize * valueCount;
+  uint32_t record_size = size_of_value_record_by_format(value_format);
+  uint32_t header_size = GPosTable::SingleAdjustment2::kBaseSize + record_size * value_count;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
   return true;
 }
@@ -2522,28 +2522,28 @@ static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType1Format2(ValidationCont
 // ===========================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType1Format1(GPosContext& ctx, Table<GPosTable::SingleAdjustment1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gpos_lookup_type1_format1(GPosContext& ctx, Table<GPosTable::SingleAdjustment1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t valueFormat = table->valueFormat();
-  BL_ASSERT_VALIDATED(valueFormat != 0);
-  BL_ASSERT_VALIDATED(table.fits(GPosTable::SingleAdjustment1::kBaseSize + sizeOfValueRecordByFormat(valueFormat)));
+  uint32_t value_format = table->value_format();
+  BL_ASSERT_VALIDATED(value_format != 0);
+  BL_ASSERT_VALIDATED(table.fits(GPosTable::SingleAdjustment1::kBaseSize + size_of_value_record_by_format(value_format)));
 
   size_t i = scope.index();
   size_t end = scope.end();
 
-  BLGlyphId* glyphData = ctx.glyphData();
-  BLGlyphPlacement* placementData = ctx.placementData();
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
+  BLGlyphId* glyph_data = ctx.glyph_data();
+  BLGlyphPlacement* placement_data = ctx.placement_data();
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
 
   do {
-    BLGlyphId glyphId = glyphData[i];
-    if (glyphRange.contains(glyphId)) {
-      uint32_t unusedCoverageIndex;
-      if (covIt.find<kCovFmt>(glyphId, unusedCoverageIndex)) {
+    BLGlyphId glyph_id = glyph_data[i];
+    if (glyph_range.contains(glyph_id)) {
+      uint32_t unused_coverage_index;
+      if (cov_it.find<kCovFmt>(glyph_id, unused_coverage_index)) {
         const Int16* p = reinterpret_cast<const Int16*>(table.data + GPosTable::SingleAdjustment1::kBaseSize);
-        applyGPosValue(p, valueFormat, &placementData[i]);
+        apply_gposValue(p, value_format, &placement_data[i]);
       }
     }
   } while (++i < end);
@@ -2552,31 +2552,31 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType1Format1(GPosContext& 
 }
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType1Format2(GPosContext& ctx, Table<GPosTable::SingleAdjustment2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gpos_lookup_type1_format2(GPosContext& ctx, Table<GPosTable::SingleAdjustment2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t valueFormat = table->valueFormat();
-  uint32_t valueCount = table->valueCount();
-  uint32_t recordSize = sizeOfValueRecordByFormat(valueFormat);
+  uint32_t value_format = table->value_format();
+  uint32_t value_count = table->value_count();
+  uint32_t record_size = size_of_value_record_by_format(value_format);
 
-  BL_ASSERT_VALIDATED(valueFormat != 0);
-  BL_ASSERT_VALIDATED(table.fits(GPosTable::SingleAdjustment2::kBaseSize + valueCount * recordSize));
+  BL_ASSERT_VALIDATED(value_format != 0);
+  BL_ASSERT_VALIDATED(table.fits(GPosTable::SingleAdjustment2::kBaseSize + value_count * record_size));
 
   size_t i = scope.index();
   size_t end = scope.end();
 
-  BLGlyphId* glyphData = ctx.glyphData();
-  BLGlyphPlacement* placementData = ctx.placementData();
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
+  BLGlyphId* glyph_data = ctx.glyph_data();
+  BLGlyphPlacement* placement_data = ctx.placement_data();
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
 
   do {
-    BLGlyphId glyphId = glyphData[i];
-    if (glyphRange.contains(glyphId)) {
-      uint32_t coverageIndex;
-      if (covIt.find<kCovFmt>(glyphId, coverageIndex) && coverageIndex < valueCount) {
-        const Int16* p = reinterpret_cast<const Int16*>(table.data + GPosTable::SingleAdjustment2::kBaseSize + coverageIndex * recordSize);
-        applyGPosValue(p, valueFormat, &placementData[i]);
+    BLGlyphId glyph_id = glyph_data[i];
+    if (glyph_range.contains(glyph_id)) {
+      uint32_t coverage_index;
+      if (cov_it.find<kCovFmt>(glyph_id, coverage_index) && coverage_index < value_count) {
+        const Int16* p = reinterpret_cast<const Int16*>(table.data + GPosTable::SingleAdjustment2::kBaseSize + coverage_index * record_size);
+        apply_gposValue(p, value_format, &placement_data[i]);
       }
     }
   } while (++i < end);
@@ -2587,62 +2587,62 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType1Format2(GPosContext& 
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #2 - Pair Adjustment Validation
 // =============================================================================
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType2Format1(ValidationContext& validator, Table<GPosTable::PairAdjustment1> table) noexcept {
-  const char* tableName = "PairAdjustment1";
+static BL_INLINE_IF_NOT_DEBUG bool validate_gpos_lookup_type2_format1(ValidationContext& validator, Table<GPosTable::PairAdjustment1> table) noexcept {
+  const char* table_name = "PairAdjustment1";
 
-  uint32_t coverageCount;
-  if (!validateLookupWithCoverage(validator, table, tableName, GPosTable::PairAdjustment1::kBaseSize, coverageCount))
+  uint32_t coverage_count;
+  if (!validate_lookup_with_coverage(validator, table, table_name, GPosTable::PairAdjustment1::kBaseSize, coverage_count))
     return false;
 
-  uint32_t pairSetCount = table->pairSetOffsets.count();
-  uint32_t valueRecordSize = 2u + sizeOfValueRecordByFormat(table->valueFormat1()) +
-                                  sizeOfValueRecordByFormat(table->valueFormat2()) ;
+  uint32_t pair_set_count = table->pair_set_offsets.count();
+  uint32_t value_record_size = 2u + size_of_value_record_by_format(table->value_format1()) +
+                                  size_of_value_record_by_format(table->value_format2()) ;
 
-  uint32_t headerSize = GPosTable::PairAdjustment1::kBaseSize + pairSetCount * 2u;
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  uint32_t header_size = GPosTable::PairAdjustment1::kBaseSize + pair_set_count * 2u;
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
-  const Offset16* offsetArray = table->pairSetOffsets.array();
-  OffsetRange pairSetOffsetRange{headerSize, table.size - 2u};
+  const Offset16* offset_array = table->pair_set_offsets.array();
+  OffsetRange pair_set_offset_range{header_size, table.size - 2u};
 
-  for (uint32_t i = 0; i < pairSetCount; i++) {
-    uint32_t pairSetOffset = offsetArray[i].value();
-    if (!pairSetOffsetRange.contains(pairSetOffset))
-      return validator.invalidOffsetEntry(tableName, "pairSetOffset", i, pairSetOffset, pairSetOffsetRange);
+  for (uint32_t i = 0; i < pair_set_count; i++) {
+    uint32_t pair_set_offset = offset_array[i].value();
+    if (!pair_set_offset_range.contains(pair_set_offset))
+      return validator.invalid_offset_entry(table_name, "pair_set_offset", i, pair_set_offset, pair_set_offset_range);
 
-    Table<GPosTable::PairSet> pairSet(table.subTable(pairSetOffset));
+    Table<GPosTable::PairSet> pair_set(table.sub_table(pair_set_offset));
 
-    uint32_t pairValueCount = pairSet->pairValueCount();
-    uint32_t pairSetSize = pairValueCount * valueRecordSize;
+    uint32_t pair_value_count = pair_set->pair_value_count();
+    uint32_t pair_set_size = pair_value_count * value_record_size;
 
-    if (!pairSet.fits(pairSetSize))
-      return validator.invalidTableSize("PairSet", pairSet.size, pairSetSize);
+    if (!pair_set.fits(pair_set_size))
+      return validator.invalid_table_size("PairSet", pair_set.size, pair_set_size);
   }
 
   return true;
 }
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType2Format2(ValidationContext& validator, Table<GPosTable::PairAdjustment2> table) noexcept {
-  const char* tableName = "PairAdjustment2";
+static BL_INLINE_IF_NOT_DEBUG bool validate_gpos_lookup_type2_format2(ValidationContext& validator, Table<GPosTable::PairAdjustment2> table) noexcept {
+  const char* table_name = "PairAdjustment2";
 
-  uint32_t coverageCount;
-  if (!validateLookupWithCoverage(validator, table, tableName, GPosTable::PairAdjustment2::kBaseSize, coverageCount))
+  uint32_t coverage_count;
+  if (!validate_lookup_with_coverage(validator, table, table_name, GPosTable::PairAdjustment2::kBaseSize, coverage_count))
     return false;
 
-  uint32_t class1Count = table->class1Count();
-  uint32_t class2Count = table->class2Count();
-  uint32_t valueRecordCount = class1Count * class2Count;
+  uint32_t class1_count = table->class1_count();
+  uint32_t class2_count = table->class2_count();
+  uint32_t value_record_count = class1_count * class2_count;
 
-  uint32_t value1Format = table->value1Format();
-  uint32_t value2Format = table->value2Format();
-  uint32_t valueRecordSize = sizeOfValueRecordByFormat(value1Format) + sizeOfValueRecordByFormat(value2Format);
+  uint32_t value1_format = table->value1_format();
+  uint32_t value2_format = table->value2_format();
+  uint32_t value_record_size = size_of_value_record_by_format(value1_format) + size_of_value_record_by_format(value2_format);
 
-  uint64_t calculatedTableSize = uint64_t(valueRecordCount) * uint64_t(valueRecordSize);
-  if (calculatedTableSize > table.size - GPosTable::PairAdjustment2::kBaseSize)
-    calculatedTableSize = 0xFFFFFFFFu;
+  uint64_t calculated_table_size = uint64_t(value_record_count) * uint64_t(value_record_size);
+  if (calculated_table_size > table.size - GPosTable::PairAdjustment2::kBaseSize)
+    calculated_table_size = 0xFFFFFFFFu;
 
-  if (!table.fits(calculatedTableSize))
-    return validator.invalidTableSize(tableName, table.size, uint32_t(calculatedTableSize));
+  if (!table.fits(calculated_table_size))
+    return validator.invalid_table_size(table_name, table.size, uint32_t(calculated_table_size));
 
   return true;
 }
@@ -2651,15 +2651,15 @@ static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType2Format2(ValidationCont
 // =========================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType2Format1(GPosContext& ctx, Table<GPosTable::PairAdjustment1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gpos_lookup_type2_format1(GPosContext& ctx, Table<GPosTable::PairAdjustment1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
   size_t i = scope.index();
-  size_t end = scope.isRange() ? scope.end() : ctx.size();
+  size_t end = scope.is_range() ? scope.end() : ctx.size();
 
   // We always want to access the current and next glyphs, so bail if there is no next glyph...
-  if (scope.isRange()) {
+  if (scope.is_range()) {
     if (i >= --end)
       return BL_SUCCESS;
   }
@@ -2668,61 +2668,61 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType2Format1(GPosContext& 
       return BL_SUCCESS;
   }
 
-  uint32_t valueFormat1 = table->valueFormat1();
-  uint32_t valueFormat2 = table->valueFormat2();
-  uint32_t pairSetOffsetsCount = table->pairSetOffsets.count();
-  BL_ASSERT_VALIDATED(table.fits(GPosTable::PairAdjustment1::kBaseSize + pairSetOffsetsCount * 2u));
+  uint32_t value_format1 = table->value_format1();
+  uint32_t value_format2 = table->value_format2();
+  uint32_t pair_set_offsets_count = table->pair_set_offsets.count();
+  BL_ASSERT_VALIDATED(table.fits(GPosTable::PairAdjustment1::kBaseSize + pair_set_offsets_count * 2u));
 
-  uint32_t valueRecordSize = 2u + sizeOfValueRecordByFormat(valueFormat1) +
-                                  sizeOfValueRecordByFormat(valueFormat2) ;
+  uint32_t value_record_size = 2u + size_of_value_record_by_format(value_format1) +
+                                  size_of_value_record_by_format(value_format2) ;
 
-  BLGlyphId* glyphData = ctx.glyphData();
-  BLGlyphPlacement* placementData = ctx.placementData();
+  BLGlyphId* glyph_data = ctx.glyph_data();
+  BLGlyphPlacement* placement_data = ctx.placement_data();
 
-  BLGlyphId leftGlyphId = glyphData[i];
-  BLGlyphId rightGlyphId = 0;
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
+  BLGlyphId left_glyph_id = glyph_data[i];
+  BLGlyphId right_glyph_id = 0;
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
 
   do {
-    rightGlyphId = glyphData[i + 1];
-    if (glyphRange.contains(leftGlyphId)) {
-      uint32_t coverageIndex;
-      if (covIt.find<kCovFmt>(leftGlyphId, coverageIndex) && coverageIndex < pairSetOffsetsCount) {
-        uint32_t pairSetOffset = table->pairSetOffsets.array()[coverageIndex].value();
-        BL_ASSERT_VALIDATED(pairSetOffset <= table.size - 2u);
+    right_glyph_id = glyph_data[i + 1];
+    if (glyph_range.contains(left_glyph_id)) {
+      uint32_t coverage_index;
+      if (cov_it.find<kCovFmt>(left_glyph_id, coverage_index) && coverage_index < pair_set_offsets_count) {
+        uint32_t pair_set_offset = table->pair_set_offsets.array()[coverage_index].value();
+        BL_ASSERT_VALIDATED(pair_set_offset <= table.size - 2u);
 
-        const GPosTable::PairSet* pairSet = PtrOps::offset<const GPosTable::PairSet>(table.data, pairSetOffset);
-        uint32_t pairSetCount = pairSet->pairValueCount();
-        BL_ASSERT_VALIDATED(pairSetCount * valueRecordSize <= table.size - pairSetOffset);
+        const GPosTable::PairSet* pair_set = PtrOps::offset<const GPosTable::PairSet>(table.data, pair_set_offset);
+        uint32_t pair_set_count = pair_set->pair_value_count();
+        BL_ASSERT_VALIDATED(pair_set_count * value_record_size <= table.size - pair_set_offset);
 
         const Int16* p = reinterpret_cast<const Int16*>(
-          binarySearchGlyphIdInVarStruct<UInt16>(
-            reinterpret_cast<const uint8_t*>(pairSet->pairValueRecords()), valueRecordSize, pairSetCount, rightGlyphId));
+          binary_search_glyph_id_in_var_struct<UInt16>(
+            reinterpret_cast<const uint8_t*>(pair_set->pair_value_records()), value_record_size, pair_set_count, right_glyph_id));
 
         if (p) {
           p++;
-          if (valueFormat1) p = applyGPosValue(p, valueFormat1, &placementData[i + 0]);
-          if (valueFormat2) p = applyGPosValue(p, valueFormat2, &placementData[i + 1]);
+          if (value_format1) p = apply_gposValue(p, value_format1, &placement_data[i + 0]);
+          if (value_format2) p = apply_gposValue(p, value_format2, &placement_data[i + 1]);
         }
       }
     }
 
-    leftGlyphId = rightGlyphId;
-  } while (scope.isRange() && ++i < end);
+    left_glyph_id = right_glyph_id;
+  } while (scope.is_range() && ++i < end);
 
   return BL_SUCCESS;
 }
 
 template<uint32_t kCovFmt, uint32_t kCD1Fmt, uint32_t kCD2Fmt, typename ApplyScope>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType2Format2(GPosContext& ctx, Table<GPosTable::PairAdjustment2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt, const ClassDefTableIterator& cd1It, ClassDefTableIterator& cd2It) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gpos_lookup_type2_format2(GPosContext& ctx, Table<GPosTable::PairAdjustment2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& cov_it, const ClassDefTableIterator& cd1_it, ClassDefTableIterator& cd2_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
   size_t i = scope.index();
-  size_t end = scope.isRange() ? scope.end() : ctx.size();
+  size_t end = scope.is_range() ? scope.end() : ctx.size();
 
   // We always want to access the current and next glyphs, so bail if there is no next glyph...
-  if (scope.isRange()) {
+  if (scope.is_range()) {
     if (i >= --end)
       return BL_SUCCESS;
   }
@@ -2731,43 +2731,43 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType2Format2(GPosContext& 
       return BL_SUCCESS;
   }
 
-  uint32_t value1Format = table->value1Format();
-  uint32_t value2Format = table->value2Format();
-  uint32_t valueRecordSize = sizeOfValueRecordByFormat(value1Format) + sizeOfValueRecordByFormat(value2Format);
+  uint32_t value1_format = table->value1_format();
+  uint32_t value2_format = table->value2_format();
+  uint32_t value_record_size = size_of_value_record_by_format(value1_format) + size_of_value_record_by_format(value2_format);
 
-  uint32_t class1Count = table->class1Count();
-  uint32_t class2Count = table->class2Count();
-  uint32_t valueRecordCount = class1Count * class2Count;
-  BL_ASSERT_VALIDATED(table.fits(GPosTable::PairAdjustment2::kBaseSize + uint64_t(valueRecordCount) * uint64_t(valueRecordSize)));
+  uint32_t class1_count = table->class1_count();
+  uint32_t class2_count = table->class2_count();
+  uint32_t value_record_count = class1_count * class2_count;
+  BL_ASSERT_VALIDATED(table.fits(GPosTable::PairAdjustment2::kBaseSize + uint64_t(value_record_count) * uint64_t(value_record_size)));
 
-  const uint8_t* valueBasePtr = table.data + GPosTable::PairAdjustment2::kBaseSize;
+  const uint8_t* value_base_ptr = table.data + GPosTable::PairAdjustment2::kBaseSize;
 
-  BLGlyphId* glyphData = ctx.glyphData();
-  BLGlyphPlacement* placementData = ctx.placementData();
+  BLGlyphId* glyph_data = ctx.glyph_data();
+  BLGlyphPlacement* placement_data = ctx.placement_data();
 
-  BLGlyphId leftGlyphId = glyphData[i];
-  BLGlyphId rightGlyphId = 0;
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
+  BLGlyphId left_glyph_id = glyph_data[i];
+  BLGlyphId right_glyph_id = 0;
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
 
   do {
-    rightGlyphId = glyphData[i + 1];
-    if (glyphRange.contains(leftGlyphId)) {
-      uint32_t coverageIndex;
-      if (covIt.find<kCovFmt>(leftGlyphId, coverageIndex)) {
-        uint32_t c1 = cd1It.classOfGlyph<kCD1Fmt>(leftGlyphId);
-        uint32_t c2 = cd2It.classOfGlyph<kCD2Fmt>(rightGlyphId);
-        uint32_t cIndex = c1 * class2Count + c2;
+    right_glyph_id = glyph_data[i + 1];
+    if (glyph_range.contains(left_glyph_id)) {
+      uint32_t coverage_index;
+      if (cov_it.find<kCovFmt>(left_glyph_id, coverage_index)) {
+        uint32_t c1 = cd1_it.class_of_glyph<kCD1Fmt>(left_glyph_id);
+        uint32_t c2 = cd2_it.class_of_glyph<kCD2Fmt>(right_glyph_id);
+        uint32_t c_index = c1 * class2_count + c2;
 
-        if (cIndex < valueRecordCount) {
-          const Int16* p = PtrOps::offset<const Int16>(valueBasePtr, cIndex * valueRecordSize);
-          if (value1Format) p = applyGPosValue(p, value1Format, &placementData[i + 0]);
-          if (value2Format) p = applyGPosValue(p, value2Format, &placementData[i + 1]);
+        if (c_index < value_record_count) {
+          const Int16* p = PtrOps::offset<const Int16>(value_base_ptr, c_index * value_record_size);
+          if (value1_format) p = apply_gposValue(p, value1_format, &placement_data[i + 0]);
+          if (value2_format) p = apply_gposValue(p, value2_format, &placement_data[i + 1]);
         }
       }
     }
 
-    leftGlyphId = rightGlyphId;
-  } while (scope.isRange() && ++i < end);
+    left_glyph_id = right_glyph_id;
+  } while (scope.is_range() && ++i < end);
 
   return BL_SUCCESS;
 }
@@ -2775,18 +2775,18 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType2Format2(GPosContext& 
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #3 - Cursive Attachment Validation
 // ================================================================================
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType3Format1(ValidationContext& validator, Table<GPosTable::CursiveAttachment1> table) noexcept {
-  const char* tableName = "CursiveAttachment1";
+static BL_INLINE_IF_NOT_DEBUG bool validate_gpos_lookup_type3_format1(ValidationContext& validator, Table<GPosTable::CursiveAttachment1> table) noexcept {
+  const char* table_name = "CursiveAttachment1";
 
-  uint32_t coverageCount;
-  if (!validateLookupWithCoverage(validator, table, tableName, GPosTable::CursiveAttachment1::kBaseSize, coverageCount))
+  uint32_t coverage_count;
+  if (!validate_lookup_with_coverage(validator, table, table_name, GPosTable::CursiveAttachment1::kBaseSize, coverage_count))
     return false;
 
-  uint32_t entryExitCount = table->entryExits.count();
-  uint32_t headerSize = GPosTable::CursiveAttachment1::kBaseSize + entryExitCount * GPosTable::EntryExit::kBaseSize;
+  uint32_t entry_exit_count = table->entry_exits.count();
+  uint32_t header_size = GPosTable::CursiveAttachment1::kBaseSize + entry_exit_count * GPosTable::EntryExit::kBaseSize;
 
-  if (!table.fits(headerSize))
-    return validator.invalidTableSize(tableName, table.size, headerSize);
+  if (!table.fits(header_size))
+    return validator.invalid_table_size(table_name, table.size, header_size);
 
   // TODO: [OpenType] GPOS Cursive attachment validation.
   return false;
@@ -2810,7 +2810,7 @@ static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType3Format1(ValidationCont
 // bl::OpenType::LayoutImpl - GPOS - Nested Lookups
 // ================================================
 
-static BL_NOINLINE BLResult applyGPosNestedLookups(GPosContext& ctx, size_t index, const SequenceMatch& match) noexcept {
+static BL_NOINLINE BLResult apply_gpos_nested_lookups(GPosContext& ctx, size_t index, const SequenceMatch& match) noexcept {
   // TODO: [OpenType] GPOS nested lookups
   return BL_SUCCESS;
 }
@@ -2818,40 +2818,40 @@ static BL_NOINLINE BLResult applyGPosNestedLookups(GPosContext& ctx, size_t inde
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #7 - Contextual Positioning Validation
 // ====================================================================================
 
-static BL_INLINE bool validateGPosLookupType7Format1(ValidationContext& validator, Table<GSubTable::SequenceContext1> table) noexcept {
-  return validateContextFormat1(validator, table, "ContextPositioning1");
+static BL_INLINE bool validate_gpos_lookup_type7_format1(ValidationContext& validator, Table<GSubTable::SequenceContext1> table) noexcept {
+  return validate_context_format1(validator, table, "ContextPositioning1");
 }
 
-static BL_INLINE bool validateGPosLookupType7Format2(ValidationContext& validator, Table<GSubTable::SequenceContext2> table) noexcept {
-  return validateContextFormat2(validator, table, "ContextPositioning2");
+static BL_INLINE bool validate_gpos_lookup_type7_format2(ValidationContext& validator, Table<GSubTable::SequenceContext2> table) noexcept {
+  return validate_context_format2(validator, table, "ContextPositioning2");
 }
 
-static BL_INLINE bool validateGPosLookupType7Format3(ValidationContext& validator, Table<GSubTable::SequenceContext3> table) noexcept {
-  return validateContextFormat3(validator, table, "ContextPositioning3");
+static BL_INLINE bool validate_gpos_lookup_type7_format3(ValidationContext& validator, Table<GSubTable::SequenceContext3> table) noexcept {
+  return validate_context_format3(validator, table, "ContextPositioning3");
 }
 
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #7 - Contextual Positioning Lookup
 // ================================================================================
 
 template<uint32_t kCovFmt>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType7Format1(GPosContext& ctx, Table<GPosTable::SequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gpos_lookup_type7_format1(GPosContext& ctx, Table<GPosTable::SequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  BL_ASSERT_VALIDATED(table.fits(GPosTable::SequenceContext1::kBaseSize + ruleSetCount * 2u));
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  BL_ASSERT_VALIDATED(table.fits(GPosTable::SequenceContext1::kBaseSize + rule_set_count * 2u));
 
   size_t index = scope.index();
   size_t end = scope.end();
   BL_ASSERT(index < end);
 
-  const BLGlyphId* glyphPtr = ctx.glyphData();
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
+  const BLGlyphId* glyph_ptr = ctx.glyph_data();
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
 
   do {
     SequenceMatch match;
-    if (matchSequenceFormat1<kCovFmt>(table, ruleSetCount, glyphRange, covIt, glyphPtr, end - index, &match)) {
-      BL_PROPAGATE(applyGPosNestedLookups(ctx, index, match));
+    if (match_sequence_format1<kCovFmt>(table, rule_set_count, glyph_range, cov_it, glyph_ptr, end - index, &match)) {
+      BL_PROPAGATE(apply_gpos_nested_lookups(ctx, index, match));
     }
   } while (++index != end);
 
@@ -2859,64 +2859,64 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType7Format1(GPosContext& 
 }
 
 template<uint32_t kCovFmt, uint32_t kCDFmt>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType7Format2(GPosContext& ctx, Table<GPosTable::SequenceContext2> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt, const ClassDefTableIterator& cdIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gpos_lookup_type7_format2(GPosContext& ctx, Table<GPosTable::SequenceContext2> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& cov_it, const ClassDefTableIterator& cd_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  BL_ASSERT_VALIDATED(table.fits(GPosTable::SequenceContext2::kBaseSize + ruleSetCount * 2u));
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  BL_ASSERT_VALIDATED(table.fits(GPosTable::SequenceContext2::kBaseSize + rule_set_count * 2u));
 
   size_t index = scope.index();
   size_t end = scope.end();
   BL_ASSERT(index < end);
 
-  const BLGlyphId* glyphPtr = ctx.glyphData() + scope.index();
-  GlyphRange glyphRange = covIt.glyphRange<kCovFmt>();
+  const BLGlyphId* glyph_ptr = ctx.glyph_data() + scope.index();
+  GlyphRange glyph_range = cov_it.glyph_range<kCovFmt>();
 
   do {
     SequenceMatch match;
-    if (matchSequenceFormat2<kCovFmt, kCDFmt>(table, ruleSetCount, glyphRange, covIt, cdIt, glyphPtr, end - index, &match)) {
-      BL_PROPAGATE(applyGPosNestedLookups(ctx, index, match));
+    if (match_sequence_format2<kCovFmt, kCDFmt>(table, rule_set_count, glyph_range, cov_it, cd_it, glyph_ptr, end - index, &match)) {
+      BL_PROPAGATE(apply_gpos_nested_lookups(ctx, index, match));
     }
   } while (++index != end);
 
   return BL_SUCCESS;
 }
 
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType7Format3(GPosContext& ctx, Table<GPosTable::SequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gpos_lookup_type7_format3(GPosContext& ctx, Table<GPosTable::SequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t glyphCount = table->glyphCount();
-  uint32_t lookupRecordCount = table->lookupRecordCount();
+  uint32_t glyph_count = table->glyph_count();
+  uint32_t lookup_record_count = table->lookup_record_count();
 
-  if (scope.size() < glyphCount)
+  if (scope.size() < glyph_count)
     return BL_SUCCESS;
 
-  BL_ASSERT_VALIDATED(glyphCount > 0);
-  BL_ASSERT_VALIDATED(lookupRecordCount > 0);
-  BL_ASSERT_VALIDATED(table.fits(GPosTable::SequenceContext3::kBaseSize + glyphCount * 2u + lookupRecordCount * GPosTable::SequenceLookupRecord::kBaseSize));
+  BL_ASSERT_VALIDATED(glyph_count > 0);
+  BL_ASSERT_VALIDATED(lookup_record_count > 0);
+  BL_ASSERT_VALIDATED(table.fits(GPosTable::SequenceContext3::kBaseSize + glyph_count * 2u + lookup_record_count * GPosTable::SequenceLookupRecord::kBaseSize));
 
-  const UInt16* coverageOffsetArray = table->coverageOffsetArray();
-  const GPosTable::SequenceLookupRecord* lookupRecordArray = table->lookupRecordArray(glyphCount);
+  const UInt16* coverage_offset_array = table->coverage_offset_array();
+  const GPosTable::SequenceLookupRecord* lookup_record_array = table->lookup_record_array(glyph_count);
 
-  CoverageTableIterator cov0It;
-  uint32_t cov0Fmt = cov0It.init(table.subTableUnchecked(coverageOffsetArray[0].value()));
+  CoverageTableIterator cov0_it;
+  uint32_t cov0_fmt = cov0_it.init(table.sub_table_unchecked(coverage_offset_array[0].value()));
 
   size_t index = scope.index();
   size_t end = scope.end();
   BL_ASSERT(index < end);
 
-  const BLGlyphId* glyphPtr = ctx.glyphData() + scope.index();
-  GlyphRange glyphRange = cov0It.glyphRangeWithFormat(cov0Fmt);
-  SequenceMatch match{glyphCount, lookupRecordCount, lookupRecordArray};
+  const BLGlyphId* glyph_ptr = ctx.glyph_data() + scope.index();
+  GlyphRange glyph_range = cov0_it.glyph_range_with_format(cov0_fmt);
+  SequenceMatch match{glyph_count, lookup_record_count, lookup_record_array};
 
-  size_t endMinusGlyphCount = end - glyphCount;
+  size_t end_minus_glyph_count = end - glyph_count;
   do {
-    if (matchSequenceFormat3(table, coverageOffsetArray, glyphRange, cov0It, cov0Fmt, glyphPtr, glyphCount)) {
-      BL_PROPAGATE(applyGPosNestedLookups(ctx, index, match));
+    if (match_sequence_format3(table, coverage_offset_array, glyph_range, cov0_it, cov0_fmt, glyph_ptr, glyph_count)) {
+      BL_PROPAGATE(apply_gpos_nested_lookups(ctx, index, match));
     }
-  } while (++index != endMinusGlyphCount);
+  } while (++index != end_minus_glyph_count);
 
   return BL_SUCCESS;
 }
@@ -2924,149 +2924,149 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType7Format3(GPosContext& 
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #8 - Chained Context Positioning Validation
 // =========================================================================================
 
-static BL_INLINE bool validateGPosLookupType8Format1(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext1> table) noexcept {
-  return validateChainedContextFormat1(validator, table, "ChainedContextPositioning1");
+static BL_INLINE bool validate_gpos_lookup_type8_format1(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext1> table) noexcept {
+  return validate_chained_context_format1(validator, table, "ChainedContextPositioning1");
 }
 
-static BL_INLINE bool validateGPosLookupType8Format2(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext2> table) noexcept {
-  return validateChainedContextFormat2(validator, table, "ChainedContextPositioning2");
+static BL_INLINE bool validate_gpos_lookup_type8_format2(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext2> table) noexcept {
+  return validate_chained_context_format2(validator, table, "ChainedContextPositioning2");
 }
 
-static BL_INLINE bool validateGPosLookupType8Format3(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext3> table) noexcept {
-  return validateChainedContextFormat3(validator, table, "ChainedContextPositioning3");
+static BL_INLINE bool validate_gpos_lookup_type8_format3(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext3> table) noexcept {
+  return validate_chained_context_format3(validator, table, "ChainedContextPositioning3");
 }
 
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #8 - Chained Context Positioning Lookup
 // =====================================================================================
 
 template<uint32_t kCovFmt>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType8Format1(GPosContext& ctx, Table<GPosTable::ChainedSequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gpos_lookup_type8_format1(GPosContext& ctx, Table<GPosTable::ChainedSequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& cov_it) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT(scope.index() < scope.end());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  BL_ASSERT_VALIDATED(table.fits(GPosTable::ChainedSequenceContext1::kBaseSize + ruleSetCount * 2u));
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  BL_ASSERT_VALIDATED(table.fits(GPosTable::ChainedSequenceContext1::kBaseSize + rule_set_count * 2u));
 
   ChainedMatchContext mCtx;
   mCtx.table = table;
-  mCtx.firstGlyphRange = covIt.glyphRange<kCovFmt>();
-  mCtx.backGlyphPtr = ctx.glyphData();
-  mCtx.aheadGlyphPtr = ctx.glyphData() + scope.index();
-  mCtx.backGlyphCount = scope.index();
-  mCtx.aheadGlyphCount = scope.size();
+  mCtx.first_glyph_range = cov_it.glyph_range<kCovFmt>();
+  mCtx.back_glyph_ptr = ctx.glyph_data();
+  mCtx.ahead_glyph_ptr = ctx.glyph_data() + scope.index();
+  mCtx.back_glyph_count = scope.index();
+  mCtx.ahead_glyph_count = scope.size();
 
-  const Offset16* ruleSetOffsets = table->ruleSetOffsets.array();
+  const Offset16* rule_set_offsets = table->rule_set_offsets.array();
   do {
     SequenceMatch match;
-    if (matchChainedSequenceFormat1<kCovFmt>(mCtx, ruleSetOffsets, ruleSetCount, covIt, &match)) {
-      BL_PROPAGATE(applyGPosNestedLookups(ctx, size_t(mCtx.aheadGlyphPtr - ctx.glyphData()), match));
+    if (match_chained_sequence_format1<kCovFmt>(mCtx, rule_set_offsets, rule_set_count, cov_it, &match)) {
+      BL_PROPAGATE(apply_gpos_nested_lookups(ctx, size_t(mCtx.ahead_glyph_ptr - ctx.glyph_data()), match));
     }
-    mCtx.aheadGlyphPtr++;
-    mCtx.backGlyphCount++;
-  } while (--mCtx.aheadGlyphCount != 0);
+    mCtx.ahead_glyph_ptr++;
+    mCtx.back_glyph_count++;
+  } while (--mCtx.ahead_glyph_count != 0);
 
   return BL_SUCCESS;
 }
 
 template<uint32_t kCovFmt, uint32_t kCD1Fmt, uint32_t kCD2Fmt, uint32_t kCD3Fmt>
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType8Format2(
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gpos_lookup_type8_format2(
   GPosContext& ctx,
   Table<GPosTable::ChainedSequenceContext2> table,
   ApplyRange scope,
   LookupFlags flags,
-  const CoverageTableIterator& covIt, const ClassDefTableIterator& cd1It, const ClassDefTableIterator& cd2It, const ClassDefTableIterator& cd3It) noexcept {
+  const CoverageTableIterator& cov_it, const ClassDefTableIterator& cd1_it, const ClassDefTableIterator& cd2_it, const ClassDefTableIterator& cd3_it) noexcept {
 
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT(scope.index() < scope.end());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t ruleSetCount = table->ruleSetOffsets.count();
-  BL_ASSERT_VALIDATED(table.fits(GPosTable::ChainedSequenceContext2::kBaseSize + ruleSetCount * 2u));
+  uint32_t rule_set_count = table->rule_set_offsets.count();
+  BL_ASSERT_VALIDATED(table.fits(GPosTable::ChainedSequenceContext2::kBaseSize + rule_set_count * 2u));
 
   ChainedMatchContext mCtx;
   mCtx.table = table;
-  mCtx.firstGlyphRange = covIt.glyphRange<kCovFmt>();
-  mCtx.backGlyphPtr = ctx.glyphData();
-  mCtx.aheadGlyphPtr = ctx.glyphData() + scope.index();
-  mCtx.backGlyphCount = scope.index();
-  mCtx.aheadGlyphCount = scope.size();
+  mCtx.first_glyph_range = cov_it.glyph_range<kCovFmt>();
+  mCtx.back_glyph_ptr = ctx.glyph_data();
+  mCtx.ahead_glyph_ptr = ctx.glyph_data() + scope.index();
+  mCtx.back_glyph_count = scope.index();
+  mCtx.ahead_glyph_count = scope.size();
 
-  const Offset16* ruleSetOffsets = table->ruleSetOffsets.array();
+  const Offset16* rule_set_offsets = table->rule_set_offsets.array();
   do {
     SequenceMatch match;
-    if (matchChainedSequenceFormat2<kCovFmt, kCD1Fmt, kCD2Fmt, kCD3Fmt>(mCtx, ruleSetOffsets, ruleSetCount, covIt, cd1It, cd2It, cd3It, &match)) {
-      BL_PROPAGATE(applyGPosNestedLookups(ctx, size_t(mCtx.aheadGlyphPtr - ctx.glyphData()), match));
+    if (match_chained_sequence_format2<kCovFmt, kCD1Fmt, kCD2Fmt, kCD3Fmt>(mCtx, rule_set_offsets, rule_set_count, cov_it, cd1_it, cd2_it, cd3_it, &match)) {
+      BL_PROPAGATE(apply_gpos_nested_lookups(ctx, size_t(mCtx.ahead_glyph_ptr - ctx.glyph_data()), match));
     }
-    mCtx.aheadGlyphPtr++;
-    mCtx.backGlyphCount++;
-  } while (--mCtx.aheadGlyphCount != 0);
+    mCtx.ahead_glyph_ptr++;
+    mCtx.back_glyph_count++;
+  } while (--mCtx.ahead_glyph_count != 0);
 
   return BL_SUCCESS;
 }
 
-static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType8Format3(GPosContext& ctx, Table<GPosTable::ChainedSequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult apply_gpos_lookup_type8_format3(GPosContext& ctx, Table<GPosTable::ChainedSequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
-  uint32_t backtrackGlyphCount = table->backtrackGlyphCount();
-  uint32_t inputOffset = 4u + backtrackGlyphCount * 2u;
-  BL_ASSERT_VALIDATED(table.fits(inputOffset + 2u));
+  uint32_t backtrack_glyph_count = table->backtrack_glyph_count();
+  uint32_t input_offset = 4u + backtrack_glyph_count * 2u;
+  BL_ASSERT_VALIDATED(table.fits(input_offset + 2u));
 
-  uint32_t inputGlyphCount = table.readU16(inputOffset);
-  uint32_t lookaheadOffset = inputOffset + 2u + inputGlyphCount * 2u;
-  BL_ASSERT_VALIDATED(inputGlyphCount > 0);
-  BL_ASSERT_VALIDATED(table.fits(lookaheadOffset + 2u));
+  uint32_t input_glyph_count = table.readU16(input_offset);
+  uint32_t lookahead_offset = input_offset + 2u + input_glyph_count * 2u;
+  BL_ASSERT_VALIDATED(input_glyph_count > 0);
+  BL_ASSERT_VALIDATED(table.fits(lookahead_offset + 2u));
 
-  uint32_t lookaheadGlyphCount = table.readU16(lookaheadOffset);
-  uint32_t lookupOffset = lookaheadOffset + 2u + lookaheadGlyphCount * 2u;
-  BL_ASSERT_VALIDATED(table.fits(lookupOffset + 2u));
+  uint32_t lookahead_glyph_count = table.readU16(lookahead_offset);
+  uint32_t lookup_offset = lookahead_offset + 2u + lookahead_glyph_count * 2u;
+  BL_ASSERT_VALIDATED(table.fits(lookup_offset + 2u));
 
-  uint32_t lookupRecordCount = table.readU16(lookupOffset);
-  BL_ASSERT_VALIDATED(lookupRecordCount > 0);
-  BL_ASSERT_VALIDATED(table.fits(lookupOffset + 2u + lookupRecordCount * GSubGPosTable::SequenceLookupRecord::kBaseSize));
+  uint32_t lookup_record_count = table.readU16(lookup_offset);
+  BL_ASSERT_VALIDATED(lookup_record_count > 0);
+  BL_ASSERT_VALIDATED(table.fits(lookup_offset + 2u + lookup_record_count * GSubGPosTable::SequenceLookupRecord::kBaseSize));
 
   // Restrict scope in a way so we would never underflow/overflow glyph buffer when matching backtrack/lookahead glyphs.
-  uint32_t inputAndLookaheadGlyphCount = inputGlyphCount + lookaheadGlyphCount;
-  scope.intersect(backtrackGlyphCount, ctx.size() - inputAndLookaheadGlyphCount);
+  uint32_t input_and_lookahead_glyph_count = input_glyph_count + lookahead_glyph_count;
+  scope.intersect(backtrack_glyph_count, ctx.size() - input_and_lookahead_glyph_count);
 
   // Bail if the buffer or the scope is too small for this chained context substitution.
-  if (scope.size() < inputAndLookaheadGlyphCount || scope.index() >= scope.end())
+  if (scope.size() < input_and_lookahead_glyph_count || scope.index() >= scope.end())
     return BL_SUCCESS;
 
-  const Offset16* backtrackCoverageOffsets = table->backtrackCoverageOffsets();
-  const Offset16* inputCoverageOffsets = table.dataAs<Offset16>(inputOffset + 2u);
-  const Offset16* lookaheadCoverageOffsets = table.dataAs<Offset16>(lookaheadOffset + 2u);
+  const Offset16* backtrack_coverage_offsets = table->backtrack_coverage_offsets();
+  const Offset16* input_coverage_offsets = table.data_as<Offset16>(input_offset + 2u);
+  const Offset16* lookahead_coverage_offsets = table.data_as<Offset16>(lookahead_offset + 2u);
 
-  CoverageTableIterator cov0It;
-  uint32_t cov0Fmt = cov0It.init(table.subTableUnchecked(inputCoverageOffsets[0].value()));
-  GlyphRange firstGlyphRange = cov0It.glyphRangeWithFormat(cov0Fmt);
+  CoverageTableIterator cov0_it;
+  uint32_t cov0_fmt = cov0_it.init(table.sub_table_unchecked(input_coverage_offsets[0].value()));
+  GlyphRange first_glyph_range = cov0_it.glyph_range_with_format(cov0_fmt);
 
   ChainedMatchContext mCtx;
   mCtx.table = table;
-  mCtx.firstGlyphRange = cov0It.glyphRangeWithFormat(cov0Fmt);
-  mCtx.backGlyphPtr = ctx.glyphData();
-  mCtx.aheadGlyphPtr = ctx.glyphData() + scope.index();
-  mCtx.backGlyphCount = scope.index();
-  mCtx.aheadGlyphCount = scope.size();
+  mCtx.first_glyph_range = cov0_it.glyph_range_with_format(cov0_fmt);
+  mCtx.back_glyph_ptr = ctx.glyph_data();
+  mCtx.ahead_glyph_ptr = ctx.glyph_data() + scope.index();
+  mCtx.back_glyph_count = scope.index();
+  mCtx.ahead_glyph_count = scope.size();
 
   SequenceMatch match;
-  match.glyphCount = inputGlyphCount;
-  match.lookupRecords = table.dataAs<GSubTable::SequenceLookupRecord>(lookupOffset + 2u);
-  match.lookupRecordCount = lookupRecordCount;
+  match.glyph_count = input_glyph_count;
+  match.lookup_records = table.data_as<GSubTable::SequenceLookupRecord>(lookup_offset + 2u);
+  match.lookup_record_count = lookup_record_count;
 
   do {
-    if (matchChainedSequenceFormat3(mCtx,
-        backtrackCoverageOffsets, backtrackGlyphCount,
-        inputCoverageOffsets, inputGlyphCount,
-        lookaheadCoverageOffsets, lookaheadGlyphCount,
-        firstGlyphRange,
-        cov0It, cov0Fmt)) {
-      BL_PROPAGATE(applyGPosNestedLookups(ctx, size_t(mCtx.aheadGlyphPtr - ctx.glyphData()), match));
+    if (match_chained_sequence_format3(mCtx,
+        backtrack_coverage_offsets, backtrack_glyph_count,
+        input_coverage_offsets, input_glyph_count,
+        lookahead_coverage_offsets, lookahead_glyph_count,
+        first_glyph_range,
+        cov0_it, cov0_fmt)) {
+      BL_PROPAGATE(apply_gpos_nested_lookups(ctx, size_t(mCtx.ahead_glyph_ptr - ctx.glyph_data()), match));
     }
-    mCtx.backGlyphCount++;
-    mCtx.aheadGlyphPtr++;
-  } while (--mCtx.aheadGlyphCount >= inputAndLookaheadGlyphCount);
+    mCtx.back_glyph_count++;
+    mCtx.ahead_glyph_ptr++;
+  } while (--mCtx.ahead_glyph_count >= input_and_lookahead_glyph_count);
 
   return BL_SUCCESS;
 }
@@ -3074,75 +3074,75 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType8Format3(GPosContext& 
 // bl::OpenType::LayoutImpl - GPOS - Lookup Dispatch
 // =================================================
 
-static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookup(ValidationContext& validator, RawTable table, GPosLookupAndFormat typeAndFormat) noexcept {
-  switch (typeAndFormat) {
-    case GPosLookupAndFormat::kType1Format1: return validateGPosLookupType1Format1(validator, table);
-    case GPosLookupAndFormat::kType1Format2: return validateGPosLookupType1Format2(validator, table);
-    case GPosLookupAndFormat::kType2Format1: return validateGPosLookupType2Format1(validator, table);
-    case GPosLookupAndFormat::kType2Format2: return validateGPosLookupType2Format2(validator, table);
-    case GPosLookupAndFormat::kType3Format1: return validateGPosLookupType3Format1(validator, table);
+static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookup(ValidationContext& validator, RawTable table, GPosLookupAndFormat type_and_format) noexcept {
+  switch (type_and_format) {
+    case GPosLookupAndFormat::kType1Format1: return validate_gpos_lookup_type1_format1(validator, table);
+    case GPosLookupAndFormat::kType1Format2: return validate_gpos_lookup_type1_format2(validator, table);
+    case GPosLookupAndFormat::kType2Format1: return validate_gpos_lookup_type2_format1(validator, table);
+    case GPosLookupAndFormat::kType2Format2: return validate_gpos_lookup_type2_format2(validator, table);
+    case GPosLookupAndFormat::kType3Format1: return validate_gpos_lookup_type3_format1(validator, table);
     /*
-    case GPosLookupAndFormat::kType4Format1: return validateGPosLookupType4Format1(validator, table);
-    case GPosLookupAndFormat::kType5Format1: return validateGPosLookupType5Format1(validator, table);
-    case GPosLookupAndFormat::kType6Format1: return validateGPosLookupType6Format1(validator, table);
+    case GPosLookupAndFormat::kType4Format1: return validate_gpos_lookup_type4_format1(validator, table);
+    case GPosLookupAndFormat::kType5Format1: return validate_gpos_lookup_type5_format1(validator, table);
+    case GPosLookupAndFormat::kType6Format1: return validate_gpos_lookup_type6_format1(validator, table);
     */
-    case GPosLookupAndFormat::kType7Format1: return validateGPosLookupType7Format1(validator, table);
-    case GPosLookupAndFormat::kType7Format2: return validateGPosLookupType7Format2(validator, table);
-    case GPosLookupAndFormat::kType7Format3: return validateGPosLookupType7Format3(validator, table);
-    case GPosLookupAndFormat::kType8Format1: return validateGPosLookupType8Format1(validator, table);
-    case GPosLookupAndFormat::kType8Format2: return validateGPosLookupType8Format2(validator, table);
-    case GPosLookupAndFormat::kType8Format3: return validateGPosLookupType8Format3(validator, table);
+    case GPosLookupAndFormat::kType7Format1: return validate_gpos_lookup_type7_format1(validator, table);
+    case GPosLookupAndFormat::kType7Format2: return validate_gpos_lookup_type7_format2(validator, table);
+    case GPosLookupAndFormat::kType7Format3: return validate_gpos_lookup_type7_format3(validator, table);
+    case GPosLookupAndFormat::kType8Format1: return validate_gpos_lookup_type8_format1(validator, table);
+    case GPosLookupAndFormat::kType8Format2: return validate_gpos_lookup_type8_format2(validator, table);
+    case GPosLookupAndFormat::kType8Format3: return validate_gpos_lookup_type8_format3(validator, table);
     default:
       return false;
   }
 }
 
-static BLResult applyGPosLookup(GPosContext& ctx, RawTable table, GPosLookupAndFormat typeAndFormat, ApplyRange scope, LookupFlags flags) noexcept {
-  BL_ASSERT_VALIDATED(table.fits(gposLookupInfoTable.lookupInfo[size_t(typeAndFormat)].headerSize));
+static BLResult apply_gpos_lookup(GPosContext& ctx, RawTable table, GPosLookupAndFormat type_and_format, ApplyRange scope, LookupFlags flags) noexcept {
+  BL_ASSERT_VALIDATED(table.fits(gpos_lookup_info_table.lookup_info[size_t(type_and_format)].header_size));
 
   #define BL_APPLY_WITH_COVERAGE(FN, TABLE)                                        \
-    CoverageTableIterator covIt;                                                   \
-    if (covIt.init(table.subTable(table.dataAs<TABLE>()->coverageOffset())) == 1u) \
-      result = FN<1>(ctx, table, scope, flags, covIt);                             \
+    CoverageTableIterator cov_it;                                                   \
+    if (cov_it.init(table.sub_table(table.data_as<TABLE>()->coverage_offset())) == 1u) \
+      result = FN<1>(ctx, table, scope, flags, cov_it);                             \
     else                                                                           \
-      result = FN<2>(ctx, table, scope, flags, covIt);
+      result = FN<2>(ctx, table, scope, flags, cov_it);
 
   BLResult result = BL_SUCCESS;
-  switch (typeAndFormat) {
+  switch (type_and_format) {
     case GPosLookupAndFormat::kType1Format1: {
-      BL_APPLY_WITH_COVERAGE(applyGPosLookupType1Format1, GPosTable::SingleAdjustment1)
+      BL_APPLY_WITH_COVERAGE(apply_gpos_lookup_type1_format1, GPosTable::SingleAdjustment1)
       break;
     }
 
     case GPosLookupAndFormat::kType1Format2: {
-      BL_APPLY_WITH_COVERAGE(applyGPosLookupType1Format2, GPosTable::SingleAdjustment2)
+      BL_APPLY_WITH_COVERAGE(apply_gpos_lookup_type1_format2, GPosTable::SingleAdjustment2)
       break;
     }
 
     case GPosLookupAndFormat::kType2Format1: {
-      BL_APPLY_WITH_COVERAGE(applyGPosLookupType2Format1, GPosTable::PairAdjustment1)
+      BL_APPLY_WITH_COVERAGE(apply_gpos_lookup_type2_format1, GPosTable::PairAdjustment1)
       break;
     }
 
     case GPosLookupAndFormat::kType2Format2: {
-      CoverageTableIterator covIt;
-      ClassDefTableIterator cd1It;
-      ClassDefTableIterator cd2It;
+      CoverageTableIterator cov_it;
+      ClassDefTableIterator cd1_it;
+      ClassDefTableIterator cd2_it;
 
-      FormatBits3X fmtBits = FormatBits3X(
-        ((covIt.init(table.subTable(table.dataAs<GPosTable::PairAdjustment2>()->coverageOffset()))  - 1u) << 2) |
-        ((cd1It.init(table.subTable(table.dataAs<GPosTable::PairAdjustment2>()->classDef1Offset())) - 1u) << 1) |
-        ((cd2It.init(table.subTable(table.dataAs<GPosTable::PairAdjustment2>()->classDef2Offset())) - 1u) << 0));
+      FormatBits3X fmt_bits = FormatBits3X(
+        ((cov_it.init(table.sub_table(table.data_as<GPosTable::PairAdjustment2>()->coverage_offset()))  - 1u) << 2) |
+        ((cd1_it.init(table.sub_table(table.data_as<GPosTable::PairAdjustment2>()->classDef1Offset())) - 1u) << 1) |
+        ((cd2_it.init(table.sub_table(table.data_as<GPosTable::PairAdjustment2>()->classDef2Offset())) - 1u) << 0));
 
-      switch (fmtBits) {
-        case FormatBits3X::k111: result = applyGPosLookupType2Format2<1, 1, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It); break;
-        case FormatBits3X::k112: result = applyGPosLookupType2Format2<1, 1, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It); break;
-        case FormatBits3X::k121: result = applyGPosLookupType2Format2<1, 2, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It); break;
-        case FormatBits3X::k122: result = applyGPosLookupType2Format2<1, 2, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It); break;
-        case FormatBits3X::k211: result = applyGPosLookupType2Format2<2, 1, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It); break;
-        case FormatBits3X::k212: result = applyGPosLookupType2Format2<2, 1, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It); break;
-        case FormatBits3X::k221: result = applyGPosLookupType2Format2<2, 2, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It); break;
-        case FormatBits3X::k222: result = applyGPosLookupType2Format2<2, 2, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It); break;
+      switch (fmt_bits) {
+        case FormatBits3X::k111: result = apply_gpos_lookup_type2_format2<1, 1, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it); break;
+        case FormatBits3X::k112: result = apply_gpos_lookup_type2_format2<1, 1, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it); break;
+        case FormatBits3X::k121: result = apply_gpos_lookup_type2_format2<1, 2, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it); break;
+        case FormatBits3X::k122: result = apply_gpos_lookup_type2_format2<1, 2, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it); break;
+        case FormatBits3X::k211: result = apply_gpos_lookup_type2_format2<2, 1, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it); break;
+        case FormatBits3X::k212: result = apply_gpos_lookup_type2_format2<2, 1, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it); break;
+        case FormatBits3X::k221: result = apply_gpos_lookup_type2_format2<2, 2, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it); break;
+        case FormatBits3X::k222: result = apply_gpos_lookup_type2_format2<2, 2, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it); break;
       }
 
       break;
@@ -3156,73 +3156,73 @@ static BLResult applyGPosLookup(GPosContext& ctx, RawTable table, GPosLookupAndF
       break;
 
     case GPosLookupAndFormat::kType7Format1: {
-      BL_APPLY_WITH_COVERAGE(applyGPosLookupType7Format1, GPosTable::LookupHeaderWithCoverage)
+      BL_APPLY_WITH_COVERAGE(apply_gpos_lookup_type7_format1, GPosTable::LookupHeaderWithCoverage)
       break;
     }
 
     case GPosLookupAndFormat::kType7Format2: {
-      CoverageTableIterator covIt;
-      ClassDefTableIterator cdIt;
+      CoverageTableIterator cov_it;
+      ClassDefTableIterator cd_it;
 
-      FormatBits2X fmtBits = FormatBits2X(
-        ((covIt.init(table.subTable(table.dataAs<GPosTable::SequenceContext2>()->coverageOffset())) - 1u) << 1) |
-        ((cdIt.init(table.subTable(table.dataAs<GPosTable::SequenceContext2>()->classDefOffset()))  - 1u) << 0));
+      FormatBits2X fmt_bits = FormatBits2X(
+        ((cov_it.init(table.sub_table(table.data_as<GPosTable::SequenceContext2>()->coverage_offset())) - 1u) << 1) |
+        ((cd_it.init(table.sub_table(table.data_as<GPosTable::SequenceContext2>()->class_def_offset()))  - 1u) << 0));
 
-      switch (fmtBits) {
-        case FormatBits2X::k11: result = applyGPosLookupType7Format2<1, 1>(ctx, table, scope, flags, covIt, cdIt); break;
-        case FormatBits2X::k12: result = applyGPosLookupType7Format2<1, 2>(ctx, table, scope, flags, covIt, cdIt); break;
-        case FormatBits2X::k21: result = applyGPosLookupType7Format2<2, 1>(ctx, table, scope, flags, covIt, cdIt); break;
-        case FormatBits2X::k22: result = applyGPosLookupType7Format2<2, 2>(ctx, table, scope, flags, covIt, cdIt); break;
+      switch (fmt_bits) {
+        case FormatBits2X::k11: result = apply_gpos_lookup_type7_format2<1, 1>(ctx, table, scope, flags, cov_it, cd_it); break;
+        case FormatBits2X::k12: result = apply_gpos_lookup_type7_format2<1, 2>(ctx, table, scope, flags, cov_it, cd_it); break;
+        case FormatBits2X::k21: result = apply_gpos_lookup_type7_format2<2, 1>(ctx, table, scope, flags, cov_it, cd_it); break;
+        case FormatBits2X::k22: result = apply_gpos_lookup_type7_format2<2, 2>(ctx, table, scope, flags, cov_it, cd_it); break;
       }
 
       break;
     }
 
     case GPosLookupAndFormat::kType7Format3: {
-      result = applyGPosLookupType7Format3(ctx, table, scope, flags);
+      result = apply_gpos_lookup_type7_format3(ctx, table, scope, flags);
       break;
     }
 
     case GPosLookupAndFormat::kType8Format1: {
-      BL_APPLY_WITH_COVERAGE(applyGPosLookupType8Format1, GPosTable::LookupHeaderWithCoverage)
+      BL_APPLY_WITH_COVERAGE(apply_gpos_lookup_type8_format1, GPosTable::LookupHeaderWithCoverage)
       break;
     }
 
     case GPosLookupAndFormat::kType8Format2: {
-      CoverageTableIterator covIt;
-      ClassDefTableIterator cd1It;
-      ClassDefTableIterator cd2It;
-      ClassDefTableIterator cd3It;
+      CoverageTableIterator cov_it;
+      ClassDefTableIterator cd1_it;
+      ClassDefTableIterator cd2_it;
+      ClassDefTableIterator cd3_it;
 
-      FormatBits4X fmtBits = FormatBits4X(
-        ((covIt.init(table.subTable(table.dataAs<GPosTable::ChainedSequenceContext2>()->coverageOffset()         )) - 1u) << 3) |
-        ((cd1It.init(table.subTable(table.dataAs<GPosTable::ChainedSequenceContext2>()->backtrackClassDefOffset())) - 1u) << 2) |
-        ((cd2It.init(table.subTable(table.dataAs<GPosTable::ChainedSequenceContext2>()->inputClassDefOffset()    )) - 1u) << 1) |
-        ((cd3It.init(table.subTable(table.dataAs<GPosTable::ChainedSequenceContext2>()->lookaheadClassDefOffset())) - 1u) << 0));
+      FormatBits4X fmt_bits = FormatBits4X(
+        ((cov_it.init(table.sub_table(table.data_as<GPosTable::ChainedSequenceContext2>()->coverage_offset()         )) - 1u) << 3) |
+        ((cd1_it.init(table.sub_table(table.data_as<GPosTable::ChainedSequenceContext2>()->backtrack_class_def_offset())) - 1u) << 2) |
+        ((cd2_it.init(table.sub_table(table.data_as<GPosTable::ChainedSequenceContext2>()->input_class_def_offset()    )) - 1u) << 1) |
+        ((cd3_it.init(table.sub_table(table.data_as<GPosTable::ChainedSequenceContext2>()->lookahead_class_def_offset())) - 1u) << 0));
 
-      switch (fmtBits) {
-        case FormatBits4X::k1111: result = applyGPosLookupType8Format2<1, 1, 1, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1112: result = applyGPosLookupType8Format2<1, 1, 1, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1121: result = applyGPosLookupType8Format2<1, 1, 2, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1122: result = applyGPosLookupType8Format2<1, 1, 2, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1211: result = applyGPosLookupType8Format2<1, 2, 1, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1212: result = applyGPosLookupType8Format2<1, 2, 1, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1221: result = applyGPosLookupType8Format2<1, 2, 2, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k1222: result = applyGPosLookupType8Format2<1, 2, 2, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2111: result = applyGPosLookupType8Format2<2, 1, 1, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2112: result = applyGPosLookupType8Format2<2, 1, 1, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2121: result = applyGPosLookupType8Format2<2, 1, 2, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2122: result = applyGPosLookupType8Format2<2, 1, 2, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2211: result = applyGPosLookupType8Format2<2, 2, 1, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2212: result = applyGPosLookupType8Format2<2, 2, 1, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2221: result = applyGPosLookupType8Format2<2, 2, 2, 1>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
-        case FormatBits4X::k2222: result = applyGPosLookupType8Format2<2, 2, 2, 2>(ctx, table, scope, flags, covIt, cd1It, cd2It, cd3It); break;
+      switch (fmt_bits) {
+        case FormatBits4X::k1111: result = apply_gpos_lookup_type8_format2<1, 1, 1, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1112: result = apply_gpos_lookup_type8_format2<1, 1, 1, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1121: result = apply_gpos_lookup_type8_format2<1, 1, 2, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1122: result = apply_gpos_lookup_type8_format2<1, 1, 2, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1211: result = apply_gpos_lookup_type8_format2<1, 2, 1, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1212: result = apply_gpos_lookup_type8_format2<1, 2, 1, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1221: result = apply_gpos_lookup_type8_format2<1, 2, 2, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k1222: result = apply_gpos_lookup_type8_format2<1, 2, 2, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2111: result = apply_gpos_lookup_type8_format2<2, 1, 1, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2112: result = apply_gpos_lookup_type8_format2<2, 1, 1, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2121: result = apply_gpos_lookup_type8_format2<2, 1, 2, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2122: result = apply_gpos_lookup_type8_format2<2, 1, 2, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2211: result = apply_gpos_lookup_type8_format2<2, 2, 1, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2212: result = apply_gpos_lookup_type8_format2<2, 2, 1, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2221: result = apply_gpos_lookup_type8_format2<2, 2, 2, 1>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
+        case FormatBits4X::k2222: result = apply_gpos_lookup_type8_format2<2, 2, 2, 2>(ctx, table, scope, flags, cov_it, cd1_it, cd2_it, cd3_it); break;
       }
       break;
     }
 
     case GPosLookupAndFormat::kType8Format3: {
-      result = applyGPosLookupType8Format3(ctx, table, scope, flags);
+      result = apply_gpos_lookup_type8_format3(ctx, table, scope, flags);
       break;
     }
 
@@ -3238,97 +3238,97 @@ static BLResult applyGPosLookup(GPosContext& ctx, RawTable table, GPosLookupAndF
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Validate
 // =================================================
 
-static bool validateLookup(ValidationContext& validator, Table<GSubGPosTable> table, uint32_t lookupIndex) noexcept {
-  const char* tableName = "LookupList";
-  const OTFaceImpl* faceI = validator.faceImpl();
+static bool validate_lookup(ValidationContext& validator, Table<GSubGPosTable> table, uint32_t lookup_index) noexcept {
+  const char* table_name = "LookupList";
+  const OTFaceImpl* ot_face_impl = validator.ot_face_impl();
 
   if (!table.fits())
-    return validator.invalidTableSize(tableName, table.size, GSubGPosTable::kBaseSize);
+    return validator.invalid_table_size(table_name, table.size, GSubGPosTable::kBaseSize);
 
-  LookupKind lookupKind = validator.lookupKind();
-  bool isGSub = lookupKind == LookupKind::kGSUB;
+  LookupKind lookup_kind = validator.lookup_kind();
+  bool isGSub = lookup_kind == LookupKind::kGSUB;
 
-  const GSubGPosLookupInfo& lookupInfo = isGSub ? gsubLookupInfoTable : gposLookupInfoTable;
-  const LayoutData::GSubGPos& layoutData = faceI->layout.kinds[size_t(lookupKind)];
-  Table<Array16<UInt16>> lookupList(table.subTable(layoutData.lookupListOffset));
+  const GSubGPosLookupInfo& lookup_info = isGSub ? gsub_lookup_info_table : gpos_lookup_info_table;
+  const LayoutData::GSubGPos& layout_data = ot_face_impl->layout.kinds[size_t(lookup_kind)];
+  Table<Array16<UInt16>> lookup_list(table.sub_table(layout_data.lookup_list_offset));
 
-  uint32_t lookupCount = layoutData.lookupCount;
-  if (lookupIndex >= lookupCount)
-    return validator.fail("%s[%u] doesn't exist (lookupCount=%u)", tableName, lookupIndex, lookupCount);
+  uint32_t lookup_count = layout_data.lookup_count;
+  if (lookup_index >= lookup_count)
+    return validator.fail("%s[%u] doesn't exist (lookup_count=%u)", table_name, lookup_index, lookup_count);
 
-  uint32_t lookupListSize = 2u + lookupCount * 2u;
-  if (!lookupList.fits(lookupListSize))
-    return validator.invalidTableSize(tableName, lookupList.size, lookupListSize);
+  uint32_t lookup_list_size = 2u + lookup_count * 2u;
+  if (!lookup_list.fits(lookup_list_size))
+    return validator.invalid_table_size(table_name, lookup_list.size, lookup_list_size);
 
-  uint32_t lookupOffset = lookupList->array()[lookupIndex].value();
-  OffsetRange lookupOffsetRange{lookupListSize, lookupList.size - GSubGPosTable::LookupTable::kBaseSize};
+  uint32_t lookup_offset = lookup_list->array()[lookup_index].value();
+  OffsetRange lookup_offset_range{lookup_list_size, lookup_list.size - GSubGPosTable::LookupTable::kBaseSize};
 
-  if (!lookupOffsetRange.contains(lookupOffset))
+  if (!lookup_offset_range.contains(lookup_offset))
     return validator.fail("%s[%u] has invalid offset (%u), valid range=[%u:%u]",
-      tableName, lookupIndex, lookupOffset, lookupOffsetRange.start, lookupOffsetRange.end);
+      table_name, lookup_index, lookup_offset, lookup_offset_range.start, lookup_offset_range.end);
 
-  Table<GSubGPosTable::LookupTable> lookupTable(lookupList.subTable(lookupOffset));
-  uint32_t lookupType = lookupTable->lookupType();
+  Table<GSubGPosTable::LookupTable> lookup_table(lookup_list.sub_table(lookup_offset));
+  uint32_t lookup_type = lookup_table->lookup_type();
 
-  // Reject unknown lookup Type+Format combinations (lookupType 0 and values above lookupMaxValue are invalid).
-  if (lookupType - 1u > uint32_t(lookupInfo.lookupMaxValue))
-    return validator.fail("%s[%u] invalid lookup type (%u)", tableName, lookupIndex, lookupType);
+  // Reject unknown lookup Type+Format combinations (lookup_type 0 and values above lookup_max_value are invalid).
+  if (lookup_type - 1u > uint32_t(lookup_info.lookup_max_value))
+    return validator.fail("%s[%u] invalid lookup type (%u)", table_name, lookup_index, lookup_type);
 
-  uint32_t subTableCount = lookupTable->subTableOffsets.count();
-  const Offset16* subTableOffsets = lookupTable->subTableOffsets.array();
+  uint32_t sub_table_count = lookup_table->sub_table_offsets.count();
+  const Offset16* sub_table_offsets = lookup_table->sub_table_offsets.array();
 
-  uint32_t lookupTableSize = GSubGPosTable::LookupTable::kBaseSize + subTableCount * 2u;
-  if (!lookupTable.fits(lookupTableSize))
-    return validator.fail("%s[%u] truncated (size=%u, required=%u)", tableName, lookupIndex, lookupTable.size, lookupTableSize);
+  uint32_t lookup_table_size = GSubGPosTable::LookupTable::kBaseSize + sub_table_count * 2u;
+  if (!lookup_table.fits(lookup_table_size))
+    return validator.fail("%s[%u] truncated (size=%u, required=%u)", table_name, lookup_index, lookup_table.size, lookup_table_size);
 
-  uint32_t subTableMinSize = lookupType == lookupInfo.extensionType ? 8u : 6u;
-  OffsetRange subTableOffsetRange{lookupTableSize, lookupTable.size - subTableMinSize};
+  uint32_t sub_table_min_size = lookup_type == lookup_info.extension_type ? 8u : 6u;
+  OffsetRange sub_table_offset_range{lookup_table_size, lookup_table.size - sub_table_min_size};
 
-  uint32_t extPreviousLookupType = 0u;
+  uint32_t ext_previous_lookup_type = 0u;
 
-  for (uint32_t subTableIndex = 0; subTableIndex < subTableCount; subTableIndex++) {
-    uint32_t subTableOffset = subTableOffsets[subTableIndex].value();
-    if (!subTableOffsetRange.contains(subTableOffset))
-      return validator.fail("%s[%u].subTable[%u] has invalid offset (%u), valid range=[%u:%u]",
-        tableName, lookupIndex, subTableIndex, subTableOffset, subTableOffsetRange.start, subTableOffsetRange.end);
+  for (uint32_t sub_table_index = 0; sub_table_index < sub_table_count; sub_table_index++) {
+    uint32_t sub_table_offset = sub_table_offsets[sub_table_index].value();
+    if (!sub_table_offset_range.contains(sub_table_offset))
+      return validator.fail("%s[%u].sub_table[%u] has invalid offset (%u), valid range=[%u:%u]",
+        table_name, lookup_index, sub_table_index, sub_table_offset, sub_table_offset_range.start, sub_table_offset_range.end);
 
-    Table<GSubGPosTable::LookupHeader> subTable(lookupTable.subTable(subTableOffset));
-    uint32_t lookupFormat = subTable->format();
+    Table<GSubGPosTable::LookupHeader> sub_table(lookup_table.sub_table(sub_table_offset));
+    uint32_t lookup_format = sub_table->format();
 
-    uint32_t lookupTypeAndFormat = lookupInfo.typeInfo[lookupType].typeAndFormat + lookupFormat - 1u;
-    if (lookupType == lookupInfo.extensionType) {
-      Table<GSubGPosTable::ExtensionLookup> extSubTable(subTable);
+    uint32_t lookup_type_and_format = lookup_info.type_info[lookup_type].type_and_format + lookup_format - 1u;
+    if (lookup_type == lookup_info.extension_type) {
+      Table<GSubGPosTable::ExtensionLookup> ext_sub_table(sub_table);
 
-      lookupType = extSubTable->lookupType();
-      uint32_t extLookupFormat = extSubTable->format();
-      uint32_t extSubTableOffset = extSubTable->offset();
+      lookup_type = ext_sub_table->lookup_type();
+      uint32_t ext_lookup_format = ext_sub_table->format();
+      uint32_t ext_sub_table_offset = ext_sub_table->offset();
 
-      if (!extPreviousLookupType && lookupType != extPreviousLookupType)
-        return validator.fail("%s[%u].subTable[%u] has a different type (%u) than a previous extension (%u)",
-          tableName, lookupIndex, subTableIndex, lookupType, extPreviousLookupType);
+      if (!ext_previous_lookup_type && lookup_type != ext_previous_lookup_type)
+        return validator.fail("%s[%u].sub_table[%u] has a different type (%u) than a previous extension (%u)",
+          table_name, lookup_index, sub_table_index, lookup_type, ext_previous_lookup_type);
 
-      extPreviousLookupType = lookupType;
-      bool validType = lookupType != lookupInfo.extensionType && lookupType - 1u < uint32_t(lookupInfo.lookupMaxValue);
+      ext_previous_lookup_type = lookup_type;
+      bool valid_type = lookup_type != lookup_info.extension_type && lookup_type - 1u < uint32_t(lookup_info.lookup_max_value);
 
-      if (!validType || extLookupFormat != 1)
-        return validator.fail("%s[%u].subTable[%u] has invalid extension type (%u) & format (%u) combination",
-          tableName, lookupIndex, subTableIndex, lookupType, extLookupFormat);
+      if (!valid_type || ext_lookup_format != 1)
+        return validator.fail("%s[%u].sub_table[%u] has invalid extension type (%u) & format (%u) combination",
+          table_name, lookup_index, sub_table_index, lookup_type, ext_lookup_format);
 
-      subTable = extSubTable.subTable(extSubTableOffset);
-      if (!subTable.fits())
-        return validator.fail("%s[%u].subTable[%u] of extension type points to a truncated table (size=%u required=%u)",
-          tableName, lookupIndex, subTableIndex);
+      sub_table = ext_sub_table.sub_table(ext_sub_table_offset);
+      if (!sub_table.fits())
+        return validator.fail("%s[%u].sub_table[%u] of extension type points to a truncated table (size=%u required=%u)",
+          table_name, lookup_index, sub_table_index);
 
-      lookupFormat = subTable->format();
-      lookupTypeAndFormat = lookupInfo.typeInfo[lookupType].typeAndFormat + lookupFormat - 1u;
+      lookup_format = sub_table->format();
+      lookup_type_and_format = lookup_info.type_info[lookup_type].type_and_format + lookup_format - 1u;
     }
 
-    if (lookupFormat - 1u >= lookupInfo.typeInfo[lookupType].formatCount)
-      return validator.fail("%s[%u].subTable[%u] has invalid type (%u) & format (%u) combination",
-        tableName, lookupIndex, subTableIndex, lookupType, lookupFormat);
+    if (lookup_format - 1u >= lookup_info.type_info[lookup_type].format_count)
+      return validator.fail("%s[%u].sub_table[%u] has invalid type (%u) & format (%u) combination",
+        table_name, lookup_index, sub_table_index, lookup_type, lookup_format);
 
-    bool valid = isGSub ? validateGSubLookup(validator, subTable, GSubLookupAndFormat(lookupTypeAndFormat))
-                        : validateGPosLookup(validator, subTable, GPosLookupAndFormat(lookupTypeAndFormat));
+    bool valid = isGSub ? validateGSubLookup(validator, sub_table, GSubLookupAndFormat(lookup_type_and_format))
+                        : validateGPosLookup(validator, sub_table, GPosLookupAndFormat(lookup_type_and_format));
     if (!valid)
       return false;
   }
@@ -3336,87 +3336,87 @@ static bool validateLookup(ValidationContext& validator, Table<GSubGPosTable> ta
   return true;
 }
 
-static BL_NOINLINE LayoutData::LookupStatusBits validateLookups(const OTFaceImpl* faceI, LookupKind lookupKind, uint32_t wordIndex, uint32_t lookupBits) noexcept {
-  Table<GSubGPosTable> table(faceI->layout.tables[size_t(lookupKind)]);
-  const LayoutData::GSubGPos& layoutData = faceI->layout.kinds[size_t(lookupKind)];
+static BL_NOINLINE LayoutData::LookupStatusBits validate_lookups(const OTFaceImpl* ot_face_impl, LookupKind lookup_kind, uint32_t word_index, uint32_t lookup_bits) noexcept {
+  Table<GSubGPosTable> table(ot_face_impl->layout.tables[size_t(lookup_kind)]);
+  const LayoutData::GSubGPos& layout_data = ot_face_impl->layout.kinds[size_t(lookup_kind)];
 
-  uint32_t baseIndex = wordIndex * 32u;
-  uint32_t lookupCount = layoutData.lookupCount;
+  uint32_t base_index = word_index * 32u;
+  uint32_t lookup_count = layout_data.lookup_count;
 
-  ValidationContext validator(faceI, lookupKind);
-  uint32_t analyzedBits = lookupBits;
-  uint32_t validBits = 0;
+  ValidationContext validator(ot_face_impl, lookup_kind);
+  uint32_t analyzed_bits = lookup_bits;
+  uint32_t valid_bits = 0;
 
-  BitSetOps::BitIterator it(analyzedBits);
-  while (it.hasNext()) {
-    uint32_t bitIndex = it.next();
-    uint32_t lookupIndex = baseIndex + bitIndex;
+  BitSetOps::BitIterator it(analyzed_bits);
+  while (it.has_next()) {
+    uint32_t bit_index = it.next();
+    uint32_t lookup_index = base_index + bit_index;
 
-    if (lookupIndex >= lookupCount)
+    if (lookup_index >= lookup_count)
       break;
 
-    if (validateLookup(validator, table, lookupIndex))
-      validBits |= BitSetOps::indexAsMask(bitIndex);
+    if (validate_lookup(validator, table, lookup_index))
+      valid_bits |= BitSetOps::index_as_mask(bit_index);
   }
 
-  return faceI->layout.commitLookupStatusBits(lookupKind, wordIndex, LayoutData::LookupStatusBits::make(analyzedBits, validBits));
+  return ot_face_impl->layout.commit_lookup_status_bits(lookup_kind, word_index, LayoutData::LookupStatusBits::make(analyzed_bits, valid_bits));
 }
 
 // bl::OpenType::LayoutImpl - Apply
 // ================================
 
-static BL_INLINE BLResult applyLookup(GSubContext& ctx, RawTable table, uint32_t typeAndFormat, ApplyRange scope, LookupFlags flags) noexcept {
-  return applyGSubLookup(ctx, table, GSubLookupAndFormat(typeAndFormat), scope, flags);
+static BL_INLINE BLResult apply_lookup(GSubContext& ctx, RawTable table, uint32_t type_and_format, ApplyRange scope, LookupFlags flags) noexcept {
+  return apply_gsub_lookup(ctx, table, GSubLookupAndFormat(type_and_format), scope, flags);
 }
 
-static BL_INLINE BLResult applyLookup(GPosContext& ctx, RawTable table, uint32_t typeAndFormat, ApplyRange scope, LookupFlags flags) noexcept {
-  return applyGPosLookup(ctx, table, GPosLookupAndFormat(typeAndFormat), scope, flags);
+static BL_INLINE BLResult apply_lookup(GPosContext& ctx, RawTable table, uint32_t type_and_format, ApplyRange scope, LookupFlags flags) noexcept {
+  return apply_gpos_lookup(ctx, table, GPosLookupAndFormat(type_and_format), scope, flags);
 }
 
-static void debugGlyphAndClustersToMessageSink(DebugSink debugSink, const BLGlyphId* glyphData, const BLGlyphInfo* infoData, size_t size) noexcept {
+static void debug_glyph_and_clusters_to_message_sink(DebugSink debug_sink, const BLGlyphId* glyph_data, const BLGlyphInfo* info_data, size_t size) noexcept {
   BLString s;
 
   s.append('[');
   for (size_t i = 0; i < size; i++) {
-    s.appendFormat("%u@%u", glyphData[i], infoData[i].cluster);
+    s.append_format("%u@%u", glyph_data[i], info_data[i].cluster);
     if (i != size - 1)
-      s.appendFormat(", ");
+      s.append_format(", ");
   }
   s.append(']');
 
-  debugSink.message(s);
+  debug_sink.message(s);
 }
 
-static void debugContextToMessageSink(GSubContext& ctx) noexcept {
-  debugGlyphAndClustersToMessageSink(ctx._debugSink, ctx.glyphData(), ctx.infoData(), ctx.size());
+static void debug_context_to_message_sink(GSubContext& ctx) noexcept {
+  debug_glyph_and_clusters_to_message_sink(ctx._debug_sink, ctx.glyph_data(), ctx.info_data(), ctx.size());
 }
 
-static void debugContextToMessageSink(GPosContext& ctx) noexcept {
+static void debug_context_to_message_sink(GPosContext& ctx) noexcept {
 }
 
 template<LookupKind kLookupKind, typename Context>
-static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffer* gb, const uint32_t* bitWords, size_t bitWordCount) noexcept {
+static BLResult BL_CDECL apply_lookups(const BLFontFaceImpl* face_impl, BLGlyphBuffer* gb, const uint32_t* bit_words, size_t bit_word_count) noexcept {
   constexpr uint32_t kLookupExtension = kLookupKind == LookupKind::kGSUB ? uint32_t(GSubTable::kLookupExtension) : uint32_t(GPosTable::kLookupExtension);
 
-  const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
-  const GSubGPosLookupInfo& lookupInfo = kLookupKind == LookupKind::kGSUB ? gsubLookupInfoTable : gposLookupInfoTable;
+  const OTFaceImpl* ot_face_impl = static_cast<const OTFaceImpl*>(face_impl);
+  const GSubGPosLookupInfo& lookup_info = kLookupKind == LookupKind::kGSUB ? gsub_lookup_info_table : gpos_lookup_info_table;
 
   Context ctx;
-  ctx.init(blGlyphBufferGetImpl(gb));
+  ctx.init(bl_glyph_buffer_get_impl(gb));
 
-  if (ctx.empty())
+  if (ctx.is_empty())
     return BL_SUCCESS;
 
-  RawTable table(faceI->layout.tables[size_t(kLookupKind)]);
-  const LayoutData::GSubGPos& layoutData = faceI->layout.kinds[size_t(kLookupKind)];
-  Table<Array16<UInt16>> lookupListTable(table.subTableUnchecked(layoutData.lookupListOffset));
+  RawTable table(ot_face_impl->layout.tables[size_t(kLookupKind)]);
+  const LayoutData::GSubGPos& layout_data = ot_face_impl->layout.kinds[size_t(kLookupKind)];
+  Table<Array16<UInt16>> lookup_list_table(table.sub_table_unchecked(layout_data.lookup_list_offset));
 
-  bool didProcessLookup = false;
-  uint32_t wordCount = uint32_t(blMin<size_t>(bitWordCount, layoutData.lookupStatusDataSize));
+  bool did_process_lookup = false;
+  uint32_t word_count = uint32_t(bl_min<size_t>(bit_word_count, layout_data.lookup_status_data_size));
 
-  for (uint32_t wordIndex = 0; wordIndex < wordCount; wordIndex++) {
-    uint32_t lookupBits = bitWords[wordIndex];
-    if (!lookupBits)
+  for (uint32_t word_index = 0; word_index < word_count; word_index++) {
+    uint32_t lookup_bits = bit_words[word_index];
+    if (!lookup_bits)
       continue;
 
     // In order to process a GSUB/GPOS lookup we first validate them so the processing pipeline does not have
@@ -3425,92 +3425,92 @@ static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffe
     //
     // We have to first check whether the lookups represented by `bits` were already analyzed. If so, then we
     // can just flip bits describing lookups where validation failed and only process lookups that are valid.
-    LayoutData::LookupStatusBits statusBits = faceI->layout.getLookupStatusBits(kLookupKind, wordIndex);
-    uint32_t nonAnalyzedBits = lookupBits & ~statusBits.analyzed;
+    LayoutData::LookupStatusBits status_bits = ot_face_impl->layout.get_lookup_status_bits(kLookupKind, word_index);
+    uint32_t non_analyzed_bits = lookup_bits & ~status_bits.analyzed;
 
-    if (BL_UNLIKELY(nonAnalyzedBits))
-      statusBits = validateLookups(faceI, kLookupKind, wordIndex, nonAnalyzedBits);
+    if (BL_UNLIKELY(non_analyzed_bits))
+      status_bits = validate_lookups(ot_face_impl, kLookupKind, word_index, non_analyzed_bits);
 
     // Remove lookups from bits that are invalid, and thus won't be processed. Note that conforming fonts will
     // never have invalid lookups, but it's possible that a font is corrupted or malformed on purpose.
-    lookupBits &= statusBits.valid;
+    lookup_bits &= status_bits.valid;
 
-    uint32_t bitOffset = wordIndex * 32u;
-    BitSetOps::BitIterator it(lookupBits);
+    uint32_t bit_offset = word_index * 32u;
+    BitSetOps::BitIterator it(lookup_bits);
 
-    while (it.hasNext()) {
-      uint32_t lookupTableIndex = it.next() + bitOffset;
-      BL_ASSERT_VALIDATED(lookupTableIndex < layoutData.lookupCount);
+    while (it.has_next()) {
+      uint32_t lookup_table_index = it.next() + bit_offset;
+      BL_ASSERT_VALIDATED(lookup_table_index < layout_data.lookup_count);
 
-      uint32_t lookupTableOffset = lookupListTable->array()[lookupTableIndex].value();
-      BL_ASSERT_VALIDATED(lookupTableOffset <= lookupListTable.size - 6u);
+      uint32_t lookup_table_offset = lookup_list_table->array()[lookup_table_index].value();
+      BL_ASSERT_VALIDATED(lookup_table_offset <= lookup_list_table.size - 6u);
 
-      Table<GSubGPosTable::LookupTable> lookupTable(lookupListTable.subTableUnchecked(lookupTableOffset));
-      uint32_t lookupType = lookupTable->lookupType();
-      uint32_t lookupFlags = lookupTable->lookupFlags();
-      BL_ASSERT_VALIDATED(lookupType - 1u < uint32_t(lookupInfo.lookupMaxValue));
+      Table<GSubGPosTable::LookupTable> lookup_table(lookup_list_table.sub_table_unchecked(lookup_table_offset));
+      uint32_t lookup_type = lookup_table->lookup_type();
+      uint32_t lookup_flags = lookup_table->lookup_flags();
+      BL_ASSERT_VALIDATED(lookup_type - 1u < uint32_t(lookup_info.lookup_max_value));
 
-      uint32_t lookupEntryCount = lookupTable->subTableOffsets.count();
-      const Offset16* lookupEntryOffsets = lookupTable->subTableOffsets.array();
+      uint32_t lookup_entry_count = lookup_table->sub_table_offsets.count();
+      const Offset16* lookup_entry_offsets = lookup_table->sub_table_offsets.array();
 
-      const GSubGPosLookupInfo::TypeInfo& lookupTypeInfo = lookupInfo.typeInfo[lookupType];
-      uint32_t lookupTableMinSize = lookupType == kLookupExtension ? 8u : 6u;
-      BL_ASSERT_VALIDATED(lookupTable.fits(lookupTableMinSize + lookupEntryCount * 2u));
+      const GSubGPosLookupInfo::TypeInfo& lookup_type_info = lookup_info.type_info[lookup_type];
+      uint32_t lookup_table_min_size = lookup_type == kLookupExtension ? 8u : 6u;
+      BL_ASSERT_VALIDATED(lookup_table.fits(lookup_table_min_size + lookup_entry_count * 2u));
 
       // Only used in Debug builds when `BL_ASSERT_VALIDATED` is enabled.
-      blUnused(lookupTableMinSize);
+      bl_unused(lookup_table_min_size);
 
-      for (uint32_t j = 0; j < lookupEntryCount; j++) {
-        uint32_t lookupOffset = lookupEntryOffsets[j].value();
-        BL_ASSERT_VALIDATED(lookupOffset <= lookupTable.size - lookupTableMinSize);
+      for (uint32_t j = 0; j < lookup_entry_count; j++) {
+        uint32_t lookup_offset = lookup_entry_offsets[j].value();
+        BL_ASSERT_VALIDATED(lookup_offset <= lookup_table.size - lookup_table_min_size);
 
-        Table<GSubGPosTable::LookupHeader> lookupHeader(lookupTable.subTableUnchecked(lookupOffset));
-        uint32_t lookupFormat = lookupHeader->format();
-        BL_ASSERT_VALIDATED(lookupFormat - 1u < lookupTypeInfo.formatCount);
+        Table<GSubGPosTable::LookupHeader> lookup_header(lookup_table.sub_table_unchecked(lookup_offset));
+        uint32_t lookup_format = lookup_header->format();
+        BL_ASSERT_VALIDATED(lookup_format - 1u < lookup_type_info.format_count);
 
-        uint32_t lookupTypeAndFormat = lookupTypeInfo.typeAndFormat + lookupFormat - 1u;
-        if (lookupType == kLookupExtension) {
-          Table<GSubGPosTable::ExtensionLookup> extensionTable(lookupTable.subTableUnchecked(lookupOffset));
+        uint32_t lookup_type_and_format = lookup_type_info.type_and_format + lookup_format - 1u;
+        if (lookup_type == kLookupExtension) {
+          Table<GSubGPosTable::ExtensionLookup> extension_table(lookup_table.sub_table_unchecked(lookup_offset));
 
-          uint32_t extensionLookupType = extensionTable->lookupType();
-          uint32_t extensionOffset = extensionTable->offset();
+          uint32_t extension_lookup_type = extension_table->lookup_type();
+          uint32_t extension_offset = extension_table->offset();
 
-          BL_ASSERT_VALIDATED(extensionLookupType - 1u < lookupInfo.lookupMaxValue);
-          BL_ASSERT_VALIDATED(extensionOffset <= extensionTable.size - 6u);
+          BL_ASSERT_VALIDATED(extension_lookup_type - 1u < lookup_info.lookup_max_value);
+          BL_ASSERT_VALIDATED(extension_offset <= extension_table.size - 6u);
 
-          lookupHeader = extensionTable.subTableUnchecked(extensionOffset);
-          lookupFormat = lookupHeader->format();
+          lookup_header = extension_table.sub_table_unchecked(extension_offset);
+          lookup_format = lookup_header->format();
 
-          const GSubGPosLookupInfo::TypeInfo& extensionLookupTypeInfo = lookupInfo.typeInfo[extensionLookupType];
-          BL_ASSERT_VALIDATED(lookupFormat - 1u < extensionLookupTypeInfo.formatCount);
+          const GSubGPosLookupInfo::TypeInfo& extension_lookup_type_info = lookup_info.type_info[extension_lookup_type];
+          BL_ASSERT_VALIDATED(lookup_format - 1u < extension_lookup_type_info.format_count);
 
-          lookupTypeAndFormat = extensionLookupTypeInfo.typeAndFormat + lookupFormat - 1u;
+          lookup_type_and_format = extension_lookup_type_info.type_and_format + lookup_format - 1u;
         }
 
-        if (ctx._debugSink.enabled()) {
-          debugContextToMessageSink(ctx);
+        if (ctx._debug_sink.enabled()) {
+          debug_context_to_message_sink(ctx);
           BLString s;
           if (kLookupKind == LookupKind::kGSUB)
-            s.assignFormat("Applying GSUB Lookup[%u].%s%u[%u]", lookupTableIndex, gsubLookupName(lookupType), lookupFormat, j);
+            s.assign_format("Applying GSUB Lookup[%u].%s%u[%u]", lookup_table_index, gsub_lookup_name(lookup_type), lookup_format, j);
           else
-            s.assignFormat("Applying GPOS Lookup[%u].%s%u[%u]", lookupTableIndex, gposLookupName(lookupType), lookupFormat, j);
+            s.assign_format("Applying GPOS Lookup[%u].%s%u[%u]", lookup_table_index, gpos_lookup_name(lookup_type), lookup_format, j);
 
-          ctx._debugSink.message(s);
-          didProcessLookup = true;
+          ctx._debug_sink.message(s);
+          did_process_lookup = true;
         }
 
-        BL_PROPAGATE(applyLookup(ctx, lookupHeader, lookupTypeAndFormat, ApplyRange{0, ctx.size()}, LookupFlags(lookupFlags)));
+        BL_PROPAGATE(apply_lookup(ctx, lookup_header, lookup_type_and_format, ApplyRange{0, ctx.size()}, LookupFlags(lookup_flags)));
 
-        if (ctx.empty())
+        if (ctx.is_empty())
           goto done;
       }
     }
   }
 
 done:
-  if (ctx._debugSink.enabled()) {
-    if (didProcessLookup)
-      debugContextToMessageSink(ctx);
+  if (ctx._debug_sink.enabled()) {
+    if (did_process_lookup)
+      debug_context_to_message_sink(ctx);
   }
 
   ctx.done();
@@ -3521,7 +3521,7 @@ done:
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Init
 // =============================================
 
-static BLResult initGSubGPos(OTFaceImpl* faceI, Table<GSubGPosTable> table, LookupKind lookupKind) noexcept {
+static BLResult initGSubGPos(OTFaceImpl* ot_face_impl, Table<GSubGPosTable> table, LookupKind lookup_kind) noexcept {
   if (BL_UNLIKELY(!table.fits())) {
     return BL_SUCCESS;
   }
@@ -3531,105 +3531,105 @@ static BLResult initGSubGPos(OTFaceImpl* faceI, Table<GSubGPosTable> table, Look
     return BL_SUCCESS;
   }
 
-  uint32_t headerSize = GPosTable::HeaderV1_0::kBaseSize;
+  uint32_t header_size = GPosTable::HeaderV1_0::kBaseSize;
   if (version >= 0x00010001u) {
-    headerSize = GPosTable::HeaderV1_1::kBaseSize;
+    header_size = GPosTable::HeaderV1_1::kBaseSize;
   }
 
-  if (BL_UNLIKELY(!table.fits(headerSize))) {
+  if (BL_UNLIKELY(!table.fits(header_size))) {
     return BL_SUCCESS;
   }
 
-  uint32_t lookupListOffset = table->v1_0()->lookupListOffset();
-  uint32_t featureListOffset = table->v1_0()->featureListOffset();
-  uint32_t scriptListOffset = table->v1_0()->scriptListOffset();
+  uint32_t lookup_list_offset = table->v1_0()->lookup_list_offset();
+  uint32_t feature_list_offset = table->v1_0()->feature_list_offset();
+  uint32_t script_list_offset = table->v1_0()->script_list_offset();
 
   // Some fonts have these set to a table size to indicate that there are no lookups, fix this...
-  if (lookupListOffset == table.size) {
-    lookupListOffset = 0;
+  if (lookup_list_offset == table.size) {
+    lookup_list_offset = 0;
   }
 
-  if (featureListOffset == table.size) {
-    featureListOffset = 0;
+  if (feature_list_offset == table.size) {
+    feature_list_offset = 0;
   }
 
-  if (scriptListOffset == table.size) {
-    scriptListOffset = 0;
+  if (script_list_offset == table.size) {
+    script_list_offset = 0;
   }
 
-  OffsetRange offsetRange{headerSize, table.size - 2u};
+  OffsetRange offset_range{header_size, table.size - 2u};
 
   // First validate core offsets - if a core offset is wrong we won't use GSUB/GPOS at all.
-  if (lookupListOffset) {
-    if (BL_UNLIKELY(!offsetRange.contains(lookupListOffset))) {
+  if (lookup_list_offset) {
+    if (BL_UNLIKELY(!offset_range.contains(lookup_list_offset))) {
       return BL_SUCCESS;
     }
   }
 
-  if (featureListOffset) {
-    if (BL_UNLIKELY(!offsetRange.contains(featureListOffset))) {
+  if (feature_list_offset) {
+    if (BL_UNLIKELY(!offset_range.contains(feature_list_offset))) {
       return BL_SUCCESS;
     }
   }
 
-  if (scriptListOffset) {
-    if (BL_UNLIKELY(!offsetRange.contains(scriptListOffset))) {
+  if (script_list_offset) {
+    if (BL_UNLIKELY(!offset_range.contains(script_list_offset))) {
       return BL_SUCCESS;
     }
   }
 
-  LayoutData::GSubGPos& d = faceI->layout.kinds[size_t(lookupKind)];
+  LayoutData::GSubGPos& d = ot_face_impl->layout.kinds[size_t(lookup_kind)];
 
-  if (lookupListOffset) {
-    Table<Array16<Offset16>> lookupListOffsets(table.subTableUnchecked(lookupListOffset));
-    uint32_t count = lookupListOffsets->count();
+  if (lookup_list_offset) {
+    Table<Array16<Offset16>> lookup_list_offsets(table.sub_table_unchecked(lookup_list_offset));
+    uint32_t count = lookup_list_offsets->count();
 
     if (count) {
-      d.lookupListOffset = uint16_t(lookupListOffset);
-      d.lookupCount = uint16_t(count);
-      faceI->otFlags |= (lookupKind == LookupKind::kGPOS) ? OTFaceFlags::kGPosLookupList : OTFaceFlags::kGSubLookupList;
+      d.lookup_list_offset = uint16_t(lookup_list_offset);
+      d.lookup_count = uint16_t(count);
+      ot_face_impl->ot_flags |= (lookup_kind == LookupKind::kGPOS) ? OTFaceFlags::kGPosLookupList : OTFaceFlags::kGSubLookupList;
     }
   }
 
-  if (featureListOffset) {
-    Table<Array16<TagRef16>> featureListOffsets(table.subTableUnchecked(featureListOffset));
-    uint32_t count = featureListOffsets->count();
+  if (feature_list_offset) {
+    Table<Array16<TagRef16>> feature_list_offsets(table.sub_table_unchecked(feature_list_offset));
+    uint32_t count = feature_list_offsets->count();
 
     if (count) {
-      const TagRef16* array = featureListOffsets->array();
+      const TagRef16* array = feature_list_offsets->array();
       for (uint32_t i = 0; i < count; i++) {
-        BLTag featureTag = array[i].tag();
-        BL_PROPAGATE(faceI->featureTagSet.addTag(featureTag));
+        BLTag feature_tag = array[i].tag();
+        BL_PROPAGATE(ot_face_impl->feature_tag_set.add_tag(feature_tag));
       }
 
-      d.featureCount = uint16_t(count);
-      d.featureListOffset = uint16_t(featureListOffset);
-      faceI->otFlags |= (lookupKind == LookupKind::kGPOS) ? OTFaceFlags::kGPosFeatureList : OTFaceFlags::kGSubFeatureList;
+      d.feature_count = uint16_t(count);
+      d.feature_list_offset = uint16_t(feature_list_offset);
+      ot_face_impl->ot_flags |= (lookup_kind == LookupKind::kGPOS) ? OTFaceFlags::kGPosFeatureList : OTFaceFlags::kGSubFeatureList;
     }
   }
 
-  if (scriptListOffset) {
-    Table<Array16<TagRef16>> scriptListOffsets(table.subTableUnchecked(scriptListOffset));
-    uint32_t count = scriptListOffsets->count();
+  if (script_list_offset) {
+    Table<Array16<TagRef16>> script_list_offsets(table.sub_table_unchecked(script_list_offset));
+    uint32_t count = script_list_offsets->count();
 
     if (count) {
-      const TagRef16* array = scriptListOffsets->array();
+      const TagRef16* array = script_list_offsets->array();
       for (uint32_t i = 0; i < count; i++) {
-        BLTag scriptTag = array[i].tag();
-        BL_PROPAGATE(faceI->scriptTagSet.addTag(scriptTag));
+        BLTag script_tag = array[i].tag();
+        BL_PROPAGATE(ot_face_impl->script_tag_set.add_tag(script_tag));
       }
 
-      d.scriptListOffset = uint16_t(scriptListOffset);
-      faceI->otFlags |= (lookupKind == LookupKind::kGPOS) ? OTFaceFlags::kGPosScriptList : OTFaceFlags::kGSubScriptList;
+      d.script_list_offset = uint16_t(script_list_offset);
+      ot_face_impl->ot_flags |= (lookup_kind == LookupKind::kGPOS) ? OTFaceFlags::kGPosScriptList : OTFaceFlags::kGSubScriptList;
     }
   }
 
-  if (d.lookupCount) {
-    if (lookupKind == LookupKind::kGSUB)
-      faceI->funcs.applyGSub = applyLookups<LookupKind::kGSUB, GSubContextPrimary>;
+  if (d.lookup_count) {
+    if (lookup_kind == LookupKind::kGSUB)
+      ot_face_impl->funcs.apply_gsub = apply_lookups<LookupKind::kGSUB, GSubContextPrimary>;
     else
-      faceI->funcs.applyGPos = applyLookups<LookupKind::kGPOS, GPosContext>;
-    faceI->layout.tables[size_t(lookupKind)] = table;
+      ot_face_impl->funcs.apply_gpos = apply_lookups<LookupKind::kGPOS, GPosContext>;
+    ot_face_impl->layout.tables[size_t(lookup_kind)] = table;
   }
 
   return BL_SUCCESS;
@@ -3638,60 +3638,60 @@ static BLResult initGSubGPos(OTFaceImpl* faceI, Table<GSubGPosTable> table, Look
 // bl::OpenType::LayoutImpl - Plan
 // ===============================
 
-static Table<GSubGPosTable::ScriptTable> findScriptInScriptList(Table<Array16<TagRef16>> scriptListOffsets, BLTag scriptTag, BLTag defaultScriptTag) noexcept {
-  const TagRef16* scriptListArray = scriptListOffsets->array();
-  uint32_t scriptCount = scriptListOffsets->count();
+static Table<GSubGPosTable::ScriptTable> find_script_in_script_list(Table<Array16<TagRef16>> script_list_offsets, BLTag script_tag, BLTag default_script_tag) noexcept {
+  const TagRef16* script_list_array = script_list_offsets->array();
+  uint32_t script_count = script_list_offsets->count();
 
-  Table<GSubGPosTable::ScriptTable> tableOut{};
+  Table<GSubGPosTable::ScriptTable> table_out{};
 
-  if (scriptListOffsets.size >= 2u + scriptCount * uint32_t(sizeof(TagRef16))) {
-    for (uint32_t i = 0; i < scriptCount; i++) {
-      BLTag recordTag = scriptListArray[i].tag();
-      if (recordTag == scriptTag || recordTag == defaultScriptTag) {
-        tableOut = scriptListOffsets.subTableUnchecked(scriptListArray[i].offset());
-        if (recordTag == scriptTag) {
+  if (script_list_offsets.size >= 2u + script_count * uint32_t(sizeof(TagRef16))) {
+    for (uint32_t i = 0; i < script_count; i++) {
+      BLTag record_tag = script_list_array[i].tag();
+      if (record_tag == script_tag || record_tag == default_script_tag) {
+        table_out = script_list_offsets.sub_table_unchecked(script_list_array[i].offset());
+        if (record_tag == script_tag) {
           break;
         }
       }
     }
   }
 
-  return tableOut;
+  return table_out;
 }
 
 template<bool kSSO>
-static BL_INLINE void populateGSubGPosLookupBits(
-  Table<GSubGPosTable::LangSysTable> langSysTable,
-  Table<Array16<TagRef16>> featureListOffsets,
-  uint32_t featureIndexCount,
-  uint32_t featureCount,
-  uint32_t lookupCount,
+static BL_INLINE void populate_gsub_gpoos_lookup_bits(
+  Table<GSubGPosTable::LangSysTable> lang_sys_table,
+  Table<Array16<TagRef16>> feature_list_offsets,
+  uint32_t feature_index_count,
+  uint32_t feature_count,
+  uint32_t lookup_count,
   const BLFontFeatureSettings& settings,
-  uint32_t* planBits) noexcept {
+  uint32_t* plan_bits) noexcept {
 
   BL_ASSERT(settings._d.sso() == kSSO);
 
-  // We need to process requiredFeatureIndex as well as all the features from the list. To not duplicate the
-  // code inside, we setup the `requiredFeatureIndex` here and just continue using the list after it's processed.
+  // We need to process required_feature_index as well as all the features from the list. To not duplicate the
+  // code inside, we setup the `required_feature_index` here and just continue using the list after it's processed.
   uint32_t i = uint32_t(0) - 1u;
-  uint32_t featureIndex = langSysTable->requiredFeatureIndex();
+  uint32_t feature_index = lang_sys_table->required_feature_index();
 
   for (;;) {
-    if (BL_LIKELY(featureIndex < featureCount)) {
-      BLTag featureTag = featureListOffsets->array()[featureIndex].tag();
-      if (FontFeatureSettingsInternal::isFeatureEnabledForPlan<kSSO>(&settings, featureTag)) {
-        uint32_t featureOffset = featureListOffsets->array()[featureIndex].offset();
-        Table<GSubGPosTable::FeatureTable> featureTable(featureListOffsets.subTableUnchecked(featureOffset));
+    if (BL_LIKELY(feature_index < feature_count)) {
+      BLTag feature_tag = feature_list_offsets->array()[feature_index].tag();
+      if (FontFeatureSettingsInternal::is_feature_enabled_for_plan<kSSO>(&settings, feature_tag)) {
+        uint32_t feature_offset = feature_list_offsets->array()[feature_index].offset();
+        Table<GSubGPosTable::FeatureTable> feature_table(feature_list_offsets.sub_table_unchecked(feature_offset));
 
         // Don't use a feature if its offset is out of bounds.
-        if (BL_LIKELY(blFontTableFitsT<GSubGPosTable::FeatureTable>(featureTable))) {
+        if (BL_LIKELY(blFontTableFitsT<GSubGPosTable::FeatureTable>(feature_table))) {
           // Don't use a lookup if its offset is out of bounds.
-          uint32_t lookupIndexCount = featureTable->lookupListIndexes.count();
-          if (BL_LIKELY(featureTable.size >= GSubGPosTable::FeatureTable::kBaseSize + lookupIndexCount * 2u)) {
-            for (uint32_t j = 0; j < lookupIndexCount; j++) {
-              uint32_t lookupIndex = featureTable->lookupListIndexes.array()[j].value();
-              if (BL_LIKELY(lookupIndex < lookupCount)) {
-                BitArrayOps::bitArraySetBit(planBits, lookupIndex);
+          uint32_t lookup_index_count = feature_table->lookup_list_indexes.count();
+          if (BL_LIKELY(feature_table.size >= GSubGPosTable::FeatureTable::kBaseSize + lookup_index_count * 2u)) {
+            for (uint32_t j = 0; j < lookup_index_count; j++) {
+              uint32_t lookup_index = feature_table->lookup_list_indexes.array()[j].value();
+              if (BL_LIKELY(lookup_index < lookup_count)) {
+                BitArrayOps::bit_array_set_bit(plan_bits, lookup_index);
               }
             }
           }
@@ -3699,117 +3699,117 @@ static BL_INLINE void populateGSubGPosLookupBits(
       }
     }
 
-    if (++i >= featureIndexCount) {
+    if (++i >= feature_index_count) {
       break;
     }
 
-    featureIndex = langSysTable->featureIndexes.array()[i].value();
+    feature_index = lang_sys_table->feature_indexes.array()[i].value();
   }
 }
 
-static BLResult calculateGSubGPosPlan(const OTFaceImpl* faceI, const BLFontFeatureSettings& settings, LookupKind lookupKind, BLBitArrayCore* plan) noexcept {
-  BLTag scriptTag = BL_MAKE_TAG('l', 'a', 't', 'n');
-  BLTag dfltScriptTag = BL_MAKE_TAG('D', 'F', 'L', 'T');
+static BLResult calculateGSubGPosPlan(const OTFaceImpl* ot_face_impl, const BLFontFeatureSettings& settings, LookupKind lookup_kind, BLBitArrayCore* plan) noexcept {
+  BLTag script_tag = BL_MAKE_TAG('l', 'a', 't', 'n');
+  BLTag dflt_script_tag = BL_MAKE_TAG('D', 'F', 'L', 'T');
 
-  const LayoutData::GSubGPos& d = faceI->layout.kinds[size_t(lookupKind)];
-  Table<GSubGPosTable> table = faceI->layout.tables[size_t(lookupKind)];
+  const LayoutData::GSubGPos& d = ot_face_impl->layout.kinds[size_t(lookup_kind)];
+  Table<GSubGPosTable> table = ot_face_impl->layout.tables[size_t(lookup_kind)];
 
   if (!table) {
     return BL_SUCCESS;
   }
 
-  Table<Array16<TagRef16>> scriptListOffsets(table.subTableUnchecked(d.scriptListOffset));
-  Table<Array16<TagRef16>> featureListOffsets(table.subTableUnchecked(d.featureListOffset));
-  Table<GSubGPosTable::ScriptTable> scriptTable(findScriptInScriptList(scriptListOffsets, scriptTag, dfltScriptTag));
+  Table<Array16<TagRef16>> script_list_offsets(table.sub_table_unchecked(d.script_list_offset));
+  Table<Array16<TagRef16>> feature_list_offsets(table.sub_table_unchecked(d.feature_list_offset));
+  Table<GSubGPosTable::ScriptTable> script_table(find_script_in_script_list(script_list_offsets, script_tag, dflt_script_tag));
 
-  if (scriptTable.empty()) {
+  if (script_table.is_empty()) {
     return BL_SUCCESS;
   }
 
-  if (BL_UNLIKELY(!blFontTableFitsT<GSubGPosTable::ScriptTable>(scriptTable))) {
+  if (BL_UNLIKELY(!blFontTableFitsT<GSubGPosTable::ScriptTable>(script_table))) {
     return BL_SUCCESS;
   }
 
-  uint32_t langSysOffset = scriptTable->langSysDefault();
+  uint32_t lang_sys_offset = script_table->lang_sys_default();
 
   /*
   {
-    uint32_t langSysCount = scriptTable->langSysOffsets.count();
-    for (uint32_t i = 0; i < langSysCount; i++) {
-      uint32_t tag = scriptTable->langSysOffsets.array()[i].tag();
+    uint32_t lang_sys_count = script_table->lang_sys_offsets.count();
+    for (uint32_t i = 0; i < lang_sys_count; i++) {
+      uint32_t tag = script_table->lang_sys_offsets.array()[i].tag();
       if (tag == BL_MAKE_TAG('D', 'F', 'L', 'T')) {
-        langSysOffset = scriptTable->langSysOffsets.array()[i].offset();
+        lang_sys_offset = script_table->lang_sys_offsets.array()[i].offset();
       }
     }
   }
   */
 
-  if (langSysOffset == 0) {
+  if (lang_sys_offset == 0) {
     return BL_SUCCESS;
   }
 
-  Table<GSubGPosTable::LangSysTable> langSysTable(scriptTable.subTableUnchecked(langSysOffset));
-  if (BL_UNLIKELY(!blFontTableFitsT<GSubGPosTable::LangSysTable>(langSysTable))) {
+  Table<GSubGPosTable::LangSysTable> lang_sys_table(script_table.sub_table_unchecked(lang_sys_offset));
+  if (BL_UNLIKELY(!blFontTableFitsT<GSubGPosTable::LangSysTable>(lang_sys_table))) {
     return BL_SUCCESS;
   }
 
-  uint32_t featureIndexCount = langSysTable->featureIndexes.count();
-  uint32_t requiredLangSysTableSize = (GSubGPosTable::LangSysTable::kBaseSize) + featureIndexCount * 2u;
+  uint32_t feature_index_count = lang_sys_table->feature_indexes.count();
+  uint32_t required_lang_sys_table_size = (GSubGPosTable::LangSysTable::kBaseSize) + feature_index_count * 2u;
 
-  if (langSysTable.size < requiredLangSysTableSize) {
+  if (lang_sys_table.size < required_lang_sys_table_size) {
     return BL_SUCCESS;
   }
 
-  uint32_t featureCount = featureListOffsets->count();
-  if (featureListOffsets.size < 2u + featureCount * 2u) {
+  uint32_t feature_count = feature_list_offsets->count();
+  if (feature_list_offsets.size < 2u + feature_count * 2u) {
     return BL_SUCCESS;
   }
 
-  uint32_t lookupCount = faceI->layout.byKind(lookupKind).lookupCount;
+  uint32_t lookup_count = ot_face_impl->layout.by_kind(lookup_kind).lookup_count;
 
-  uint32_t* planBits;
-  BL_PROPAGATE(blBitArrayReplaceOp(plan, lookupCount, &planBits));
+  uint32_t* plan_bits;
+  BL_PROPAGATE(bl_bit_array_replace_op(plan, lookup_count, &plan_bits));
 
   if (settings._d.sso())
-    populateGSubGPosLookupBits<true>(langSysTable, featureListOffsets, featureIndexCount, featureCount, lookupCount, settings, planBits);
+    populate_gsub_gpoos_lookup_bits<true>(lang_sys_table, feature_list_offsets, feature_index_count, feature_count, lookup_count, settings, plan_bits);
   else
-    populateGSubGPosLookupBits<false>(langSysTable, featureListOffsets, featureIndexCount, featureCount, lookupCount, settings, planBits);
+    populate_gsub_gpoos_lookup_bits<false>(lang_sys_table, feature_list_offsets, feature_index_count, feature_count, lookup_count, settings, plan_bits);
 
   return BL_SUCCESS;
 }
 
-BLResult calculateGSubPlan(const OTFaceImpl* faceI, const BLFontFeatureSettings& settings, BLBitArrayCore* plan) noexcept {
-  return calculateGSubGPosPlan(faceI, settings, LookupKind::kGSUB, plan);
+BLResult calculate_gsub_plan(const OTFaceImpl* ot_face_impl, const BLFontFeatureSettings& settings, BLBitArrayCore* plan) noexcept {
+  return calculateGSubGPosPlan(ot_face_impl, settings, LookupKind::kGSUB, plan);
 }
 
-BLResult calculateGPosPlan(const OTFaceImpl* faceI, const BLFontFeatureSettings& settings, BLBitArrayCore* plan) noexcept {
-  return calculateGSubGPosPlan(faceI, settings, LookupKind::kGPOS, plan);
+BLResult calculate_gpos_plan(const OTFaceImpl* ot_face_impl, const BLFontFeatureSettings& settings, BLBitArrayCore* plan) noexcept {
+  return calculateGSubGPosPlan(ot_face_impl, settings, LookupKind::kGPOS, plan);
 }
 
 // bl::OpenType::LayoutImpl - Init
 // ===============================
 
-BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
+BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept {
   if (tables.gdef) {
-    BL_PROPAGATE(initGDef(faceI, tables.gdef));
+    BL_PROPAGATE(initGDef(ot_face_impl, tables.gdef));
   }
 
   if (tables.gsub) {
-    BL_PROPAGATE(initGSubGPos(faceI, tables.gsub, LookupKind::kGSUB));
+    BL_PROPAGATE(initGSubGPos(ot_face_impl, tables.gsub, LookupKind::kGSUB));
   }
 
   if (tables.gpos) {
-    BL_PROPAGATE(initGSubGPos(faceI, tables.gpos, LookupKind::kGPOS));
+    BL_PROPAGATE(initGSubGPos(ot_face_impl, tables.gpos, LookupKind::kGPOS));
   }
 
-  BL_PROPAGATE(faceI->layout.allocateLookupStatusBits());
+  BL_PROPAGATE(ot_face_impl->layout.allocate_lookup_status_bits());
 
   // Some fonts have both 'GPOS' and 'kern' tables, but 'kern' feature is not provided by GPOS. The practice
   // is to use both GPOS and kern tables in this case, basically breaking the rule of not using legacy tables
   // when GSUB/GPOS are provided. We use `OTFaceFlags::kGPosKernAvailable` flag to decide which table to use.
-  if (blTestFlag(faceI->otFlags, OTFaceFlags::kGPosLookupList)) {
-    if (faceI->featureTagSet.hasKnownTag(FontTagData::FeatureId::kKERN)) {
-      faceI->otFlags |= OTFaceFlags::kGPosKernAvailable;
+  if (bl_test_flag(ot_face_impl->ot_flags, OTFaceFlags::kGPosLookupList)) {
+    if (ot_face_impl->feature_tag_set.has_known_tag(FontTagData::FeatureId::kKERN)) {
+      ot_face_impl->ot_flags |= OTFaceFlags::kGPosKernAvailable;
     }
   }
 

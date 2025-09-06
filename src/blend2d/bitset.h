@@ -43,56 +43,56 @@ BL_DEFINE_ENUM(BLBitSetConstants) {
 //! bits, which is currently 128 bits. However, when the segment describes all ones, the first value in data `data[0]`
 //! describes the last bit of the range, which means that an arbitrary range can be encoded within a single segment.
 struct BLBitSetSegment {
-  uint32_t _startWord;
+  uint32_t _start_word;
   uint32_t _data[BL_BIT_SET_SEGMENT_WORD_COUNT];
 
 #ifdef __cplusplus
-  BL_INLINE_NODEBUG bool allOnes() const noexcept { return (_startWord & BL_BIT_SET_RANGE_MASK) != 0; }
-  BL_INLINE_NODEBUG void clearData() noexcept { memset(_data, 0, sizeof(_data)); }
-  BL_INLINE_NODEBUG void fillData() noexcept { memset(_data, 0xFF, sizeof(_data)); }
+  BL_INLINE_NODEBUG bool all_ones() const noexcept { return (_start_word & BL_BIT_SET_RANGE_MASK) != 0; }
+  BL_INLINE_NODEBUG void clear_data() noexcept { memset(_data, 0, sizeof(_data)); }
+  BL_INLINE_NODEBUG void fill_data() noexcept { memset(_data, 0xFF, sizeof(_data)); }
 
   BL_INLINE_NODEBUG uint32_t* data() noexcept { return _data; }
   BL_INLINE_NODEBUG const uint32_t* data() const noexcept { return _data; }
-  BL_INLINE_NODEBUG uint32_t wordAt(size_t index) const noexcept { return _data[index]; }
+  BL_INLINE_NODEBUG uint32_t word_at(size_t index) const noexcept { return _data[index]; }
 
-  BL_INLINE_NODEBUG uint32_t _rangeStartWord() const noexcept { return _startWord & ~BL_BIT_SET_RANGE_MASK; }
-  BL_INLINE_NODEBUG uint32_t _rangeEndWord() const noexcept { return _data[0]; }
+  BL_INLINE_NODEBUG uint32_t _range_start_word() const noexcept { return _start_word & ~BL_BIT_SET_RANGE_MASK; }
+  BL_INLINE_NODEBUG uint32_t _range_end_word() const noexcept { return _data[0]; }
 
-  BL_INLINE_NODEBUG uint32_t _denseStartWord() const noexcept { return _startWord; }
-  BL_INLINE_NODEBUG uint32_t _denseEndWord() const noexcept { return _startWord + BL_BIT_SET_SEGMENT_WORD_COUNT; }
+  BL_INLINE_NODEBUG uint32_t _dense_start_word() const noexcept { return _start_word; }
+  BL_INLINE_NODEBUG uint32_t _dense_end_word() const noexcept { return _start_word + BL_BIT_SET_SEGMENT_WORD_COUNT; }
 
-  BL_INLINE_NODEBUG void _setRangeStartWord(uint32_t index) noexcept { _startWord = index; }
-  BL_INLINE_NODEBUG void _setRangeEndWord(uint32_t index) noexcept { _data[0] = index; }
+  BL_INLINE_NODEBUG void _set_range_start_word(uint32_t index) noexcept { _start_word = index; }
+  BL_INLINE_NODEBUG void _set_range_end_word(uint32_t index) noexcept { _data[0] = index; }
 
-  BL_INLINE_NODEBUG uint32_t startWord() const noexcept { return _startWord & ~BL_BIT_SET_RANGE_MASK; }
-  BL_INLINE_NODEBUG uint32_t startSegmentId() const noexcept { return startWord() / BL_BIT_SET_SEGMENT_WORD_COUNT; }
-  BL_INLINE_NODEBUG uint32_t startBit() const noexcept { return _startWord * 32u; }
+  BL_INLINE_NODEBUG uint32_t start_word() const noexcept { return _start_word & ~BL_BIT_SET_RANGE_MASK; }
+  BL_INLINE_NODEBUG uint32_t start_segment_id() const noexcept { return start_word() / BL_BIT_SET_SEGMENT_WORD_COUNT; }
+  BL_INLINE_NODEBUG uint32_t start_bit() const noexcept { return _start_word * 32u; }
 
-  BL_INLINE uint32_t endWord() const noexcept {
-    uint32_t rangeEnd = _rangeEndWord();
-    uint32_t denseEnd = _denseEndWord();
-    return allOnes() ? rangeEnd : denseEnd;
+  BL_INLINE uint32_t end_word() const noexcept {
+    uint32_t range_end = _range_end_word();
+    uint32_t dense_end = _dense_end_word();
+    return all_ones() ? range_end : dense_end;
   }
 
-  BL_INLINE_NODEBUG uint32_t endSegmentId() const noexcept { return endWord() / BL_BIT_SET_SEGMENT_WORD_COUNT; }
-  BL_INLINE_NODEBUG uint32_t lastBit() const noexcept { return endWord() * 32u - 1u; }
+  BL_INLINE_NODEBUG uint32_t end_segment_id() const noexcept { return end_word() / BL_BIT_SET_SEGMENT_WORD_COUNT; }
+  BL_INLINE_NODEBUG uint32_t last_bit() const noexcept { return end_word() * 32u - 1u; }
 #endif
 };
 
 //! BitSet data view.
 struct BLBitSetData {
-  const BLBitSetSegment* segmentData;
-  uint32_t segmentCount;
-  BLBitSetSegment ssoSegments[3];
+  const BLBitSetSegment* segment_data;
+  uint32_t segment_count;
+  BLBitSetSegment sso_segments[3];
 
 #ifdef __cplusplus
-  BL_INLINE_NODEBUG bool empty() const noexcept {
-    return segmentCount == 0;
+  BL_INLINE_NODEBUG bool is_empty() const noexcept {
+    return segment_count == 0;
   }
 
   BL_INLINE void reset() noexcept {
-    segmentData = nullptr;
-    segmentCount = 0;
+    segment_data = nullptr;
+    segment_count = 0;
   }
 #endif
 };
@@ -108,47 +108,47 @@ struct BLBitSetData {
 
 BL_BEGIN_C_DECLS
 
-BL_API BLResult BL_CDECL blBitSetInit(BLBitSetCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetInitMove(BLBitSetCore* self, BLBitSetCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetInitWeak(BLBitSetCore* self, const BLBitSetCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetInitRange(BLBitSetCore* self, uint32_t startBit, uint32_t endBit) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetDestroy(BLBitSetCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetReset(BLBitSetCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetAssignMove(BLBitSetCore* self, BLBitSetCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetAssignWeak(BLBitSetCore* self, const BLBitSetCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetAssignDeep(BLBitSetCore* self, const BLBitSetCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetAssignRange(BLBitSetCore* self, uint32_t startBit, uint32_t endBit) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetAssignWords(BLBitSetCore* self, uint32_t startWord, const uint32_t* wordData, uint32_t wordCount) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blBitSetIsEmpty(const BLBitSetCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetGetData(const BLBitSetCore* self, BLBitSetData* out) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blBitSetGetSegmentCount(const BLBitSetCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API uint32_t BL_CDECL blBitSetGetSegmentCapacity(const BLBitSetCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API uint32_t BL_CDECL blBitSetGetCardinality(const BLBitSetCore* self) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blBitSetGetCardinalityInRange(const BLBitSetCore* self, uint32_t startBit, uint32_t endBit) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blBitSetHasBit(const BLBitSetCore* self, uint32_t bitIndex) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blBitSetHasBitsInRange(const BLBitSetCore* self, uint32_t startBit, uint32_t endBit) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blBitSetSubsumes(const BLBitSetCore* a, const BLBitSetCore* b) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blBitSetIntersects(const BLBitSetCore* a, const BLBitSetCore* b) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blBitSetGetRange(const BLBitSetCore* self, uint32_t* startOut, uint32_t* endOut) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blBitSetEquals(const BLBitSetCore* a, const BLBitSetCore* b) BL_NOEXCEPT_C;
-BL_API int BL_CDECL blBitSetCompare(const BLBitSetCore* a, const BLBitSetCore* b) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetClear(BLBitSetCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetShrink(BLBitSetCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetOptimize(BLBitSetCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetChop(BLBitSetCore* self, uint32_t startBit, uint32_t endBit) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetAddBit(BLBitSetCore* self, uint32_t bitIndex) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetAddRange(BLBitSetCore* self, uint32_t rangeStartBit, uint32_t rangeEndBit) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, const uint32_t* wordData, uint32_t wordCount) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetClearBit(BLBitSetCore* self, uint32_t bitIndex) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetClearRange(BLBitSetCore* self, uint32_t rangeStartBit, uint32_t rangeEndBit) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_init(BLBitSetCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_init_move(BLBitSetCore* self, BLBitSetCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_init_weak(BLBitSetCore* self, const BLBitSetCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_init_range(BLBitSetCore* self, uint32_t start_bit, uint32_t end_bit) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_destroy(BLBitSetCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_reset(BLBitSetCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_assign_move(BLBitSetCore* self, BLBitSetCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_assign_weak(BLBitSetCore* self, const BLBitSetCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_assign_deep(BLBitSetCore* self, const BLBitSetCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_assign_range(BLBitSetCore* self, uint32_t start_bit, uint32_t end_bit) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_assign_words(BLBitSetCore* self, uint32_t start_word, const uint32_t* word_data, uint32_t word_count) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_bit_set_is_empty(const BLBitSetCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_get_data(const BLBitSetCore* self, BLBitSetData* out) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL bl_bit_set_get_segment_count(const BLBitSetCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API uint32_t BL_CDECL bl_bit_set_get_segment_capacity(const BLBitSetCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API uint32_t BL_CDECL bl_bit_set_get_cardinality(const BLBitSetCore* self) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL bl_bit_set_get_cardinality_in_range(const BLBitSetCore* self, uint32_t start_bit, uint32_t end_bit) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_bit_set_has_bit(const BLBitSetCore* self, uint32_t bit_index) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_bit_set_has_bits_in_range(const BLBitSetCore* self, uint32_t start_bit, uint32_t end_bit) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_bit_set_subsumes(const BLBitSetCore* a, const BLBitSetCore* b) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_bit_set_intersects(const BLBitSetCore* a, const BLBitSetCore* b) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_bit_set_get_range(const BLBitSetCore* self, uint32_t* start_out, uint32_t* end_out) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_bit_set_equals(const BLBitSetCore* a, const BLBitSetCore* b) BL_NOEXCEPT_C;
+BL_API int BL_CDECL bl_bit_set_compare(const BLBitSetCore* a, const BLBitSetCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_clear(BLBitSetCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_shrink(BLBitSetCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_optimize(BLBitSetCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_chop(BLBitSetCore* self, uint32_t start_bit, uint32_t end_bit) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_add_bit(BLBitSetCore* self, uint32_t bit_index) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_add_range(BLBitSetCore* self, uint32_t range_start_bit, uint32_t range_end_bit) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_add_words(BLBitSetCore* self, uint32_t start_word, const uint32_t* word_data, uint32_t word_count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_clear_bit(BLBitSetCore* self, uint32_t bit_index) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_clear_range(BLBitSetCore* self, uint32_t range_start_bit, uint32_t range_end_bit) BL_NOEXCEPT_C;
 
 // TODO: Future API (BitSet).
 /*
-BL_API BLResult BL_CDECL blBitSetCombine(BLBitSetCore* dst, const BLBitSetCore* a, const BLBitSetCore* b, BLBooleanOp booleanOp) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_combine(BLBitSetCore* dst, const BLBitSetCore* a, const BLBitSetCore* b, BLBooleanOp boolean_op) BL_NOEXCEPT_C;
 */
 
-BL_API BLResult BL_CDECL blBitSetBuilderCommit(BLBitSetCore* self, BLBitSetBuilderCore* builder, uint32_t newAreaIndex) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blBitSetBuilderAddRange(BLBitSetCore* self, BLBitSetBuilderCore* builder, uint32_t startBit, uint32_t endBit) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_builder_commit(BLBitSetCore* self, BLBitSetBuilderCore* builder, uint32_t new_area_index) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_bit_set_builder_add_range(BLBitSetCore* self, BLBitSetBuilderCore* builder, uint32_t start_bit, uint32_t end_bit) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
@@ -160,14 +160,14 @@ struct BLBitSetCore BL_CLASS_INHERITS(BLObjectCore) {
 
 //! BitSet builder [C API].
 struct BLBitSetBuilderCore {
-  //! Shift to get `_areaIndex` from bit index, equals to `log2(kBitCount)`.
-  uint32_t _areaShift;
+  //! Shift to get `_area_index` from bit index, equals to `log2(kBitCount)`.
+  uint32_t _area_shift;
   //! Area index - index from 0...N where each index represents `kBitCount` bits.
-  uint32_t _areaIndex;
+  uint32_t _area_index;
 
   /*
   //! Area word data.
-  uint32_t areaWords[1 << (areaShift - 5)];
+  uint32_t area_words[1 << (area_shift - 5)];
   */
 
 #ifdef __cplusplus
@@ -175,8 +175,8 @@ struct BLBitSetBuilderCore {
     kInvalidAreaIndex = 0xFFFFFFFFu
   };
 
-  BL_INLINE_NODEBUG uint32_t* areaWords() noexcept { return reinterpret_cast<uint32_t*>(this + 1); }
-  BL_INLINE_NODEBUG const uint32_t* areaWords() const noexcept { return reinterpret_cast<const uint32_t*>(this + 1); }
+  BL_INLINE_NODEBUG uint32_t* area_words() noexcept { return reinterpret_cast<uint32_t*>(this + 1); }
+  BL_INLINE_NODEBUG const uint32_t* area_words() const noexcept { return reinterpret_cast<const uint32_t*>(this + 1); }
 #endif
 };
 
@@ -188,14 +188,14 @@ struct BLBitSetBuilderCore {
 
 //! BitSet container [Impl].
 struct BLBitSetImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Count of used segments in `segmentData`.
-  uint32_t segmentCount;
-  //! Count of allocated segments in `segmentData`.
-  uint32_t segmentCapacity;
+  //! Count of used segments in `segment_data`.
+  uint32_t segment_count;
+  //! Count of allocated segments in `segment_data`.
+  uint32_t segment_capacity;
 
 #ifdef __cplusplus
-  BL_INLINE_NODEBUG BLBitSetSegment* segmentData() const noexcept { return (BLBitSetSegment*)(this + 1); }
-  BL_INLINE_NODEBUG BLBitSetSegment* segmentDataEnd() const noexcept { return segmentData() + segmentCount; }
+  BL_INLINE_NODEBUG BLBitSetSegment* segment_data() const noexcept { return (BLBitSetSegment*)(this + 1); }
+  BL_INLINE_NODEBUG BLBitSetSegment* segment_data_end() const noexcept { return segment_data() + segment_count; }
 #endif
 };
 
@@ -232,17 +232,17 @@ public:
   enum : uint32_t {
     //! Number of words that can be used by SSO dense representation (2 words => 64 bits).
     kSSOWordCount = 2,
-    kSSODenseSignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_BIT_SET),
-    kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_BIT_SET) | BL_OBJECT_INFO_R_FLAG
+    kSSODenseSignature = BLObjectInfo::pack_type_with_marker(BL_OBJECT_TYPE_BIT_SET),
+    kSSOEmptySignature = BLObjectInfo::pack_type_with_marker(BL_OBJECT_TYPE_BIT_SET) | BL_OBJECT_INFO_R_FLAG
   };
 
   [[nodiscard]]
   BL_INLINE_NODEBUG BLBitSetImpl* _impl() const noexcept { return static_cast<BLBitSetImpl*>(_d.impl); }
 
-  BL_INLINE_NODEBUG void _initRangeInternal(uint32_t startBit = 0u, uint32_t endBit = 0u) noexcept {
-    _d.initStatic(BLObjectInfo{kSSOEmptySignature});
-    _d.u32_data[0] = startBit;
-    _d.u32_data[1] = endBit;
+  BL_INLINE_NODEBUG void _init_range_internal(uint32_t start_bit = 0u, uint32_t end_bit = 0u) noexcept {
+    _d.init_static(BLObjectInfo{kSSOEmptySignature});
+    _d.u32_data[0] = start_bit;
+    _d.u32_data[1] = end_bit;
   }
 
   //! \}
@@ -251,24 +251,24 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLBitSet() noexcept { _initRangeInternal(); }
+  BL_INLINE BLBitSet() noexcept { _init_range_internal(); }
 
   BL_INLINE BLBitSet(BLBitSet&& other) noexcept {
     _d = other._d;
-    other._initRangeInternal();
+    other._init_range_internal();
   }
 
-  BL_INLINE BLBitSet(const BLBitSet& other) noexcept { blBitSetInitWeak(this, &other); }
+  BL_INLINE BLBitSet(const BLBitSet& other) noexcept { bl_bit_set_init_weak(this, &other); }
 
-  BL_INLINE BLBitSet(uint32_t startBit, uint32_t endBit) noexcept {
-    uint32_t mask = uint32_t(-int32_t(startBit < endBit));
-    _initRangeInternal(startBit & mask, endBit & mask);
+  BL_INLINE BLBitSet(uint32_t start_bit, uint32_t end_bit) noexcept {
+    uint32_t mask = uint32_t(-int32_t(start_bit < end_bit));
+    _init_range_internal(start_bit & mask, end_bit & mask);
   }
 
   //! Destroys the BitSet.
   BL_INLINE ~BLBitSet() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
-      blBitSetDestroy(this);
+    if (BLInternal::object_needs_cleanup(_d.info.bits)) {
+      bl_bit_set_destroy(this);
     }
   }
 
@@ -279,16 +279,16 @@ public:
 
   //! Tests whether the BitSet has a content.
   //!
-  //! \note This is essentially the opposite of `empty()`.
-  BL_INLINE explicit operator bool() const noexcept { return !empty(); }
+  //! \note This is essentially the opposite of `is_empty()`.
+  BL_INLINE explicit operator bool() const noexcept { return !is_empty(); }
 
   //! Move assignment.
   //!
   //! \note The `other` BitSet is reset by move assignment, so its state after the move operation is the same as
   //! a default constructed BitSet.
-  BL_INLINE BLBitSet& operator=(BLBitSet&& other) noexcept { blBitSetAssignMove(this, &other); return *this; }
+  BL_INLINE BLBitSet& operator=(BLBitSet&& other) noexcept { bl_bit_set_assign_move(this, &other); return *this; }
   //! Copy assignment, performs weak copy of the data held by the `other` BitSet.
-  BL_INLINE BLBitSet& operator=(const BLBitSet& other) noexcept { blBitSetAssignWeak(this, &other); return *this; }
+  BL_INLINE BLBitSet& operator=(const BLBitSet& other) noexcept { bl_bit_set_assign_weak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLBitSet& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLBitSet& other) const noexcept { return !equals(other); }
@@ -305,7 +305,7 @@ public:
   //! Clears the content of the BitSet and releases its data.
   //!
   //! After reset the BitSet content matches a default constructed instance.
-  BL_INLINE BLResult reset() noexcept { return blBitSetReset(this); }
+  BL_INLINE BLResult reset() noexcept { return bl_bit_set_reset(this); }
 
   //! Swaps the content of this string with the `other` string.
   BL_INLINE void swap(BLBitSetCore& other) noexcept { _d.swap(other._d); }
@@ -316,55 +316,55 @@ public:
   //! Tests whether the BitSet is empty (has no content).
   //!
   //! Returns `true` if the BitSet's size is zero.
-  BL_INLINE bool empty() const noexcept { return blBitSetIsEmpty(this); }
+  BL_INLINE bool is_empty() const noexcept { return bl_bit_set_is_empty(this); }
 
   //! Returns the number of segments this BitSet occupies.
   //!
   //! \note If the BitSet is in SSO mode then the returned value is the number of segments the BitSet would occupy
   //! when the BitSet was converted to dynamic.
-  BL_INLINE uint32_t segmentCount() const noexcept { return blBitSetGetSegmentCount(this); }
+  BL_INLINE uint32_t segment_count() const noexcept { return bl_bit_set_get_segment_count(this); }
 
   //! Returns the number of segments this BitSet has allocated.
   //!
   //! \note If the BitSet is in SSO mode the returned value is always zero.
-  BL_INLINE uint32_t segmentCapacity() const noexcept { return _d.sso() ? 0 : _impl()->segmentCapacity; }
+  BL_INLINE uint32_t segment_capacity() const noexcept { return _d.sso() ? 0 : _impl()->segment_capacity; }
 
-  //! Returns the range of the BitSet as `[startOut, endOut)`.
+  //! Returns the range of the BitSet as `[start_out, end_out)`.
   //!
   //! Returns true if the query was successful, false if the BitSet is empty.
-  BL_INLINE bool getRange(uint32_t* startOut, uint32_t* endOut) const noexcept { return blBitSetGetRange(this, startOut, endOut); }
+  BL_INLINE bool get_range(uint32_t* start_out, uint32_t* end_out) const noexcept { return bl_bit_set_get_range(this, start_out, end_out); }
 
   //! Returns the number of bits set in the BitSet.
-  BL_INLINE uint32_t cardinality() const noexcept { return blBitSetGetCardinality(this); }
+  BL_INLINE uint32_t cardinality() const noexcept { return bl_bit_set_get_cardinality(this); }
 
-  //! Returns the number of bits set in the given `[startBit, endBit)` range.
-  BL_INLINE uint32_t cardinalityInRange(uint32_t startBit, uint32_t endBit) const noexcept { return blBitSetGetCardinalityInRange(this, startBit, endBit); }
+  //! Returns the number of bits set in the given `[start_bit, end_bit)` range.
+  BL_INLINE uint32_t cardinality_in_range(uint32_t start_bit, uint32_t end_bit) const noexcept { return bl_bit_set_get_cardinality_in_range(this, start_bit, end_bit); }
 
   //! Stores a normalized BitSet data represented as segments into `out`.
   //!
-  //! If the BitSet is in SSO mode, it will be converter to temporary segments provided by `BLBitSetData::ssoSegments`,
+  //! If the BitSet is in SSO mode, it will be converter to temporary segments provided by `BLBitSetData::sso_segments`,
   //! if the BitSet is in dynamic mode (already contains segments) then only a pointer to the data will be stored into
   //! `out`.
   //!
   //! \remarks The data written into `out` can reference the data in the BitSet, thus the BitSet cannot be manipulated
   //! during the use of the data. This function is ideal for inspecting the content of the BitSet in a unique way and
   //! for implementing iterators that don't have to be aware of how SSO data is represented and used.
-  BL_INLINE BLResult getData(BLBitSetData* out) const noexcept { return blBitSetGetData(this, out); }
+  BL_INLINE BLResult get_data(BLBitSetData* out) const noexcept { return bl_bit_set_get_data(this, out); }
 
   //! \}
 
   //! \name Test Operations
   //! \{
 
-  //! Returns a bit-value at the given `bitIndex`.
-  BL_INLINE bool hasBit(uint32_t bitIndex) const noexcept { return blBitSetHasBit(this, bitIndex); }
+  //! Returns a bit-value at the given `bit_index`.
+  BL_INLINE bool has_bit(uint32_t bit_index) const noexcept { return bl_bit_set_has_bit(this, bit_index); }
   //! Returns whether the bit-set has at least on bit in the given range `[start:end)`.
-  BL_INLINE bool hasBitsInRange(uint32_t startBit, uint32_t endBit) const noexcept { return blBitSetHasBitsInRange(this, startBit, endBit); }
+  BL_INLINE bool has_bits_in_range(uint32_t start_bit, uint32_t end_bit) const noexcept { return bl_bit_set_has_bits_in_range(this, start_bit, end_bit); }
 
   //! Returns whether this BitSet subsumes `other`.
-  BL_INLINE bool subsumes(const BLBitSetCore& other) const noexcept { return blBitSetSubsumes(this, &other); }
+  BL_INLINE bool subsumes(const BLBitSetCore& other) const noexcept { return bl_bit_set_subsumes(this, &other); }
   //! Returns whether this BitSet intersects with `other`.
-  BL_INLINE bool intersects(const BLBitSetCore& other) const noexcept { return blBitSetIntersects(this, &other); }
+  BL_INLINE bool intersects(const BLBitSetCore& other) const noexcept { return bl_bit_set_intersects(this, &other); }
 
   //! \}
 
@@ -372,9 +372,9 @@ public:
   //! \{
 
   //! Returns whether this BitSet and `other` are bitwise equal.
-  BL_INLINE bool equals(const BLBitSetCore& other) const noexcept { return blBitSetEquals(this, &other); }
+  BL_INLINE bool equals(const BLBitSetCore& other) const noexcept { return bl_bit_set_equals(this, &other); }
   //! Compares this BitSet with `other` and returns either `-1`, `0`, or `1`.
-  BL_INLINE int compare(const BLBitSetCore& other) const noexcept { return blBitSetCompare(this, &other); }
+  BL_INLINE int compare(const BLBitSetCore& other) const noexcept { return bl_bit_set_compare(this, &other); }
 
   //! \}
 
@@ -382,63 +382,63 @@ public:
   //! \{
 
   //! Move assignment, the same as `operator=`, but returns a `BLResult` instead of `this`.
-  BL_INLINE BLResult assign(BLBitSetCore&& other) noexcept { return blBitSetAssignMove(this, &other); }
+  BL_INLINE BLResult assign(BLBitSetCore&& other) noexcept { return bl_bit_set_assign_move(this, &other); }
 
   //! Copy assignment, the same as `operator=`, but returns a `BLResult` instead of `this`.
-  BL_INLINE BLResult assign(const BLBitSetCore& other) noexcept { return blBitSetAssignWeak(this, &other); }
+  BL_INLINE BLResult assign(const BLBitSetCore& other) noexcept { return bl_bit_set_assign_weak(this, &other); }
 
   //! Copy assignment, but creates a deep copy of the `other` BitSet instead of weak copy.
-  BL_INLINE BLResult assignDeep(const BLBitSetCore& other) noexcept { return blBitSetAssignDeep(this, &other); }
+  BL_INLINE BLResult assign_deep(const BLBitSetCore& other) noexcept { return bl_bit_set_assign_deep(this, &other); }
 
   //! Replaces the content of the BitSet by the given range.
-  BL_INLINE BLResult assignRange(uint32_t startBit, uint32_t endBit) noexcept { return blBitSetAssignRange(this, startBit, endBit); }
+  BL_INLINE BLResult assign_range(uint32_t start_bit, uint32_t end_bit) noexcept { return bl_bit_set_assign_range(this, start_bit, end_bit); }
 
-  //! Replaces the content of the BitSet by bits specified by `wordData` of size `wordCount` [the size is in uint32_t units].
-  BL_INLINE BLResult assignWords(uint32_t startWord, const uint32_t* wordData, uint32_t wordCount) noexcept { return blBitSetAssignWords(this, startWord, wordData, wordCount); }
+  //! Replaces the content of the BitSet by bits specified by `word_data` of size `word_count` [the size is in uint32_t units].
+  BL_INLINE BLResult assign_words(uint32_t start_word, const uint32_t* word_data, uint32_t word_count) noexcept { return bl_bit_set_assign_words(this, start_word, word_data, word_count); }
 
   //! Clears the content of the BitSet without releasing its dynamically allocated data, if possible.
-  BL_INLINE BLResult clear() noexcept { return blBitSetClear(this); }
+  BL_INLINE BLResult clear() noexcept { return bl_bit_set_clear(this); }
 
   //! Shrinks the capacity of the BitSet to match the actual content.
-  BL_INLINE BLResult shrink() noexcept { return blBitSetShrink(this); }
+  BL_INLINE BLResult shrink() noexcept { return bl_bit_set_shrink(this); }
 
   //! Optimizes the BitSet by clearing unused pages and by merging continuous pages, without reallocating the BitSet.
   //! This functions should always return `BL_SUCCESS`.
-  BL_INLINE BLResult optimize() noexcept { return blBitSetOptimize(this); }
+  BL_INLINE BLResult optimize() noexcept { return bl_bit_set_optimize(this); }
 
   //! Bounds the BitSet to the given interval `[start:end)`.
-  BL_INLINE BLResult chop(uint32_t startBit, uint32_t endBit) noexcept { return blBitSetChop(this, startBit, endBit); }
+  BL_INLINE BLResult chop(uint32_t start_bit, uint32_t end_bit) noexcept { return bl_bit_set_chop(this, start_bit, end_bit); }
   //! Truncates the BitSet so it's maximum bit set is less than `n`.
-  BL_INLINE BLResult truncate(uint32_t n) noexcept { return blBitSetChop(this, 0, n); }
+  BL_INLINE BLResult truncate(uint32_t n) noexcept { return bl_bit_set_chop(this, 0, n); }
 
   //! Adds a bit to the BitSet at the given `index`.
-  BL_INLINE BLResult addBit(uint32_t bitIndex) noexcept { return blBitSetAddBit(this, bitIndex); }
-  //! Adds a range of bits `[rangeStartBit:rangeEndBit)` to the BitSet.
-  BL_INLINE BLResult addRange(uint32_t rangeStartBit, uint32_t rangeEndBit) noexcept { return blBitSetAddRange(this, rangeStartBit, rangeEndBit); }
+  BL_INLINE BLResult add_bit(uint32_t bit_index) noexcept { return bl_bit_set_add_bit(this, bit_index); }
+  //! Adds a range of bits `[range_start_bit:range_end_bit)` to the BitSet.
+  BL_INLINE BLResult add_range(uint32_t range_start_bit, uint32_t range_end_bit) noexcept { return bl_bit_set_add_range(this, range_start_bit, range_end_bit); }
   //! Adds a dense data to the BitSet starting a bit index `start`.
-  BL_INLINE BLResult addWords(uint32_t startWord, const uint32_t* wordData, uint32_t wordCount) noexcept { return blBitSetAddWords(this, startWord, wordData, wordCount); }
+  BL_INLINE BLResult add_words(uint32_t start_word, const uint32_t* word_data, uint32_t word_count) noexcept { return bl_bit_set_add_words(this, start_word, word_data, word_count); }
 
   //! Clears a bit in the BitSet at the given `index`.
-  BL_INLINE BLResult clearBit(uint32_t bitIndex) noexcept { return blBitSetClearBit(this, bitIndex); }
-  //! Clears a range of bits `[rangeStartBit:rangeEndBit)` in the BitSet.
-  BL_INLINE BLResult clearRange(uint32_t rangeStartBit, uint32_t rangeEndBit) noexcept { return blBitSetClearRange(this, rangeStartBit, rangeEndBit); }
+  BL_INLINE BLResult clear_bit(uint32_t bit_index) noexcept { return bl_bit_set_clear_bit(this, bit_index); }
+  //! Clears a range of bits `[range_start_bit:range_end_bit)` in the BitSet.
+  BL_INLINE BLResult clear_range(uint32_t range_start_bit, uint32_t range_end_bit) noexcept { return bl_bit_set_clear_range(this, range_start_bit, range_end_bit); }
 
   /*
   // TODO: Future API (BitSet).
 
-  BL_INLINE BLResult and_(const BLBitSetCore& other) noexcept { return blBitSetCombine(this, this, &other, BL_BOOLEAN_OP_AND); }
-  BL_INLINE BLResult or_(const BLBitSetCore& other) noexcept { return blBitSetCombine(this, this, &other, BL_BOOLEAN_OP_OR); }
-  BL_INLINE BLResult xor_(const BLBitSetCore& other) noexcept { return blBitSetCombine(this, this, &other, BL_BOOLEAN_OP_XOR); }
-  BL_INLINE BLResult andNot(const BLBitSetCore& other) noexcept { return blBitSetCombine(this, this, &other, BL_BOOLEAN_OP_AND_NOT); }
-  BL_INLINE BLResult notAnd(const BLBitSetCore& other) noexcept { return blBitSetCombine(this, this, &other, BL_BOOLEAN_OP_NOT_AND); }
-  BL_INLINE BLResult combine(const BLBitSetCore& other, BLBooleanOp booleanOp) noexcept { return blBitSetCombine(this, this, &other, booleanOp); }
+  BL_INLINE BLResult and_(const BLBitSetCore& other) noexcept { return bl_bit_set_combine(this, this, &other, BL_BOOLEAN_OP_AND); }
+  BL_INLINE BLResult or_(const BLBitSetCore& other) noexcept { return bl_bit_set_combine(this, this, &other, BL_BOOLEAN_OP_OR); }
+  BL_INLINE BLResult xor_(const BLBitSetCore& other) noexcept { return bl_bit_set_combine(this, this, &other, BL_BOOLEAN_OP_XOR); }
+  BL_INLINE BLResult and_not(const BLBitSetCore& other) noexcept { return bl_bit_set_combine(this, this, &other, BL_BOOLEAN_OP_AND_NOT); }
+  BL_INLINE BLResult not_and(const BLBitSetCore& other) noexcept { return bl_bit_set_combine(this, this, &other, BL_BOOLEAN_OP_NOT_AND); }
+  BL_INLINE BLResult combine(const BLBitSetCore& other, BLBooleanOp boolean_op) noexcept { return bl_bit_set_combine(this, this, &other, boolean_op); }
 
-  static BL_INLINE BLResult and_(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b) noexcept { return blBitSetCombine(&dst, &a, &b, BL_BOOLEAN_OP_AND); }
-  static BL_INLINE BLResult or_(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b) noexcept { return blBitSetCombine(&dst, &a, &b, BL_BOOLEAN_OP_OR); }
-  static BL_INLINE BLResult xor_(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b) noexcept { return blBitSetCombine(&dst, &a, &b, BL_BOOLEAN_OP_XOR); }
-  static BL_INLINE BLResult andNot(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b) noexcept { return blBitSetCombine(&dst, &a, &b, BL_BOOLEAN_OP_AND_NOT); }
-  static BL_INLINE BLResult notAnd(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b) noexcept { return blBitSetCombine(&dst, &a, &b, BL_BOOLEAN_OP_NOT_AND); }
-  static BL_INLINE BLResult combine(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b, BLBooleanOp booleanOp) noexcept { return blBitSetCombine(&dst, &a, &b, booleanOp); }
+  static BL_INLINE BLResult and_(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b) noexcept { return bl_bit_set_combine(&dst, &a, &b, BL_BOOLEAN_OP_AND); }
+  static BL_INLINE BLResult or_(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b) noexcept { return bl_bit_set_combine(&dst, &a, &b, BL_BOOLEAN_OP_OR); }
+  static BL_INLINE BLResult xor_(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b) noexcept { return bl_bit_set_combine(&dst, &a, &b, BL_BOOLEAN_OP_XOR); }
+  static BL_INLINE BLResult and_not(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b) noexcept { return bl_bit_set_combine(&dst, &a, &b, BL_BOOLEAN_OP_AND_NOT); }
+  static BL_INLINE BLResult not_and(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b) noexcept { return bl_bit_set_combine(&dst, &a, &b, BL_BOOLEAN_OP_NOT_AND); }
+  static BL_INLINE BLResult combine(BLBitSetCore& dst, const BLBitSetCore& a, const BLBitSetCore& b, BLBooleanOp boolean_op) noexcept { return bl_bit_set_combine(&dst, &a, &b, boolean_op); }
   */
 
   //! \}
@@ -449,7 +449,7 @@ public:
 //! BitSet builder is a low-level utility class that can be used to efficiently build a BitSet in C++. It maintains
 //! a configurable buffer (called area) where intermediate bits are set, which are then committed to BitSet when
 //! an added bit/range is outside of the area or when user is done with BitSet building. The commit uses \ref
-//! blBitSetBuilderCommit() function, which was specifically designed for `BLBitSetBuilderT<BitCount>` in addition
+//! bl_bit_set_builder_commit() function, which was specifically designed for `BLBitSetBuilderT<BitCount>` in addition
 //! to the `BLBitSetBuilder` alias.
 //!
 //! \note The destructor doesn't do anything. If there are still bits to be committed, they will be lost.
@@ -474,12 +474,12 @@ public:
   //! \{
 
   //! Area words data.
-  uint32_t _areaWords[kAreaWordCount];
+  uint32_t _area_words[kAreaWordCount];
 
   //! BitSet we are building.
   //!
   //! \note This member is not part of C API. C API requires both BLBitSetCore and BLBitSetBuilderCore to be passed.
-  BLBitSetCore* _bitSet;
+  BLBitSetCore* _bit_set;
 
   //! \}
 
@@ -488,19 +488,19 @@ public:
 
   //! Constructs a new BitSet builder having no BitSet assigned.
   BL_INLINE BLBitSetBuilderT() noexcept {
-    _bitSet = nullptr;
-    _areaShift = kAreaShift;
-    _areaIndex = kInvalidAreaIndex;
+    _bit_set = nullptr;
+    _area_shift = kAreaShift;
+    _area_index = kInvalidAreaIndex;
   }
 
-  //! Constructs a new BitSet builder having the given `bitSet` assigned.
+  //! Constructs a new BitSet builder having the given `bit_set` assigned.
   //!
-  //! \note The builder only stores a pointer to the `bitSet` - the user must guarantee to not destroy the BitSet
+  //! \note The builder only stores a pointer to the `bit_set` - the user must guarantee to not destroy the BitSet
   //! before the builder is destroyed or reset.
-  BL_INLINE explicit BLBitSetBuilderT(BLBitSetCore* bitSet) noexcept {
-    _bitSet = bitSet;
-    _areaShift = kAreaShift;
-    _areaIndex = kInvalidAreaIndex;
+  BL_INLINE explicit BLBitSetBuilderT(BLBitSetCore* bit_set) noexcept {
+    _bit_set = bit_set;
+    _area_shift = kAreaShift;
+    _area_index = kInvalidAreaIndex;
   }
 
   BL_INLINE BLBitSetBuilderT(const BLBitSetBuilderT&) = delete;
@@ -512,9 +512,9 @@ public:
   //! \{
 
   //! Returns whether the BitSet builder is valid, which means that is has an associated `BLBitSet` instance.
-  BL_INLINE bool isValid() const noexcept { return _bitSet != nullptr; }
+  BL_INLINE bool is_valid() const noexcept { return _bit_set != nullptr; }
   //! Returns an associated `BLBitSet` instance that this builder commits to.
-  BL_INLINE BLBitSet* bitSet() const noexcept { return static_cast<BLBitSet*>(_bitSet); }
+  BL_INLINE BLBitSet* bit_set() const noexcept { return static_cast<BLBitSet*>(_bit_set); }
 
   //! \}
 
@@ -522,41 +522,41 @@ public:
   //! \{
 
   BL_INLINE BLResult reset() noexcept {
-    _bitSet = nullptr;
-    _areaShift = kAreaShift;
-    _areaIndex = kInvalidAreaIndex;
+    _bit_set = nullptr;
+    _area_shift = kAreaShift;
+    _area_index = kInvalidAreaIndex;
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult reset(BLBitSetCore* bitSet) noexcept {
-    _bitSet = bitSet;
-    _areaShift = kAreaShift;
-    _areaIndex = kInvalidAreaIndex;
+  BL_INLINE BLResult reset(BLBitSetCore* bit_set) noexcept {
+    _bit_set = bit_set;
+    _area_shift = kAreaShift;
+    _area_index = kInvalidAreaIndex;
     return BL_SUCCESS;
   }
 
   //! Adds a bit to the area maintained by BitSet builder.
   //!
-  //! If the area of `bitIndex` is different compared to the current active area, the current area will be
+  //! If the area of `bit_index` is different compared to the current active area, the current area will be
   //! committed to the BitSet. This is actually the only operation that can return \ref BL_ERROR_OUT_OF_MEMORY.
-  BL_INLINE BLResult addBit(uint32_t bitIndex) noexcept {
-    uint32_t areaIndex = bitIndex / kAreaBitCount;
-    if (_areaIndex != areaIndex)
-      BL_PROPAGATE(blBitSetBuilderCommit(_bitSet, this, areaIndex));
+  BL_INLINE BLResult add_bit(uint32_t bit_index) noexcept {
+    uint32_t area_index = bit_index / kAreaBitCount;
+    if (_area_index != area_index)
+      BL_PROPAGATE(bl_bit_set_builder_commit(_bit_set, this, area_index));
 
-    bitIndex &= kAreaBitCount - 1;
-    _areaWords[bitIndex / 32u] |= uint32_t(0x80000000u) >> (bitIndex % 32u);
+    bit_index &= kAreaBitCount - 1;
+    _area_words[bit_index / 32u] |= uint32_t(0x80000000u) >> (bit_index % 32u);
     return BL_SUCCESS;
   }
 
-  //! Adds a `[startBit, endBit)` range of bits to the BitSet.
+  //! Adds a `[start_bit, end_bit)` range of bits to the BitSet.
   //!
   //! If the range is relatively small and fits into a single builder area, it will be added to that area.
   //! On the other hand, if the range is large, the area will be kept and the builder would call \ref
-  //! BLBitSet::addRange() instead. If the are of the range is different compared to the current active area,
+  //! BLBitSet::add_range() instead. If the are of the range is different compared to the current active area,
   //! the data in the current active area will be committed.
-  BL_INLINE BLResult addRange(uint32_t startBit, uint32_t endBit) noexcept {
-    return blBitSetBuilderAddRange(_bitSet, this, startBit, endBit);
+  BL_INLINE BLResult add_range(uint32_t start_bit, uint32_t end_bit) noexcept {
+    return bl_bit_set_builder_add_range(_bit_set, this, start_bit, end_bit);
   }
 
   //! Commits changes in the current active area to the BitSet.
@@ -564,13 +564,13 @@ public:
   //! \note This must be called in order to finalize building the BitSet. If this function is not called the
   //! BitSet could have missing bits that are in the current active area.
   BL_INLINE BLResult commit() noexcept {
-    return blBitSetBuilderCommit(_bitSet, this, kInvalidAreaIndex);
+    return bl_bit_set_builder_commit(_bit_set, this, kInvalidAreaIndex);
   }
 
-  //! Similar to \ref commit(), but the additional parameter `newAreaIndex` will be used to set the current
+  //! Similar to \ref commit(), but the additional parameter `new_area_index` will be used to set the current
   //! active area.
-  BL_INLINE BLResult commit(uint32_t newAreaIndex) noexcept {
-    return blBitSetBuilderCommit(_bitSet, this, newAreaIndex);
+  BL_INLINE BLResult commit(uint32_t new_area_index) noexcept {
+    return bl_bit_set_builder_commit(_bit_set, this, new_area_index);
   }
 
   //! \}
@@ -588,11 +588,11 @@ using BLBitSetBuilder = BLBitSetBuilderT<512>;
 //!
 //! ```
 //! BLBitSet set;
-//! set.addRange(100, 200);
+//! set.add_range(100, 200);
 //!
 //! BLBitSetWordIterator it(set);
-//! while (uint32_t bits = it.nextWord()) {
-//!   printf("{WordIndex: %u, WordData: %08X }\n", it.wordIndex(), bits);
+//! while (uint32_t bits = it.next_word()) {
+//!   printf("{WordIndex: %u, WordData: %08X }\n", it.word_index(), bits);
 //! }
 //! ```
 class BLBitSetWordIterator final {
@@ -600,10 +600,10 @@ public:
   //! \name Members
   //! \{
 
-  const BLBitSetSegment* _segmentPtr;
-  const BLBitSetSegment* _segmentEnd;
+  const BLBitSetSegment* _segment_ptr;
+  const BLBitSetSegment* _segment_end;
   BLBitSetData _data;
-  uint32_t _wordIndex;
+  uint32_t _word_index;
 
   //! \}
 
@@ -612,10 +612,10 @@ public:
 
   //! Creates a default constructed iterator, not initialized to iterate any BitSet.
   BL_INLINE BLBitSetWordIterator() noexcept { reset(); }
-  //! Creates an iterator, that will iterate the given `bitSet`.
+  //! Creates an iterator, that will iterate the given `bit_set`.
   //!
-  //! \note The `bitSet` cannot change or be destroyed during iteration.
-  BL_INLINE BLBitSetWordIterator(const BLBitSetCore& bitSet) noexcept { reset(bitSet); }
+  //! \note The `bit_set` cannot change or be destroyed during iteration.
+  BL_INLINE BLBitSetWordIterator(const BLBitSetCore& bit_set) noexcept { reset(bit_set); }
   //! Creates a copy of `other` iterator.
   BL_INLINE BLBitSetWordIterator(const BLBitSetWordIterator& other) noexcept = default;
 
@@ -633,18 +633,18 @@ public:
 
   //! Resets the iterator (puts it into a default constructed state).
   BL_INLINE void reset() noexcept {
-    _segmentPtr = nullptr;
-    _segmentEnd = nullptr;
+    _segment_ptr = nullptr;
+    _segment_end = nullptr;
     _data.reset();
-    _wordIndex = 0;
+    _word_index = 0;
   }
 
-  //! Reinitializes the iterator to iterate the given `bitSet`, from the beginning.
-  BL_INLINE void reset(const BLBitSetCore& bitSet) noexcept {
-    blBitSetGetData(&bitSet, &_data);
-    _segmentPtr = _data.segmentData;
-    _segmentEnd = _data.segmentData + _data.segmentCount;
-    _wordIndex = _segmentPtr != _segmentEnd ? uint32_t(_segmentPtr->startWord() - 1u) : uint32_t(0xFFFFFFFFu);
+  //! Reinitializes the iterator to iterate the given `bit_set`, from the beginning.
+  BL_INLINE void reset(const BLBitSetCore& bit_set) noexcept {
+    bl_bit_set_get_data(&bit_set, &_data);
+    _segment_ptr = _data.segment_data;
+    _segment_end = _data.segment_data + _data.segment_count;
+    _word_index = _segment_ptr != _segment_end ? uint32_t(_segment_ptr->start_word() - 1u) : uint32_t(0xFFFFFFFFu);
   }
 
   //! \}
@@ -655,38 +655,38 @@ public:
   //! Returns the next (or the first, if called the first time) non-zero word of the BitSet or zero if the
   //! iteration ended.
   //!
-  //! Use `wordIndex()` to get the index (in word units) of the word returned.
-  BL_INLINE uint32_t nextWord() noexcept {
-    if (_segmentPtr == _segmentEnd)
+  //! Use `word_index()` to get the index (in word units) of the word returned.
+  BL_INLINE uint32_t next_word() noexcept {
+    if (_segment_ptr == _segment_end)
       return 0;
 
-    _wordIndex++;
+    _word_index++;
     for (;;) {
-      if (_segmentPtr->allOnes()) {
-        if (_wordIndex < _segmentPtr->_rangeEndWord())
+      if (_segment_ptr->all_ones()) {
+        if (_word_index < _segment_ptr->_range_end_word())
           return 0xFFFFFFFFu;
       }
       else {
-        uint32_t endWord = _segmentPtr->_denseEndWord();
-        while (_wordIndex < endWord) {
-          uint32_t bits = _segmentPtr->_data[_wordIndex & (BL_BIT_SET_SEGMENT_WORD_COUNT - 1u)];
+        uint32_t end_word = _segment_ptr->_dense_end_word();
+        while (_word_index < end_word) {
+          uint32_t bits = _segment_ptr->_data[_word_index & (BL_BIT_SET_SEGMENT_WORD_COUNT - 1u)];
           if (bits != 0u)
             return bits;
-          _wordIndex++;
+          _word_index++;
         }
       }
 
-      if (++_segmentPtr == _segmentEnd)
+      if (++_segment_ptr == _segment_end)
         return 0;
-      _wordIndex = _segmentPtr->startWord();
+      _word_index = _segment_ptr->start_word();
     }
   }
 
-  //! Returns the current bit index of a word returned by `nextWord()`.
-  BL_INLINE uint32_t bitIndex() const noexcept { return _wordIndex * 32u; }
+  //! Returns the current bit index of a word returned by `next_word()`.
+  BL_INLINE uint32_t bit_index() const noexcept { return _word_index * 32u; }
 
-  //! Returns the current word index of a word returned by `nextWord()`.
-  BL_INLINE uint32_t wordIndex() const noexcept { return _wordIndex; }
+  //! Returns the current word index of a word returned by `next_word()`.
+  BL_INLINE uint32_t word_index() const noexcept { return _word_index; }
 
   //! \}
 };

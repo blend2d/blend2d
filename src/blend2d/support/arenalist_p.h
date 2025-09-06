@@ -17,34 +17,34 @@ namespace bl {
 //! \name Arena Allocated ArenaList
 //! \{
 
-//! Zone-allocated double-linked list node.
+//! Arena-allocated double-linked list node.
 template<typename NodeT>
 class ArenaListNode {
 public:
   union {
-    NodeT* _listNodes[2];
+    NodeT* _list_nodes[2];
     struct {
-      NodeT* _listPrev;
-      NodeT* _listNext;
+      NodeT* _list_prev;
+      NodeT* _list_next;
     };
   };
 
   BL_NONCOPYABLE(ArenaListNode)
 
   BL_INLINE ArenaListNode() noexcept
-    : _listNodes { nullptr, nullptr } {}
+    : _list_nodes { nullptr, nullptr } {}
 
   BL_INLINE ArenaListNode(ArenaListNode&& other) noexcept
-    : _listNodes { other._listNodes[0], other._listNodes[1] } {}
+    : _list_nodes { other._list_nodes[0], other._list_nodes[1] } {}
 
-  BL_INLINE bool hasPrev() const noexcept { return _listPrev != nullptr; }
-  BL_INLINE bool hasNext() const noexcept { return _listNext != nullptr; }
+  BL_INLINE bool has_prev() const noexcept { return _list_prev != nullptr; }
+  BL_INLINE bool has_next() const noexcept { return _list_next != nullptr; }
 
-  BL_INLINE NodeT* prev() const noexcept { return _listPrev; }
-  BL_INLINE NodeT* next() const noexcept { return _listNext; }
+  BL_INLINE NodeT* prev() const noexcept { return _list_prev; }
+  BL_INLINE NodeT* next() const noexcept { return _list_next; }
 };
 
-//! Zone-allocated double-linked list container.
+//! Arena-allocated double-linked list container.
 template <typename NodeT>
 class ArenaList {
 public:
@@ -77,8 +77,8 @@ public:
   }
 
   BL_INLINE void reset(NodeT* node) noexcept {
-    node->_listNodes[0] = nullptr;
-    node->_listNodes[1] = nullptr;
+    node->_list_nodes[0] = nullptr;
+    node->_list_nodes[1] = nullptr;
     _nodes[0] = node;
     _nodes[1] = node;
   }
@@ -89,54 +89,54 @@ public:
   //! \{
 
   // Can be used to both prepend and append.
-  BL_INLINE void _addNode(NodeT* node, size_t dir) noexcept {
+  BL_INLINE void _add_node(NodeT* node, size_t dir) noexcept {
     NodeT* prev = _nodes[dir];
 
-    node->_listNodes[!dir] = prev;
+    node->_list_nodes[!dir] = prev;
     _nodes[dir] = node;
     if (prev)
-      prev->_listNodes[dir] = node;
+      prev->_list_nodes[dir] = node;
     else
       _nodes[!dir] = node;
   }
 
   // Can be used to both prepend and append.
-  BL_INLINE void _insertNode(NodeT* ref, NodeT* node, size_t dir) noexcept {
+  BL_INLINE void _insert_node(NodeT* ref, NodeT* node, size_t dir) noexcept {
     BL_ASSERT(ref != nullptr);
 
     NodeT* prev = ref;
-    NodeT* next = ref->_listNodes[dir];
+    NodeT* next = ref->_list_nodes[dir];
 
-    prev->_listNodes[dir] = node;
+    prev->_list_nodes[dir] = node;
     if (next)
-      next->_listNodes[!dir] = node;
+      next->_list_nodes[!dir] = node;
     else
       _nodes[dir] = node;
 
-    node->_listNodes[!dir] = prev;
-    node->_listNodes[ dir] = next;
+    node->_list_nodes[!dir] = prev;
+    node->_list_nodes[ dir] = next;
   }
 
-  BL_INLINE void append(NodeT* node) noexcept { _addNode(node, 1); }
-  BL_INLINE void prepend(NodeT* node) noexcept { _addNode(node, 0); }
+  BL_INLINE void append(NodeT* node) noexcept { _add_node(node, 1); }
+  BL_INLINE void prepend(NodeT* node) noexcept { _add_node(node, 0); }
 
-  BL_INLINE void insertAfter(NodeT* ref, NodeT* node) noexcept { _insertNode(ref, node, 1); }
-  BL_INLINE void insertBefore(NodeT* ref, NodeT* node) noexcept { _insertNode(ref, node, 0); }
+  BL_INLINE void insert_after(NodeT* ref, NodeT* node) noexcept { _insert_node(ref, node, 1); }
+  BL_INLINE void insert_before(NodeT* ref, NodeT* node) noexcept { _insert_node(ref, node, 0); }
 
   BL_INLINE NodeT* unlink(NodeT* node) noexcept {
     NodeT* prev = node->prev();
     NodeT* next = node->next();
 
-    if (prev) { prev->_listNext = next; } else { _nodes[0] = next; }
-    if (next) { next->_listPrev = prev; } else { _nodes[1] = prev; }
+    if (prev) { prev->_list_next = next; } else { _nodes[0] = next; }
+    if (next) { next->_list_prev = prev; } else { _nodes[1] = prev; }
 
-    node->_listPrev = nullptr;
-    node->_listNext = nullptr;
+    node->_list_prev = nullptr;
+    node->_list_next = nullptr;
 
     return node;
   }
 
-  BL_INLINE NodeT* popFirst() noexcept {
+  BL_INLINE NodeT* pop_first() noexcept {
     NodeT* node = _nodes[0];
     BL_ASSERT(node != nullptr);
 
@@ -144,8 +144,8 @@ public:
     _nodes[0] = next;
 
     if (next) {
-      next->_listPrev = nullptr;
-      node->_listNext = nullptr;
+      next->_list_prev = nullptr;
+      node->_list_next = nullptr;
     }
     else {
       _nodes[1] = nullptr;
@@ -162,8 +162,8 @@ public:
     _nodes[1] = prev;
 
     if (prev) {
-      prev->_listNext = nullptr;
-      node->_listPrev = nullptr;
+      prev->_list_next = nullptr;
+      node->_list_prev = nullptr;
     }
     else {
       _nodes[0] = nullptr;
@@ -177,7 +177,7 @@ public:
   //! \name Accessors
   //! \{
 
-  BL_INLINE bool empty() const noexcept { return _nodes[0] == nullptr; }
+  BL_INLINE bool is_empty() const noexcept { return _nodes[0] == nullptr; }
   BL_INLINE NodeT* first() const noexcept { return _nodes[0]; }
   BL_INLINE NodeT* last() const noexcept { return _nodes[1]; }
 

@@ -46,8 +46,8 @@ static constexpr RenderingMode kAsync = RenderingMode::kAsync;
 // bl::RasterEngine - ContextImpl - Globals
 // ========================================
 
-static BLContextVirt rasterImplVirtSync;
-static BLContextVirt rasterImplVirtAsync;
+static BLContextVirt raster_impl_virt_sync;
+static BLContextVirt raster_impl_virt_async;
 
 // bl::RasterEngine - ContextImpl - Tables
 // =======================================
@@ -83,7 +83,7 @@ static const constexpr SolidDataWrapperU16 solidOverrideFillU16[] = {
   { {0u}, 0u, 0u, 0x0000000000000000u }  // kAlwaysNop.
 };
 
-static const uint8_t textByteSizeShiftByEncoding[] = { 0, 1, 2, 0 };
+static const uint8_t text_byte_size_shift_by_encoding[] = { 0, 1, 2, 0 };
 
 // bl::RasterEngine - ContextImpl - Internals - Uncategorized Yet
 // ==============================================================
@@ -119,12 +119,12 @@ union DispatchInfo {
   //! \name Interface
   //! \{
 
-  BL_INLINE_NODEBUG void init(Pipeline::Signature signatureValue, uint32_t alphaValue) noexcept {
-    alpha = alphaValue;
-    signature = signatureValue;
+  BL_INLINE_NODEBUG void init(Pipeline::Signature signature_value, uint32_t alpha_value) noexcept {
+    alpha = alpha_value;
+    signature = signature_value;
   }
 
-  BL_INLINE_NODEBUG void addSignature(Pipeline::Signature sgn) noexcept {
+  BL_INLINE_NODEBUG void add_signature(Pipeline::Signature sgn) noexcept {
 #if BL_TARGET_ARCH_BITS >= 64
     packed |= sgn.value;
 #else
@@ -132,8 +132,8 @@ union DispatchInfo {
 #endif
   }
 
-  BL_INLINE_NODEBUG void addFillType(Pipeline::FillType fillType) noexcept {
-    addSignature(Pipeline::Signature::fromFillType(fillType));
+  BL_INLINE_NODEBUG void add_fill_type(Pipeline::FillType fill_type) noexcept {
+    add_signature(Pipeline::Signature::from_fill_type(fill_type));
   }
 
   //! \}
@@ -144,7 +144,7 @@ struct DispatchStyle {
   //! \name Members
   //! \{
 
-  RenderFetchDataHeader* fetchData;
+  RenderFetchDataHeader* fetch_data;
 
   //! \}
 };
@@ -154,136 +154,136 @@ struct DispatchStyle {
 
 class DirectStateAccessor {
 public:
-  const BLRasterContextImpl* ctxI;
+  const BLRasterContextImpl* ctx_impl;
 
-  BL_INLINE_NODEBUG explicit DirectStateAccessor(const BLRasterContextImpl* ctxI) noexcept : ctxI(ctxI) {}
+  BL_INLINE_NODEBUG explicit DirectStateAccessor(const BLRasterContextImpl* ctx_impl) noexcept : ctx_impl(ctx_impl) {}
 
-  BL_INLINE_NODEBUG const BLBox& finalClipBoxD() const noexcept { return ctxI->finalClipBoxD(); }
-  BL_INLINE_NODEBUG const BLBox& finalClipBoxFixedD() const noexcept { return ctxI->finalClipBoxFixedD(); }
+  BL_INLINE_NODEBUG const BLBox& final_clip_box_d() const noexcept { return ctx_impl->final_clip_box_d(); }
+  BL_INLINE_NODEBUG const BLBox& final_clip_box_fixed_d() const noexcept { return ctx_impl->final_clip_box_fixed_d(); }
 
-  BL_INLINE_NODEBUG const BLStrokeOptions& strokeOptions() const noexcept { return ctxI->strokeOptions(); }
-  BL_INLINE_NODEBUG const BLApproximationOptions& approximationOptions() const noexcept { return ctxI->approximationOptions(); }
+  BL_INLINE_NODEBUG const BLStrokeOptions& stroke_options() const noexcept { return ctx_impl->stroke_options(); }
+  BL_INLINE_NODEBUG const BLApproximationOptions& approximation_options() const noexcept { return ctx_impl->approximation_options(); }
 
-  BL_INLINE_NODEBUG BLTransformType metaTransformFixedType() const noexcept { return ctxI->metaTransformFixedType(); }
-  BL_INLINE_NODEBUG BLTransformType finalTransformFixedType() const noexcept { return ctxI->finalTransformFixedType(); }
+  BL_INLINE_NODEBUG BLTransformType meta_transform_fixed_type() const noexcept { return ctx_impl->meta_transform_fixed_type(); }
+  BL_INLINE_NODEBUG BLTransformType final_transform_fixed_type() const noexcept { return ctx_impl->final_transform_fixed_type(); }
 
-  BL_INLINE BLMatrix2D userTransform() const noexcept {
-    const BLMatrix2D& t = ctxI->userTransform();
+  BL_INLINE BLMatrix2D user_transform() const noexcept {
+    const BLMatrix2D& t = ctx_impl->user_transform();
     return BLMatrix2D(t.m00, t.m01, t.m10, t.m11, 0.0, 0.0);
   }
 
-  BL_INLINE BLMatrix2D finalTransformFixed(const BLPoint& originFixed) const noexcept {
-    const BLMatrix2D& t = ctxI->finalTransformFixed();
-    return BLMatrix2D(t.m00, t.m01, t.m10, t.m11, originFixed.x, originFixed.y);
+  BL_INLINE BLMatrix2D final_transform_fixed(const BLPoint& origin_fixed) const noexcept {
+    const BLMatrix2D& t = ctx_impl->final_transform_fixed();
+    return BLMatrix2D(t.m00, t.m01, t.m10, t.m11, origin_fixed.x, origin_fixed.y);
   }
 
-  BL_INLINE BLMatrix2D metaTransformFixed(const BLPoint& originFixed) const noexcept {
-    const BLMatrix2D& t = ctxI->metaTransformFixed();
-    return BLMatrix2D(t.m00, t.m01, t.m10, t.m11, originFixed.x, originFixed.y);
+  BL_INLINE BLMatrix2D meta_transform_fixed(const BLPoint& origin_fixed) const noexcept {
+    const BLMatrix2D& t = ctx_impl->meta_transform_fixed();
+    return BLMatrix2D(t.m00, t.m01, t.m10, t.m11, origin_fixed.x, origin_fixed.y);
   }
 };
 
 // bl::RasterEngine - ContextImpl - Internals - SyncWorkState
 // ==========================================================
 
-//! State that is used by the synchronous rendering context when using `syncWorkData` to execute the work
+//! State that is used by the synchronous rendering context when using `sync_work_data` to execute the work
 //! in user thread. Some properties of `WorkData` are used as states, and those have to be saved/restored.
 class SyncWorkState {
 public:
-  BLBox _clipBoxD;
+  BLBox _clip_box_d;
 
-  BL_INLINE_NODEBUG void save(const WorkData& workData) noexcept { _clipBoxD = workData.edgeBuilder._clipBoxD; }
-  BL_INLINE_NODEBUG void restore(WorkData& workData) const noexcept { workData.edgeBuilder._clipBoxD = _clipBoxD; }
+  BL_INLINE_NODEBUG void save(const WorkData& work_data) noexcept { _clip_box_d = work_data.edge_builder._clip_box_d; }
+  BL_INLINE_NODEBUG void restore(WorkData& work_data) const noexcept { work_data.edge_builder._clip_box_d = _clip_box_d; }
 };
 
 // bl::RasterEngine - ContextImpl - Internals - Core State
 // =======================================================
 
-static BL_INLINE void onBeforeConfigChange(BLRasterContextImpl* ctxI) noexcept {
-  if (blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateConfig)) {
-    SavedState* state = ctxI->savedState;
-    state->approximationOptions = ctxI->approximationOptions();
+static BL_INLINE void on_before_config_change(BLRasterContextImpl* ctx_impl) noexcept {
+  if (bl_test_flag(ctx_impl->context_flags, ContextFlags::kWeakStateConfig)) {
+    SavedState* state = ctx_impl->saved_state;
+    state->approximation_options = ctx_impl->approximation_options();
   }
 }
 
-static BL_INLINE void onAfterFlattenToleranceChanged(BLRasterContextImpl* ctxI) noexcept {
-  ctxI->internalState.toleranceFixedD = ctxI->approximationOptions().flattenTolerance * ctxI->renderTargetInfo.fpScaleD;
-  ctxI->syncWorkData.edgeBuilder.setFlattenToleranceSq(Math::square(ctxI->internalState.toleranceFixedD));
+static BL_INLINE void on_after_flatten_tolerance_changed(BLRasterContextImpl* ctx_impl) noexcept {
+  ctx_impl->internal_state.toleranceFixedD = ctx_impl->approximation_options().flatten_tolerance * ctx_impl->render_target_info.fp_scale_d;
+  ctx_impl->sync_work_data.edge_builder.set_flatten_tolerance_sq(Math::square(ctx_impl->internal_state.toleranceFixedD));
 }
 
-static BL_INLINE void onAfterOffsetParameterChanged(BLRasterContextImpl* ctxI) noexcept {
-  blUnused(ctxI);
+static BL_INLINE void on_after_offset_parameter_changed(BLRasterContextImpl* ctx_impl) noexcept {
+  bl_unused(ctx_impl);
 }
 
-static BL_INLINE void onAfterCompOpChanged(BLRasterContextImpl* ctxI) noexcept {
-  ctxI->compOpSimplifyInfo = compOpSimplifyInfoArrayOf(CompOpExt(ctxI->compOp()), ctxI->format());
+static BL_INLINE void on_after_comp_op_changed(BLRasterContextImpl* ctx_impl) noexcept {
+  ctx_impl->comp_op_simplify_info = comp_op_simplify_info_array_of(CompOpExt(ctx_impl->comp_op()), ctx_impl->format());
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Style State
 // ========================================================
 
-static BL_INLINE void initStyleToDefault(BLRasterContextImpl* ctxI, BLContextStyleSlot slot) noexcept {
-  ctxI->internalState.styleType[slot] = uint8_t(BL_OBJECT_TYPE_RGBA32);
+static BL_INLINE void init_style_to_default(BLRasterContextImpl* ctx_impl, BLContextStyleSlot slot) noexcept {
+  ctx_impl->internal_state.style_type[slot] = uint8_t(BL_OBJECT_TYPE_RGBA32);
 
-  StyleData& style = ctxI->internalState.style[slot];
+  StyleData& style = ctx_impl->internal_state.style[slot];
   style = StyleData{};
-  style.solid.initHeader(0, FormatExt(ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB]));
-  style.solid.pipelineData = ctxI->solidOverrideFillTable[size_t(CompOpSolidId::kOpaqueBlack)].pipelineData;
+  style.solid.init_header(0, FormatExt(ctx_impl->solid_format_table[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB]));
+  style.solid.pipeline_data = ctx_impl->solid_override_fill_table[size_t(CompOpSolidId::kOpaqueBlack)].pipeline_data;
   style.solid.original.rgba32.value = 0xFF000000u;
-  style.makeFetchDataImplicit();
+  style.make_fetch_data_implicit();
 }
 
-static BL_INLINE void destroyValidStyle(BLRasterContextImpl* ctxI, StyleData* style) noexcept {
-  RenderFetchData* fetchData = static_cast<RenderFetchData*>(style->fetchData);
-  fetchData->release(ctxI);
+static BL_INLINE void destroy_valid_style(BLRasterContextImpl* ctx_impl, StyleData* style) noexcept {
+  RenderFetchData* fetch_data = static_cast<RenderFetchData*>(style->fetch_data);
+  fetch_data->release(ctx_impl);
 }
 
-static BL_INLINE void onBeforeStyleChange(BLRasterContextImpl* ctxI, BLContextStyleSlot slot, StyleData& style, ContextFlags contextFlags) noexcept {
-  if (blTestFlag(contextFlags, ContextFlags::kFetchDataBase << slot)) {
-    if (!blTestFlag(contextFlags, ContextFlags::kWeakStateBaseStyle << slot)) {
-      RenderFetchData* fetchData = style.getRenderFetchData();
-      fetchData->release(ctxI);
+static BL_INLINE void on_before_style_change(BLRasterContextImpl* ctx_impl, BLContextStyleSlot slot, StyleData& style, ContextFlags context_flags) noexcept {
+  if (bl_test_flag(context_flags, ContextFlags::kFetchDataBase << slot)) {
+    if (!bl_test_flag(context_flags, ContextFlags::kWeakStateBaseStyle << slot)) {
+      RenderFetchData* fetch_data = style.get_render_fetch_data();
+      fetch_data->release(ctx_impl);
       return;
     }
   }
   else {
-    BL_ASSERT(blTestFlag(contextFlags, ContextFlags::kWeakStateBaseStyle << slot));
+    BL_ASSERT(bl_test_flag(context_flags, ContextFlags::kWeakStateBaseStyle << slot));
   }
 
-  BL_ASSERT(ctxI->savedState != nullptr);
-  ctxI->savedState->style[slot].copyFrom(style);
+  BL_ASSERT(ctx_impl->saved_state != nullptr);
+  ctx_impl->saved_state->style[slot].copy_from(style);
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Fetch Data Initialization
 // ======================================================================
 
-// Recycle means that the FetchData was allocated by the rendering context 'setStyle()' function and it's pooled.
-static void BL_CDECL recycleFetchDataImage(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
-  ImageInternal::releaseInstance(static_cast<BLImageCore*>(&fetchData->style));
-  ctxI->freeFetchData(fetchData);
+// Recycle means that the FetchData was allocated by the rendering context 'set_style()' function and it's pooled.
+static void BL_CDECL recycle_fetch_data_image(BLRasterContextImpl* ctx_impl, RenderFetchData* fetch_data) noexcept {
+  ImageInternal::release_instance(static_cast<BLImageCore*>(&fetch_data->style));
+  ctx_impl->free_fetch_data(fetch_data);
 }
 
-static void BL_CDECL recycleFetchDataPattern(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
-  PatternInternal::releaseInstance(static_cast<BLPatternCore*>(&fetchData->style));
-  ctxI->freeFetchData(fetchData);
+static void BL_CDECL recycle_fetch_data_pattern(BLRasterContextImpl* ctx_impl, RenderFetchData* fetch_data) noexcept {
+  PatternInternal::release_instance(static_cast<BLPatternCore*>(&fetch_data->style));
+  ctx_impl->free_fetch_data(fetch_data);
 }
 
-static void BL_CDECL recycleFetchDataGradient(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
-  GradientInternal::releaseInstance(static_cast<BLGradientCore*>(&fetchData->style));
-  ctxI->freeFetchData(fetchData);
+static void BL_CDECL recycle_fetch_data_gradient(BLRasterContextImpl* ctx_impl, RenderFetchData* fetch_data) noexcept {
+  GradientInternal::release_instance(static_cast<BLGradientCore*>(&fetch_data->style));
+  ctx_impl->free_fetch_data(fetch_data);
 }
 
 // Destroy is used exclusively by the multi-threaded rendering context implementation. This FetchData was allocated
 // during a render call dispatch in which a Style has been passed explicitly to the call. This kind of FetchData is
 // one-shot: only one reference to it exists.
-static void BL_CDECL destroyFetchDataImage(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
-  blUnused(ctxI);
-  ImageInternal::releaseInstance(static_cast<BLImageCore*>(&fetchData->style));
+static void BL_CDECL destroy_fetch_data_image(BLRasterContextImpl* ctx_impl, RenderFetchData* fetch_data) noexcept {
+  bl_unused(ctx_impl);
+  ImageInternal::release_instance(static_cast<BLImageCore*>(&fetch_data->style));
 }
 
-static void BL_CDECL destroyFetchDataGradient(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
-  blUnused(ctxI);
-  GradientInternal::releaseInstance(static_cast<BLGradientCore*>(&fetchData->style));
+static void BL_CDECL destroy_fetch_data_gradient(BLRasterContextImpl* ctx_impl, RenderFetchData* fetch_data) noexcept {
+  bl_unused(ctx_impl);
+  GradientInternal::release_instance(static_cast<BLGradientCore*>(&fetch_data->style));
 }
 
 // Creating FetchData
@@ -291,49 +291,49 @@ static void BL_CDECL destroyFetchDataGradient(BLRasterContextImpl* ctxI, RenderF
 
 // There are in general two ways FetchData can be created:
 //
-//   - using 'BLContext::setStyle()'
+//   - using 'BLContext::set_style()'
 //   - passing Style explicitly to the frontend function suffixed by 'Ext'
-//   - passing an Image to a 'blitImage' frontend function
+//   - passing an Image to a 'blit_image' frontend function
 //
-// When FetchData is created by setStyle() it will become part of the rendering context State, which means that
+// When FetchData is created by set_style() it will become part of the rendering context State, which means that
 // such FetchData can be saved, restored, reused, etc... The rendering context uses a reference count to keep
-// track of such FetchData and must maintain additional properties to make getStyle() working.
+// track of such FetchData and must maintain additional properties to make get_style() working.
 //
 // On the other hand, when FetchData is created from an explicitly passed style / image to a render call, it's
 // only used once and doesn't need anything to be able to get that style in the future, which means that it's
 // much easier to manage.
 //
-// Applier is used with initNonSolidFetchData function to unify both concepts and to share code.
+// Applier is used with init_non_solid_fetch_data function to unify both concepts and to share code.
 
 class NonSolidFetchStateApplier {
 public:
   static constexpr bool kIsExplicit = false;
 
-  ContextFlags _contextFlags;
-  ContextFlags _styleFlags;
+  ContextFlags _context_flags;
+  ContextFlags _style_flags;
   BLContextStyleSlot _slot;
 
-  BL_INLINE_NODEBUG NonSolidFetchStateApplier(ContextFlags contextFlags, BLContextStyleSlot slot) noexcept
-    : _contextFlags(contextFlags),
-      _styleFlags(ContextFlags::kFetchDataBase),
+  BL_INLINE_NODEBUG NonSolidFetchStateApplier(ContextFlags context_flags, BLContextStyleSlot slot) noexcept
+    : _context_flags(context_flags),
+      _style_flags(ContextFlags::kFetchDataBase),
       _slot(slot) {}
 
-  BL_INLINE void initStyleType(BLRasterContextImpl* ctxI, BLObjectType styleType) noexcept {
-    ctxI->internalState.styleType[_slot] = uint8_t(styleType);
+  BL_INLINE void init_style_type(BLRasterContextImpl* ctx_impl, BLObjectType style_type) noexcept {
+    ctx_impl->internal_state.style_type[_slot] = uint8_t(style_type);
   }
 
-  BL_INLINE void initComputedTransform(BLRasterContextImpl* ctxI, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
-    if (transformType >= BL_TRANSFORM_TYPE_INVALID)
-      markAsNop();
-    ctxI->internalState.style[_slot].nonSolid.adjustedTransform = transform;
+  BL_INLINE void init_computed_transform(BLRasterContextImpl* ctx_impl, const BLMatrix2D& transform, BLTransformType transform_type) noexcept {
+    if (transform_type >= BL_TRANSFORM_TYPE_INVALID)
+      mark_as_nop();
+    ctx_impl->internal_state.style[_slot].non_solid.adjusted_transform = transform;
   }
 
-  BL_INLINE void markAsNop() noexcept {
-    _styleFlags |= ContextFlags::kNoBaseStyle;
+  BL_INLINE void mark_as_nop() noexcept {
+    _style_flags |= ContextFlags::kNoBaseStyle;
   }
 
-  BL_INLINE bool finalize(BLRasterContextImpl* ctxI) noexcept {
-    ctxI->contextFlags = _contextFlags | (_styleFlags << uint32_t(_slot));
+  BL_INLINE bool finalize(BLRasterContextImpl* ctx_impl) noexcept {
+    ctx_impl->context_flags = _context_flags | (_style_flags << uint32_t(_slot));
     return true;
   }
 };
@@ -344,137 +344,137 @@ public:
 
   BL_INLINE_NODEBUG NonSolidFetchExplicitApplier() noexcept {}
 
-  BL_INLINE void initStyleType(BLRasterContextImpl* ctxI, BLObjectType styleType) noexcept {
-    blUnused(ctxI, styleType);
+  BL_INLINE void init_style_type(BLRasterContextImpl* ctx_impl, BLObjectType style_type) noexcept {
+    bl_unused(ctx_impl, style_type);
   }
 
-  BL_INLINE void initComputedTransform(BLRasterContextImpl* ctxI, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
-    blUnused(ctxI, transform, transformType);
+  BL_INLINE void init_computed_transform(BLRasterContextImpl* ctx_impl, const BLMatrix2D& transform, BLTransformType transform_type) noexcept {
+    bl_unused(ctx_impl, transform, transform_type);
   }
 
-  BL_INLINE void markAsNop() noexcept {
+  BL_INLINE void mark_as_nop() noexcept {
   }
 
-  BL_INLINE bool finalize(BLRasterContextImpl* ctxI) noexcept {
-    blUnused(ctxI);
+  BL_INLINE bool finalize(BLRasterContextImpl* ctx_impl) noexcept {
+    bl_unused(ctx_impl);
     return true;
   }
 };
 
 template<typename Applier>
-static BL_INLINE bool initNonSolidFetchData(
-    BLRasterContextImpl* ctxI,
-    RenderFetchData* fetchData,
-    const BLObjectCore* style, BLObjectType styleType, BLContextStyleTransformMode transformMode, Applier& applier) noexcept {
+static BL_INLINE bool init_non_solid_fetch_data(
+    BLRasterContextImpl* ctx_impl,
+    RenderFetchData* fetch_data,
+    const BLObjectCore* style, BLObjectType style_type, BLContextStyleTransformMode transform_mode, Applier& applier) noexcept {
 
-  const BLMatrix2D* transform = ctxI->transformPtrs[transformMode];
-  BLTransformType transformType = BLTransformType(ctxI->internalState.transformTypes[transformMode]);
-  BLMatrix2D transformStorage;
+  const BLMatrix2D* transform = ctx_impl->transform_ptrs[transform_mode];
+  BLTransformType transform_type = BLTransformType(ctx_impl->internal_state.transform_types[transform_mode]);
+  BLMatrix2D transform_storage;
 
-  applier.initStyleType(ctxI, styleType);
-  Pipeline::Signature pendingBit{0};
+  applier.init_style_type(ctx_impl, style_type);
+  Pipeline::Signature pending_bit{0};
 
-  switch (styleType) {
+  switch (style_type) {
     case BL_OBJECT_TYPE_PATTERN: {
       const BLPattern* pattern = static_cast<const BLPattern*>(style);
-      BLPatternImpl* patternI = PatternInternal::getImpl(pattern);
-      BLImageCore* image = &patternI->image;
+      BLPatternImpl* pattern_impl = PatternInternal::get_impl(pattern);
+      BLImageCore* image = &pattern_impl->image;
 
       if constexpr (Applier::kIsExplicit) {
         // Reinitialize this style to use the image instead of the pattern if this is an explicit operation.
         // The reason is that we don't need the BLPattern data once the FetchData is initialized, so if the
         // user reinitializes the pattern for multiple calls we would save one memory allocation each time
         // the pattern is reinitialized.
-        fetchData->initStyleObject(image);
-        fetchData->initDestroyFunc(destroyFetchDataImage);
+        fetch_data->init_style_object(image);
+        fetch_data->init_destroy_func(destroy_fetch_data_image);
       }
       else {
-        fetchData->initDestroyFunc(recycleFetchDataPattern);
+        fetch_data->init_destroy_func(recycle_fetch_data_pattern);
       }
 
       // NOTE: The area comes from pattern, it means that it's the pattern's responsibility to make sure that it's valid.
-      BLRectI area = patternI->area;
+      BLRectI area = pattern_impl->area;
 
       if (!area.w || !area.h) {
-        applier.markAsNop();
+        applier.mark_as_nop();
         if constexpr (Applier::kIsExplicit)
           return false;
       }
 
-      BLTransformType styleTransformType = pattern->transformType();
-      if (styleTransformType != BL_TRANSFORM_TYPE_IDENTITY) {
-        TransformInternal::multiply(transformStorage, patternI->transform, *transform);
-        transform = &transformStorage;
-        styleTransformType = transformStorage.type();
+      BLTransformType style_transform_type = pattern->transform_type();
+      if (style_transform_type != BL_TRANSFORM_TYPE_IDENTITY) {
+        TransformInternal::multiply(transform_storage, pattern_impl->transform, *transform);
+        transform = &transform_storage;
+        style_transform_type = transform_storage.type();
       }
-      applier.initComputedTransform(ctxI, *transform, transformType);
+      applier.init_computed_transform(ctx_impl, *transform, transform_type);
 
-      BLPatternQuality quality = BLPatternQuality(ctxI->hints().patternQuality);
-      BLExtendMode extendMode = PatternInternal::getExtendMode(pattern);
-      BLImageImpl* imageI = ImageInternal::getImpl(image);
+      BLPatternQuality quality = BLPatternQuality(ctx_impl->hints().pattern_quality);
+      BLExtendMode extend_mode = PatternInternal::get_extend_mode(pattern);
+      BLImageImpl* image_impl = ImageInternal::get_impl(image);
 
-      fetchData->extra.format = uint8_t(imageI->format);
-      fetchData->initImageSource(imageI, area);
+      fetch_data->extra.format = uint8_t(image_impl->format);
+      fetch_data->init_image_source(image_impl, area);
 
-      fetchData->signature = Pipeline::FetchUtils::initPatternAffine(
-        fetchData->pipelineData.pattern, extendMode, quality, uint32_t(imageI->depth) / 8u, *transform);
+      fetch_data->signature = Pipeline::FetchUtils::init_pattern_affine(
+        fetch_data->pipeline_data.pattern, extend_mode, quality, uint32_t(image_impl->depth) / 8u, *transform);
       break;
     }
 
     case BL_OBJECT_TYPE_GRADIENT: {
       const BLGradient* gradient = static_cast<const BLGradient*>(style);
-      BLGradientPrivateImpl* gradientI = GradientInternal::getImpl(gradient);
+      BLGradientPrivateImpl* gradient_impl = GradientInternal::get_impl(gradient);
 
-      fetchData->initStyleObject(gradient);
+      fetch_data->init_style_object(gradient);
       if constexpr (Applier::kIsExplicit)
-        fetchData->initDestroyFunc(destroyFetchDataGradient);
+        fetch_data->init_destroy_func(destroy_fetch_data_gradient);
       else
-        fetchData->initDestroyFunc(recycleFetchDataGradient);
+        fetch_data->init_destroy_func(recycle_fetch_data_gradient);
 
-      BLTransformType styleTransformType = gradient->transformType();
-      if (styleTransformType != BL_TRANSFORM_TYPE_IDENTITY) {
-        TransformInternal::multiply(transformStorage, gradientI->transform, *transform);
-        transform = &transformStorage;
-        styleTransformType = transformStorage.type();
+      BLTransformType style_transform_type = gradient->transform_type();
+      if (style_transform_type != BL_TRANSFORM_TYPE_IDENTITY) {
+        TransformInternal::multiply(transform_storage, gradient_impl->transform, *transform);
+        transform = &transform_storage;
+        style_transform_type = transform_storage.type();
       }
-      applier.initComputedTransform(ctxI, *transform, transformType);
+      applier.init_computed_transform(ctx_impl, *transform, transform_type);
 
-      BLGradientInfo gradientInfo = GradientInternal::ensureInfo(gradientI);
-      fetchData->extra.format = uint8_t(gradientInfo.format);
+      BLGradientInfo gradient_info = GradientInternal::ensure_info(gradient_impl);
+      fetch_data->extra.format = uint8_t(gradient_info.format);
 
-      if (gradientInfo.empty()) {
-        applier.markAsNop();
+      if (gradient_info.is_empty()) {
+        applier.mark_as_nop();
         if constexpr (Applier::kIsExplicit)
           return false;
       }
-      else if (gradientInfo.solid) {
+      else if (gradient_info.solid) {
         // Using last color according to the SVG specification.
-        uint32_t rgba32 = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(RgbaInternal::rgba32FromRgba64(gradientI->stops[gradientI->size - 1].rgba.value));
-        fetchData->pipelineData.solid.prgb32 = rgba32;
+        uint32_t rgba32 = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(RgbaInternal::rgba32FromRgba64(gradient_impl->stops[gradient_impl->size - 1].rgba.value));
+        fetch_data->pipeline_data.solid.prgb32 = rgba32;
       }
       else {
-        BLGradientType type = GradientInternal::getGradientType(gradient);
-        BLGradientQuality quality = BLGradientQuality(ctxI->hints().gradientQuality);
-        BLExtendMode extendMode = GradientInternal::getExtendMode(gradient);
+        BLGradientType type = GradientInternal::get_gradient_type(gradient);
+        BLGradientQuality quality = BLGradientQuality(ctx_impl->hints().gradient_quality);
+        BLExtendMode extend_mode = GradientInternal::get_extend_mode(gradient);
 
         // Do not dither gradients when rendering into A8 targets.
-        if (ctxI->syncWorkData.ctxData.dst.format == BL_FORMAT_A8)
+        if (ctx_impl->sync_work_data.ctx_data.dst.format == BL_FORMAT_A8)
           quality = BL_GRADIENT_QUALITY_NEAREST;
 
-        const void* lutData = nullptr;
-        uint32_t lutSize = gradientInfo.lutSize(quality >= BL_GRADIENT_QUALITY_DITHER);
+        const void* lut_data = nullptr;
+        uint32_t lut_size = gradient_info.lut_size(quality >= BL_GRADIENT_QUALITY_DITHER);
 
-        BLGradientLUT* lut = gradientI->lut[size_t(quality >= BL_GRADIENT_QUALITY_DITHER)];
+        BLGradientLUT* lut = gradient_impl->lut[size_t(quality >= BL_GRADIENT_QUALITY_DITHER)];
         if (lut)
-          lutData = lut->data();
+          lut_data = lut->data();
 
         // We have to store the quality somewhere as if this FetchData would be lazily materialized we have to
         // cache the desired quality and the size of the LUT calculated (to avoid going over GradientInfo again).
-        fetchData->extra.custom[0] = uint8_t(quality);
-        pendingBit = Pipeline::Signature::fromPendingFlag(!lut);
+        fetch_data->extra.custom[0] = uint8_t(quality);
+        pending_bit = Pipeline::Signature::from_pending_flag(!lut);
 
-        fetchData->signature = Pipeline::FetchUtils::initGradient(
-          fetchData->pipelineData.gradient, type, extendMode, quality, gradientI->values, lutData, lutSize, *transform);
+        fetch_data->signature = Pipeline::FetchUtils::init_gradient(
+          fetch_data->pipeline_data.gradient, type, extend_mode, quality, gradient_impl->values, lut_data, lut_size, *transform);
       }
       break;
     }
@@ -484,213 +484,213 @@ static BL_INLINE bool initNonSolidFetchData(
       BL_NOT_REACHED();
   }
 
-  if (fetchData->signature.hasPendingFlag()) {
-    applier.markAsNop();
+  if (fetch_data->signature.has_pending_flag()) {
+    applier.mark_as_nop();
     if constexpr (Applier::kIsExplicit)
       return false;
   }
 
-  fetchData->signature |= pendingBit;
-  return applier.finalize(ctxI);
+  fetch_data->signature |= pending_bit;
+  return applier.finalize(ctx_impl);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Fill & Stroke Style
 // ===============================================================
 
-static BL_INLINE_NODEBUG uint32_t restrictedIndexFromSlot(BLContextStyleSlot slot) noexcept {
-  return blMin<uint32_t>(slot, uint32_t(BL_CONTEXT_STYLE_SLOT_MAX_VALUE) + 1);
+static BL_INLINE_NODEBUG uint32_t restricted_index_from_slot(BLContextStyleSlot slot) noexcept {
+  return bl_min<uint32_t>(slot, uint32_t(BL_CONTEXT_STYLE_SLOT_MAX_VALUE) + 1);
 }
 
-static BLResult BL_CDECL getStyleImpl(const BLContextImpl* baseImpl, BLContextStyleSlot slot, bool transformed, BLVarCore* varOut) noexcept {
-  const BLRasterContextImpl* ctxI = static_cast<const BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL get_style_impl(const BLContextImpl* base_impl, BLContextStyleSlot slot, bool transformed, BLVarCore* var_out) noexcept {
+  const BLRasterContextImpl* ctx_impl = static_cast<const BLRasterContextImpl*>(base_impl);
 
   if (BL_UNLIKELY(slot > BL_CONTEXT_STYLE_SLOT_MAX_VALUE)) {
-    blVarAssignNull(varOut);
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    bl_var_assign_null(var_out);
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
   }
 
-  BLObjectType styleType = BLObjectType(ctxI->internalState.styleType[slot]);
-  const StyleData* style = &ctxI->internalState.style[slot];
+  BLObjectType style_type = BLObjectType(ctx_impl->internal_state.style_type[slot]);
+  const StyleData* style = &ctx_impl->internal_state.style[slot];
 
-  if (styleType <= BL_OBJECT_TYPE_NULL) {
-    if (styleType == BL_OBJECT_TYPE_RGBA32)
-      return blVarAssignRgba32(varOut, style->solid.original.rgba32.value);
+  if (style_type <= BL_OBJECT_TYPE_NULL) {
+    if (style_type == BL_OBJECT_TYPE_RGBA32)
+      return bl_var_assign_rgba32(var_out, style->solid.original.rgba32.value);
 
-    if (styleType == BL_OBJECT_TYPE_RGBA64)
-      return blVarAssignRgba64(varOut, style->solid.original.rgba64.value);
+    if (style_type == BL_OBJECT_TYPE_RGBA64)
+      return bl_var_assign_rgba64(var_out, style->solid.original.rgba64.value);
 
-    if (styleType == BL_OBJECT_TYPE_RGBA)
-      return blVarAssignRgba(varOut, &style->solid.original.rgba);
+    if (style_type == BL_OBJECT_TYPE_RGBA)
+      return bl_var_assign_rgba(var_out, &style->solid.original.rgba);
 
-    return blVarAssignNull(varOut);
+    return bl_var_assign_null(var_out);
   }
 
-  const RenderFetchData* fetchData = style->getRenderFetchData();
-  blVarAssignWeak(varOut, &fetchData->styleAs<BLVarCore>());
+  const RenderFetchData* fetch_data = style->get_render_fetch_data();
+  bl_var_assign_weak(var_out, &fetch_data->style_as<BLVarCore>());
 
   if (!transformed)
     return BL_SUCCESS;
 
-  switch (styleType) {
+  switch (style_type) {
     case BL_OBJECT_TYPE_PATTERN:
-      return varOut->dcast().as<BLPattern>().setTransform(style->nonSolid.adjustedTransform);
+      return var_out->dcast().as<BLPattern>().set_transform(style->non_solid.adjusted_transform);
 
     case BL_OBJECT_TYPE_GRADIENT:
-      return varOut->dcast().as<BLGradient>().setTransform(style->nonSolid.adjustedTransform);
+      return var_out->dcast().as<BLGradient>().set_transform(style->non_solid.adjusted_transform);
 
     default:
-      return blTraceError(BL_ERROR_INVALID_STATE);
+      return bl_trace_error(BL_ERROR_INVALID_STATE);
   }
 }
 
-static BLResult BL_CDECL disableStyleImpl(BLContextImpl* baseImpl, BLContextStyleSlot slot) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  ContextFlags contextFlags = ctxI->contextFlags;
-  ContextFlags styleFlags = (ContextFlags::kWeakStateBaseStyle | ContextFlags::kFetchDataBase) << restrictedIndexFromSlot(slot);
+static BLResult BL_CDECL disable_style_impl(BLContextImpl* base_impl, BLContextStyleSlot slot) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  ContextFlags context_flags = ctx_impl->context_flags;
+  ContextFlags style_flags = (ContextFlags::kWeakStateBaseStyle | ContextFlags::kFetchDataBase) << restricted_index_from_slot(slot);
 
-  if (blTestFlag(contextFlags, styleFlags)) {
+  if (bl_test_flag(context_flags, style_flags)) {
     if (BL_UNLIKELY(slot > BL_CONTEXT_STYLE_SLOT_MAX_VALUE))
-      return blTraceError(BL_ERROR_INVALID_VALUE);
-    onBeforeStyleChange(ctxI, slot, ctxI->internalState.style[slot], contextFlags);
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    on_before_style_change(ctx_impl, slot, ctx_impl->internal_state.style[slot], context_flags);
   }
 
-  ctxI->contextFlags = (contextFlags & ~styleFlags) | ContextFlags::kNoBaseStyle << slot;
-  ctxI->internalState.styleType[slot] = uint8_t(BL_OBJECT_TYPE_NULL);
+  ctx_impl->context_flags = (context_flags & ~style_flags) | ContextFlags::kNoBaseStyle << slot;
+  ctx_impl->internal_state.style_type[slot] = uint8_t(BL_OBJECT_TYPE_NULL);
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setStyleRgba32Impl(BLContextImpl* baseImpl, BLContextStyleSlot slot, uint32_t rgba32) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  ContextFlags contextFlags = ctxI->contextFlags;
-  ContextFlags styleFlags = (ContextFlags::kWeakStateBaseStyle | ContextFlags::kFetchDataBase) << restrictedIndexFromSlot(slot);
+static BLResult BL_CDECL set_style_rgba32Impl(BLContextImpl* base_impl, BLContextStyleSlot slot, uint32_t rgba32) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  ContextFlags context_flags = ctx_impl->context_flags;
+  ContextFlags style_flags = (ContextFlags::kWeakStateBaseStyle | ContextFlags::kFetchDataBase) << restricted_index_from_slot(slot);
 
-  if (blTestFlag(contextFlags, styleFlags)) {
+  if (bl_test_flag(context_flags, style_flags)) {
     if (BL_UNLIKELY(slot > BL_CONTEXT_STYLE_SLOT_MAX_VALUE))
-      return blTraceError(BL_ERROR_INVALID_VALUE);
-    onBeforeStyleChange(ctxI, slot, ctxI->internalState.style[slot], contextFlags);
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    on_before_style_change(ctx_impl, slot, ctx_impl->internal_state.style[slot], context_flags);
   }
 
-  StyleData& style = ctxI->internalState.style[slot];
+  StyleData& style = ctx_impl->internal_state.style[slot];
   style.solid.original.rgba32.value = rgba32;
 
   uint32_t premultiplied = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32);
   FormatExt format = formatFromRgba32(rgba32);
 
-  ctxI->contextFlags = contextFlags & ~(styleFlags | (ContextFlags::kNoBaseStyle << slot));
-  ctxI->internalState.styleType[slot] = uint8_t(BL_OBJECT_TYPE_RGBA32);
+  ctx_impl->context_flags = context_flags & ~(style_flags | (ContextFlags::kNoBaseStyle << slot));
+  ctx_impl->internal_state.style_type[slot] = uint8_t(BL_OBJECT_TYPE_RGBA32);
 
-  style.solid.initHeader(0, format);
-  style.solid.pipelineData.prgb32 = premultiplied;
-  style.makeFetchDataImplicit();
+  style.solid.init_header(0, format);
+  style.solid.pipeline_data.prgb32 = premultiplied;
+  style.make_fetch_data_implicit();
 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setStyleRgba64Impl(BLContextImpl* baseImpl, BLContextStyleSlot slot, uint64_t rgba64) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  ContextFlags contextFlags = ctxI->contextFlags;
-  ContextFlags styleFlags = (ContextFlags::kWeakStateBaseStyle | ContextFlags::kFetchDataBase) << restrictedIndexFromSlot(slot);
+static BLResult BL_CDECL set_style_rgba64Impl(BLContextImpl* base_impl, BLContextStyleSlot slot, uint64_t rgba64) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  ContextFlags context_flags = ctx_impl->context_flags;
+  ContextFlags style_flags = (ContextFlags::kWeakStateBaseStyle | ContextFlags::kFetchDataBase) << restricted_index_from_slot(slot);
 
-  if (blTestFlag(contextFlags, styleFlags)) {
+  if (bl_test_flag(context_flags, style_flags)) {
     if (BL_UNLIKELY(slot > BL_CONTEXT_STYLE_SLOT_MAX_VALUE))
-      return blTraceError(BL_ERROR_INVALID_VALUE);
-    onBeforeStyleChange(ctxI, slot, ctxI->internalState.style[slot], contextFlags);
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    on_before_style_change(ctx_impl, slot, ctx_impl->internal_state.style[slot], context_flags);
   }
 
-  StyleData& style = ctxI->internalState.style[slot];
+  StyleData& style = ctx_impl->internal_state.style[slot];
   style.solid.original.rgba64.value = rgba64;
 
   uint32_t rgba32 = RgbaInternal::rgba32FromRgba64(rgba64);
   uint32_t premultiplied = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32);
   FormatExt format = formatFromRgba32(rgba32);
 
-  ctxI->contextFlags = contextFlags & ~(styleFlags | (ContextFlags::kNoBaseStyle << slot));
-  ctxI->internalState.styleType[slot] = uint8_t(BL_OBJECT_TYPE_RGBA64);
+  ctx_impl->context_flags = context_flags & ~(style_flags | (ContextFlags::kNoBaseStyle << slot));
+  ctx_impl->internal_state.style_type[slot] = uint8_t(BL_OBJECT_TYPE_RGBA64);
 
-  style.solid.initHeader(0, format);
-  style.solid.pipelineData.prgb32 = premultiplied;
-  style.makeFetchDataImplicit();
+  style.solid.init_header(0, format);
+  style.solid.pipeline_data.prgb32 = premultiplied;
+  style.make_fetch_data_implicit();
 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setStyleRgbaImpl(BLContextImpl* baseImpl, BLContextStyleSlot slot, const BLRgba* rgba) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  ContextFlags contextFlags = ctxI->contextFlags;
-  ContextFlags styleFlags = (ContextFlags::kWeakStateBaseStyle | ContextFlags::kFetchDataBase) << restrictedIndexFromSlot(slot);
+static BLResult BL_CDECL set_style_rgba_impl(BLContextImpl* base_impl, BLContextStyleSlot slot, const BLRgba* rgba) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  ContextFlags context_flags = ctx_impl->context_flags;
+  ContextFlags style_flags = (ContextFlags::kWeakStateBaseStyle | ContextFlags::kFetchDataBase) << restricted_index_from_slot(slot);
 
-  BLRgba norm = blClamp(*rgba, BLRgba(0.0f, 0.0f, 0.0f, 0.0f), BLRgba(1.0f, 1.0f, 1.0f, 1.0f));
-  if (!RgbaInternal::isValid(*rgba))
-    return disableStyleImpl(baseImpl, slot);
+  BLRgba norm = bl_clamp(*rgba, BLRgba(0.0f, 0.0f, 0.0f, 0.0f), BLRgba(1.0f, 1.0f, 1.0f, 1.0f));
+  if (!RgbaInternal::is_valid(*rgba))
+    return disable_style_impl(base_impl, slot);
 
-  if (blTestFlag(contextFlags, styleFlags)) {
+  if (bl_test_flag(context_flags, style_flags)) {
     if (BL_UNLIKELY(slot > BL_CONTEXT_STYLE_SLOT_MAX_VALUE))
-      return blTraceError(BL_ERROR_INVALID_VALUE);
-    onBeforeStyleChange(ctxI, slot, ctxI->internalState.style[slot], contextFlags);
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    on_before_style_change(ctx_impl, slot, ctx_impl->internal_state.style[slot], context_flags);
   }
 
-  StyleData& style = ctxI->internalState.style[slot];
+  StyleData& style = ctx_impl->internal_state.style[slot];
   style.solid.original.rgba = norm;
 
   // Premultiply and convert to RGBA32.
-  float aScale = norm.a * 255.0f;
-  uint32_t r = uint32_t(Math::roundToInt(norm.r * aScale));
-  uint32_t g = uint32_t(Math::roundToInt(norm.g * aScale));
-  uint32_t b = uint32_t(Math::roundToInt(norm.b * aScale));
-  uint32_t a = uint32_t(Math::roundToInt(aScale));
+  float a_scale = norm.a * 255.0f;
+  uint32_t r = uint32_t(Math::round_to_int(norm.r * a_scale));
+  uint32_t g = uint32_t(Math::round_to_int(norm.g * a_scale));
+  uint32_t b = uint32_t(Math::round_to_int(norm.b * a_scale));
+  uint32_t a = uint32_t(Math::round_to_int(a_scale));
   uint32_t premultiplied = BLRgba32(r, g, b, a).value;
   FormatExt format = formatFromRgba32(premultiplied);
 
-  ctxI->contextFlags = contextFlags & ~(styleFlags | (ContextFlags::kNoBaseStyle << slot));
-  ctxI->internalState.styleType[slot] = uint8_t(BL_OBJECT_TYPE_RGBA);
+  ctx_impl->context_flags = context_flags & ~(style_flags | (ContextFlags::kNoBaseStyle << slot));
+  ctx_impl->internal_state.style_type[slot] = uint8_t(BL_OBJECT_TYPE_RGBA);
 
-  style.solid.initHeader(0, format);
-  style.solid.pipelineData.prgb32 = premultiplied;
-  style.makeFetchDataImplicit();
+  style.solid.init_header(0, format);
+  style.solid.pipeline_data.prgb32 = premultiplied;
+  style.make_fetch_data_implicit();
 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setStyleImpl(BLContextImpl* baseImpl, BLContextStyleSlot slot, const BLObjectCore* style, BLContextStyleTransformMode transformMode) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLObjectType styleType = style->_d.getType();
+static BLResult BL_CDECL set_style_impl(BLContextImpl* base_impl, BLContextStyleSlot slot, const BLObjectCore* style, BLContextStyleTransformMode transform_mode) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLObjectType style_type = style->_d.get_type();
 
-  if (styleType <= BL_OBJECT_TYPE_NULL) {
-    if (styleType == BL_OBJECT_TYPE_RGBA32)
-      return setStyleRgba32Impl(baseImpl, slot, style->_d.rgba32.value);
+  if (style_type <= BL_OBJECT_TYPE_NULL) {
+    if (style_type == BL_OBJECT_TYPE_RGBA32)
+      return set_style_rgba32Impl(base_impl, slot, style->_d.rgba32.value);
 
-    if (styleType == BL_OBJECT_TYPE_RGBA64)
-      return setStyleRgba64Impl(baseImpl, slot, style->_d.rgba64.value);
+    if (style_type == BL_OBJECT_TYPE_RGBA64)
+      return set_style_rgba64Impl(base_impl, slot, style->_d.rgba64.value);
 
-    if (styleType == BL_OBJECT_TYPE_RGBA)
-      return setStyleRgbaImpl(baseImpl, slot, &style->_d.rgba);
+    if (style_type == BL_OBJECT_TYPE_RGBA)
+      return set_style_rgba_impl(base_impl, slot, &style->_d.rgba);
 
-    return disableStyleImpl(ctxI, slot);
+    return disable_style_impl(ctx_impl, slot);
   }
 
-  if (BL_UNLIKELY(slot > BL_CONTEXT_STYLE_SLOT_MAX_VALUE || styleType > BL_OBJECT_TYPE_MAX_STYLE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(slot > BL_CONTEXT_STYLE_SLOT_MAX_VALUE || style_type > BL_OBJECT_TYPE_MAX_STYLE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  ContextFlags contextFlags = ctxI->contextFlags;
-  ContextFlags styleFlags = (ContextFlags::kFetchDataBase | ContextFlags::kWeakStateBaseStyle) << slot;
-  StyleData& styleState = ctxI->internalState.style[slot];
+  ContextFlags context_flags = ctx_impl->context_flags;
+  ContextFlags style_flags = (ContextFlags::kFetchDataBase | ContextFlags::kWeakStateBaseStyle) << slot;
+  StyleData& style_state = ctx_impl->internal_state.style[slot];
 
-  RenderFetchData* fetchData = ctxI->allocFetchData();
-  if (BL_UNLIKELY(!fetchData))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+  RenderFetchData* fetch_data = ctx_impl->alloc_fetch_data();
+  if (BL_UNLIKELY(!fetch_data))
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-  if (blTestFlag(contextFlags, styleFlags))
-    onBeforeStyleChange(ctxI, slot, styleState, contextFlags);
+  if (bl_test_flag(context_flags, style_flags))
+    on_before_style_change(ctx_impl, slot, style_state, context_flags);
 
-  fetchData->initHeader(1);
-  fetchData->initStyleObject(style);
-  ObjectInternal::retainInstance(style);
+  fetch_data->init_header(1);
+  fetch_data->init_style_object(style);
+  ObjectInternal::retain_instance(style);
 
-  styleState.fetchData = fetchData;
-  contextFlags &= ~(styleFlags | (ContextFlags::kNoBaseStyle << slot));
+  style_state.fetch_data = fetch_data;
+  context_flags &= ~(style_flags | (ContextFlags::kNoBaseStyle << slot));
 
-  NonSolidFetchStateApplier applier(contextFlags, slot);
-  initNonSolidFetchData(ctxI, fetchData, style, styleType, transformMode, applier);
+  NonSolidFetchStateApplier applier(context_flags, slot);
+  init_non_solid_fetch_data(ctx_impl, fetch_data, style, style_type, transform_mode, applier);
 
   return BL_SUCCESS;
 }
@@ -698,86 +698,86 @@ static BLResult BL_CDECL setStyleImpl(BLContextImpl* baseImpl, BLContextStyleSlo
 // bl::RasterEngine - ContextImpl - Internals - Stroke State
 // =========================================================
 
-static BL_INLINE void onBeforeStrokeChange(BLRasterContextImpl* ctxI) noexcept {
-  if (blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateStrokeOptions)) {
-    SavedState* state = ctxI->savedState;
-    state->strokeOptions._copyFrom(ctxI->strokeOptions());
-    ArrayInternal::retainInstance(&state->strokeOptions.dashArray);
+static BL_INLINE void on_before_stroke_change(BLRasterContextImpl* ctx_impl) noexcept {
+  if (bl_test_flag(ctx_impl->context_flags, ContextFlags::kWeakStateStrokeOptions)) {
+    SavedState* state = ctx_impl->saved_state;
+    state->stroke_options._copy_from(ctx_impl->stroke_options());
+    ArrayInternal::retain_instance(&state->stroke_options.dash_array);
   }
 }
 
-static BL_INLINE void onBeforeStrokeChangeAndDestroyDashArray(BLRasterContextImpl* ctxI) noexcept {
-  if (blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateStrokeOptions)) {
-    SavedState* state = ctxI->savedState;
-    state->strokeOptions._copyFrom(ctxI->strokeOptions());
+static BL_INLINE void on_before_stroke_change_and_destroy_dash_array(BLRasterContextImpl* ctx_impl) noexcept {
+  if (bl_test_flag(ctx_impl->context_flags, ContextFlags::kWeakStateStrokeOptions)) {
+    SavedState* state = ctx_impl->saved_state;
+    state->stroke_options._copy_from(ctx_impl->stroke_options());
   }
   else {
-    ArrayInternal::releaseInstance(&ctxI->internalState.strokeOptions.dashArray);
+    ArrayInternal::release_instance(&ctx_impl->internal_state.stroke_options.dash_array);
   }
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Transform State
 // ============================================================
 
-// Called before `userTransform` is changed.
+// Called before `user_transform` is changed.
 //
-// This function is responsible for saving the current userTransform in case that the
-// `ContextFlags::kWeakStateUserTransform` flag is set, which means that the userTransform
+// This function is responsible for saving the current user_transform in case that the
+// `ContextFlags::kWeakStateUserTransform` flag is set, which means that the user_transform
 // must be saved before any modification.
-static BL_INLINE void onBeforeUserTransformChange(BLRasterContextImpl* ctxI, Matrix2x2& before2x2) noexcept {
-  before2x2.m[0] = ctxI->finalTransform().m00;
-  before2x2.m[1] = ctxI->finalTransform().m01;
-  before2x2.m[2] = ctxI->finalTransform().m10;
-  before2x2.m[3] = ctxI->finalTransform().m11;
+static BL_INLINE void on_before_user_transform_change(BLRasterContextImpl* ctx_impl, Matrix2x2& before2x2) noexcept {
+  before2x2.m[0] = ctx_impl->final_transform().m00;
+  before2x2.m[1] = ctx_impl->final_transform().m01;
+  before2x2.m[2] = ctx_impl->final_transform().m10;
+  before2x2.m[3] = ctx_impl->final_transform().m11;
 
-  if (blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateUserTransform)) {
+  if (bl_test_flag(ctx_impl->context_flags, ContextFlags::kWeakStateUserTransform)) {
     // Weak MetaTransform state must be set together with weak UserTransform.
-    BL_ASSERT(blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateMetaTransform));
+    BL_ASSERT(bl_test_flag(ctx_impl->context_flags, ContextFlags::kWeakStateMetaTransform));
 
-    SavedState* state = ctxI->savedState;
-    state->altTransform = ctxI->finalTransform();
-    state->userTransform = ctxI->userTransform();
+    SavedState* state = ctx_impl->saved_state;
+    state->alt_transform = ctx_impl->final_transform();
+    state->user_transform = ctx_impl->user_transform();
   }
 }
 
-static BL_INLINE void updateFinalTransform(BLRasterContextImpl* ctxI) noexcept {
-  TransformInternal::multiply(ctxI->internalState.finalTransform, ctxI->userTransform(), ctxI->metaTransform());
+static BL_INLINE void update_final_transform(BLRasterContextImpl* ctx_impl) noexcept {
+  TransformInternal::multiply(ctx_impl->internal_state.final_transform, ctx_impl->user_transform(), ctx_impl->meta_transform());
 }
 
-static BL_INLINE void updateMetaTransformFixed(BLRasterContextImpl* ctxI) noexcept {
-  ctxI->internalState.metaTransformFixed = ctxI->metaTransform();
-  ctxI->internalState.metaTransformFixed.postScale(ctxI->renderTargetInfo.fpScaleD);
+static BL_INLINE void update_meta_transform_fixed(BLRasterContextImpl* ctx_impl) noexcept {
+  ctx_impl->internal_state.meta_transform_fixed = ctx_impl->meta_transform();
+  ctx_impl->internal_state.meta_transform_fixed.post_scale(ctx_impl->render_target_info.fp_scale_d);
 }
 
-static BL_INLINE void updateFinalTransformFixed(BLRasterContextImpl* ctxI) noexcept {
-  ctxI->internalState.finalTransformFixed = ctxI->finalTransform();
-  ctxI->internalState.finalTransformFixed.postScale(ctxI->renderTargetInfo.fpScaleD);
+static BL_INLINE void update_final_transform_fixed(BLRasterContextImpl* ctx_impl) noexcept {
+  ctx_impl->internal_state.final_transform_fixed = ctx_impl->final_transform();
+  ctx_impl->internal_state.final_transform_fixed.post_scale(ctx_impl->render_target_info.fp_scale_d);
 }
 
-// Called after `userTransform` has been modified.
+// Called after `user_transform` has been modified.
 //
-// Responsible for updating `finalTransform` and other matrix information.
-static BL_INLINE void onAfterUserTransformChanged(BLRasterContextImpl* ctxI, const Matrix2x2& before2x2) noexcept {
-  ContextFlags contextFlags = ctxI->contextFlags;
+// Responsible for updating `final_transform` and other matrix information.
+static BL_INLINE void on_after_user_transform_changed(BLRasterContextImpl* ctx_impl, const Matrix2x2& before2x2) noexcept {
+  ContextFlags context_flags = ctx_impl->context_flags;
 
-  contextFlags &= ~(ContextFlags::kNoUserTransform         |
+  context_flags &= ~(ContextFlags::kNoUserTransform         |
                     ContextFlags::kInfoIntegralTranslation |
                     ContextFlags::kWeakStateUserTransform  );
 
-  updateFinalTransform(ctxI);
-  updateFinalTransformFixed(ctxI);
+  update_final_transform(ctx_impl);
+  update_final_transform_fixed(ctx_impl);
 
-  const BLMatrix2D& ft = ctxI->finalTransformFixed();
-  BLTransformType finalTransformType = ctxI->finalTransform().type();
+  const BLMatrix2D& ft = ctx_impl->final_transform_fixed();
+  BLTransformType final_transform_type = ctx_impl->final_transform().type();
 
-  ctxI->internalState.finalTransformType = uint8_t(finalTransformType);
-  ctxI->internalState.finalTransformFixedType = uint8_t(blMax<uint32_t>(finalTransformType, BL_TRANSFORM_TYPE_SCALE));
+  ctx_impl->internal_state.final_transform_type = uint8_t(final_transform_type);
+  ctx_impl->internal_state.final_transform_fixed_type = uint8_t(bl_max<uint32_t>(final_transform_type, BL_TRANSFORM_TYPE_SCALE));
 
-  if (finalTransformType <= BL_TRANSFORM_TYPE_TRANSLATE) {
+  if (final_transform_type <= BL_TRANSFORM_TYPE_TRANSLATE) {
     // No scaling - input coordinates have pixel granularity. Check if the translation has pixel granularity as well
-    // and setup the `translationI` data for that case.
-    if (ft.m20 >= ctxI->fpMinSafeCoordD && ft.m20 <= ctxI->fpMaxSafeCoordD &&
-        ft.m21 >= ctxI->fpMinSafeCoordD && ft.m21 <= ctxI->fpMaxSafeCoordD) {
+    // and setup the `translation_i` data for that case.
+    if (ft.m20 >= ctx_impl->fp_min_safe_coord_d && ft.m20 <= ctx_impl->fp_max_safe_coord_d &&
+        ft.m21 >= ctx_impl->fp_min_safe_coord_d && ft.m21 <= ctx_impl->fp_max_safe_coord_d) {
       // We need 64-bit ints here as we are already scaled. We also need a `floor` function as we have to handle
       // negative translations which cannot be truncated (the default conversion).
       int64_t tx64 = Math::floorToInt64(ft.m20);
@@ -785,65 +785,65 @@ static BL_INLINE void onAfterUserTransformChanged(BLRasterContextImpl* ctxI, con
 
       // Pixel to pixel translation is only possible when both fixed points `tx64` and `ty64` have all zeros in
       // their fraction parts.
-      if (((tx64 | ty64) & ctxI->renderTargetInfo.fpMaskI) == 0) {
-        int tx = int(tx64 >> ctxI->renderTargetInfo.fpShiftI);
-        int ty = int(ty64 >> ctxI->renderTargetInfo.fpShiftI);
+      if (((tx64 | ty64) & ctx_impl->render_target_info.fpMaskI) == 0) {
+        int tx = int(tx64 >> ctx_impl->render_target_info.fpShiftI);
+        int ty = int(ty64 >> ctx_impl->render_target_info.fpShiftI);
 
-        ctxI->setTranslationI(BLPointI(tx, ty));
-        contextFlags |= ContextFlags::kInfoIntegralTranslation;
+        ctx_impl->set_translation_i(BLPointI(tx, ty));
+        context_flags |= ContextFlags::kInfoIntegralTranslation;
       }
     }
   }
 
   // Shared states are not invalidated when the transformation is just translated.
-  uint32_t invalidateSharedState = uint32_t(before2x2.m[0] != ctxI->finalTransform().m00) |
-                                   uint32_t(before2x2.m[1] != ctxI->finalTransform().m01) |
-                                   uint32_t(before2x2.m[2] != ctxI->finalTransform().m10) |
-                                   uint32_t(before2x2.m[3] != ctxI->finalTransform().m11);
+  uint32_t invalidate_shared_state = uint32_t(before2x2.m[0] != ctx_impl->final_transform().m00) |
+                                   uint32_t(before2x2.m[1] != ctx_impl->final_transform().m01) |
+                                   uint32_t(before2x2.m[2] != ctx_impl->final_transform().m10) |
+                                   uint32_t(before2x2.m[3] != ctx_impl->final_transform().m11);
 
   // Mark NoUserTransform in case that the transformation matrix is invalid.
-  if (finalTransformType >= BL_TRANSFORM_TYPE_INVALID)
-    contextFlags |= ContextFlags::kNoUserTransform;
+  if (final_transform_type >= BL_TRANSFORM_TYPE_INVALID)
+    context_flags |= ContextFlags::kNoUserTransform;
 
   // Clear shared state flags if the shared state has been invalidated by the transformation.
-  if (invalidateSharedState)
-    contextFlags &= ~(ContextFlags::kSharedStateFill | ContextFlags::kSharedStateStrokeExt);
+  if (invalidate_shared_state)
+    context_flags &= ~(ContextFlags::kSharedStateFill | ContextFlags::kSharedStateStrokeExt);
 
-  ctxI->contextFlags = contextFlags;
+  ctx_impl->context_flags = context_flags;
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Clip State
 // =======================================================
 
-static BL_INLINE void onBeforeClipBoxChange(BLRasterContextImpl* ctxI) noexcept {
-  if (blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateClip)) {
-    SavedState* state = ctxI->savedState;
-    state->finalClipBoxD = ctxI->finalClipBoxD();
+static BL_INLINE void on_before_clip_box_change(BLRasterContextImpl* ctx_impl) noexcept {
+  if (bl_test_flag(ctx_impl->context_flags, ContextFlags::kWeakStateClip)) {
+    SavedState* state = ctx_impl->saved_state;
+    state->final_clip_box_d = ctx_impl->final_clip_box_d();
   }
 }
 
-static BL_INLINE void resetClippingToMetaClipBox(BLRasterContextImpl* ctxI) noexcept {
-  const BLBoxI& meta = ctxI->metaClipBoxI();
-  ctxI->internalState.finalClipBoxI.reset(meta.x0, meta.y0, meta.x1, meta.y1);
-  ctxI->internalState.finalClipBoxD.reset(meta.x0, meta.y0, meta.x1, meta.y1);
-  ctxI->setFinalClipBoxFixedD(ctxI->finalClipBoxD() * ctxI->renderTargetInfo.fpScaleD);
+static BL_INLINE void reset_clipping_to_meta_clip_box(BLRasterContextImpl* ctx_impl) noexcept {
+  const BLBoxI& meta = ctx_impl->meta_clip_box_i();
+  ctx_impl->internal_state.final_clip_box_i.reset(meta.x0, meta.y0, meta.x1, meta.y1);
+  ctx_impl->internal_state.final_clip_box_d.reset(meta.x0, meta.y0, meta.x1, meta.y1);
+  ctx_impl->set_final_clip_box_fixed_d(ctx_impl->final_clip_box_d() * ctx_impl->render_target_info.fp_scale_d);
 }
 
-static BL_INLINE void restoreClippingFromState(BLRasterContextImpl* ctxI, SavedState* savedState) noexcept {
+static BL_INLINE void restore_clipping_from_state(BLRasterContextImpl* ctx_impl, SavedState* saved_state) noexcept {
   // TODO: [Rendering Context] Path-based clipping.
-  ctxI->internalState.finalClipBoxD = savedState->finalClipBoxD;
-  ctxI->internalState.finalClipBoxI.reset(
-    Math::truncToInt(ctxI->finalClipBoxD().x0),
-    Math::truncToInt(ctxI->finalClipBoxD().y0),
-    Math::ceilToInt(ctxI->finalClipBoxD().x1),
-    Math::ceilToInt(ctxI->finalClipBoxD().y1));
+  ctx_impl->internal_state.final_clip_box_d = saved_state->final_clip_box_d;
+  ctx_impl->internal_state.final_clip_box_i.reset(
+    Math::trunc_to_int(ctx_impl->final_clip_box_d().x0),
+    Math::trunc_to_int(ctx_impl->final_clip_box_d().y0),
+    Math::ceil_to_int(ctx_impl->final_clip_box_d().x1),
+    Math::ceil_to_int(ctx_impl->final_clip_box_d().y1));
 
-  double fpScale = ctxI->renderTargetInfo.fpScaleD;
-  ctxI->setFinalClipBoxFixedD(BLBox(
-    ctxI->finalClipBoxD().x0 * fpScale,
-    ctxI->finalClipBoxD().y0 * fpScale,
-    ctxI->finalClipBoxD().x1 * fpScale,
-    ctxI->finalClipBoxD().y1 * fpScale));
+  double fp_scale = ctx_impl->render_target_info.fp_scale_d;
+  ctx_impl->set_final_clip_box_fixed_d(BLBox(
+    ctx_impl->final_clip_box_d().x0 * fp_scale,
+    ctx_impl->final_clip_box_d().y0 * fp_scale,
+    ctx_impl->final_clip_box_d().x1 * fp_scale,
+    ctx_impl->final_clip_box_d().y1 * fp_scale));
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Clip Utilities
@@ -851,144 +851,144 @@ static BL_INLINE void restoreClippingFromState(BLRasterContextImpl* ctxI, SavedS
 
 #if 0
 // TODO: [Rendering Context] Experiment, not ready yet.
-static BL_INLINE bool translateAndClipRectToFillI(const BLRasterContextImpl* ctxI, const BLRectI* srcRect, BLBoxI* dstBoxOut) noexcept {
-  __m128d x0y0 = _mm_cvtepi32_pd(_mm_loadu_si64(&srcRect->x));
-  __m128d wh = _mm_cvtepi32_pd(_mm_loadu_si64(&srcRect->w));
+static BL_INLINE bool translateAndClipRectToFillI(const BLRasterContextImpl* ctx_impl, const BLRectI* src_rect, BLBoxI* dst_box_out) noexcept {
+  __m128d x0y0 = _mm_cvtepi32_pd(_mm_loadu_si64(&src_rect->x));
+  __m128d wh = _mm_cvtepi32_pd(_mm_loadu_si64(&src_rect->w));
 
-  x0y0 = _mm_add_pd(x0y0, *(__m128d*)&ctxI->internalState.finalTransform.m20);
+  x0y0 = _mm_add_pd(x0y0, *(__m128d*)&ctx_impl->internal_state.final_transform.m20);
   __m128d x1y1 = _mm_add_pd(x0y0, wh);
 
-  x0y0 = _mm_max_pd(x0y0, *(__m128d*)&ctxI->internalState.finalClipBoxD.x0);
-  x1y1 = _mm_min_pd(x1y1, *(__m128d*)&ctxI->internalState.finalClipBoxD.x1);
+  x0y0 = _mm_max_pd(x0y0, *(__m128d*)&ctx_impl->internal_state.final_clip_box_d.x0);
+  x1y1 = _mm_min_pd(x1y1, *(__m128d*)&ctx_impl->internal_state.final_clip_box_d.x1);
 
   __m128i a = _mm_cvtpd_epi32(x0y0);
   __m128i b = _mm_cvtpd_epi32(x1y1);
   __m128d msk = _mm_cmpge_pd(x0y0, x1y1);
-  _mm_storeu_si128((__m128i*)dstBoxOut, _mm_unpacklo_epi64(a, b));
+  _mm_storeu_si128((__m128i*)dst_box_out, _mm_unpacklo_epi64(a, b));
 
   return _mm_movemask_pd(msk) == 0;
 }
 #else
-static BL_INLINE bool translateAndClipRectToFillI(const BLRasterContextImpl* ctxI, const BLRectI* srcRect, BLBoxI* dstBoxOut) noexcept {
-  int rx = srcRect->x;
-  int ry = srcRect->y;
-  int rw = srcRect->w;
-  int rh = srcRect->h;
+static BL_INLINE bool translateAndClipRectToFillI(const BLRasterContextImpl* ctx_impl, const BLRectI* src_rect, BLBoxI* dst_box_out) noexcept {
+  int rx = src_rect->x;
+  int ry = src_rect->y;
+  int rw = src_rect->w;
+  int rh = src_rect->h;
 
   if (BL_TARGET_ARCH_BITS < 64) {
     OverflowFlag of{};
 
-    int x0 = IntOps::addOverflow(rx, ctxI->translationI().x, &of);
-    int y0 = IntOps::addOverflow(ry, ctxI->translationI().y, &of);
-    int x1 = IntOps::addOverflow(rw, x0, &of);
-    int y1 = IntOps::addOverflow(rh, y0, &of);
+    int x0 = IntOps::add_overflow(rx, ctx_impl->translation_i().x, &of);
+    int y0 = IntOps::add_overflow(ry, ctx_impl->translation_i().y, &of);
+    int x1 = IntOps::add_overflow(rw, x0, &of);
+    int y1 = IntOps::add_overflow(rh, y0, &of);
 
     if (BL_UNLIKELY(of))
       goto Use64Bit;
 
-    x0 = blMax(x0, ctxI->finalClipBoxI().x0);
-    y0 = blMax(y0, ctxI->finalClipBoxI().y0);
-    x1 = blMin(x1, ctxI->finalClipBoxI().x1);
-    y1 = blMin(y1, ctxI->finalClipBoxI().y1);
+    x0 = bl_max(x0, ctx_impl->final_clip_box_i().x0);
+    y0 = bl_max(y0, ctx_impl->final_clip_box_i().y0);
+    x1 = bl_min(x1, ctx_impl->final_clip_box_i().x1);
+    y1 = bl_min(y1, ctx_impl->final_clip_box_i().y1);
 
     // Clipped out or invalid rect.
     if (BL_UNLIKELY((x0 >= x1) | (y0 >= y1)))
       return false;
 
-    dstBoxOut->reset(int(x0), int(y0), int(x1), int(y1));
+    dst_box_out->reset(int(x0), int(y0), int(x1), int(y1));
     return true;
   }
   else {
 Use64Bit:
-    int64_t x0 = int64_t(rx) + int64_t(ctxI->translationI().x);
-    int64_t y0 = int64_t(ry) + int64_t(ctxI->translationI().y);
+    int64_t x0 = int64_t(rx) + int64_t(ctx_impl->translation_i().x);
+    int64_t y0 = int64_t(ry) + int64_t(ctx_impl->translation_i().y);
     int64_t x1 = int64_t(rw) + x0;
     int64_t y1 = int64_t(rh) + y0;
 
-    x0 = blMax<int64_t>(x0, ctxI->finalClipBoxI().x0);
-    y0 = blMax<int64_t>(y0, ctxI->finalClipBoxI().y0);
-    x1 = blMin<int64_t>(x1, ctxI->finalClipBoxI().x1);
-    y1 = blMin<int64_t>(y1, ctxI->finalClipBoxI().y1);
+    x0 = bl_max<int64_t>(x0, ctx_impl->final_clip_box_i().x0);
+    y0 = bl_max<int64_t>(y0, ctx_impl->final_clip_box_i().y0);
+    x1 = bl_min<int64_t>(x1, ctx_impl->final_clip_box_i().x1);
+    y1 = bl_min<int64_t>(y1, ctx_impl->final_clip_box_i().y1);
 
     // Clipped out or invalid rect.
     if (BL_UNLIKELY((x0 >= x1) | (y0 >= y1)))
       return false;
 
-    dstBoxOut->reset(int(x0), int(y0), int(x1), int(y1));
+    dst_box_out->reset(int(x0), int(y0), int(x1), int(y1));
     return true;
   }
 }
 #endif
 
-static BL_INLINE bool translateAndClipRectToBlitI(const BLRasterContextImpl* ctxI, const BLPointI* origin, const BLRectI* area, const BLSizeI* sz, BLResult* resultOut, BLBoxI* dstBoxOut, BLPointI* srcOffsetOut) noexcept {
+static BL_INLINE bool translateAndClipRectToBlitI(const BLRasterContextImpl* ctx_impl, const BLPointI* origin, const BLRectI* area, const BLSizeI* sz, BLResult* result_out, BLBoxI* dst_box_out, BLPointI* src_offset_out) noexcept {
   BLSizeI size(sz->w, sz->h);
-  srcOffsetOut->reset();
+  src_offset_out->reset();
 
   if (area) {
-    unsigned maxW = unsigned(size.w) - unsigned(area->x);
-    unsigned maxH = unsigned(size.h) - unsigned(area->y);
+    unsigned max_w = unsigned(size.w) - unsigned(area->x);
+    unsigned max_h = unsigned(size.h) - unsigned(area->y);
 
-    if (BL_UNLIKELY((maxW > unsigned(size.w)) | (unsigned(area->w) > maxW) |
-                    (maxH > unsigned(size.h)) | (unsigned(area->h) > maxH))) {
-      *resultOut = blTraceError(BL_ERROR_INVALID_VALUE);
+    if (BL_UNLIKELY((max_w > unsigned(size.w)) | (unsigned(area->w) > max_w) |
+                    (max_h > unsigned(size.h)) | (unsigned(area->h) > max_h))) {
+      *result_out = bl_trace_error(BL_ERROR_INVALID_VALUE);
       return false;
     }
 
-    srcOffsetOut->reset(area->x, area->y);
+    src_offset_out->reset(area->x, area->y);
     size.reset(area->w, area->h);
   }
 
-  *resultOut = BL_SUCCESS;
+  *result_out = BL_SUCCESS;
   if (BL_TARGET_ARCH_BITS < 64) {
     OverflowFlag of{};
 
-    int dx = IntOps::addOverflow(origin->x, ctxI->translationI().x, &of);
-    int dy = IntOps::addOverflow(origin->y, ctxI->translationI().y, &of);
+    int dx = IntOps::add_overflow(origin->x, ctx_impl->translation_i().x, &of);
+    int dy = IntOps::add_overflow(origin->y, ctx_impl->translation_i().y, &of);
 
     int x0 = dx;
     int y0 = dy;
-    int x1 = IntOps::addOverflow(x0, size.w, &of);
-    int y1 = IntOps::addOverflow(y0, size.h, &of);
+    int x1 = IntOps::add_overflow(x0, size.w, &of);
+    int y1 = IntOps::add_overflow(y0, size.h, &of);
 
     if (BL_UNLIKELY(of))
       goto Use64Bit;
 
-    x0 = blMax(x0, ctxI->finalClipBoxI().x0);
-    y0 = blMax(y0, ctxI->finalClipBoxI().y0);
-    x1 = blMin(x1, ctxI->finalClipBoxI().x1);
-    y1 = blMin(y1, ctxI->finalClipBoxI().y1);
+    x0 = bl_max(x0, ctx_impl->final_clip_box_i().x0);
+    y0 = bl_max(y0, ctx_impl->final_clip_box_i().y0);
+    x1 = bl_min(x1, ctx_impl->final_clip_box_i().x1);
+    y1 = bl_min(y1, ctx_impl->final_clip_box_i().y1);
 
     // Clipped out.
     if ((x0 >= x1) | (y0 >= y1))
       return false;
 
-    dstBoxOut->reset(x0, y0, x1, y1);
-    srcOffsetOut->x += x0 - dx;
-    srcOffsetOut->y += y0 - dy;
+    dst_box_out->reset(x0, y0, x1, y1);
+    src_offset_out->x += x0 - dx;
+    src_offset_out->y += y0 - dy;
     return true;
   }
   else {
 Use64Bit:
-    int64_t dx = int64_t(origin->x) + ctxI->translationI().x;
-    int64_t dy = int64_t(origin->y) + ctxI->translationI().y;
+    int64_t dx = int64_t(origin->x) + ctx_impl->translation_i().x;
+    int64_t dy = int64_t(origin->y) + ctx_impl->translation_i().y;
 
     int64_t x0 = dx;
     int64_t y0 = dy;
     int64_t x1 = x0 + int64_t(unsigned(size.w));
     int64_t y1 = y0 + int64_t(unsigned(size.h));
 
-    x0 = blMax<int64_t>(x0, ctxI->finalClipBoxI().x0);
-    y0 = blMax<int64_t>(y0, ctxI->finalClipBoxI().y0);
-    x1 = blMin<int64_t>(x1, ctxI->finalClipBoxI().x1);
-    y1 = blMin<int64_t>(y1, ctxI->finalClipBoxI().y1);
+    x0 = bl_max<int64_t>(x0, ctx_impl->final_clip_box_i().x0);
+    y0 = bl_max<int64_t>(y0, ctx_impl->final_clip_box_i().y0);
+    x1 = bl_min<int64_t>(x1, ctx_impl->final_clip_box_i().x1);
+    y1 = bl_min<int64_t>(y1, ctx_impl->final_clip_box_i().y1);
 
     // Clipped out.
     if ((x0 >= x1) | (y0 >= y1))
       return false;
 
-    dstBoxOut->reset(int(x0), int(y0), int(x1), int(y1));
-    srcOffsetOut->x += int(x0 - dx);
-    srcOffsetOut->y += int(y0 - dy);
+    dst_box_out->reset(int(x0), int(y0), int(x1), int(y1));
+    src_offset_out->x += int(x0 - dx);
+    src_offset_out->y += int(y0 - dy);
     return true;
   }
 }
@@ -996,77 +996,77 @@ Use64Bit:
 // bl::RasterEngine - ContextImpl - Internals - Async - Render Batch
 // =================================================================
 
-static BL_INLINE void releaseBatchFetchData(BLRasterContextImpl* ctxI, RenderCommandQueue* queue) noexcept {
+static BL_INLINE void release_batch_fetch_data(BLRasterContextImpl* ctx_impl, RenderCommandQueue* queue) noexcept {
   while (queue) {
-    RenderCommand* commandData = queue->_data;
-    for (size_t i = 0; i < queue->_fetchDataMarks.sizeInWords(); i++) {
-      BLBitWord bits = queue->_fetchDataMarks.data[i];
+    RenderCommand* command_data = queue->_data;
+    for (size_t i = 0; i < queue->_fetch_data_marks.size_in_words(); i++) {
+      BLBitWord bits = queue->_fetch_data_marks.data[i];
       ParametrizedBitOps<BitOrder::kLSB, BLBitWord>::BitIterator it(bits);
 
-      while (it.hasNext()) {
-        size_t bitIndex = it.next();
-        RenderCommand& command = commandData[bitIndex];
+      while (it.has_next()) {
+        size_t bit_index = it.next();
+        RenderCommand& command = command_data[bit_index];
 
-        if (command.retainsStyleFetchData())
-          command._source.fetchData->release(ctxI);
+        if (command.retains_style_fetch_data())
+          command._source.fetch_data->release(ctx_impl);
 
-        if (command.retainsMaskImageData())
-          ImageInternal::releaseImpl<RCMode::kMaybe>(command._payload.boxMaskA.maskImageI.ptr);
+        if (command.retains_mask_image_data())
+          ImageInternal::release_impl<RCMode::kMaybe>(command._payload.box_mask_a.mask_image_i.ptr);
       }
-      commandData += IntOps::bitSizeOf<BLBitWord>();
+      command_data += IntOps::bit_size_of<BLBitWord>();
     }
     queue = queue->next();
   }
 }
 
-static BL_NOINLINE BLResult flushRenderBatch(BLRasterContextImpl* ctxI) noexcept {
-  WorkerManager& mgr = ctxI->workerMgr();
-  if (mgr.hasPendingCommands()) {
-    mgr.finalizeBatch();
+static BL_NOINLINE BLResult flush_render_batch(BLRasterContextImpl* ctx_impl) noexcept {
+  WorkerManager& mgr = ctx_impl->worker_mgr();
+  if (mgr.has_pending_commands()) {
+    mgr.finalize_batch();
 
     WorkerSynchronization* synchronization = &mgr._synchronization;
-    RenderBatch* batch = mgr.currentBatch();
-    uint32_t threadCount = mgr.threadCount();
+    RenderBatch* batch = mgr.current_batch();
+    uint32_t thread_count = mgr.thread_count();
 
-    for (uint32_t i = 0; i < threadCount; i++) {
-      WorkData* workData = mgr._workDataStorage[i];
-      workData->initBatch(batch);
-      workData->initContextData(ctxI->dstData, ctxI->syncWorkData.ctxData.pixelOrigin);
+    for (uint32_t i = 0; i < thread_count; i++) {
+      WorkData* work_data = mgr._work_data_storage[i];
+      work_data->init_batch(batch);
+      work_data->init_context_data(ctx_impl->dst_data, ctx_impl->sync_work_data.ctx_data.pixel_origin);
     }
 
     // Just to make sure that all the changes are visible to the threads.
-    synchronization->beforeStart(threadCount, batch->jobCount() > 0);
+    synchronization->before_start(thread_count, batch->job_count() > 0);
 
-    for (uint32_t i = 0; i < threadCount; i++) {
-      mgr._workerThreads[i]->run(WorkerProc::workerThreadEntry, mgr._workDataStorage[i]);
+    for (uint32_t i = 0; i < thread_count; i++) {
+      mgr._worker_threads[i]->run(WorkerProc::worker_thread_entry, mgr._work_data_storage[i]);
     }
 
     // User thread acts as a worker too.
     {
-      synchronization->threadStarted();
+      synchronization->thread_started();
 
-      WorkData* workData = &ctxI->syncWorkData;
-      SyncWorkState workState;
+      WorkData* work_data = &ctx_impl->sync_work_data;
+      SyncWorkState work_state;
 
-      workState.save(*workData);
-      WorkerProc::processWorkData(workData, batch);
-      workState.restore(*workData);
+      work_state.save(*work_data);
+      WorkerProc::process_work_data(work_data, batch);
+      work_state.restore(*work_data);
     }
 
-    if (threadCount) {
-      synchronization->waitForThreadsToFinish();
-      ctxI->syncWorkData._accumulatedErrorFlags |= blAtomicFetchRelaxed(&batch->_accumulatedErrorFlags);
+    if (thread_count) {
+      synchronization->wait_for_threads_to_finish();
+      ctx_impl->sync_work_data._accumulated_error_flags |= bl_atomic_fetch_relaxed(&batch->_accumulated_error_flags);
     }
 
-    releaseBatchFetchData(ctxI, batch->_commandList.first());
+    release_batch_fetch_data(ctx_impl, batch->_command_list.first());
 
     mgr._allocator.clear();
-    mgr.initFirstBatch();
+    mgr.init_first_batch();
 
-    ctxI->syncWorkData.startOver();
-    ctxI->contextFlags &= ~ContextFlags::kSharedStateAllFlags;
-    ctxI->sharedFillState = nullptr;
-    ctxI->sharedStrokeState = nullptr;
+    ctx_impl->sync_work_data.start_over();
+    ctx_impl->context_flags &= ~ContextFlags::kSharedStateAllFlags;
+    ctx_impl->shared_fill_state = nullptr;
+    ctx_impl->shared_stroke_state = nullptr;
   }
 
   return BL_SUCCESS;
@@ -1075,9 +1075,9 @@ static BL_NOINLINE BLResult flushRenderBatch(BLRasterContextImpl* ctxI) noexcept
 // bl::RasterEngine - ContextImpl - Internals - Render Call - Data Allocation
 // ==========================================================================
 
-static BL_INLINE void markQueueFullOrExhausted(BLRasterContextImpl* ctxI, bool flag) noexcept {
-  constexpr uint32_t kMTFullOrExhaustedShift = IntOps::bitShiftOf(ContextFlags::kMTFullOrExhausted);
-  ctxI->contextFlags |= ContextFlags(uint32_t(flag) << kMTFullOrExhaustedShift);
+static BL_INLINE void mark_queue_full_or_exhausted(BLRasterContextImpl* ctx_impl, bool flag) noexcept {
+  constexpr uint32_t kMTFullOrExhaustedShift = IntOps::bit_shift_of(ContextFlags::kMTFullOrExhausted);
+  ctx_impl->context_flags |= ContextFlags(uint32_t(flag) << kMTFullOrExhaustedShift);
 }
 
 template<RenderingMode kRM>
@@ -1085,38 +1085,38 @@ struct RenderFetchDataStorage;
 
 template<>
 struct RenderFetchDataStorage<kSync> {
-  RenderFetchData _fetchData;
+  RenderFetchData _fetch_data;
 
   BL_INLINE_NODEBUG RenderFetchDataStorage() noexcept {}
-  BL_INLINE_NODEBUG RenderFetchDataStorage(BLRasterContextImpl* ctxI) noexcept { init(ctxI); }
+  BL_INLINE_NODEBUG RenderFetchDataStorage(BLRasterContextImpl* ctx_impl) noexcept { init(ctx_impl); }
 
-  BL_INLINE_NODEBUG void init(BLRasterContextImpl* ctxI) noexcept { blUnused(ctxI); }
+  BL_INLINE_NODEBUG void init(BLRasterContextImpl* ctx_impl) noexcept { bl_unused(ctx_impl); }
 
-  BL_INLINE_NODEBUG RenderFetchData* ptr() noexcept { return &_fetchData; }
-  BL_INLINE_NODEBUG RenderFetchData* operator->() noexcept { return &_fetchData; }
+  BL_INLINE_NODEBUG RenderFetchData* ptr() noexcept { return &_fetch_data; }
+  BL_INLINE_NODEBUG RenderFetchData* operator->() noexcept { return &_fetch_data; }
 };
 
 template<>
 struct RenderFetchDataStorage<kAsync> {
-  RenderFetchData* _fetchData;
+  RenderFetchData* _fetch_data;
 
   BL_INLINE_NODEBUG RenderFetchDataStorage() noexcept {}
-  BL_INLINE_NODEBUG RenderFetchDataStorage(BLRasterContextImpl* ctxI) noexcept {
-    init(ctxI);
+  BL_INLINE_NODEBUG RenderFetchDataStorage(BLRasterContextImpl* ctx_impl) noexcept {
+    init(ctx_impl);
   }
 
-  BL_INLINE_NODEBUG void init(BLRasterContextImpl* ctxI) noexcept {
-    _fetchData = ctxI->workerMgr()._fetchDataPool.ptr;
-    _fetchData->initHeader(0);
+  BL_INLINE_NODEBUG void init(BLRasterContextImpl* ctx_impl) noexcept {
+    _fetch_data = ctx_impl->worker_mgr()._fetch_data_pool.ptr;
+    _fetch_data->init_header(0);
   }
 
-  BL_INLINE_NODEBUG RenderFetchData* ptr() noexcept { return _fetchData; }
-  BL_INLINE_NODEBUG RenderFetchData* operator->() noexcept { return _fetchData; }
+  BL_INLINE_NODEBUG RenderFetchData* ptr() noexcept { return _fetch_data; }
+  BL_INLINE_NODEBUG RenderFetchData* operator->() noexcept { return _fetch_data; }
 };
 
-static BL_INLINE void advanceFetchPtr(BLRasterContextImpl* ctxI) noexcept {
-  ctxI->workerMgr()._fetchDataPool.advance();
-  markQueueFullOrExhausted(ctxI, ctxI->workerMgr()._fetchDataPool.exhausted());
+static BL_INLINE void advance_fetch_ptr(BLRasterContextImpl* ctx_impl) noexcept {
+  ctx_impl->worker_mgr()._fetch_data_pool.advance();
+  mark_queue_full_or_exhausted(ctx_impl, ctx_impl->worker_mgr()._fetch_data_pool.exhausted());
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Render Call - Fetch And Dispatch Data
@@ -1124,42 +1124,42 @@ static BL_INLINE void advanceFetchPtr(BLRasterContextImpl* ctxI) noexcept {
 
 // Slow path - if the pipeline is not in cache there is also a chance that FetchData has not been setup yet.
 // In that case it would have PendingFlag set to 1, which would indicate the pending setup.
-static BL_NOINLINE BLResult ensureFetchAndDispatchDataSlow(
-    BLRasterContextImpl* ctxI,
-    Pipeline::Signature signature, RenderFetchDataHeader* fetchData, Pipeline::DispatchData* out) noexcept {
+static BL_NOINLINE BLResult ensure_fetch_and_dispatch_data_slow(
+    BLRasterContextImpl* ctx_impl,
+    Pipeline::Signature signature, RenderFetchDataHeader* fetch_data, Pipeline::DispatchData* out) noexcept {
 
-  if (signature.hasPendingFlag()) {
-    BL_PROPAGATE(computePendingFetchData(static_cast<RenderFetchData*>(fetchData)));
+  if (signature.has_pending_flag()) {
+    BL_PROPAGATE(compute_pending_fetch_data(static_cast<RenderFetchData*>(fetch_data)));
 
-    signature.clearPendingBit();
-    auto m = Pipeline::cacheLookup(ctxI->pipeLookupCache, signature.value);
+    signature.clear_pending_bit();
+    auto m = Pipeline::cache_lookup(ctx_impl->pipe_lookup_cache, signature.value);
 
     if (m.matched()) {
-      *out = ctxI->pipeLookupCache.dispatchData(m.index());
+      *out = ctx_impl->pipe_lookup_cache.dispatch_data(m.index());
       return BL_SUCCESS;
     }
   }
 
-  return ctxI->pipeProvider.get(signature.value, out, &ctxI->pipeLookupCache);
+  return ctx_impl->pipe_provider.get(signature.value, out, &ctx_impl->pipe_lookup_cache);
 }
 
 // Fast path - if the signature is in the cache, which means that we have the dispatch data and that FetchData
 // doesn't need initialization (it's either SOLID or it has been already initialized in case that it was used
 // multiple times or this render call is a blit).
-static BL_INLINE BLResult ensureFetchAndDispatchData(
-    BLRasterContextImpl* ctxI,
-    Pipeline::Signature signature, RenderFetchDataHeader* fetchData, Pipeline::DispatchData* out) noexcept {
+static BL_INLINE BLResult ensure_fetch_and_dispatch_data(
+    BLRasterContextImpl* ctx_impl,
+    Pipeline::Signature signature, RenderFetchDataHeader* fetch_data, Pipeline::DispatchData* out) noexcept {
 
   // Must be inlined for greater performance.
-  auto m = Pipeline::cacheLookup(ctxI->pipeLookupCache, signature.value);
+  auto m = Pipeline::cache_lookup(ctx_impl->pipe_lookup_cache, signature.value);
 
   // Likely if there is not a lot of diverse render commands.
   if (BL_LIKELY(m.matched())) {
-    *out = ctxI->pipeLookupCache.dispatchData(m.index());
+    *out = ctx_impl->pipe_lookup_cache.dispatch_data(m.index());
     return BL_SUCCESS;
   }
 
-  return ensureFetchAndDispatchDataSlow(ctxI, signature, fetchData, out);
+  return ensure_fetch_and_dispatch_data_slow(ctx_impl, signature, fetch_data, out);
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Render Call - Queues and Pools
@@ -1169,37 +1169,37 @@ static BL_INLINE BLResult ensureFetchAndDispatchData(
 //
 // The purpose of this function is to make sure that ALL queues are not full and that no pools
 // are exhausted, because the dispatching relies on the availability of these resources.
-static BL_NOINLINE BLResult handleQueuesFullOrPoolsExhausted(BLRasterContextImpl* ctxI) noexcept {
+static BL_NOINLINE BLResult handle_queues_full_or_pools_exhausted(BLRasterContextImpl* ctx_impl) noexcept {
   // Should only be called when we know at that least one queue / buffer needs refill.
-  BL_ASSERT(blTestFlag(ctxI->contextFlags, ContextFlags::kMTFullOrExhausted));
+  BL_ASSERT(bl_test_flag(ctx_impl->context_flags, ContextFlags::kMTFullOrExhausted));
 
-  WorkerManager& mgr = ctxI->workerMgr();
+  WorkerManager& mgr = ctx_impl->worker_mgr();
 
-  if (mgr.isCommandQueueFull()) {
-    mgr.beforeGrowCommandQueue();
-    if (mgr.isBatchFull()) {
-      BL_PROPAGATE(flushRenderBatch(ctxI));
+  if (mgr.is_command_queue_full()) {
+    mgr.before_grow_command_queue();
+    if (mgr.is_batch_full()) {
+      BL_PROPAGATE(flush_render_batch(ctx_impl));
       // NOTE: After a successful flush the queues and pools should already be allocated.
-      ctxI->contextFlags &= ~ContextFlags::kMTFullOrExhausted;
+      ctx_impl->context_flags &= ~ContextFlags::kMTFullOrExhausted;
       return BL_SUCCESS;
     }
 
-    BL_PROPAGATE(mgr._growCommandQueue());
+    BL_PROPAGATE(mgr._grow_command_queue());
   }
 
-  if (mgr.isJobQueueFull()) {
-    BL_PROPAGATE(mgr._growJobQueue());
+  if (mgr.is_job_queue_full()) {
+    BL_PROPAGATE(mgr._grow_job_queue());
   }
 
-  if (mgr.isFetchDataPoolExhausted()) {
-    BL_PROPAGATE(mgr._preallocateFetchDataPool());
+  if (mgr.is_fetch_data_pool_exhausted()) {
+    BL_PROPAGATE(mgr._preallocate_fetch_data_pool());
   }
 
-  if (mgr.isSharedDataPoolExhausted()) {
-    BL_PROPAGATE(mgr._preallocateSharedDataPool());
+  if (mgr.is_shared_data_pool_exhausted()) {
+    BL_PROPAGATE(mgr._preallocate_shared_data_pool());
   }
 
-  ctxI->contextFlags &= ~ContextFlags::kMTFullOrExhausted;
+  ctx_impl->context_flags &= ~ContextFlags::kMTFullOrExhausted;
   return BL_SUCCESS;
 }
 
@@ -1230,130 +1230,130 @@ struct RenderCallResolvedOp {
 
 // Resolves a clear operation - clear operation is always solid and always forces SRC_COPY operator on the input.
 template<RenderingMode kRM>
-static BL_INLINE RenderCallResolvedOp resolveClearOp(BLRasterContextImpl* ctxI, ContextFlags nopFlags) noexcept {
+static BL_INLINE RenderCallResolvedOp resolve_clear_op(BLRasterContextImpl* ctx_impl, ContextFlags nop_flags) noexcept {
   constexpr ContextFlags kNopExtra = kRM == kSync ? ContextFlags::kNoFlagsSet : ContextFlags::kMTFullOrExhausted;
 
-  CompOpSimplifyInfo simplifyInfo = compOpSimplifyInfo(CompOpExt::kSrcCopy, ctxI->format(), FormatExt::kPRGB32);
-  CompOpSolidId solidId = simplifyInfo.solidId();
+  CompOpSimplifyInfo simplify_info = comp_op_simplify_info(CompOpExt::kSrcCopy, ctx_impl->format(), FormatExt::kPRGB32);
+  CompOpSolidId solid_id = simplify_info.solid_id();
 
-  ContextFlags combinedFlags = ctxI->contextFlags | ContextFlags(solidId);
-  ContextFlags resolvedFlags = combinedFlags & (nopFlags | kNopExtra);
+  ContextFlags combined_flags = ctx_impl->context_flags | ContextFlags(solid_id);
+  ContextFlags resolved_flags = combined_flags & (nop_flags | kNopExtra);
 
-  return RenderCallResolvedOp{simplifyInfo.signature(), resolvedFlags};
+  return RenderCallResolvedOp{simplify_info.signature(), resolved_flags};
 }
 
 // Resolves a fill operation that uses the default fill style (or stroke style if this fill implements a stroke operation).
 template<RenderingMode kRM>
-static BL_INLINE RenderCallResolvedOp resolveImplicitStyleOp(BLRasterContextImpl* ctxI, ContextFlags nopFlags, const RenderFetchDataHeader* fetchData, bool bail) noexcept {
+static BL_INLINE RenderCallResolvedOp resolve_implicit_style_op(BLRasterContextImpl* ctx_impl, ContextFlags nop_flags, const RenderFetchDataHeader* fetch_data, bool bail) noexcept {
   constexpr ContextFlags kNopExtra = kRM == kSync ? ContextFlags::kNoFlagsSet : ContextFlags::kMTFullOrExhausted;
 
-  CompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[fetchData->extra.format];
-  CompOpSolidId solidId = simplifyInfo.solidId();
+  CompOpSimplifyInfo simplify_info = ctx_impl->comp_op_simplify_info[fetch_data->extra.format];
+  CompOpSolidId solid_id = simplify_info.solid_id();
 
-  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << IntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
-  ContextFlags resolvedFlags = (ctxI->contextFlags | ContextFlags(solidId) | bailFlag) & (nopFlags | kNopExtra);
+  ContextFlags bail_flag = ContextFlags(uint32_t(bail) << IntOps::bit_shift_of(uint32_t(ContextFlags::kNoOperation)));
+  ContextFlags resolved_flags = (ctx_impl->context_flags | ContextFlags(solid_id) | bail_flag) & (nop_flags | kNopExtra);
 
-  return RenderCallResolvedOp{simplifyInfo.signature(), resolvedFlags};
+  return RenderCallResolvedOp{simplify_info.signature(), resolved_flags};
 }
 
 // Resolves a solid operation, which uses a custom Rgba32 color passed by the user to the frontend.
 template<RenderingMode kRM>
-static BL_INLINE RenderCallResolvedOp resolveExplicitSolidOp(BLRasterContextImpl* ctxI, ContextFlags nopFlags, uint32_t rgba32, RenderFetchDataSolid& solid, bool bail) noexcept {
+static BL_INLINE RenderCallResolvedOp resolve_explicit_solid_op(BLRasterContextImpl* ctx_impl, ContextFlags nop_flags, uint32_t rgba32, RenderFetchDataSolid& solid, bool bail) noexcept {
   constexpr ContextFlags kNopExtra = kRM == kSync ? ContextFlags::kNoFlagsSet : ContextFlags::kMTFullOrExhausted;
 
   FormatExt fmt = formatFromRgba32(rgba32);
-  CompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[size_t(fmt)];
-  CompOpSolidId solidId = simplifyInfo.solidId();
+  CompOpSimplifyInfo simplify_info = ctx_impl->comp_op_simplify_info[size_t(fmt)];
+  CompOpSolidId solid_id = simplify_info.solid_id();
 
-  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << IntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
-  ContextFlags resolvedFlags = (ctxI->contextFlags | ContextFlags(solidId) | bailFlag) & (nopFlags | kNopExtra);
+  ContextFlags bail_flag = ContextFlags(uint32_t(bail) << IntOps::bit_shift_of(uint32_t(ContextFlags::kNoOperation)));
+  ContextFlags resolved_flags = (ctx_impl->context_flags | ContextFlags(solid_id) | bail_flag) & (nop_flags | kNopExtra);
 
   solid.signature.reset();
-  solid.pipelineData.prgb32 = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32);
-  solid.pipelineData.reserved32 = 0;
+  solid.pipeline_data.prgb32 = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32);
+  solid.pipeline_data.reserved32 = 0;
 
-  return RenderCallResolvedOp{simplifyInfo.signature(), resolvedFlags};
+  return RenderCallResolvedOp{simplify_info.signature(), resolved_flags};
 }
 
 template<RenderingMode kRM>
-static BL_NOINLINE BLResultT<RenderCallResolvedOp> resolveExplicitStyleOp(BLRasterContextImpl* ctxI, ContextFlags nopFlags, const BLObjectCore* style, RenderFetchDataStorage<kRM>& fetchDataStorage, bool bail) noexcept {
+static BL_NOINLINE BLResultT<RenderCallResolvedOp> resolve_explicit_style_op(BLRasterContextImpl* ctx_impl, ContextFlags nop_flags, const BLObjectCore* style, RenderFetchDataStorage<kRM>& fetch_data_storage, bool bail) noexcept {
   constexpr RenderCallResolvedOp kNop = {{0u}, ContextFlags::kNoOperation};
   constexpr BLContextStyleTransformMode kTransformMode = BL_CONTEXT_STYLE_TRANSFORM_MODE_USER;
 
   if constexpr (kRM == kAsync) {
-    if (blTestFlag(ctxI->contextFlags, ContextFlags::kMTFullOrExhausted)) {
-      BLResult result = handleQueuesFullOrPoolsExhausted(ctxI);
+    if (bl_test_flag(ctx_impl->context_flags, ContextFlags::kMTFullOrExhausted)) {
+      BLResult result = handle_queues_full_or_pools_exhausted(ctx_impl);
       if (BL_UNLIKELY(result != BL_SUCCESS))
         return BLResultT<RenderCallResolvedOp>{result, kNop};
     }
   }
 
-  fetchDataStorage.init(ctxI);
-  RenderFetchData* fetchData = fetchDataStorage.ptr();
+  fetch_data_storage.init(ctx_impl);
+  RenderFetchData* fetch_data = fetch_data_storage.ptr();
 
   FormatExt format = FormatExt::kNone;
-  BLObjectType styleType = style->_d.getType();
-  fetchData->initHeader(0);
+  BLObjectType style_type = style->_d.get_type();
+  fetch_data->init_header(0);
 
-  if (styleType <= BL_OBJECT_TYPE_NULL) {
+  if (style_type <= BL_OBJECT_TYPE_NULL) {
     BLRgba32 rgba32;
 
-    if (styleType == BL_OBJECT_TYPE_RGBA32)
+    if (style_type == BL_OBJECT_TYPE_RGBA32)
       rgba32.reset(style->_d.rgba32);
-    else if (styleType == BL_OBJECT_TYPE_RGBA64)
+    else if (style_type == BL_OBJECT_TYPE_RGBA64)
       rgba32.reset(style->_d.rgba64);
-    else if (styleType == BL_OBJECT_TYPE_RGBA)
-      rgba32 = style->_d.rgba.toRgba32();
+    else if (style_type == BL_OBJECT_TYPE_RGBA)
+      rgba32 = style->_d.rgba.to_rgba32();
     else
       return BLResultT<RenderCallResolvedOp>{BL_SUCCESS, kNop};
 
     format = formatFromRgba32(rgba32.value);
-    fetchData->pipelineData.solid.prgb32 = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32.value);
+    fetch_data->pipeline_data.solid.prgb32 = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32.value);
   }
   else {
-    if (BL_UNLIKELY(styleType > BL_OBJECT_TYPE_MAX_STYLE))
+    if (BL_UNLIKELY(style_type > BL_OBJECT_TYPE_MAX_STYLE))
       return BLResultT<RenderCallResolvedOp>{BL_ERROR_INVALID_VALUE, kNop};
 
     NonSolidFetchExplicitApplier applier;
-    if (!initNonSolidFetchData(ctxI, fetchData, style, styleType, kTransformMode, applier))
+    if (!init_non_solid_fetch_data(ctx_impl, fetch_data, style, style_type, kTransformMode, applier))
       return BLResultT<RenderCallResolvedOp>{BL_SUCCESS, kNop};
-    format = FormatExt(fetchData->extra.format);
+    format = FormatExt(fetch_data->extra.format);
   }
 
-  CompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[size_t(format)];
-  CompOpSolidId solidId = simplifyInfo.solidId();
-  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << IntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
+  CompOpSimplifyInfo simplify_info = ctx_impl->comp_op_simplify_info[size_t(format)];
+  CompOpSolidId solid_id = simplify_info.solid_id();
+  ContextFlags bail_flag = ContextFlags(uint32_t(bail) << IntOps::bit_shift_of(uint32_t(ContextFlags::kNoOperation)));
 
-  ContextFlags resolvedFlags = (ctxI->contextFlags | ContextFlags(solidId) | bailFlag) & nopFlags;
-  return BLResultT<RenderCallResolvedOp>{BL_SUCCESS, {simplifyInfo.signature(), resolvedFlags}};
+  ContextFlags resolved_flags = (ctx_impl->context_flags | ContextFlags(solid_id) | bail_flag) & nop_flags;
+  return BLResultT<RenderCallResolvedOp>{BL_SUCCESS, {simplify_info.signature(), resolved_flags}};
 }
 
 // Resolves a blit operation.
 template<RenderingMode kRM>
-static BL_INLINE RenderCallResolvedOp resolveBlitOp(BLRasterContextImpl* ctxI, ContextFlags nopFlags, uint32_t format, bool bail) noexcept {
+static BL_INLINE RenderCallResolvedOp resolve_blit_op(BLRasterContextImpl* ctx_impl, ContextFlags nop_flags, uint32_t format, bool bail) noexcept {
   constexpr ContextFlags kNopExtra = kRM == kSync ? ContextFlags::kNoFlagsSet : ContextFlags::kMTFullOrExhausted;
 
-  CompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[format];
-  CompOpSolidId solidId = simplifyInfo.solidId();
+  CompOpSimplifyInfo simplify_info = ctx_impl->comp_op_simplify_info[format];
+  CompOpSolidId solid_id = simplify_info.solid_id();
 
-  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << IntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
-  ContextFlags resolvedFlags = (ctxI->contextFlags | ContextFlags(solidId) | bailFlag) & (nopFlags | kNopExtra);
+  ContextFlags bail_flag = ContextFlags(uint32_t(bail) << IntOps::bit_shift_of(uint32_t(ContextFlags::kNoOperation)));
+  ContextFlags resolved_flags = (ctx_impl->context_flags | ContextFlags(solid_id) | bail_flag) & (nop_flags | kNopExtra);
 
-  return RenderCallResolvedOp{simplifyInfo.signature(), resolvedFlags};
+  return RenderCallResolvedOp{simplify_info.signature(), resolved_flags};
 }
 
 // Prepare means to prepare an already resolved and initialized render call. We don't have to worry about memory
 // allocations here, just to setup the render call object in the way it can be consumed by all the layers below.
 
-static BL_INLINE void prepareOverriddenFetch(BLRasterContextImpl* ctxI, DispatchInfo& di, DispatchStyle& ds, CompOpSolidId solidId) noexcept {
-  blUnused(di);
-  ds.fetchData = ctxI->solidFetchDataOverrideTable[size_t(solidId)];
+static BL_INLINE void prepare_overridden_fetch(BLRasterContextImpl* ctx_impl, DispatchInfo& di, DispatchStyle& ds, CompOpSolidId solid_id) noexcept {
+  bl_unused(di);
+  ds.fetch_data = ctx_impl->solid_fetch_data_override_table[size_t(solid_id)];
 }
 
-static BL_INLINE void prepareNonSolidFetch(BLRasterContextImpl* ctxI, DispatchInfo& di, DispatchStyle& ds, RenderFetchDataHeader* fetchData) noexcept {
-  blUnused(ctxI);
-  di.addSignature(fetchData->signature);
-  ds.fetchData = fetchData;
+static BL_INLINE void prepare_non_solid_fetch(BLRasterContextImpl* ctx_impl, DispatchInfo& di, DispatchStyle& ds, RenderFetchDataHeader* fetch_data) noexcept {
+  bl_unused(ctx_impl);
+  di.add_signature(fetch_data->signature);
+  ds.fetch_data = fetch_data;
 }
 
 // Used by other macros to share code - in general this is the main resolving mechanism that
@@ -1365,112 +1365,112 @@ static BL_INLINE void prepareNonSolidFetch(BLRasterContextImpl* ctxI, DispatchIn
     /* ASYNC MODE: more flags are used, so make sure our queue is not full */    \
     /* and our pools are not exhausted before rejecting the render call.   */    \
     if (BL_UNLIKELY(resolved.flags >= ContextFlags::kNoOperation)) {             \
-      if (!blTestFlag(resolved.flags, ContextFlags::kMTFullOrExhausted))         \
-        return bailResult;                                                       \
+      if (!bl_test_flag(resolved.flags, ContextFlags::kMTFullOrExhausted))         \
+        return bail_result;                                                       \
                                                                                  \
-      BL_PROPAGATE(handleQueuesFullOrPoolsExhausted(ctxI));                      \
+      BL_PROPAGATE(handle_queues_full_or_pools_exhausted(ctx_impl));                      \
       resolved.flags &= ~ContextFlags::kMTFullOrExhausted;                       \
                                                                                  \
       /* The same as in SYNC mode - bail if the resolved operation is NOP. */    \
       if (resolved.flags >= ContextFlags::kNoOperation)                          \
-        return bailResult;                                                       \
+        return bail_result;                                                       \
     }                                                                            \
   }                                                                              \
   else {                                                                         \
     /* SYNC MODE: Just bail if the resolved operation is NOP. */                 \
     if (resolved.flags >= ContextFlags::kNoOperation)                            \
-      return bailResult;                                                         \
+      return bail_result;                                                         \
   }
 
 // Resolves a clear operation (always solid).
 #define BL_CONTEXT_RESOLVE_CLEAR_OP(NopFlags)                                    \
   BL_CONTEXT_RESOLVE_GENERIC_OP(                                                 \
-    resolveClearOp<kRM>(ctxI, NopFlags))                                         \
+    resolve_clear_op<kRM>(ctx_impl, NopFlags))                                         \
                                                                                  \
   DispatchInfo di;                                                               \
-  di.init(resolved.signature, ctxI->renderTargetInfo.fullAlphaI);                \
-  DispatchStyle ds{&ctxI->solidOverrideFillTable[size_t(resolved.flags)]}
+  di.init(resolved.signature, ctx_impl->render_target_info.fullAlphaI);                \
+  DispatchStyle ds{&ctx_impl->solid_override_fill_table[size_t(resolved.flags)]}
 
 // Resolves an operation that uses implicit style (fill or stroke).
 #define BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(NopFlags, Slot, Bail)               \
-  RenderFetchDataHeader* fetchData = ctxI->internalState.style[Slot].fetchData;  \
+  RenderFetchDataHeader* fetch_data = ctx_impl->internal_state.style[Slot].fetch_data;  \
                                                                                  \
   BL_CONTEXT_RESOLVE_GENERIC_OP(                                                 \
-    resolveImplicitStyleOp<kRM>(ctxI, NopFlags, fetchData, Bail))                \
+    resolve_implicit_style_op<kRM>(ctx_impl, NopFlags, fetch_data, Bail))                \
                                                                                  \
-  RenderFetchDataHeader* overriddenFetchData =                                   \
-    ctxI->solidFetchDataOverrideTable[size_t(resolved.flags)];                   \
+  RenderFetchDataHeader* overridden_fetch_data =                                   \
+    ctx_impl->solid_fetch_data_override_table[size_t(resolved.flags)];                   \
                                                                                  \
   if (resolved.flags != ContextFlags::kNoFlagsSet)                               \
-    fetchData = overriddenFetchData;                                             \
+    fetch_data = overridden_fetch_data;                                             \
                                                                                  \
   DispatchInfo di;                                                               \
-  di.init(resolved.signature, ctxI->internalState.styleAlphaI[Slot]);            \
-  di.addSignature(fetchData->signature);                                         \
-  DispatchStyle ds{fetchData}
+  di.init(resolved.signature, ctx_impl->internal_state.styleAlphaI[Slot]);            \
+  di.add_signature(fetch_data->signature);                                         \
+  DispatchStyle ds{fetch_data}
 
 // Resolves an operation that uses explicit color (fill or stroke).
 #define BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(NopFlags, Slot, Color, Bail)        \
   RenderFetchDataSolid solid;                                                    \
                                                                                  \
   BL_CONTEXT_RESOLVE_GENERIC_OP(                                                 \
-    resolveExplicitSolidOp<kRM>(ctxI, NopFlags, Color, solid, Bail))             \
+    resolve_explicit_solid_op<kRM>(ctx_impl, NopFlags, Color, solid, Bail))             \
                                                                                  \
   DispatchInfo di;                                                               \
-  di.init(resolved.signature, ctxI->internalState.styleAlphaI[Slot]);            \
+  di.init(resolved.signature, ctx_impl->internal_state.styleAlphaI[Slot]);            \
   DispatchStyle ds{&solid}
 
 // Resolves an operation that uses explicit style (fill or stroke).
 #define BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(NopFlags, Slot, Style, Bail)        \
-  RenderFetchDataStorage<kRM> fetchData;                                         \
+  RenderFetchDataStorage<kRM> fetch_data;                                         \
                                                                                  \
   BLResultT<RenderCallResolvedOp> resolved =                                     \
-    resolveExplicitStyleOp(ctxI, NopFlags, Style, fetchData, Bail);              \
+    resolve_explicit_style_op(ctx_impl, NopFlags, Style, fetch_data, Bail);              \
                                                                                  \
   if (BL_UNLIKELY(resolved.value.flags >= ContextFlags::kNoOperation))           \
-    return resolved.code ? resolved.code : bailResult;                           \
+    return resolved.code ? resolved.code : bail_result;                           \
                                                                                  \
   DispatchInfo di;                                                               \
-  di.init(resolved.value.signature, ctxI->internalState.styleAlphaI[Slot]);      \
+  di.init(resolved.value.signature, ctx_impl->internal_state.styleAlphaI[Slot]);      \
                                                                                  \
-  RenderFetchDataHeader* overriddenFetchData =                                   \
-    ctxI->solidFetchDataOverrideTable[size_t(resolved.value.flags)];             \
+  RenderFetchDataHeader* overridden_fetch_data =                                   \
+    ctx_impl->solid_fetch_data_override_table[size_t(resolved.value.flags)];             \
                                                                                  \
-  DispatchStyle ds{fetchData.ptr()};                                             \
+  DispatchStyle ds{fetch_data.ptr()};                                             \
   if (resolved.value.flags != ContextFlags::kNoFlagsSet)                         \
-    ds.fetchData = overriddenFetchData;                                          \
+    ds.fetch_data = overridden_fetch_data;                                          \
                                                                                  \
-  di.addSignature(ds.fetchData->signature)
+  di.add_signature(ds.fetch_data->signature)
 
 // Resolves a blit operation that uses explicitly passed image.
 #define BL_CONTEXT_RESOLVE_BLIT_OP(NopFlags, Format, Bail)                       \
   BL_CONTEXT_RESOLVE_GENERIC_OP(                                                 \
-    resolveBlitOp<kRM>(ctxI, NopFlags, Format, Bail))                            \
+    resolve_blit_op<kRM>(ctx_impl, NopFlags, Format, Bail))                            \
                                                                                  \
-  RenderFetchDataStorage<kRM> fetchData(ctxI);                                   \
+  RenderFetchDataStorage<kRM> fetch_data(ctx_impl);                                   \
                                                                                  \
   DispatchInfo di;                                                               \
   DispatchStyle ds;                                                              \
-  di.init(resolved.signature, ctxI->globalAlphaI())
+  di.init(resolved.signature, ctx_impl->global_alpha_i())
 
 // bl::RasterEngine - ContextImpl - Internals - Render Call - Finalize
 // ===================================================================
 
 template<RenderingMode kRM>
-BL_INLINE_NODEBUG BLResult finalizeExplicitOp(BLRasterContextImpl* ctxI, RenderFetchData* fetchData, BLResult result) noexcept;
+BL_INLINE_NODEBUG BLResult finalize_explicit_op(BLRasterContextImpl* ctx_impl, RenderFetchData* fetch_data, BLResult result) noexcept;
 
 template<>
-BL_INLINE_NODEBUG BLResult finalizeExplicitOp<kSync>(BLRasterContextImpl* ctxI, RenderFetchData* fetchData, BLResult result) noexcept {
-  blUnused(ctxI, fetchData);
+BL_INLINE_NODEBUG BLResult finalize_explicit_op<kSync>(BLRasterContextImpl* ctx_impl, RenderFetchData* fetch_data, BLResult result) noexcept {
+  bl_unused(ctx_impl, fetch_data);
   return result;
 }
 
 template<>
-BL_INLINE_NODEBUG BLResult finalizeExplicitOp<kAsync>(BLRasterContextImpl* ctxI, RenderFetchData* fetchData, BLResult result) noexcept {
+BL_INLINE_NODEBUG BLResult finalize_explicit_op<kAsync>(BLRasterContextImpl* ctx_impl, RenderFetchData* fetch_data, BLResult result) noexcept {
   // The reference count of FetchData is always incremented when a command using it is enqueued. Initially it's zero, so check for one.
-  if (fetchData->refCount == 1u) {
-    ObjectInternal::retainInstance(&fetchData->style);
-    advanceFetchPtr(ctxI);
+  if (fetch_data->ref_count == 1u) {
+    ObjectInternal::retain_instance(&fetch_data->style);
+    advance_fetch_ptr(ctx_impl);
   }
   return result;
 }
@@ -1478,15 +1478,15 @@ BL_INLINE_NODEBUG BLResult finalizeExplicitOp<kAsync>(BLRasterContextImpl* ctxI,
 // bl::RasterEngine - ContextImpl - Frontend - Flush
 // =================================================
 
-static BLResult BL_CDECL flushImpl(BLContextImpl* baseImpl, BLContextFlushFlags flags) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL flush_impl(BLContextImpl* base_impl, BLContextFlushFlags flags) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
   // Nothing to flush if the rendering context is synchronous.
-  if (ctxI->isSync())
+  if (ctx_impl->is_sync())
     return BL_SUCCESS;
 
   if (flags & BL_CONTEXT_FLUSH_SYNC) {
-    BL_PROPAGATE(flushRenderBatch(ctxI));
+    BL_PROPAGATE(flush_render_batch(ctx_impl));
   }
 
   return BL_SUCCESS;
@@ -1495,307 +1495,307 @@ static BLResult BL_CDECL flushImpl(BLContextImpl* baseImpl, BLContextFlushFlags 
 // bl::RasterEngine - ContextImpl - Frontend - Properties
 // ======================================================
 
-static BLResult BL_CDECL getPropertyImpl(const BLObjectImpl* impl, const char* name, size_t nameSize, BLVarCore* valueOut) noexcept {
-  const BLRasterContextImpl* ctxI = static_cast<const BLRasterContextImpl*>(impl);
+static BLResult BL_CDECL get_property_impl(const BLObjectImpl* impl, const char* name, size_t name_size, BLVarCore* value_out) noexcept {
+  const BLRasterContextImpl* ctx_impl = static_cast<const BLRasterContextImpl*>(impl);
 
-  if (blMatchProperty(name, nameSize, "threadCount")) {
-    uint32_t value = ctxI->isSync() ? uint32_t(0) : uint32_t(ctxI->workerMgr().threadCount() + 1u);
-    return blVarAssignUInt64(valueOut, value);
+  if (bl_match_property(name, name_size, "thread_count")) {
+    uint32_t value = ctx_impl->is_sync() ? uint32_t(0) : uint32_t(ctx_impl->worker_mgr().thread_count() + 1u);
+    return bl_var_assign_uint64(value_out, value);
   }
 
-  if (blMatchProperty(name, nameSize, "accumulatedErrorFlags")) {
-    uint32_t value = ctxI->syncWorkData.accumulatedErrorFlags();
-    return blVarAssignUInt64(valueOut, value);
+  if (bl_match_property(name, name_size, "accumulated_error_flags")) {
+    uint32_t value = ctx_impl->sync_work_data.accumulated_error_flags();
+    return bl_var_assign_uint64(value_out, value);
   }
 
-  return blObjectImplGetProperty(ctxI, name, nameSize, valueOut);
+  return bl_object_impl_get_property(ctx_impl, name, name_size, value_out);
 }
 
-static BLResult BL_CDECL setPropertyImpl(BLObjectImpl* impl, const char* name, size_t nameSize, const BLVarCore* value) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(impl);
-  return blObjectImplSetProperty(ctxI, name, nameSize, value);
+static BLResult BL_CDECL set_property_impl(BLObjectImpl* impl, const char* name, size_t name_size, const BLVarCore* value) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(impl);
+  return bl_object_impl_set_property(ctx_impl, name, name_size, value);
 }
 
 // bl::RasterEngine - ContextImpl - Save & Restore
 // ===============================================
 
-// Returns how many states have to be restored to match the `stateId`. It would return zero if there is no state
-// that matches `stateId`.
-static BL_INLINE uint32_t getNumStatesToRestore(SavedState* savedState, uint64_t stateId) noexcept {
+// Returns how many states have to be restored to match the `state_id`. It would return zero if there is no state
+// that matches `state_id`.
+static BL_INLINE uint32_t get_num_states_to_restore(SavedState* saved_state, uint64_t state_id) noexcept {
   uint32_t n = 1;
   do {
-    uint64_t savedId = savedState->stateId;
-    if (savedId <= stateId)
-      return savedId == stateId ? n : uint32_t(0);
+    uint64_t saved_id = saved_state->state_id;
+    if (saved_id <= state_id)
+      return saved_id == state_id ? n : uint32_t(0);
     n++;
-    savedState = savedState->prevState;
-  } while (savedState);
+    saved_state = saved_state->prev_state;
+  } while (saved_state);
 
   return 0;
 }
 
 // "CoreState" consists of states that are always saved and restored to make the restoration simpler. All states
 // saved/restored by CoreState should be cheap to copy.
-static BL_INLINE void saveCoreState(BLRasterContextImpl* ctxI, SavedState* state) noexcept {
-  state->hints = ctxI->hints();
-  state->compOp = ctxI->compOp();
-  state->fillRule = uint8_t(ctxI->fillRule());
-  state->styleType[0] = ctxI->internalState.styleType[0];
-  state->styleType[1] = ctxI->internalState.styleType[1];
+static BL_INLINE void save_core_state(BLRasterContextImpl* ctx_impl, SavedState* state) noexcept {
+  state->hints = ctx_impl->hints();
+  state->comp_op = ctx_impl->comp_op();
+  state->fill_rule = uint8_t(ctx_impl->fill_rule());
+  state->style_type[0] = ctx_impl->internal_state.style_type[0];
+  state->style_type[1] = ctx_impl->internal_state.style_type[1];
 
-  state->clipMode = ctxI->clipMode();
-  state->prevContextFlags = ctxI->contextFlags & ~(ContextFlags::kPreservedFlags);
+  state->clip_mode = ctx_impl->clip_mode();
+  state->prev_context_flags = ctx_impl->context_flags & ~(ContextFlags::kPreservedFlags);
 
-  state->transformTypesPacked = ctxI->internalState.transformTypesPacked;
-  state->globalAlphaI = ctxI->globalAlphaI();
-  state->styleAlphaI[0] = ctxI->internalState.styleAlphaI[0];
-  state->styleAlphaI[1] = ctxI->internalState.styleAlphaI[1];
+  state->transform_types_packed = ctx_impl->internal_state.transform_types_packed;
+  state->global_alpha_i = ctx_impl->global_alpha_i();
+  state->styleAlphaI[0] = ctx_impl->internal_state.styleAlphaI[0];
+  state->styleAlphaI[1] = ctx_impl->internal_state.styleAlphaI[1];
 
-  state->globalAlpha = ctxI->globalAlphaD();
-  state->styleAlpha[0] = ctxI->internalState.styleAlpha[0];
-  state->styleAlpha[1] = ctxI->internalState.styleAlpha[1];
+  state->global_alpha = ctx_impl->global_alpha_d();
+  state->style_alpha[0] = ctx_impl->internal_state.style_alpha[0];
+  state->style_alpha[1] = ctx_impl->internal_state.style_alpha[1];
 
-  state->translationI = ctxI->translationI();
+  state->translation_i = ctx_impl->translation_i();
 }
 
-static BL_INLINE void restoreCoreState(BLRasterContextImpl* ctxI, SavedState* state) noexcept {
-  ctxI->internalState.hints = state->hints;
-  ctxI->internalState.compOp = state->compOp;
-  ctxI->internalState.fillRule = state->fillRule;
-  ctxI->internalState.styleType[0] = state->styleType[0];
-  ctxI->internalState.styleType[1] = state->styleType[1];
-  ctxI->syncWorkData.clipMode = state->clipMode;
-  ctxI->contextFlags = state->prevContextFlags;
+static BL_INLINE void restore_core_state(BLRasterContextImpl* ctx_impl, SavedState* state) noexcept {
+  ctx_impl->internal_state.hints = state->hints;
+  ctx_impl->internal_state.comp_op = state->comp_op;
+  ctx_impl->internal_state.fill_rule = state->fill_rule;
+  ctx_impl->internal_state.style_type[0] = state->style_type[0];
+  ctx_impl->internal_state.style_type[1] = state->style_type[1];
+  ctx_impl->sync_work_data.clip_mode = state->clip_mode;
+  ctx_impl->context_flags = state->prev_context_flags;
 
-  ctxI->internalState.transformTypesPacked = state->transformTypesPacked;
-  ctxI->internalState.globalAlphaI = state->globalAlphaI;
-  ctxI->internalState.styleAlphaI[0] = state->styleAlphaI[0];
-  ctxI->internalState.styleAlphaI[1] = state->styleAlphaI[1];
+  ctx_impl->internal_state.transform_types_packed = state->transform_types_packed;
+  ctx_impl->internal_state.global_alpha_i = state->global_alpha_i;
+  ctx_impl->internal_state.styleAlphaI[0] = state->styleAlphaI[0];
+  ctx_impl->internal_state.styleAlphaI[1] = state->styleAlphaI[1];
 
-  ctxI->internalState.globalAlpha = state->globalAlpha;
-  ctxI->internalState.styleAlpha[0] = state->styleAlpha[0];
-  ctxI->internalState.styleAlpha[1] = state->styleAlpha[1];
+  ctx_impl->internal_state.global_alpha = state->global_alpha;
+  ctx_impl->internal_state.style_alpha[0] = state->style_alpha[0];
+  ctx_impl->internal_state.style_alpha[1] = state->style_alpha[1];
 
-  ctxI->internalState.translationI = state->translationI;
+  ctx_impl->internal_state.translation_i = state->translation_i;
 
-  onAfterCompOpChanged(ctxI);
+  on_after_comp_op_changed(ctx_impl);
 }
 
-static void discardStates(BLRasterContextImpl* ctxI, SavedState* topState) noexcept {
-  SavedState* savedState = ctxI->savedState;
-  if (savedState == topState)
+static void discard_states(BLRasterContextImpl* ctx_impl, SavedState* top_state) noexcept {
+  SavedState* saved_state = ctx_impl->saved_state;
+  if (saved_state == top_state)
     return;
 
   // NOTE: No need to handle parts of states that don't use dynamically allocated memory.
-  ContextFlags contextFlags = ctxI->contextFlags;
+  ContextFlags context_flags = ctx_impl->context_flags;
   do {
-    if ((contextFlags & (ContextFlags::kFetchDataFill | ContextFlags::kWeakStateFillStyle)) == ContextFlags::kFetchDataFill) {
+    if ((context_flags & (ContextFlags::kFetchDataFill | ContextFlags::kWeakStateFillStyle)) == ContextFlags::kFetchDataFill) {
       constexpr uint32_t kSlot = BL_CONTEXT_STYLE_SLOT_FILL;
-      if (savedState->style[kSlot].hasFetchData()) {
-        RenderFetchData* fetchData = savedState->style[kSlot].getRenderFetchData();
-        fetchData->release(ctxI);
+      if (saved_state->style[kSlot].has_fetch_data()) {
+        RenderFetchData* fetch_data = saved_state->style[kSlot].get_render_fetch_data();
+        fetch_data->release(ctx_impl);
       }
     }
 
-    if ((contextFlags & (ContextFlags::kFetchDataStroke | ContextFlags::kWeakStateStrokeStyle)) == ContextFlags::kFetchDataStroke) {
+    if ((context_flags & (ContextFlags::kFetchDataStroke | ContextFlags::kWeakStateStrokeStyle)) == ContextFlags::kFetchDataStroke) {
       constexpr uint32_t kSlot = BL_CONTEXT_STYLE_SLOT_STROKE;
-      if (savedState->style[kSlot].hasFetchData()) {
-        RenderFetchData* fetchData = savedState->style[kSlot].getRenderFetchData();
-        fetchData->release(ctxI);
+      if (saved_state->style[kSlot].has_fetch_data()) {
+        RenderFetchData* fetch_data = saved_state->style[kSlot].get_render_fetch_data();
+        fetch_data->release(ctx_impl);
       }
     }
 
-    if (!blTestFlag(contextFlags, ContextFlags::kWeakStateStrokeOptions)) {
-      blCallDtor(savedState->strokeOptions.dashArray);
+    if (!bl_test_flag(context_flags, ContextFlags::kWeakStateStrokeOptions)) {
+      bl_call_dtor(saved_state->stroke_options.dash_array);
     }
 
-    SavedState* prevState = savedState->prevState;
-    contextFlags = savedState->prevContextFlags;
+    SavedState* prev_state = saved_state->prev_state;
+    context_flags = saved_state->prev_context_flags;
 
-    ctxI->freeSavedState(savedState);
-    savedState = prevState;
-  } while (savedState != topState);
+    ctx_impl->free_saved_state(saved_state);
+    saved_state = prev_state;
+  } while (saved_state != top_state);
 
-  // Make 'topState' the current state.
-  ctxI->savedState = topState;
-  ctxI->contextFlags = contextFlags;
+  // Make 'top_state' the current state.
+  ctx_impl->saved_state = top_state;
+  ctx_impl->context_flags = context_flags;
 }
 
-static BLResult BL_CDECL saveImpl(BLContextImpl* baseImpl, BLContextCookie* cookie) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL save_impl(BLContextImpl* base_impl, BLContextCookie* cookie) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  if (BL_UNLIKELY(ctxI->internalState.savedStateCount >= ctxI->savedStateLimit))
-    return blTraceError(BL_ERROR_TOO_MANY_SAVED_STATES);
+  if (BL_UNLIKELY(ctx_impl->internal_state.saved_state_count >= ctx_impl->saved_state_limit))
+    return bl_trace_error(BL_ERROR_TOO_MANY_SAVED_STATES);
 
-  SavedState* newState = ctxI->allocSavedState();
-  if (BL_UNLIKELY(!newState))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+  SavedState* new_state = ctx_impl->alloc_saved_state();
+  if (BL_UNLIKELY(!new_state))
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-  newState->prevState = ctxI->savedState;
-  newState->stateId = Traits::maxValue<uint64_t>();
+  new_state->prev_state = ctx_impl->saved_state;
+  new_state->state_id = Traits::max_value<uint64_t>();
 
-  ctxI->savedState = newState;
-  ctxI->internalState.savedStateCount++;
+  ctx_impl->saved_state = new_state;
+  ctx_impl->internal_state.saved_state_count++;
 
-  saveCoreState(ctxI, newState);
-  ctxI->contextFlags |= ContextFlags::kWeakStateAllFlags;
+  save_core_state(ctx_impl, new_state);
+  ctx_impl->context_flags |= ContextFlags::kWeakStateAllFlags;
 
   if (!cookie)
     return BL_SUCCESS;
 
   // Setup the given `cookie` and make the state cookie dependent.
-  uint64_t stateId = ++ctxI->stateIdCounter;
-  newState->stateId = stateId;
+  uint64_t state_id = ++ctx_impl->state_id_counter;
+  new_state->state_id = state_id;
 
-  cookie->reset(ctxI->contextOriginId, stateId);
+  cookie->reset(ctx_impl->context_origin_id, state_id);
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL restoreImpl(BLContextImpl* baseImpl, const BLContextCookie* cookie) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  SavedState* savedState = ctxI->savedState;
+static BLResult BL_CDECL restore_impl(BLContextImpl* base_impl, const BLContextCookie* cookie) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  SavedState* saved_state = ctx_impl->saved_state;
 
-  if (BL_UNLIKELY(!savedState))
-    return blTraceError(BL_ERROR_NO_STATES_TO_RESTORE);
+  if (BL_UNLIKELY(!saved_state))
+    return bl_trace_error(BL_ERROR_NO_STATES_TO_RESTORE);
 
   // By default there would be only one state to restore if `cookie` was not provided.
   uint32_t n = 1;
 
   if (cookie) {
     // Verify context origin.
-    if (BL_UNLIKELY(cookie->data[0] != ctxI->contextOriginId))
-      return blTraceError(BL_ERROR_NO_MATCHING_COOKIE);
+    if (BL_UNLIKELY(cookie->data[0] != ctx_impl->context_origin_id))
+      return bl_trace_error(BL_ERROR_NO_MATCHING_COOKIE);
 
     // Verify cookie payload and get the number of states we have to restore (if valid).
-    n = getNumStatesToRestore(savedState, cookie->data[1]);
+    n = get_num_states_to_restore(saved_state, cookie->data[1]);
     if (BL_UNLIKELY(n == 0))
-      return blTraceError(BL_ERROR_NO_MATCHING_COOKIE);
+      return bl_trace_error(BL_ERROR_NO_MATCHING_COOKIE);
   }
   else {
-    // A state that has a `stateId` assigned cannot be restored without a matching cookie.
-    if (savedState->stateId != Traits::maxValue<uint64_t>())
-      return blTraceError(BL_ERROR_NO_MATCHING_COOKIE);
+    // A state that has a `state_id` assigned cannot be restored without a matching cookie.
+    if (saved_state->state_id != Traits::max_value<uint64_t>())
+      return bl_trace_error(BL_ERROR_NO_MATCHING_COOKIE);
   }
 
   ContextFlags kPreservedFlags = ContextFlags::kPreservedFlags | ContextFlags::kSharedStateAllFlags;
-  ContextFlags contextFlagsToKeep = ctxI->contextFlags & kPreservedFlags;
-  ctxI->internalState.savedStateCount -= n;
+  ContextFlags context_flags_to_keep = ctx_impl->context_flags & kPreservedFlags;
+  ctx_impl->internal_state.saved_state_count -= n;
 
   for (;;) {
-    ContextFlags currentFlags = ctxI->contextFlags;
-    restoreCoreState(ctxI, savedState);
+    ContextFlags current_flags = ctx_impl->context_flags;
+    restore_core_state(ctx_impl, saved_state);
 
-    if (!blTestFlag(currentFlags, ContextFlags::kWeakStateConfig)) {
-      ctxI->internalState.approximationOptions = savedState->approximationOptions;
-      onAfterFlattenToleranceChanged(ctxI);
-      onAfterOffsetParameterChanged(ctxI);
+    if (!bl_test_flag(current_flags, ContextFlags::kWeakStateConfig)) {
+      ctx_impl->internal_state.approximation_options = saved_state->approximation_options;
+      on_after_flatten_tolerance_changed(ctx_impl);
+      on_after_offset_parameter_changed(ctx_impl);
 
-      contextFlagsToKeep &= ~ContextFlags::kSharedStateFill;
+      context_flags_to_keep &= ~ContextFlags::kSharedStateFill;
     }
 
-    if (!blTestFlag(currentFlags, ContextFlags::kWeakStateClip)) {
-      restoreClippingFromState(ctxI, savedState);
-      contextFlagsToKeep &= ~ContextFlags::kSharedStateFill;
+    if (!bl_test_flag(current_flags, ContextFlags::kWeakStateClip)) {
+      restore_clipping_from_state(ctx_impl, saved_state);
+      context_flags_to_keep &= ~ContextFlags::kSharedStateFill;
     }
 
-    if (!blTestFlag(currentFlags, ContextFlags::kWeakStateFillStyle)) {
-      StyleData* dst = &ctxI->internalState.style[BL_CONTEXT_STYLE_SLOT_FILL];
-      StyleData* src = &savedState->style[BL_CONTEXT_STYLE_SLOT_FILL];
+    if (!bl_test_flag(current_flags, ContextFlags::kWeakStateFillStyle)) {
+      StyleData* dst = &ctx_impl->internal_state.style[BL_CONTEXT_STYLE_SLOT_FILL];
+      StyleData* src = &saved_state->style[BL_CONTEXT_STYLE_SLOT_FILL];
 
-      if (blTestFlag(currentFlags, ContextFlags::kFetchDataFill))
-        destroyValidStyle(ctxI, dst);
+      if (bl_test_flag(current_flags, ContextFlags::kFetchDataFill))
+        destroy_valid_style(ctx_impl, dst);
 
-      dst->copyFrom(*src);
+      dst->copy_from(*src);
     }
 
-    if (!blTestFlag(currentFlags, ContextFlags::kWeakStateStrokeStyle)) {
-      StyleData* dst = &ctxI->internalState.style[BL_CONTEXT_STYLE_SLOT_STROKE];
-      StyleData* src = &savedState->style[BL_CONTEXT_STYLE_SLOT_STROKE];
+    if (!bl_test_flag(current_flags, ContextFlags::kWeakStateStrokeStyle)) {
+      StyleData* dst = &ctx_impl->internal_state.style[BL_CONTEXT_STYLE_SLOT_STROKE];
+      StyleData* src = &saved_state->style[BL_CONTEXT_STYLE_SLOT_STROKE];
 
-      if (blTestFlag(currentFlags, ContextFlags::kFetchDataStroke))
-        destroyValidStyle(ctxI, dst);
+      if (bl_test_flag(current_flags, ContextFlags::kFetchDataStroke))
+        destroy_valid_style(ctx_impl, dst);
 
-      dst->copyFrom(*src);
+      dst->copy_from(*src);
     }
 
-    if (!blTestFlag(currentFlags, ContextFlags::kWeakStateStrokeOptions)) {
+    if (!bl_test_flag(current_flags, ContextFlags::kWeakStateStrokeOptions)) {
       // NOTE: This code is unsafe, but since we know that `BLStrokeOptions` is movable it's just fine. We
       // destroy `BLStrokeOptions` first and then move it into that destroyed instance from the saved state.
-      ArrayInternal::releaseInstance(&ctxI->internalState.strokeOptions.dashArray);
-      ctxI->internalState.strokeOptions._copyFrom(savedState->strokeOptions);
-      contextFlagsToKeep &= ~(ContextFlags::kSharedStateStrokeBase | ContextFlags::kSharedStateStrokeExt);
+      ArrayInternal::release_instance(&ctx_impl->internal_state.stroke_options.dash_array);
+      ctx_impl->internal_state.stroke_options._copy_from(saved_state->stroke_options);
+      context_flags_to_keep &= ~(ContextFlags::kSharedStateStrokeBase | ContextFlags::kSharedStateStrokeExt);
     }
 
     // UserTransform state is unset when MetaTransform and/or UserTransform were saved.
-    if (!blTestFlag(currentFlags, ContextFlags::kWeakStateUserTransform)) {
-      ctxI->internalState.userTransform = savedState->userTransform;
+    if (!bl_test_flag(current_flags, ContextFlags::kWeakStateUserTransform)) {
+      ctx_impl->internal_state.user_transform = saved_state->user_transform;
 
-      if (!blTestFlag(currentFlags, ContextFlags::kWeakStateMetaTransform)) {
-        ctxI->internalState.metaTransform = savedState->altTransform;
-        updateFinalTransform(ctxI);
-        updateMetaTransformFixed(ctxI);
-        updateFinalTransformFixed(ctxI);
+      if (!bl_test_flag(current_flags, ContextFlags::kWeakStateMetaTransform)) {
+        ctx_impl->internal_state.meta_transform = saved_state->alt_transform;
+        update_final_transform(ctx_impl);
+        update_meta_transform_fixed(ctx_impl);
+        update_final_transform_fixed(ctx_impl);
       }
       else {
-        ctxI->internalState.finalTransform = savedState->altTransform;
-        updateFinalTransformFixed(ctxI);
+        ctx_impl->internal_state.final_transform = saved_state->alt_transform;
+        update_final_transform_fixed(ctx_impl);
       }
 
-      contextFlagsToKeep &= ~(ContextFlags::kSharedStateFill | ContextFlags::kSharedStateStrokeBase | ContextFlags::kSharedStateStrokeExt);
+      context_flags_to_keep &= ~(ContextFlags::kSharedStateFill | ContextFlags::kSharedStateStrokeBase | ContextFlags::kSharedStateStrokeExt);
     }
 
-    SavedState* finishedSavedState = savedState;
-    savedState = savedState->prevState;
+    SavedState* finished_saved_state = saved_state;
+    saved_state = saved_state->prev_state;
 
-    ctxI->savedState = savedState;
-    ctxI->freeSavedState(finishedSavedState);
+    ctx_impl->saved_state = saved_state;
+    ctx_impl->free_saved_state(finished_saved_state);
 
     if (--n == 0)
       break;
   }
 
-  ctxI->contextFlags = (ctxI->contextFlags & ~kPreservedFlags) | contextFlagsToKeep;
+  ctx_impl->context_flags = (ctx_impl->context_flags & ~kPreservedFlags) | context_flags_to_keep;
   return BL_SUCCESS;
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Transformations
 // ===========================================================
 
-static BLResult BL_CDECL applyTransformOpImpl(BLContextImpl* baseImpl, BLTransformOp opType, const void* opData) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL apply_transform_op_impl(BLContextImpl* base_impl, BLTransformOp op_type, const void* op_data) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
   Matrix2x2 before2x2;
-  onBeforeUserTransformChange(ctxI, before2x2);
-  BL_PROPAGATE(blMatrix2DApplyOp(&ctxI->internalState.userTransform, opType, opData));
+  on_before_user_transform_change(ctx_impl, before2x2);
+  BL_PROPAGATE(bl_matrix2d_apply_op(&ctx_impl->internal_state.user_transform, op_type, op_data));
 
-  onAfterUserTransformChanged(ctxI, before2x2);
+  on_after_user_transform_changed(ctx_impl, before2x2);
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL userToMetaImpl(BLContextImpl* baseImpl) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL user_to_meta_impl(BLContextImpl* base_impl) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
   constexpr ContextFlags kUserAndMetaFlags = ContextFlags::kWeakStateMetaTransform | ContextFlags::kWeakStateUserTransform;
 
-  if (blTestFlag(ctxI->contextFlags, kUserAndMetaFlags)) {
-    SavedState* state = ctxI->savedState;
+  if (bl_test_flag(ctx_impl->context_flags, kUserAndMetaFlags)) {
+    SavedState* state = ctx_impl->saved_state;
 
-    // Always save both `metaTransform` and `userTransform` in case we have to save the current state before we
-    // change the transform. In this case the `altTransform` of the state would store the current `metaTransform`
+    // Always save both `meta_transform` and `user_transform` in case we have to save the current state before we
+    // change the transform. In this case the `alt_transform` of the state would store the current `meta_transform`
     // and on state restore the final transform would be recalculated in-place.
-    state->altTransform = ctxI->metaTransform();
+    state->alt_transform = ctx_impl->meta_transform();
 
-    // Don't copy it if it was already saved, we would have copied an altered `userTransform`.
-    if (blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateUserTransform))
-      state->userTransform = ctxI->userTransform();
+    // Don't copy it if it was already saved, we would have copied an altered `user_transform`.
+    if (bl_test_flag(ctx_impl->context_flags, ContextFlags::kWeakStateUserTransform))
+      state->user_transform = ctx_impl->user_transform();
   }
 
-  ctxI->contextFlags &= ~(kUserAndMetaFlags | ContextFlags::kSharedStateStrokeExt);
-  ctxI->internalState.userTransform.reset();
-  ctxI->internalState.metaTransform = ctxI->finalTransform();
-  ctxI->internalState.metaTransformFixed = ctxI->finalTransformFixed();
-  ctxI->internalState.metaTransformType = uint8_t(ctxI->finalTransformType());
-  ctxI->internalState.metaTransformFixedType = uint8_t(ctxI->finalTransformFixedType());
+  ctx_impl->context_flags &= ~(kUserAndMetaFlags | ContextFlags::kSharedStateStrokeExt);
+  ctx_impl->internal_state.user_transform.reset();
+  ctx_impl->internal_state.meta_transform = ctx_impl->final_transform();
+  ctx_impl->internal_state.meta_transform_fixed = ctx_impl->final_transform_fixed();
+  ctx_impl->internal_state.meta_transform_type = uint8_t(ctx_impl->final_transform_type());
+  ctx_impl->internal_state.meta_transform_fixed_type = uint8_t(ctx_impl->final_transform_fixed_type());
 
   return BL_SUCCESS;
 }
@@ -1803,114 +1803,114 @@ static BLResult BL_CDECL userToMetaImpl(BLContextImpl* baseImpl) noexcept {
 // bl::RasterEngine - ContextImpl - Frontend - Rendering Hints
 // ===========================================================
 
-static BLResult BL_CDECL setHintImpl(BLContextImpl* baseImpl, BLContextHint hintType, uint32_t value) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_hint_impl(BLContextImpl* base_impl, BLContextHint hint_type, uint32_t value) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  switch (hintType) {
+  switch (hint_type) {
     case BL_CONTEXT_HINT_RENDERING_QUALITY:
       if (BL_UNLIKELY(value > BL_RENDERING_QUALITY_MAX_VALUE))
-        return blTraceError(BL_ERROR_INVALID_VALUE);
+        return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-      ctxI->internalState.hints.renderingQuality = uint8_t(value);
+      ctx_impl->internal_state.hints.rendering_quality = uint8_t(value);
       return BL_SUCCESS;
 
     case BL_CONTEXT_HINT_GRADIENT_QUALITY:
       if (BL_UNLIKELY(value > BL_GRADIENT_QUALITY_MAX_VALUE))
-        return blTraceError(BL_ERROR_INVALID_VALUE);
+        return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-      ctxI->internalState.hints.gradientQuality = uint8_t(value);
+      ctx_impl->internal_state.hints.gradient_quality = uint8_t(value);
       return BL_SUCCESS;
 
     case BL_CONTEXT_HINT_PATTERN_QUALITY:
       if (BL_UNLIKELY(value > BL_PATTERN_QUALITY_MAX_VALUE))
-        return blTraceError(BL_ERROR_INVALID_VALUE);
+        return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-      ctxI->internalState.hints.patternQuality = uint8_t(value);
+      ctx_impl->internal_state.hints.pattern_quality = uint8_t(value);
       return BL_SUCCESS;
 
     default:
-      return blTraceError(BL_ERROR_INVALID_VALUE);
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
   }
 }
 
-static BLResult BL_CDECL setHintsImpl(BLContextImpl* baseImpl, const BLContextHints* hints) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_hints_impl(BLContextImpl* base_impl, const BLContextHints* hints) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  uint8_t renderingQuality = hints->renderingQuality;
-  uint8_t patternQuality = hints->patternQuality;
-  uint8_t gradientQuality = hints->gradientQuality;
+  uint8_t rendering_quality = hints->rendering_quality;
+  uint8_t pattern_quality = hints->pattern_quality;
+  uint8_t gradient_quality = hints->gradient_quality;
 
-  if (BL_UNLIKELY(renderingQuality > BL_RENDERING_QUALITY_MAX_VALUE ||
-                  patternQuality   > BL_PATTERN_QUALITY_MAX_VALUE   ||
-                  gradientQuality  > BL_GRADIENT_QUALITY_MAX_VALUE  ))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(rendering_quality > BL_RENDERING_QUALITY_MAX_VALUE ||
+                  pattern_quality   > BL_PATTERN_QUALITY_MAX_VALUE   ||
+                  gradient_quality  > BL_GRADIENT_QUALITY_MAX_VALUE  ))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  ctxI->internalState.hints.renderingQuality = renderingQuality;
-  ctxI->internalState.hints.patternQuality = patternQuality;
-  ctxI->internalState.hints.gradientQuality = gradientQuality;
+  ctx_impl->internal_state.hints.rendering_quality = rendering_quality;
+  ctx_impl->internal_state.hints.pattern_quality = pattern_quality;
+  ctx_impl->internal_state.hints.gradient_quality = gradient_quality;
   return BL_SUCCESS;
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Approximation Options
 // =================================================================
 
-static BLResult BL_CDECL setFlattenModeImpl(BLContextImpl* baseImpl, BLFlattenMode mode) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_flatten_mode_impl(BLContextImpl* base_impl, BLFlattenMode mode) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
   if (BL_UNLIKELY(uint32_t(mode) > BL_FLATTEN_MODE_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  onBeforeConfigChange(ctxI);
-  ctxI->contextFlags &= ~ContextFlags::kWeakStateConfig;
+  on_before_config_change(ctx_impl);
+  ctx_impl->context_flags &= ~ContextFlags::kWeakStateConfig;
 
-  ctxI->internalState.approximationOptions.flattenMode = uint8_t(mode);
+  ctx_impl->internal_state.approximation_options.flatten_mode = uint8_t(mode);
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setFlattenToleranceImpl(BLContextImpl* baseImpl, double tolerance) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_flatten_tolerance_impl(BLContextImpl* base_impl, double tolerance) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
   if (BL_UNLIKELY(Math::isNaN(tolerance)))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  onBeforeConfigChange(ctxI);
-  ctxI->contextFlags &= ~(ContextFlags::kWeakStateConfig | ContextFlags::kSharedStateFill);
+  on_before_config_change(ctx_impl);
+  ctx_impl->context_flags &= ~(ContextFlags::kWeakStateConfig | ContextFlags::kSharedStateFill);
 
-  tolerance = blClamp(tolerance, ContextInternal::kMinimumTolerance, ContextInternal::kMaximumTolerance);
-  BL_ASSERT(Math::isFinite(tolerance));
+  tolerance = bl_clamp(tolerance, ContextInternal::kMinimumTolerance, ContextInternal::kMaximumTolerance);
+  BL_ASSERT(Math::is_finite(tolerance));
 
-  ctxI->internalState.approximationOptions.flattenTolerance = tolerance;
-  onAfterFlattenToleranceChanged(ctxI);
+  ctx_impl->internal_state.approximation_options.flatten_tolerance = tolerance;
+  on_after_flatten_tolerance_changed(ctx_impl);
 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setApproximationOptionsImpl(BLContextImpl* baseImpl, const BLApproximationOptions* options) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_approximation_options_impl(BLContextImpl* base_impl, const BLApproximationOptions* options) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  uint32_t flattenMode = options->flattenMode;
-  uint32_t offsetMode = options->offsetMode;
+  uint32_t flatten_mode = options->flatten_mode;
+  uint32_t offset_mode = options->offset_mode;
 
-  double flattenTolerance = options->flattenTolerance;
-  double offsetParameter = options->offsetParameter;
+  double flatten_tolerance = options->flatten_tolerance;
+  double offset_parameter = options->offset_parameter;
 
-  if (BL_UNLIKELY(flattenMode > BL_FLATTEN_MODE_MAX_VALUE ||
-                  offsetMode > BL_OFFSET_MODE_MAX_VALUE ||
-                  Math::isNaN(flattenTolerance) ||
-                  Math::isNaN(offsetParameter)))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(flatten_mode > BL_FLATTEN_MODE_MAX_VALUE ||
+                  offset_mode > BL_OFFSET_MODE_MAX_VALUE ||
+                  Math::isNaN(flatten_tolerance) ||
+                  Math::isNaN(offset_parameter)))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  onBeforeConfigChange(ctxI);
-  ctxI->contextFlags &= ~(ContextFlags::kWeakStateConfig | ContextFlags::kSharedStateFill);
+  on_before_config_change(ctx_impl);
+  ctx_impl->context_flags &= ~(ContextFlags::kWeakStateConfig | ContextFlags::kSharedStateFill);
 
-  BLApproximationOptions& dst = ctxI->internalState.approximationOptions;
-  dst.flattenMode = uint8_t(flattenMode);
-  dst.offsetMode = uint8_t(offsetMode);
-  dst.flattenTolerance = blClamp(flattenTolerance, ContextInternal::kMinimumTolerance, ContextInternal::kMaximumTolerance);
-  dst.offsetParameter = offsetParameter;
+  BLApproximationOptions& dst = ctx_impl->internal_state.approximation_options;
+  dst.flatten_mode = uint8_t(flatten_mode);
+  dst.offset_mode = uint8_t(offset_mode);
+  dst.flatten_tolerance = bl_clamp(flatten_tolerance, ContextInternal::kMinimumTolerance, ContextInternal::kMaximumTolerance);
+  dst.offset_parameter = offset_parameter;
 
-  onAfterFlattenToleranceChanged(ctxI);
-  onAfterOffsetParameterChanged(ctxI);
+  on_after_flatten_tolerance_changed(ctx_impl);
+  on_after_offset_parameter_changed(ctx_impl);
 
   return BL_SUCCESS;
 }
@@ -1918,125 +1918,125 @@ static BLResult BL_CDECL setApproximationOptionsImpl(BLContextImpl* baseImpl, co
 // bl::RasterEngine - ContextImpl - Frontend - Style Alpha
 // =======================================================
 
-static BLResult BL_CDECL setStyleAlphaImpl(BLContextImpl* baseImpl, BLContextStyleSlot slot, double alpha) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_style_alpha_impl(BLContextImpl* base_impl, BLContextStyleSlot slot, double alpha) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
   if (BL_UNLIKELY(slot > BL_CONTEXT_STYLE_SLOT_MAX_VALUE || Math::isNaN(alpha)))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  ContextFlags noAlpha = ContextFlags::kNoBaseAlpha << slot;
-  ContextFlags contextFlags = ctxI->contextFlags & ~noAlpha;
+  ContextFlags no_alpha = ContextFlags::kNoBaseAlpha << slot;
+  ContextFlags context_flags = ctx_impl->context_flags & ~no_alpha;
 
-  alpha = blClamp(alpha, 0.0, 1.0);
-  uint32_t alphaI = uint32_t(Math::roundToInt(ctxI->globalAlphaD() * ctxI->fullAlphaD() * alpha));
+  alpha = bl_clamp(alpha, 0.0, 1.0);
+  uint32_t alpha_i = uint32_t(Math::round_to_int(ctx_impl->global_alpha_d() * ctx_impl->full_alpha_d() * alpha));
 
-  if (alphaI)
-    noAlpha = ContextFlags::kNoFlagsSet;
+  if (alpha_i)
+    no_alpha = ContextFlags::kNoFlagsSet;
 
-  ctxI->internalState.styleAlpha[slot] = alpha;
-  ctxI->internalState.styleAlphaI[slot] = alphaI;
-  ctxI->contextFlags = contextFlags | noAlpha;
+  ctx_impl->internal_state.style_alpha[slot] = alpha;
+  ctx_impl->internal_state.styleAlphaI[slot] = alpha_i;
+  ctx_impl->context_flags = context_flags | no_alpha;
   return BL_SUCCESS;
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Swap Styles
 // =======================================================
 
-static BLResult BL_CDECL swapStylesImpl(BLContextImpl* baseImpl, BLContextStyleSwapMode mode) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  ContextFlags contextFlags = ctxI->contextFlags;
+static BLResult BL_CDECL swap_styles_impl(BLContextImpl* base_impl, BLContextStyleSwapMode mode) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  ContextFlags context_flags = ctx_impl->context_flags;
 
   if (BL_UNLIKELY(mode > BL_CONTEXT_STYLE_SWAP_MODE_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  RasterContextState& state = ctxI->internalState;
+  RasterContextState& state = ctx_impl->internal_state;
 
   constexpr BLContextStyleSlot kFillSlot = BL_CONTEXT_STYLE_SLOT_FILL;
   constexpr BLContextStyleSlot kStrokeSlot = BL_CONTEXT_STYLE_SLOT_STROKE;
   constexpr ContextFlags kWeakFillAndStrokeStyle = ContextFlags::kWeakStateFillStyle | ContextFlags::kWeakStateStrokeStyle;
 
-  if (blTestFlag(contextFlags, kWeakFillAndStrokeStyle)) {
-    BL_ASSERT(ctxI->savedState != nullptr);
+  if (bl_test_flag(context_flags, kWeakFillAndStrokeStyle)) {
+    BL_ASSERT(ctx_impl->saved_state != nullptr);
 
-    if (blTestFlag(contextFlags, ContextFlags::kWeakStateFillStyle)) {
-      ctxI->savedState->style[kFillSlot].copyFrom(state.style[kFillSlot]);
-      if (blTestFlag(contextFlags, ContextFlags::kFetchDataFill))
-        state.style[kFillSlot].getRenderFetchData()->refCount++;
+    if (bl_test_flag(context_flags, ContextFlags::kWeakStateFillStyle)) {
+      ctx_impl->saved_state->style[kFillSlot].copy_from(state.style[kFillSlot]);
+      if (bl_test_flag(context_flags, ContextFlags::kFetchDataFill))
+        state.style[kFillSlot].get_render_fetch_data()->ref_count++;
     }
 
-    if (blTestFlag(contextFlags, ContextFlags::kWeakStateStrokeStyle)) {
-      ctxI->savedState->style[kStrokeSlot].copyFrom(state.style[kStrokeSlot]);
-      if (blTestFlag(contextFlags, ContextFlags::kFetchDataFill))
-        state.style[kStrokeSlot].getRenderFetchData()->refCount++;
+    if (bl_test_flag(context_flags, ContextFlags::kWeakStateStrokeStyle)) {
+      ctx_impl->saved_state->style[kStrokeSlot].copy_from(state.style[kStrokeSlot]);
+      if (bl_test_flag(context_flags, ContextFlags::kFetchDataFill))
+        state.style[kStrokeSlot].get_render_fetch_data()->ref_count++;
     }
 
-    contextFlags &= ~kWeakFillAndStrokeStyle;
+    context_flags &= ~kWeakFillAndStrokeStyle;
   }
 
   // Swap fill and stroke styles.
   {
     state.style[kFillSlot].swap(state.style[kStrokeSlot]);
-    BLInternal::swap(state.styleType[kFillSlot], state.styleType[kStrokeSlot]);
+    BLInternal::swap(state.style_type[kFillSlot], state.style_type[kStrokeSlot]);
 
     constexpr ContextFlags kSwapFlags = ContextFlags::kNoFillAndStrokeStyle | ContextFlags::kFetchDataFillAndStroke;
-    contextFlags = (contextFlags & ~kSwapFlags) | ((contextFlags >> 1) & kSwapFlags) | ((contextFlags << 1) & kSwapFlags);
+    context_flags = (context_flags & ~kSwapFlags) | ((context_flags >> 1) & kSwapFlags) | ((context_flags << 1) & kSwapFlags);
   }
 
   // Swap fill and stroke alphas.
   if (mode == BL_CONTEXT_STYLE_SWAP_MODE_STYLES_WITH_ALPHA) {
-    BLInternal::swap(state.styleAlpha[kFillSlot], state.styleAlpha[kStrokeSlot]);
+    BLInternal::swap(state.style_alpha[kFillSlot], state.style_alpha[kStrokeSlot]);
     BLInternal::swap(state.styleAlphaI[kFillSlot], state.styleAlphaI[kStrokeSlot]);
 
     constexpr ContextFlags kSwapFlags = ContextFlags::kNoFillAndStrokeAlpha;
-    contextFlags = (contextFlags & ~kSwapFlags) | ((contextFlags >> 1) & kSwapFlags) | ((contextFlags << 1) & kSwapFlags);
+    context_flags = (context_flags & ~kSwapFlags) | ((context_flags >> 1) & kSwapFlags) | ((context_flags << 1) & kSwapFlags);
   }
 
-  ctxI->contextFlags = contextFlags;
+  ctx_impl->context_flags = context_flags;
   return BL_SUCCESS;
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Composition Options
 // ===============================================================
 
-static BLResult BL_CDECL setGlobalAlphaImpl(BLContextImpl* baseImpl, double alpha) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_global_alpha_impl(BLContextImpl* base_impl, double alpha) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
   if (BL_UNLIKELY(Math::isNaN(alpha)))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  alpha = blClamp(alpha, 0.0, 1.0);
+  alpha = bl_clamp(alpha, 0.0, 1.0);
 
-  double intAlphaD = alpha * ctxI->fullAlphaD();
-  double fillAlphaD = intAlphaD * ctxI->internalState.styleAlpha[BL_CONTEXT_STYLE_SLOT_FILL];
-  double strokeAlphaD = intAlphaD * ctxI->internalState.styleAlpha[BL_CONTEXT_STYLE_SLOT_STROKE];
+  double intAlphaD = alpha * ctx_impl->full_alpha_d();
+  double fillAlphaD = intAlphaD * ctx_impl->internal_state.style_alpha[BL_CONTEXT_STYLE_SLOT_FILL];
+  double strokeAlphaD = intAlphaD * ctx_impl->internal_state.style_alpha[BL_CONTEXT_STYLE_SLOT_STROKE];
 
-  uint32_t globalAlphaI = uint32_t(Math::roundToInt(intAlphaD));
-  uint32_t styleAlphaI[2] = { uint32_t(Math::roundToInt(fillAlphaD)), uint32_t(Math::roundToInt(strokeAlphaD)) };
+  uint32_t global_alpha_i = uint32_t(Math::round_to_int(intAlphaD));
+  uint32_t styleAlphaI[2] = { uint32_t(Math::round_to_int(fillAlphaD)), uint32_t(Math::round_to_int(strokeAlphaD)) };
 
-  ctxI->internalState.globalAlpha = alpha;
-  ctxI->internalState.globalAlphaI = globalAlphaI;
-  ctxI->internalState.styleAlphaI[0] = styleAlphaI[0];
-  ctxI->internalState.styleAlphaI[1] = styleAlphaI[1];
+  ctx_impl->internal_state.global_alpha = alpha;
+  ctx_impl->internal_state.global_alpha_i = global_alpha_i;
+  ctx_impl->internal_state.styleAlphaI[0] = styleAlphaI[0];
+  ctx_impl->internal_state.styleAlphaI[1] = styleAlphaI[1];
 
-  ContextFlags contextFlags = ctxI->contextFlags;
-  contextFlags &= ~(ContextFlags::kNoGlobalAlpha | ContextFlags::kNoFillAlpha | ContextFlags::kNoStrokeAlpha);
+  ContextFlags context_flags = ctx_impl->context_flags;
+  context_flags &= ~(ContextFlags::kNoGlobalAlpha | ContextFlags::kNoFillAlpha | ContextFlags::kNoStrokeAlpha);
 
-  if (!globalAlphaI) contextFlags |= ContextFlags::kNoGlobalAlpha;
-  if (!styleAlphaI[0]) contextFlags |= ContextFlags::kNoFillAlpha;
-  if (!styleAlphaI[1]) contextFlags |= ContextFlags::kNoStrokeAlpha;
+  if (!global_alpha_i) context_flags |= ContextFlags::kNoGlobalAlpha;
+  if (!styleAlphaI[0]) context_flags |= ContextFlags::kNoFillAlpha;
+  if (!styleAlphaI[1]) context_flags |= ContextFlags::kNoStrokeAlpha;
 
-  ctxI->contextFlags = contextFlags;
+  ctx_impl->context_flags = context_flags;
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setCompOpImpl(BLContextImpl* baseImpl, BLCompOp compOp) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_comp_op_impl(BLContextImpl* base_impl, BLCompOp comp_op) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  if (BL_UNLIKELY(uint32_t(compOp) > BL_COMP_OP_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(uint32_t(comp_op) > BL_COMP_OP_MAX_VALUE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  ctxI->internalState.compOp = uint8_t(compOp);
-  onAfterCompOpChanged(ctxI);
+  ctx_impl->internal_state.comp_op = uint8_t(comp_op);
+  on_after_comp_op_changed(ctx_impl);
 
   return BL_SUCCESS;
 }
@@ -2044,144 +2044,144 @@ static BLResult BL_CDECL setCompOpImpl(BLContextImpl* baseImpl, BLCompOp compOp)
 // bl::RasterEngine - ContextImpl - Frontend - Fill Options
 // ========================================================
 
-static BLResult BL_CDECL setFillRuleImpl(BLContextImpl* baseImpl, BLFillRule fillRule) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_fill_rule_impl(BLContextImpl* base_impl, BLFillRule fill_rule) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  if (BL_UNLIKELY(uint32_t(fillRule) > BL_FILL_RULE_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(uint32_t(fill_rule) > BL_FILL_RULE_MAX_VALUE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  ctxI->internalState.fillRule = uint8_t(fillRule);
+  ctx_impl->internal_state.fill_rule = uint8_t(fill_rule);
   return BL_SUCCESS;
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Stroke Options
 // ==========================================================
 
-static BLResult BL_CDECL setStrokeWidthImpl(BLContextImpl* baseImpl, double width) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_stroke_width_impl(BLContextImpl* base_impl, double width) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  onBeforeStrokeChange(ctxI);
-  ctxI->contextFlags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
-  ctxI->internalState.strokeOptions.width = width;
+  on_before_stroke_change(ctx_impl);
+  ctx_impl->context_flags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
+  ctx_impl->internal_state.stroke_options.width = width;
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setStrokeMiterLimitImpl(BLContextImpl* baseImpl, double miterLimit) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_stroke_miter_limit_impl(BLContextImpl* base_impl, double miter_limit) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  onBeforeStrokeChange(ctxI);
-  ctxI->contextFlags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
-  ctxI->internalState.strokeOptions.miterLimit = miterLimit;
+  on_before_stroke_change(ctx_impl);
+  ctx_impl->context_flags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
+  ctx_impl->internal_state.stroke_options.miter_limit = miter_limit;
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setStrokeCapImpl(BLContextImpl* baseImpl, BLStrokeCapPosition position, BLStrokeCap strokeCap) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_stroke_cap_impl(BLContextImpl* base_impl, BLStrokeCapPosition position, BLStrokeCap stroke_cap) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
   if (BL_UNLIKELY(uint32_t(position) > BL_STROKE_CAP_POSITION_MAX_VALUE ||
-                  uint32_t(strokeCap) > BL_STROKE_CAP_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+                  uint32_t(stroke_cap) > BL_STROKE_CAP_MAX_VALUE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  onBeforeStrokeChange(ctxI);
-  ctxI->contextFlags &= ~ContextFlags::kSharedStateStrokeBase;
+  on_before_stroke_change(ctx_impl);
+  ctx_impl->context_flags &= ~ContextFlags::kSharedStateStrokeBase;
 
-  ctxI->internalState.strokeOptions.caps[position] = uint8_t(strokeCap);
+  ctx_impl->internal_state.stroke_options.caps[position] = uint8_t(stroke_cap);
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setStrokeCapsImpl(BLContextImpl* baseImpl, BLStrokeCap strokeCap) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_stroke_caps_impl(BLContextImpl* base_impl, BLStrokeCap stroke_cap) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  if (BL_UNLIKELY(uint32_t(strokeCap) > BL_STROKE_CAP_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(uint32_t(stroke_cap) > BL_STROKE_CAP_MAX_VALUE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  onBeforeStrokeChange(ctxI);
-  ctxI->contextFlags &= ~ContextFlags::kSharedStateStrokeBase;
+  on_before_stroke_change(ctx_impl);
+  ctx_impl->context_flags &= ~ContextFlags::kSharedStateStrokeBase;
 
   for (uint32_t i = 0; i <= BL_STROKE_CAP_POSITION_MAX_VALUE; i++)
-    ctxI->internalState.strokeOptions.caps[i] = uint8_t(strokeCap);
+    ctx_impl->internal_state.stroke_options.caps[i] = uint8_t(stroke_cap);
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setStrokeJoinImpl(BLContextImpl* baseImpl, BLStrokeJoin strokeJoin) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_stroke_join_impl(BLContextImpl* base_impl, BLStrokeJoin stroke_join) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  if (BL_UNLIKELY(uint32_t(strokeJoin) > BL_STROKE_JOIN_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(uint32_t(stroke_join) > BL_STROKE_JOIN_MAX_VALUE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  onBeforeStrokeChange(ctxI);
-  ctxI->contextFlags &= ~ContextFlags::kSharedStateStrokeBase;
+  on_before_stroke_change(ctx_impl);
+  ctx_impl->context_flags &= ~ContextFlags::kSharedStateStrokeBase;
 
-  ctxI->internalState.strokeOptions.join = uint8_t(strokeJoin);
+  ctx_impl->internal_state.stroke_options.join = uint8_t(stroke_join);
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setStrokeDashOffsetImpl(BLContextImpl* baseImpl, double dashOffset) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_stroke_dash_offset_impl(BLContextImpl* base_impl, double dash_offset) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  onBeforeStrokeChange(ctxI);
-  ctxI->contextFlags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
+  on_before_stroke_change(ctx_impl);
+  ctx_impl->context_flags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
 
-  ctxI->internalState.strokeOptions.dashOffset = dashOffset;
+  ctx_impl->internal_state.stroke_options.dash_offset = dash_offset;
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setStrokeDashArrayImpl(BLContextImpl* baseImpl, const BLArrayCore* dashArray) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_stroke_dash_array_impl(BLContextImpl* base_impl, const BLArrayCore* dash_array) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  if (BL_UNLIKELY(dashArray->_d.rawType() != BL_OBJECT_TYPE_ARRAY_FLOAT64))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(dash_array->_d.raw_type() != BL_OBJECT_TYPE_ARRAY_FLOAT64))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  onBeforeStrokeChangeAndDestroyDashArray(ctxI);
-  ctxI->contextFlags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
+  on_before_stroke_change_and_destroy_dash_array(ctx_impl);
+  ctx_impl->context_flags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
 
-  ctxI->internalState.strokeOptions.dashArray._d = dashArray->_d;
-  return ArrayInternal::retainInstance(&ctxI->internalState.strokeOptions.dashArray);
+  ctx_impl->internal_state.stroke_options.dash_array._d = dash_array->_d;
+  return ArrayInternal::retain_instance(&ctx_impl->internal_state.stroke_options.dash_array);
 }
 
-static BLResult BL_CDECL setStrokeTransformOrderImpl(BLContextImpl* baseImpl, BLStrokeTransformOrder transformOrder) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_stroke_transform_order_impl(BLContextImpl* base_impl, BLStrokeTransformOrder transform_order) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  if (BL_UNLIKELY(uint32_t(transformOrder) > BL_STROKE_TRANSFORM_ORDER_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+  if (BL_UNLIKELY(uint32_t(transform_order) > BL_STROKE_TRANSFORM_ORDER_MAX_VALUE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  onBeforeStrokeChange(ctxI);
-  ctxI->contextFlags &= ~(ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
+  on_before_stroke_change(ctx_impl);
+  ctx_impl->context_flags &= ~(ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
 
-  ctxI->internalState.strokeOptions.transformOrder = uint8_t(transformOrder);
+  ctx_impl->internal_state.stroke_options.transform_order = uint8_t(transform_order);
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL setStrokeOptionsImpl(BLContextImpl* baseImpl, const BLStrokeOptionsCore* options) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL set_stroke_options_impl(BLContextImpl* base_impl, const BLStrokeOptionsCore* options) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  if (BL_UNLIKELY(options->startCap > BL_STROKE_CAP_MAX_VALUE ||
-                  options->endCap > BL_STROKE_CAP_MAX_VALUE ||
+  if (BL_UNLIKELY(options->start_cap > BL_STROKE_CAP_MAX_VALUE ||
+                  options->end_cap > BL_STROKE_CAP_MAX_VALUE ||
                   options->join > BL_STROKE_JOIN_MAX_VALUE ||
-                  options->transformOrder > BL_STROKE_TRANSFORM_ORDER_MAX_VALUE))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+                  options->transform_order > BL_STROKE_TRANSFORM_ORDER_MAX_VALUE))
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-  onBeforeStrokeChange(ctxI);
-  ctxI->contextFlags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
-  return blStrokeOptionsAssignWeak(&ctxI->internalState.strokeOptions, options);
+  on_before_stroke_change(ctx_impl);
+  ctx_impl->context_flags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
+  return bl_stroke_options_assign_weak(&ctx_impl->internal_state.stroke_options, options);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Clip Operations
 // ===========================================================
 
-static BLResult clipToFinalBox(BLRasterContextImpl* ctxI, const BLBox& inputBox) noexcept {
+static BLResult clip_to_final_box(BLRasterContextImpl* ctx_impl, const BLBox& input_box) noexcept {
   BLBox b;
-  onBeforeClipBoxChange(ctxI);
+  on_before_clip_box_change(ctx_impl);
 
-  if (Geometry::intersect(b, ctxI->finalClipBoxD(), inputBox)) {
-    int fpMaskI = ctxI->renderTargetInfo.fpMaskI;
-    int fpShiftI = ctxI->renderTargetInfo.fpShiftI;
+  if (Geometry::intersect(b, ctx_impl->final_clip_box_d(), input_box)) {
+    int fpMaskI = ctx_impl->render_target_info.fpMaskI;
+    int fpShiftI = ctx_impl->render_target_info.fpShiftI;
 
-    ctxI->setFinalClipBoxFixedD(b * ctxI->fpScaleD());
-    const BLBoxI& clipBoxFixedI = ctxI->finalClipBoxFixedI();
+    ctx_impl->set_final_clip_box_fixed_d(b * ctx_impl->fp_scale_d());
+    const BLBoxI& clipBoxFixedI = ctx_impl->final_clip_box_fixed_i();
 
-    ctxI->internalState.finalClipBoxD = b;
-    ctxI->internalState.finalClipBoxI.reset((clipBoxFixedI.x0 >> fpShiftI),
+    ctx_impl->internal_state.final_clip_box_d = b;
+    ctx_impl->internal_state.final_clip_box_i.reset((clipBoxFixedI.x0 >> fpShiftI),
                                             (clipBoxFixedI.y0 >> fpShiftI),
                                             (clipBoxFixedI.x1 + fpMaskI) >> fpShiftI,
                                             (clipBoxFixedI.y1 + fpMaskI) >> fpShiftI);
@@ -2189,64 +2189,64 @@ static BLResult clipToFinalBox(BLRasterContextImpl* ctxI, const BLBox& inputBox)
     int32_t bits = clipBoxFixedI.x0 | clipBoxFixedI.y0 | clipBoxFixedI.x1 | clipBoxFixedI.y1;
 
     if ((bits & fpMaskI) == 0)
-      ctxI->syncWorkData.clipMode = BL_CLIP_MODE_ALIGNED_RECT;
+      ctx_impl->sync_work_data.clip_mode = BL_CLIP_MODE_ALIGNED_RECT;
     else
-      ctxI->syncWorkData.clipMode = BL_CLIP_MODE_UNALIGNED_RECT;
+      ctx_impl->sync_work_data.clip_mode = BL_CLIP_MODE_UNALIGNED_RECT;
   }
   else {
-    ctxI->internalState.finalClipBoxD.reset();
-    ctxI->internalState.finalClipBoxI.reset();
-    ctxI->setFinalClipBoxFixedD(BLBox(0, 0, 0, 0));
-    ctxI->contextFlags |= ContextFlags::kNoClipRect;
-    ctxI->syncWorkData.clipMode = BL_CLIP_MODE_ALIGNED_RECT;
+    ctx_impl->internal_state.final_clip_box_d.reset();
+    ctx_impl->internal_state.final_clip_box_i.reset();
+    ctx_impl->set_final_clip_box_fixed_d(BLBox(0, 0, 0, 0));
+    ctx_impl->context_flags |= ContextFlags::kNoClipRect;
+    ctx_impl->sync_work_data.clip_mode = BL_CLIP_MODE_ALIGNED_RECT;
   }
 
-  ctxI->contextFlags &= ~(ContextFlags::kWeakStateClip | ContextFlags::kSharedStateFill);
+  ctx_impl->context_flags &= ~(ContextFlags::kWeakStateClip | ContextFlags::kSharedStateFill);
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL clipToRectDImpl(BLContextImpl* baseImpl, const BLRect* rect) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL clip_to_rect_dImpl(BLContextImpl* base_impl, const BLRect* rect) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
   // TODO: [Rendering Context] Path-based clipping.
-  BLBox inputBox = BLBox(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
-  return clipToFinalBox(ctxI, TransformInternal::mapBox(ctxI->finalTransform(), inputBox));
+  BLBox input_box = BLBox(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
+  return clip_to_final_box(ctx_impl, TransformInternal::map_box(ctx_impl->final_transform(), input_box));
 }
 
-static BLResult BL_CDECL clipToRectIImpl(BLContextImpl* baseImpl, const BLRectI* rect) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL clip_to_rect_iImpl(BLContextImpl* base_impl, const BLRectI* rect) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
   // Don't bother if the current ClipBox is not aligned or the translation is not integral.
-  if (ctxI->syncWorkData.clipMode != BL_CLIP_MODE_ALIGNED_RECT || !blTestFlag(ctxI->contextFlags, ContextFlags::kInfoIntegralTranslation)) {
-    BLRect rectD;
-    rectD.x = double(rect->x);
-    rectD.y = double(rect->y);
-    rectD.w = double(rect->w);
-    rectD.h = double(rect->h);
-    return clipToRectDImpl(ctxI, &rectD);
+  if (ctx_impl->sync_work_data.clip_mode != BL_CLIP_MODE_ALIGNED_RECT || !bl_test_flag(ctx_impl->context_flags, ContextFlags::kInfoIntegralTranslation)) {
+    BLRect rect_d;
+    rect_d.x = double(rect->x);
+    rect_d.y = double(rect->y);
+    rect_d.w = double(rect->w);
+    rect_d.h = double(rect->h);
+    return clip_to_rect_dImpl(ctx_impl, &rect_d);
   }
 
   BLBoxI b;
-  onBeforeClipBoxChange(ctxI);
+  on_before_clip_box_change(ctx_impl);
 
-  int tx = ctxI->translationI().x;
-  int ty = ctxI->translationI().y;
+  int tx = ctx_impl->translation_i().x;
+  int ty = ctx_impl->translation_i().y;
 
   if (BL_TARGET_ARCH_BITS < 64) {
     OverflowFlag of{};
 
-    int x0 = IntOps::addOverflow(tx, rect->x, &of);
-    int y0 = IntOps::addOverflow(ty, rect->y, &of);
-    int x1 = IntOps::addOverflow(x0, rect->w, &of);
-    int y1 = IntOps::addOverflow(y0, rect->h, &of);
+    int x0 = IntOps::add_overflow(tx, rect->x, &of);
+    int y0 = IntOps::add_overflow(ty, rect->y, &of);
+    int x1 = IntOps::add_overflow(x0, rect->w, &of);
+    int y1 = IntOps::add_overflow(y0, rect->h, &of);
 
     if (BL_UNLIKELY(of))
       goto Use64Bit;
 
-    b.x0 = blMax(x0, ctxI->finalClipBoxI().x0);
-    b.y0 = blMax(y0, ctxI->finalClipBoxI().y0);
-    b.x1 = blMin(x1, ctxI->finalClipBoxI().x1);
-    b.y1 = blMin(y1, ctxI->finalClipBoxI().y1);
+    b.x0 = bl_max(x0, ctx_impl->final_clip_box_i().x0);
+    b.y0 = bl_max(y0, ctx_impl->final_clip_box_i().y0);
+    b.x1 = bl_min(x1, ctx_impl->final_clip_box_i().x1);
+    b.y1 = bl_min(y1, ctx_impl->final_clip_box_i().y1);
   }
   else {
 Use64Bit:
@@ -2256,44 +2256,44 @@ Use64Bit:
     int64_t x1 = x0 + int64_t(rect->w);
     int64_t y1 = y0 + int64_t(rect->h);
 
-    b.x0 = int(blMax<int64_t>(x0, ctxI->finalClipBoxI().x0));
-    b.y0 = int(blMax<int64_t>(y0, ctxI->finalClipBoxI().y0));
-    b.x1 = int(blMin<int64_t>(x1, ctxI->finalClipBoxI().x1));
-    b.y1 = int(blMin<int64_t>(y1, ctxI->finalClipBoxI().y1));
+    b.x0 = int(bl_max<int64_t>(x0, ctx_impl->final_clip_box_i().x0));
+    b.y0 = int(bl_max<int64_t>(y0, ctx_impl->final_clip_box_i().y0));
+    b.x1 = int(bl_min<int64_t>(x1, ctx_impl->final_clip_box_i().x1));
+    b.y1 = int(bl_min<int64_t>(y1, ctx_impl->final_clip_box_i().y1));
   }
 
   if (b.x0 < b.x1 && b.y0 < b.y1) {
-    ctxI->internalState.finalClipBoxI = b;
-    ctxI->internalState.finalClipBoxD.reset(b);
-    ctxI->setFinalClipBoxFixedD(ctxI->finalClipBoxD() * ctxI->fpScaleD());
+    ctx_impl->internal_state.final_clip_box_i = b;
+    ctx_impl->internal_state.final_clip_box_d.reset(b);
+    ctx_impl->set_final_clip_box_fixed_d(ctx_impl->final_clip_box_d() * ctx_impl->fp_scale_d());
   }
   else {
-    ctxI->internalState.finalClipBoxI.reset();
-    ctxI->internalState.finalClipBoxD.reset(b);
-    ctxI->setFinalClipBoxFixedD(BLBox(0, 0, 0, 0));
-    ctxI->contextFlags |= ContextFlags::kNoClipRect;
+    ctx_impl->internal_state.final_clip_box_i.reset();
+    ctx_impl->internal_state.final_clip_box_d.reset(b);
+    ctx_impl->set_final_clip_box_fixed_d(BLBox(0, 0, 0, 0));
+    ctx_impl->context_flags |= ContextFlags::kNoClipRect;
   }
 
-  ctxI->contextFlags &= ~(ContextFlags::kWeakStateClip | ContextFlags::kSharedStateFill);
+  ctx_impl->context_flags &= ~(ContextFlags::kWeakStateClip | ContextFlags::kSharedStateFill);
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL restoreClippingImpl(BLContextImpl* baseImpl) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  SavedState* state = ctxI->savedState;
+static BLResult BL_CDECL restore_clipping_impl(BLContextImpl* base_impl) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  SavedState* state = ctx_impl->saved_state;
 
-  if (!blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateClip)) {
+  if (!bl_test_flag(ctx_impl->context_flags, ContextFlags::kWeakStateClip)) {
     if (state) {
-      restoreClippingFromState(ctxI, state);
-      ctxI->syncWorkData.clipMode = state->clipMode;
-      ctxI->contextFlags &= ~(ContextFlags::kNoClipRect | ContextFlags::kWeakStateClip | ContextFlags::kSharedStateFill);
-      ctxI->contextFlags |= (state->prevContextFlags & ContextFlags::kNoClipRect);
+      restore_clipping_from_state(ctx_impl, state);
+      ctx_impl->sync_work_data.clip_mode = state->clip_mode;
+      ctx_impl->context_flags &= ~(ContextFlags::kNoClipRect | ContextFlags::kWeakStateClip | ContextFlags::kSharedStateFill);
+      ctx_impl->context_flags |= (state->prev_context_flags & ContextFlags::kNoClipRect);
     }
     else {
       // If there is no state saved it means that we have to restore clipping to
-      // the initial state, which is accessible through `metaClipBoxI` member.
-      ctxI->contextFlags &= ~(ContextFlags::kNoClipRect | ContextFlags::kSharedStateFill);
-      resetClippingToMetaClipBox(ctxI);
+      // the initial state, which is accessible through `meta_clip_box_i` member.
+      ctx_impl->context_flags &= ~(ContextFlags::kNoClipRect | ContextFlags::kSharedStateFill);
+      reset_clipping_to_meta_clip_box(ctx_impl);
     }
   }
 
@@ -2303,16 +2303,16 @@ static BLResult BL_CDECL restoreClippingImpl(BLContextImpl* baseImpl) noexcept {
 // bl::RasterEngine - ContextImpl - Mask & Blit Utilities
 // ======================================================
 
-static BL_INLINE BLResult checkImageArea(BLRectI& out, const BLImageImpl* image, const BLRectI* area) noexcept {
+static BL_INLINE BLResult check_image_area(BLRectI& out, const BLImageImpl* image, const BLRectI* area) noexcept {
   out.reset(0, 0, image->size.w, image->size.h);
 
   if (area) {
-    unsigned maxW = unsigned(out.w) - unsigned(area->x);
-    unsigned maxH = unsigned(out.h) - unsigned(area->y);
+    unsigned max_w = unsigned(out.w) - unsigned(area->x);
+    unsigned max_h = unsigned(out.h) - unsigned(area->y);
 
-    if ((maxW > unsigned(out.w)) | (unsigned(area->w) > maxW) |
-        (maxH > unsigned(out.h)) | (unsigned(area->h) > maxH))
-      return blTraceError(BL_ERROR_INVALID_VALUE);
+    if ((max_w > unsigned(out.w)) | (unsigned(area->w) > max_w) |
+        (max_h > unsigned(out.h)) | (unsigned(area->h) > max_h))
+      return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
     out = *area;
   }
@@ -2323,12 +2323,12 @@ static BL_INLINE BLResult checkImageArea(BLRectI& out, const BLImageImpl* image,
 // bl::RasterEngine - ContextImpl - Internals - Asynchronous Rendering - Shared State
 // ==================================================================================
 
-static constexpr ContextFlags sharedStrokeStateFlagsTable[BL_STROKE_TRANSFORM_ORDER_MAX_VALUE + 1] = {
+static constexpr ContextFlags shared_stroke_state_flags_table[BL_STROKE_TRANSFORM_ORDER_MAX_VALUE + 1] = {
   ContextFlags::kSharedStateStrokeBase,
   ContextFlags::kSharedStateStrokeBase | ContextFlags::kSharedStateStrokeExt
 };
 
-static constexpr uint32_t sharedStrokeStateSizeTable[BL_STROKE_TRANSFORM_ORDER_MAX_VALUE + 1] = {
+static constexpr uint32_t shared_stroke_state_size_table[BL_STROKE_TRANSFORM_ORDER_MAX_VALUE + 1] = {
   uint32_t(sizeof(SharedBaseStrokeState)),
   uint32_t(sizeof(SharedExtendedStrokeState))
 };
@@ -2337,73 +2337,73 @@ static constexpr uint32_t sharedStrokeStateSizeTable[BL_STROKE_TRANSFORM_ORDER_M
 // shared data pool, which is ALWAYS available once the frontend function checks ContextFlags and refills the
 // pool when necessary. There is ALWAYS enough space in the pool to allocate BOTH shared states, so we don't
 // have to do any checks in case that shared fill or stroke states were not created yet.
-static BL_INLINE SharedFillState* getSharedFillState(BLRasterContextImpl* ctxI) noexcept {
-  SharedFillState* sharedFillState = ctxI->sharedFillState;
+static BL_INLINE SharedFillState* get_shared_fill_state(BLRasterContextImpl* ctx_impl) noexcept {
+  SharedFillState* shared_fill_state = ctx_impl->shared_fill_state;
 
-  if (!blTestFlag(ctxI->contextFlags, ContextFlags::kSharedStateFill)) {
-    sharedFillState = ctxI->workerMgr().allocateFromSharedDataPool<SharedFillState>();
+  if (!bl_test_flag(ctx_impl->context_flags, ContextFlags::kSharedStateFill)) {
+    shared_fill_state = ctx_impl->worker_mgr().allocate_from_shared_data_pool<SharedFillState>();
 
-    const BLMatrix2D& ft = ctxI->finalTransformFixed();
-    sharedFillState->finalClipBoxFixedD = ctxI->finalClipBoxFixedD();
-    sharedFillState->finalTransformFixed = Matrix2x2{ft.m00, ft.m01, ft.m10, ft.m11};
-    sharedFillState->toleranceFixedD = ctxI->internalState.toleranceFixedD;
+    const BLMatrix2D& ft = ctx_impl->final_transform_fixed();
+    shared_fill_state->final_clip_box_fixed_d = ctx_impl->final_clip_box_fixed_d();
+    shared_fill_state->final_transform_fixed = Matrix2x2{ft.m00, ft.m01, ft.m10, ft.m11};
+    shared_fill_state->toleranceFixedD = ctx_impl->internal_state.toleranceFixedD;
 
-    ctxI->sharedFillState = sharedFillState;
-    ctxI->contextFlags |= ContextFlags::kSharedStateFill;
-    markQueueFullOrExhausted(ctxI, ctxI->workerMgr().isSharedDataPoolExhausted());
+    ctx_impl->shared_fill_state = shared_fill_state;
+    ctx_impl->context_flags |= ContextFlags::kSharedStateFill;
+    mark_queue_full_or_exhausted(ctx_impl, ctx_impl->worker_mgr().is_shared_data_pool_exhausted());
   }
 
-  return sharedFillState;
+  return shared_fill_state;
 }
 
-static BL_INLINE SharedBaseStrokeState* getSharedStrokeState(BLRasterContextImpl* ctxI) noexcept {
-  SharedBaseStrokeState* sharedStrokeState = ctxI->sharedStrokeState;
+static BL_INLINE SharedBaseStrokeState* get_shared_stroke_state(BLRasterContextImpl* ctx_impl) noexcept {
+  SharedBaseStrokeState* shared_stroke_state = ctx_impl->shared_stroke_state;
 
-  BLStrokeTransformOrder transformOrder = BLStrokeTransformOrder(ctxI->strokeOptions().transformOrder);
-  ContextFlags sharedFlags = sharedStrokeStateFlagsTable[transformOrder];
+  BLStrokeTransformOrder transform_order = BLStrokeTransformOrder(ctx_impl->stroke_options().transform_order);
+  ContextFlags shared_flags = shared_stroke_state_flags_table[transform_order];
 
-  if ((ctxI->contextFlags & sharedFlags) != sharedFlags) {
-    size_t stateSize = sharedStrokeStateSizeTable[transformOrder];
-    sharedStrokeState = ctxI->workerMgr().allocateFromSharedDataPool<SharedBaseStrokeState>(stateSize);
+  if ((ctx_impl->context_flags & shared_flags) != shared_flags) {
+    size_t state_size = shared_stroke_state_size_table[transform_order];
+    shared_stroke_state = ctx_impl->worker_mgr().allocate_from_shared_data_pool<SharedBaseStrokeState>(state_size);
 
-    blCallCtor(*sharedStrokeState, ctxI->strokeOptions(), ctxI->approximationOptions());
+    bl_call_ctor(*shared_stroke_state, ctx_impl->stroke_options(), ctx_impl->approximation_options());
 
-    if (transformOrder != BL_STROKE_TRANSFORM_ORDER_AFTER) {
-      const BLMatrix2D& ut = ctxI->userTransform();
-      const BLMatrix2D& mt = ctxI->metaTransformFixed();
-      static_cast<SharedExtendedStrokeState*>(sharedStrokeState)->userTransform = Matrix2x2{ut.m00, ut.m01, ut.m10, ut.m11};
-      static_cast<SharedExtendedStrokeState*>(sharedStrokeState)->metaTransformFixed = Matrix2x2{mt.m00, mt.m01, mt.m10, mt.m11};
+    if (transform_order != BL_STROKE_TRANSFORM_ORDER_AFTER) {
+      const BLMatrix2D& ut = ctx_impl->user_transform();
+      const BLMatrix2D& mt = ctx_impl->meta_transform_fixed();
+      static_cast<SharedExtendedStrokeState*>(shared_stroke_state)->user_transform = Matrix2x2{ut.m00, ut.m01, ut.m10, ut.m11};
+      static_cast<SharedExtendedStrokeState*>(shared_stroke_state)->meta_transform_fixed = Matrix2x2{mt.m00, mt.m01, mt.m10, mt.m11};
     }
 
-    ctxI->sharedStrokeState = sharedStrokeState;
-    ctxI->contextFlags |= sharedFlags;
-    markQueueFullOrExhausted(ctxI, ctxI->workerMgr().isSharedDataPoolExhausted());
+    ctx_impl->shared_stroke_state = shared_stroke_state;
+    ctx_impl->context_flags |= shared_flags;
+    mark_queue_full_or_exhausted(ctx_impl, ctx_impl->worker_mgr().is_shared_data_pool_exhausted());
   }
 
-  return sharedStrokeState;
+  return shared_stroke_state;
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Asynchronous Rendering - Jobs
 // ==========================================================================
 
 template<typename JobType>
-static BL_INLINE BLResult newFillJob(BLRasterContextImpl* ctxI, size_t jobDataSize, JobType** out) noexcept {
-  JobType* job = ctxI->workerMgr()._allocator.template allocNoAlignT<JobType>(jobDataSize);
+static BL_INLINE BLResult new_fill_job(BLRasterContextImpl* ctx_impl, size_t job_data_size, JobType** out) noexcept {
+  JobType* job = ctx_impl->worker_mgr()._allocator.template allocNoAlignT<JobType>(job_data_size);
   if (BL_UNLIKELY(!job))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-  job->initStates(getSharedFillState(ctxI));
+  job->init_states(get_shared_fill_state(ctx_impl));
   *out = job;
   return BL_SUCCESS;
 }
 
 template<typename JobType>
-static BL_INLINE BLResult newStrokeJob(BLRasterContextImpl* ctxI, size_t jobDataSize, JobType** out) noexcept {
-  JobType* job = ctxI->workerMgr()._allocator.template allocNoAlignT<JobType>(jobDataSize);
+static BL_INLINE BLResult new_stroke_job(BLRasterContextImpl* ctx_impl, size_t job_data_size, JobType** out) noexcept {
+  JobType* job = ctx_impl->worker_mgr()._allocator.template allocNoAlignT<JobType>(job_data_size);
   if (BL_UNLIKELY(!job))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-  job->initStates(getSharedFillState(ctxI), getSharedStrokeState(ctxI));
+  job->init_states(get_shared_fill_state(ctx_impl), get_shared_stroke_state(ctx_impl));
   *out = job;
   return BL_SUCCESS;
 }
@@ -2412,115 +2412,115 @@ static BL_INLINE BLResult newStrokeJob(BLRasterContextImpl* ctxI, size_t jobData
 // =============================================================================
 
 template<typename CommandFinalizer>
-static BL_INLINE BLResult enqueueCommand(
-    BLRasterContextImpl* ctxI,
+static BL_INLINE BLResult enqueue_command(
+    BLRasterContextImpl* ctx_impl,
     RenderCommand* command,
     uint8_t qy0,
-    RenderFetchDataHeader* fetchData,
-    const CommandFinalizer& commandFinalizer) noexcept {
+    RenderFetchDataHeader* fetch_data,
+    const CommandFinalizer& command_finalizer) noexcept {
 
-  WorkerManager& mgr = ctxI->workerMgr();
-  constexpr uint32_t kRetainsStyleFetchDataShift = IntOps::bitShiftOf(uint32_t(RenderCommandFlags::kRetainsStyleFetchData));
+  WorkerManager& mgr = ctx_impl->worker_mgr();
+  constexpr uint32_t kRetainsStyleFetchDataShift = IntOps::bit_shift_of(uint32_t(RenderCommandFlags::kRetainsStyleFetchData));
 
-  if (fetchData->isSolid()) {
-    command->_source.solid = static_cast<RenderFetchDataSolid*>(fetchData)->pipelineData;
+  if (fetch_data->is_solid()) {
+    command->_source.solid = static_cast<RenderFetchDataSolid*>(fetch_data)->pipeline_data;
   }
   else {
-    uint32_t batchId = mgr.currentBatchId();
-    uint32_t fdRetain = uint32_t(fetchData->batchId != batchId);
+    uint32_t batch_id = mgr.current_batch_id();
+    uint32_t fd_retain = uint32_t(fetch_data->batch_id != batch_id);
 
-    fetchData->batchId = mgr.currentBatchId();
-    fetchData->retain(fdRetain);
+    fetch_data->batch_id = mgr.current_batch_id();
+    fetch_data->retain(fd_retain);
 
-    RenderCommandFlags flags = RenderCommandFlags(fdRetain << kRetainsStyleFetchDataShift) | RenderCommandFlags::kHasStyleFetchData;
-    command->addFlags(flags);
-    command->_source.fetchData = static_cast<RenderFetchData*>(fetchData);
+    RenderCommandFlags flags = RenderCommandFlags(fd_retain << kRetainsStyleFetchDataShift) | RenderCommandFlags::kHasStyleFetchData;
+    command->add_flags(flags);
+    command->_source.fetch_data = static_cast<RenderFetchData*>(fetch_data);
 
-    mgr._commandAppender.markFetchData(fdRetain);
+    mgr._command_appender.mark_fetch_data(fd_retain);
   }
 
-  commandFinalizer(command);
-  mgr.commandAppender().initQuantizedY0(qy0);
-  mgr.commandAppender().advance();
-  markQueueFullOrExhausted(ctxI, mgr._commandAppender.full());
+  command_finalizer(command);
+  mgr.command_appender().initQuantizedY0(qy0);
+  mgr.command_appender().advance();
+  mark_queue_full_or_exhausted(ctx_impl, mgr._command_appender.full());
 
   return BL_SUCCESS;
 }
 
 template<typename JobType, typename JobFinalizer>
-static BL_INLINE BLResult enqueueCommandWithFillJob(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    size_t jobSize, const BLPoint& originFixed, const JobFinalizer& jobFinalizer) noexcept {
+static BL_INLINE BLResult enqueue_command_with_fill_job(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    size_t job_size, const BLPoint& origin_fixed, const JobFinalizer& job_finalizer) noexcept {
 
   constexpr uint8_t kNoCoord = kInvalidQuantizedCoordinate;
 
-  RenderCommand* command = ctxI->workerMgr->currentCommand();
+  RenderCommand* command = ctx_impl->worker_mgr->current_command();
   JobType* job;
 
   // TODO: [Rendering Context] FetchData calculation offloading not ready yet - needs more testing:
-  // bool wasPending = di.signature.hasPendingFlag();
-  // di.signature.clearPendingBit();
+  // bool was_pending = di.signature.has_pending_flag();
+  // di.signature.clear_pending_bit();
 
-  BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
-  BL_PROPAGATE(newFillJob(ctxI, jobSize, &job));
+  BL_PROPAGATE(ensure_fetch_and_dispatch_data(ctx_impl, di.signature, ds.fetch_data, command->pipe_dispatch_data()));
+  BL_PROPAGATE(new_fill_job(ctx_impl, job_size, &job));
 
-  return enqueueCommand(ctxI, command, kNoCoord, ds.fetchData, [&](RenderCommand* command) noexcept {
-    command->_payload.analytic.stateSlotIndex = ctxI->workerMgr().nextStateSlotIndex();
+  return enqueue_command(ctx_impl, command, kNoCoord, ds.fetch_data, [&](RenderCommand* command) noexcept {
+    command->_payload.analytic.state_slot_index = ctx_impl->worker_mgr().next_state_slot_index();
 
-    WorkerManager& mgr = ctxI->workerMgr();
-    job->initFillJob(mgr._commandAppender.queue(), mgr._commandAppender.index());
+    WorkerManager& mgr = ctx_impl->worker_mgr();
+    job->init_fill_job(mgr._command_appender.queue(), mgr._command_appender.index());
 
     // TODO: [Rendering Context] FetchData calculation offloading not ready yet - needs more testing:
-    // if (wasPending && command->hasFlag(RenderCommandFlags::kRetainsStyleFetchData))
-    //   job->addJobFlags(RenderJobFlags::kComputePendingFetchData);
+    // if (was_pending && command->has_flag(RenderCommandFlags::kRetainsStyleFetchData))
+    //   job->add_job_flags(RenderJobFlags::kComputePendingFetchData);
 
-    job->setOriginFixed(originFixed);
-    job->setMetaTransformFixedType(ctxI->metaTransformFixedType());
-    job->setFinalTransformFixedType(ctxI->finalTransformFixedType());
-    jobFinalizer(job);
-    mgr.addJob(job);
-    markQueueFullOrExhausted(ctxI, mgr._jobAppender.full());
+    job->set_origin_fixed(origin_fixed);
+    job->set_meta_transform_fixed_type(ctx_impl->meta_transform_fixed_type());
+    job->set_final_transform_fixed_type(ctx_impl->final_transform_fixed_type());
+    job_finalizer(job);
+    mgr.add_job(job);
+    mark_queue_full_or_exhausted(ctx_impl, mgr._job_appender.full());
   });
 }
 
 template<typename JobType, typename JobFinalizer>
-static BL_INLINE BLResult enqueueCommandWithStrokeJob(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    size_t jobSize, const BLPoint& originFixed, const JobFinalizer& jobFinalizer) noexcept {
+static BL_INLINE BLResult enqueue_command_with_stroke_job(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    size_t job_size, const BLPoint& origin_fixed, const JobFinalizer& job_finalizer) noexcept {
 
   constexpr uint8_t kNoCoord = kInvalidQuantizedCoordinate;
 
-  RenderCommand* command = ctxI->workerMgr->currentCommand();
+  RenderCommand* command = ctx_impl->worker_mgr->current_command();
   JobType* job;
 
-  BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
-  BL_PROPAGATE(newStrokeJob(ctxI, jobSize, &job));
+  BL_PROPAGATE(ensure_fetch_and_dispatch_data(ctx_impl, di.signature, ds.fetch_data, command->pipe_dispatch_data()));
+  BL_PROPAGATE(new_stroke_job(ctx_impl, job_size, &job));
 
-  return enqueueCommand(ctxI, command, kNoCoord, ds.fetchData, [&](RenderCommand* command) noexcept {
-    command->_payload.analytic.stateSlotIndex = ctxI->workerMgr().nextStateSlotIndex();
+  return enqueue_command(ctx_impl, command, kNoCoord, ds.fetch_data, [&](RenderCommand* command) noexcept {
+    command->_payload.analytic.state_slot_index = ctx_impl->worker_mgr().next_state_slot_index();
 
-    WorkerManager& mgr = ctxI->workerMgr();
-    job->initStrokeJob(mgr._commandAppender.queue(), mgr._commandAppender.index());
+    WorkerManager& mgr = ctx_impl->worker_mgr();
+    job->init_stroke_job(mgr._command_appender.queue(), mgr._command_appender.index());
 
-    job->setOriginFixed(originFixed);
-    job->setMetaTransformFixedType(ctxI->metaTransformFixedType());
-    job->setFinalTransformFixedType(ctxI->finalTransformFixedType());
-    jobFinalizer(job);
+    job->set_origin_fixed(origin_fixed);
+    job->set_meta_transform_fixed_type(ctx_impl->meta_transform_fixed_type());
+    job->set_final_transform_fixed_type(ctx_impl->final_transform_fixed_type());
+    job_finalizer(job);
 
-    mgr.addJob(job);
-    markQueueFullOrExhausted(ctxI, mgr._jobAppender.full());
+    mgr.add_job(job);
+    mark_queue_full_or_exhausted(ctx_impl, mgr._job_appender.full());
   });
 }
 
 template<uint32_t OpType, typename JobType, typename JobFinalizer>
-static BL_INLINE BLResult enqueueCommandWithFillOrStrokeJob(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    size_t jobSize, const BLPoint& originFixed, const JobFinalizer& jobFinalizer) noexcept {
+static BL_INLINE BLResult enqueue_command_with_fill_or_stroke_job(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    size_t job_size, const BLPoint& origin_fixed, const JobFinalizer& job_finalizer) noexcept {
 
   if (OpType == BL_CONTEXT_STYLE_SLOT_FILL)
-    return enqueueCommandWithFillJob<JobType, JobFinalizer>(ctxI, di, ds, jobSize, originFixed, jobFinalizer);
+    return enqueue_command_with_fill_job<JobType, JobFinalizer>(ctx_impl, di, ds, job_size, origin_fixed, job_finalizer);
   else
-    return enqueueCommandWithStrokeJob<JobType, JobFinalizer>(ctxI, di, ds, jobSize, originFixed, jobFinalizer);
+    return enqueue_command_with_stroke_job<JobType, JobFinalizer>(ctx_impl, di, ds, job_size, origin_fixed, job_finalizer);
 }
 
 // bl::RasterEngine - ContextImpl - Asynchronous Rendering - Enqueue GlyphRun & TextData
@@ -2534,53 +2534,53 @@ BL_STATIC_ASSERT(sizeof(BLGlyphPlacementRawData) == sizeof(BLPoint));
 BL_STATIC_ASSERT(sizeof(BLGlyphPlacementRawData) == sizeof(BLGlyphPlacement));
 
 template<uint32_t OpType>
-static BL_INLINE BLResult enqueueFillOrStrokeGlyphRun(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const BLPoint* origin, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
+static BL_INLINE BLResult enqueue_fill_or_stroke_glyph_run(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const BLPoint* origin, const BLFontCore* font, const BLGlyphRun* glyph_run) noexcept {
 
-  size_t size = glyphRun->size;
-  size_t glyphDataSize = IntOps::alignUp(size * sizeof(uint32_t), WorkerManager::kAllocatorAlignment);
-  size_t placementDataSize = IntOps::alignUp(size * sizeof(BLGlyphPlacementRawData), WorkerManager::kAllocatorAlignment);
+  size_t size = glyph_run->size;
+  size_t glyph_data_size = IntOps::align_up(size * sizeof(uint32_t), WorkerManager::kAllocatorAlignment);
+  size_t placement_data_size = IntOps::align_up(size * sizeof(BLGlyphPlacementRawData), WorkerManager::kAllocatorAlignment);
 
-  uint32_t* glyphData = ctxI->workerMgr()._allocator.template allocNoAlignT<uint32_t>(glyphDataSize);
-  BLGlyphPlacementRawData* placementData = ctxI->workerMgr()._allocator.template allocNoAlignT<BLGlyphPlacementRawData>(placementDataSize);
+  uint32_t* glyph_data = ctx_impl->worker_mgr()._allocator.template allocNoAlignT<uint32_t>(glyph_data_size);
+  BLGlyphPlacementRawData* placement_data = ctx_impl->worker_mgr()._allocator.template allocNoAlignT<BLGlyphPlacementRawData>(placement_data_size);
 
-  if (BL_UNLIKELY(!glyphData || !placementData))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+  if (BL_UNLIKELY(!glyph_data || !placement_data))
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
 
-  BLGlyphRunIterator it(*glyphRun);
-  uint32_t* dstGlyphData = glyphData;
-  BLGlyphPlacementRawData* dstPlacementData = placementData;
+  BLGlyphRunIterator it(*glyph_run);
+  uint32_t* dst_glyph_data = glyph_data;
+  BLGlyphPlacementRawData* dst_placement_data = placement_data;
 
-  while (!it.atEnd()) {
-    *dstGlyphData++ = it.glyphId();
-    *dstPlacementData++ = it.placement<BLGlyphPlacementRawData>();
+  while (!it.at_end()) {
+    *dst_glyph_data++ = it.glyph_id();
+    *dst_placement_data++ = it.placement<BLGlyphPlacementRawData>();
     it.advance();
   }
 
-  BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-  di.addFillType(Pipeline::FillType::kAnalytic);
+  BLPoint origin_fixed = ctx_impl->final_transform_fixed().map_point(*origin);
+  di.add_fill_type(Pipeline::FillType::kAnalytic);
 
-  RenderCommand* command = ctxI->workerMgr->currentCommand();
-  command->initCommand(di.alpha);
-  command->initFillAnalytic(nullptr, 0, BL_FILL_RULE_NON_ZERO);
+  RenderCommand* command = ctx_impl->worker_mgr->current_command();
+  command->init_command(di.alpha);
+  command->init_fill_analytic(nullptr, 0, BL_FILL_RULE_NON_ZERO);
 
-  return enqueueCommandWithFillOrStrokeJob<OpType, RenderJob_TextOp>(
-    ctxI, di, ds,
-    IntOps::alignUp(sizeof(RenderJob_TextOp), WorkerManager::kAllocatorAlignment), originFixed,
+  return enqueue_command_with_fill_or_stroke_job<OpType, RenderJob_TextOp>(
+    ctx_impl, di, ds,
+    IntOps::align_up(sizeof(RenderJob_TextOp), WorkerManager::kAllocatorAlignment), origin_fixed,
     [&](RenderJob_TextOp* job) {
-      job->initFont(*font);
-      job->initGlyphRun(glyphData, placementData, size, glyphRun->placementType, glyphRun->flags);
+      job->init_font(*font);
+      job->init_glyph_run(glyph_data, placement_data, size, glyph_run->placement_type, glyph_run->flags);
     });
 }
 
 template<uint32_t OpType>
-static BL_INLINE BLResult enqueueFillOrStrokeText(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
+static BL_INLINE BLResult enqueue_fill_or_stroke_text(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
     const BLPoint* origin, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) noexcept {
 
   if (size == SIZE_MAX)
-    size = StringOps::lengthWithEncoding(text, encoding);
+    size = StringOps::length_with_encoding(text, encoding);
 
   if (!size)
     return BL_SUCCESS;
@@ -2588,42 +2588,42 @@ static BL_INLINE BLResult enqueueFillOrStrokeText(
   BLResult result = BL_SUCCESS;
   Wrap<BLGlyphBuffer> gb;
 
-  void* serializedTextData = nullptr;
-  size_t serializedTextSize = size << textByteSizeShiftByEncoding[encoding];
+  void* serialized_text_data = nullptr;
+  size_t serialized_text_size = size << text_byte_size_shift_by_encoding[encoding];
 
-  if (serializedTextSize > BL_RASTER_CONTEXT_MAXIMUM_EMBEDDED_TEXT_SIZE) {
+  if (serialized_text_size > BL_RASTER_CONTEXT_MAXIMUM_EMBEDDED_TEXT_SIZE) {
     gb.init();
-    result = gb->setText(text, size, encoding);
+    result = gb->set_text(text, size, encoding);
   }
   else {
-    serializedTextData = ctxI->workerMgr->_allocator.alloc(IntOps::alignUp(serializedTextSize, 8));
-    if (!serializedTextData)
+    serialized_text_data = ctx_impl->worker_mgr->_allocator.alloc(IntOps::align_up(serialized_text_size, 8));
+    if (!serialized_text_data)
       result = BL_ERROR_OUT_OF_MEMORY;
     else
-      memcpy(serializedTextData, text, serializedTextSize);
+      memcpy(serialized_text_data, text, serialized_text_size);
   }
 
   if (result == BL_SUCCESS) {
-    BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-    di.addFillType(Pipeline::FillType::kAnalytic);
+    BLPoint origin_fixed = ctx_impl->final_transform_fixed().map_point(*origin);
+    di.add_fill_type(Pipeline::FillType::kAnalytic);
 
-    RenderCommand* command = ctxI->workerMgr->currentCommand();
-    command->initCommand(di.alpha);
-    command->initFillAnalytic(nullptr, 0, BL_FILL_RULE_NON_ZERO);
+    RenderCommand* command = ctx_impl->worker_mgr->current_command();
+    command->init_command(di.alpha);
+    command->init_fill_analytic(nullptr, 0, BL_FILL_RULE_NON_ZERO);
 
-    result = enqueueCommandWithFillOrStrokeJob<OpType, RenderJob_TextOp>(
-      ctxI, di, ds,
-      IntOps::alignUp(sizeof(RenderJob_TextOp), WorkerManager::kAllocatorAlignment), originFixed,
+    result = enqueue_command_with_fill_or_stroke_job<OpType, RenderJob_TextOp>(
+      ctx_impl, di, ds,
+      IntOps::align_up(sizeof(RenderJob_TextOp), WorkerManager::kAllocatorAlignment), origin_fixed,
       [&](RenderJob_TextOp* job) {
-        job->initFont(*font);
-        if (serializedTextSize > BL_RASTER_CONTEXT_MAXIMUM_EMBEDDED_TEXT_SIZE)
-          job->initGlyphBuffer(gb->impl);
+        job->init_font(*font);
+        if (serialized_text_size > BL_RASTER_CONTEXT_MAXIMUM_EMBEDDED_TEXT_SIZE)
+          job->init_glyph_buffer(gb->impl);
         else
-          job->initTextData(serializedTextData, size, encoding);
+          job->init_text_data(serialized_text_data, size, encoding);
       });
   }
 
-  if (result != BL_SUCCESS && serializedTextSize > BL_RASTER_CONTEXT_MAXIMUM_EMBEDDED_TEXT_SIZE)
+  if (result != BL_SUCCESS && serialized_text_size > BL_RASTER_CONTEXT_MAXIMUM_EMBEDDED_TEXT_SIZE)
     gb.destroy();
 
   return result;
@@ -2633,152 +2633,152 @@ static BL_INLINE BLResult enqueueFillOrStrokeText(
 // =============================================================
 
 template<RenderingMode kRM>
-static BL_INLINE BLResult fillClippedBoxA(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxA) noexcept;
+static BL_INLINE BLResult fill_clipped_box_a(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLBoxI& box_a) noexcept;
 
 template<>
-BL_INLINE BLResult fillClippedBoxA<kSync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxA) noexcept {
-  Pipeline::DispatchData dispatchData;
-  di.addFillType(Pipeline::FillType::kBoxA);
-  BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, &dispatchData));
+BL_INLINE BLResult fill_clipped_box_a<kSync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLBoxI& box_a) noexcept {
+  Pipeline::DispatchData dispatch_data;
+  di.add_fill_type(Pipeline::FillType::kBoxA);
+  BL_PROPAGATE(ensure_fetch_and_dispatch_data(ctx_impl, di.signature, ds.fetch_data, &dispatch_data));
 
-  return CommandProcSync::fillBoxA(ctxI->syncWorkData, dispatchData, di.alpha, boxA, ds.fetchData->getPipelineData());
+  return CommandProcSync::fill_box_a(ctx_impl->sync_work_data, dispatch_data, di.alpha, box_a, ds.fetch_data->get_pipeline_data());
 }
 
 template<>
-BL_INLINE BLResult fillClippedBoxA<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxA) noexcept {
-  RenderCommand* command = ctxI->workerMgr->currentCommand();
+BL_INLINE BLResult fill_clipped_box_a<kAsync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLBoxI& box_a) noexcept {
+  RenderCommand* command = ctx_impl->worker_mgr->current_command();
 
-  di.addFillType(Pipeline::FillType::kBoxA);
-  BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
+  di.add_fill_type(Pipeline::FillType::kBoxA);
+  BL_PROPAGATE(ensure_fetch_and_dispatch_data(ctx_impl, di.signature, ds.fetch_data, command->pipe_dispatch_data()));
 
-  command->initCommand(di.alpha);
-  command->initFillBoxA(boxA);
+  command->init_command(di.alpha);
+  command->init_fill_box_a(box_a);
 
-  uint8_t qy0 = uint8_t((boxA.y0) >> ctxI->commandQuantizationShiftAA());
-  return enqueueCommand(ctxI, command, qy0, ds.fetchData, [&](RenderCommand*) noexcept {});
-}
-
-template<RenderingMode kRM>
-static BL_INLINE BLResult fillClippedBoxU(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxU) noexcept;
-
-template<>
-BL_INLINE BLResult fillClippedBoxU<kSync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxU) noexcept {
-  Pipeline::DispatchData dispatchData;
-  di.addFillType(Pipeline::FillType::kMask);
-  BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, &dispatchData));
-
-  return CommandProcSync::fillBoxU(ctxI->syncWorkData, dispatchData, di.alpha, boxU, ds.fetchData->getPipelineData());
-}
-
-template<>
-BL_INLINE BLResult fillClippedBoxU<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxU) noexcept {
-  RenderCommand* command = ctxI->workerMgr->currentCommand();
-
-  di.addFillType(Pipeline::FillType::kMask);
-  BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
-
-  command->initCommand(di.alpha);
-  command->initFillBoxU(boxU);
-
-  uint8_t qy0 = uint8_t((boxU.y0) >> ctxI->commandQuantizationShiftFp());
-  return enqueueCommand(ctxI, command, qy0, ds.fetchData, [&](RenderCommand*) noexcept {});
+  uint8_t qy0 = uint8_t((box_a.y0) >> ctx_impl->command_quantization_shift_aa());
+  return enqueue_command(ctx_impl, command, qy0, ds.fetch_data, [&](RenderCommand*) noexcept {});
 }
 
 template<RenderingMode kRM>
-static BL_INLINE BLResult fillClippedBoxF(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxU) noexcept;
+static BL_INLINE BLResult fill_clipped_box_u(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLBoxI& box_u) noexcept;
 
 template<>
-BL_INLINE BLResult fillClippedBoxF<kSync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxU) noexcept {
-  if (isBoxAligned24x8(boxU))
-    return fillClippedBoxA<kSync>(ctxI, di, ds, BLBoxI(boxU.x0 >> 8, boxU.y0 >> 8, boxU.x1 >> 8, boxU.y1 >> 8));
+BL_INLINE BLResult fill_clipped_box_u<kSync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLBoxI& box_u) noexcept {
+  Pipeline::DispatchData dispatch_data;
+  di.add_fill_type(Pipeline::FillType::kMask);
+  BL_PROPAGATE(ensure_fetch_and_dispatch_data(ctx_impl, di.signature, ds.fetch_data, &dispatch_data));
+
+  return CommandProcSync::fill_box_u(ctx_impl->sync_work_data, dispatch_data, di.alpha, box_u, ds.fetch_data->get_pipeline_data());
+}
+
+template<>
+BL_INLINE BLResult fill_clipped_box_u<kAsync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLBoxI& box_u) noexcept {
+  RenderCommand* command = ctx_impl->worker_mgr->current_command();
+
+  di.add_fill_type(Pipeline::FillType::kMask);
+  BL_PROPAGATE(ensure_fetch_and_dispatch_data(ctx_impl, di.signature, ds.fetch_data, command->pipe_dispatch_data()));
+
+  command->init_command(di.alpha);
+  command->init_fill_box_u(box_u);
+
+  uint8_t qy0 = uint8_t((box_u.y0) >> ctx_impl->command_quantization_shift_fp());
+  return enqueue_command(ctx_impl, command, qy0, ds.fetch_data, [&](RenderCommand*) noexcept {});
+}
+
+template<RenderingMode kRM>
+static BL_INLINE BLResult fill_clipped_box_f(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLBoxI& box_u) noexcept;
+
+template<>
+BL_INLINE BLResult fill_clipped_box_f<kSync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLBoxI& box_u) noexcept {
+  if (isBoxAligned24x8(box_u))
+    return fill_clipped_box_a<kSync>(ctx_impl, di, ds, BLBoxI(box_u.x0 >> 8, box_u.y0 >> 8, box_u.x1 >> 8, box_u.y1 >> 8));
   else
-    return fillClippedBoxU<kSync>(ctxI, di, ds, boxU);
+    return fill_clipped_box_u<kSync>(ctx_impl, di, ds, box_u);
 }
 
 template<>
-BL_INLINE BLResult fillClippedBoxF<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxU) noexcept {
-  RenderCommand* command = ctxI->workerMgr->currentCommand();
-  command->initCommand(di.alpha);
+BL_INLINE BLResult fill_clipped_box_f<kAsync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLBoxI& box_u) noexcept {
+  RenderCommand* command = ctx_impl->worker_mgr->current_command();
+  command->init_command(di.alpha);
 
-  uint8_t qy0 = uint8_t(boxU.y0 >> ctxI->commandQuantizationShiftFp());
+  uint8_t qy0 = uint8_t(box_u.y0 >> ctx_impl->command_quantization_shift_fp());
 
-  if (isBoxAligned24x8(boxU)) {
-    di.addFillType(Pipeline::FillType::kBoxA);
-    command->initFillBoxA(BLBoxI(boxU.x0 >> 8, boxU.y0 >> 8, boxU.x1 >> 8, boxU.y1 >> 8));
+  if (isBoxAligned24x8(box_u)) {
+    di.add_fill_type(Pipeline::FillType::kBoxA);
+    command->init_fill_box_a(BLBoxI(box_u.x0 >> 8, box_u.y0 >> 8, box_u.x1 >> 8, box_u.y1 >> 8));
   }
   else {
-    di.addFillType(Pipeline::FillType::kMask);
-    command->initFillBoxU(boxU);
+    di.add_fill_type(Pipeline::FillType::kMask);
+    command->init_fill_box_u(box_u);
   }
 
-  BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
-  return enqueueCommand(ctxI, command, qy0, ds.fetchData, [&](RenderCommand*) noexcept {});
+  BL_PROPAGATE(ensure_fetch_and_dispatch_data(ctx_impl, di.signature, ds.fetch_data, command->pipe_dispatch_data()));
+  return enqueue_command(ctx_impl, command, qy0, ds.fetch_data, [&](RenderCommand*) noexcept {});
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Fill All
 // =====================================================
 
 template<RenderingMode kRM>
-static BL_NOINLINE BLResult fillAll(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds) noexcept {
-  return ctxI->clipMode() == BL_CLIP_MODE_ALIGNED_RECT
-    ? fillClippedBoxA<kRM>(ctxI, di, ds, ctxI->finalClipBoxI())
-    : fillClippedBoxU<kRM>(ctxI, di, ds, ctxI->finalClipBoxFixedI());
+static BL_NOINLINE BLResult fill_all(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds) noexcept {
+  return ctx_impl->clip_mode() == BL_CLIP_MODE_ALIGNED_RECT
+    ? fill_clipped_box_a<kRM>(ctx_impl, di, ds, ctx_impl->final_clip_box_i())
+    : fill_clipped_box_u<kRM>(ctx_impl, di, ds, ctx_impl->final_clip_box_fixed_i());
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Fill Clipped Edges
 // ===============================================================
 
 template<RenderingMode kRM>
-static BLResult fillClippedEdges(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLFillRule fillRule) noexcept;
+static BLResult fill_clipped_edges(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, BLFillRule fill_rule) noexcept;
 
 template<>
-BL_NOINLINE BLResult fillClippedEdges<kSync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLFillRule fillRule) noexcept {
-  WorkData& workData = ctxI->syncWorkData;
-  EdgeStorage<int>& edgeStorage = workData.edgeStorage;
+BL_NOINLINE BLResult fill_clipped_edges<kSync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, BLFillRule fill_rule) noexcept {
+  WorkData& work_data = ctx_impl->sync_work_data;
+  EdgeStorage<int>& edge_storage = work_data.edge_storage;
 
   // NOTE: This doesn't happen often, but it's possible if for example the data in bands is all horizontal lines or no data at all.
-  if (edgeStorage.empty() || edgeStorage.boundingBox().y0 >= edgeStorage.boundingBox().y1)
+  if (edge_storage.is_empty() || edge_storage.bounding_box().y0 >= edge_storage.bounding_box().y1)
     return BL_SUCCESS;
 
-  Pipeline::DispatchData dispatchData;
-  di.addFillType(Pipeline::FillType::kAnalytic);
-  BLResult result = ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, &dispatchData);
+  Pipeline::DispatchData dispatch_data;
+  di.add_fill_type(Pipeline::FillType::kAnalytic);
+  BLResult result = ensure_fetch_and_dispatch_data(ctx_impl, di.signature, ds.fetch_data, &dispatch_data);
   if (BL_UNLIKELY(result != BL_SUCCESS)) {
     // Must revert the edge builder if we have failed here as we cannot execute the render call.
-    workData.revertEdgeBuilder();
+    work_data.revert_edge_builder();
     return result;
   }
 
-  return CommandProcSync::fillAnalytic(workData, dispatchData, di.alpha, &edgeStorage, fillRule, ds.fetchData->getPipelineData());
+  return CommandProcSync::fill_analytic(work_data, dispatch_data, di.alpha, &edge_storage, fill_rule, ds.fetch_data->get_pipeline_data());
 }
 
 template<>
-BL_NOINLINE BLResult fillClippedEdges<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLFillRule fillRule) noexcept {
-  RenderCommand* command = ctxI->workerMgr->currentCommand();
+BL_NOINLINE BLResult fill_clipped_edges<kAsync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, BLFillRule fill_rule) noexcept {
+  RenderCommand* command = ctx_impl->worker_mgr->current_command();
 
-  WorkData& workData = ctxI->syncWorkData;
-  EdgeStorage<int>& edgeStorage = workData.edgeStorage;
+  WorkData& work_data = ctx_impl->sync_work_data;
+  EdgeStorage<int>& edge_storage = work_data.edge_storage;
 
   // NOTE: This doesn't happen often, but it's possible if for example the data in bands is all horizontal lines or no data at all.
-  if (edgeStorage.empty() || edgeStorage.boundingBox().y0 >= edgeStorage.boundingBox().y1)
+  if (edge_storage.is_empty() || edge_storage.bounding_box().y0 >= edge_storage.bounding_box().y1)
     return BL_SUCCESS;
 
-  uint8_t qy0 = uint8_t(edgeStorage.boundingBox().y0 >> ctxI->commandQuantizationShiftFp());
+  uint8_t qy0 = uint8_t(edge_storage.bounding_box().y0 >> ctx_impl->command_quantization_shift_fp());
 
-  di.addFillType(Pipeline::FillType::kAnalytic);
-  command->initCommand(di.alpha);
-  command->initFillAnalytic(edgeStorage.flattenEdgeLinks(), edgeStorage.boundingBox().y0, fillRule);
-  edgeStorage.resetBoundingBox();
+  di.add_fill_type(Pipeline::FillType::kAnalytic);
+  command->init_command(di.alpha);
+  command->init_fill_analytic(edge_storage.flatten_edge_links(), edge_storage.bounding_box().y0, fill_rule);
+  edge_storage.reset_bounding_box();
 
-  BLResult result = ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData());
+  BLResult result = ensure_fetch_and_dispatch_data(ctx_impl, di.signature, ds.fetch_data, command->pipe_dispatch_data());
   if (BL_UNLIKELY(result != BL_SUCCESS)) {
     // Must revert the edge builder if we have failed here as we cannot execute the render call.
-    workData.revertEdgeBuilder();
+    work_data.revert_edge_builder();
     return result;
   }
 
-  return enqueueCommand(ctxI, command, qy0, ds.fetchData, [&](RenderCommand* command) noexcept {
-    command->_payload.analytic.stateSlotIndex = ctxI->workerMgr().nextStateSlotIndex();
+  return enqueue_command(ctx_impl, command, qy0, ds.fetch_data, [&](RenderCommand* command) noexcept {
+    command->_payload.analytic.state_slot_index = ctx_impl->worker_mgr().next_state_slot_index();
   });
 }
 
@@ -2786,167 +2786,167 @@ BL_NOINLINE BLResult fillClippedEdges<kAsync>(BLRasterContextImpl* ctxI, Dispatc
 // ================================================================
 
 template<RenderingMode kRM>
-static BL_INLINE BLResult fillUnclippedPath(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const BLPath& path, BLFillRule fillRule, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
+static BL_INLINE BLResult fill_unclipped_path(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const BLPath& path, BLFillRule fill_rule, const BLMatrix2D& transform, BLTransformType transform_type) noexcept {
 
   if constexpr (kRM == kAsync)
-    ctxI->syncWorkData.saveState();
+    ctx_impl->sync_work_data.save_state();
 
-  BL_PROPAGATE(addFilledPathEdges(&ctxI->syncWorkData, path.view(), transform, transformType));
-  return fillClippedEdges<kRM>(ctxI, di, ds, fillRule);
+  BL_PROPAGATE(add_filled_path_edges(&ctx_impl->sync_work_data, path.view(), transform, transform_type));
+  return fill_clipped_edges<kRM>(ctx_impl, di, ds, fill_rule);
 }
 
 template<RenderingMode kRM>
-static BL_INLINE BLResult fillUnclippedPath(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const BLPath& path, BLFillRule fillRule) noexcept {
+static BL_INLINE BLResult fill_unclipped_path(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const BLPath& path, BLFillRule fill_rule) noexcept {
 
-  return fillUnclippedPath<kRM>(ctxI, di, ds, path, fillRule, ctxI->finalTransformFixed(), ctxI->finalTransformFixedType());
+  return fill_unclipped_path<kRM>(ctx_impl, di, ds, path, fill_rule, ctx_impl->final_transform_fixed(), ctx_impl->final_transform_fixed_type());
 }
 
 template<RenderingMode kRM>
-static BL_INLINE BLResult fillUnclippedPathWithOrigin(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const BLPoint& originFixed, const BLPath& path, BLFillRule fillRule) noexcept;
+static BL_INLINE BLResult fill_unclipped_path_with_origin(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const BLPoint& origin_fixed, const BLPath& path, BLFillRule fill_rule) noexcept;
 
 template<>
-BL_INLINE BLResult fillUnclippedPathWithOrigin<kSync>(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const BLPoint& originFixed, const BLPath& path, BLFillRule fillRule) noexcept {
-  const BLMatrix2D& ft = ctxI->finalTransformFixed();
-  BLMatrix2D transform(ft.m00, ft.m01, ft.m10, ft.m11, originFixed.x, originFixed.y);
+BL_INLINE BLResult fill_unclipped_path_with_origin<kSync>(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const BLPoint& origin_fixed, const BLPath& path, BLFillRule fill_rule) noexcept {
+  const BLMatrix2D& ft = ctx_impl->final_transform_fixed();
+  BLMatrix2D transform(ft.m00, ft.m01, ft.m10, ft.m11, origin_fixed.x, origin_fixed.y);
 
-  BLTransformType transformType = blMax<BLTransformType>(ctxI->finalTransformFixedType(), BL_TRANSFORM_TYPE_TRANSLATE);
-  return fillUnclippedPath<kSync>(ctxI, di, ds, path, fillRule, transform, transformType);
+  BLTransformType transform_type = bl_max<BLTransformType>(ctx_impl->final_transform_fixed_type(), BL_TRANSFORM_TYPE_TRANSLATE);
+  return fill_unclipped_path<kSync>(ctx_impl, di, ds, path, fill_rule, transform, transform_type);
 }
 
 template<>
-BL_INLINE BLResult fillUnclippedPathWithOrigin<kAsync>(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const BLPoint& originFixed, const BLPath& path, BLFillRule fillRule) noexcept {
+BL_INLINE BLResult fill_unclipped_path_with_origin<kAsync>(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const BLPoint& origin_fixed, const BLPath& path, BLFillRule fill_rule) noexcept {
 
   if (path.size() <= BL_RASTER_CONTEXT_MINIMUM_ASYNC_PATH_SIZE) {
-    const BLMatrix2D& ft = ctxI->finalTransformFixed();
-    BLMatrix2D transform(ft.m00, ft.m01, ft.m10, ft.m11, originFixed.x, originFixed.y);
+    const BLMatrix2D& ft = ctx_impl->final_transform_fixed();
+    BLMatrix2D transform(ft.m00, ft.m01, ft.m10, ft.m11, origin_fixed.x, origin_fixed.y);
 
-    BLTransformType transformType = blMax<BLTransformType>(ctxI->finalTransformFixedType(), BL_TRANSFORM_TYPE_TRANSLATE);
-    return fillUnclippedPath<kAsync>(ctxI, di, ds, path, fillRule, transform, transformType);
+    BLTransformType transform_type = bl_max<BLTransformType>(ctx_impl->final_transform_fixed_type(), BL_TRANSFORM_TYPE_TRANSLATE);
+    return fill_unclipped_path<kAsync>(ctx_impl, di, ds, path, fill_rule, transform, transform_type);
   }
 
-  size_t jobSize = sizeof(RenderJob_GeometryOp) + sizeof(BLPathCore);
-  di.addFillType(Pipeline::FillType::kAnalytic);
+  size_t job_size = sizeof(RenderJob_GeometryOp) + sizeof(BLPathCore);
+  di.add_fill_type(Pipeline::FillType::kAnalytic);
 
-  RenderCommand* command = ctxI->workerMgr->currentCommand();
-  command->initCommand(di.alpha);
-  command->initFillAnalytic(nullptr, 0, fillRule);
-  return enqueueCommandWithFillJob<RenderJob_GeometryOp>(ctxI, di, ds, jobSize, originFixed, [&](RenderJob_GeometryOp* job) noexcept { job->setGeometryWithPath(&path); });
+  RenderCommand* command = ctx_impl->worker_mgr->current_command();
+  command->init_command(di.alpha);
+  command->init_fill_analytic(nullptr, 0, fill_rule);
+  return enqueue_command_with_fill_job<RenderJob_GeometryOp>(ctx_impl, di, ds, job_size, origin_fixed, [&](RenderJob_GeometryOp* job) noexcept { job->set_geometry_with_path(&path); });
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Fill Unclipped Polygon
 // ===================================================================
 
 template<RenderingMode kRM, typename PointType>
-static BL_INLINE BLResult fillUnclippedPolygonT(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const PointType* pts, size_t size, BLFillRule fillRule, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
+static BL_INLINE BLResult fill_unclipped_polygon_t(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const PointType* pts, size_t size, BLFillRule fill_rule, const BLMatrix2D& transform, BLTransformType transform_type) noexcept {
 
   if constexpr (kRM == kAsync)
-    ctxI->syncWorkData.saveState();
+    ctx_impl->sync_work_data.save_state();
 
-  BL_PROPAGATE(addFilledPolygonEdges(&ctxI->syncWorkData, pts, size, transform, transformType));
-  return fillClippedEdges<kRM>(ctxI, di, ds, fillRule);
+  BL_PROPAGATE(add_filled_polygon_edges(&ctx_impl->sync_work_data, pts, size, transform, transform_type));
+  return fill_clipped_edges<kRM>(ctx_impl, di, ds, fill_rule);
 }
 
 template<RenderingMode kRM, typename PointType>
-static BL_INLINE BLResult fillUnclippedPolygonT(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const PointType* pts, size_t size, BLFillRule fillRule) noexcept {
+static BL_INLINE BLResult fill_unclipped_polygon_t(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const PointType* pts, size_t size, BLFillRule fill_rule) noexcept {
 
-  return fillUnclippedPolygonT<kRM>(ctxI, di, ds, pts, size, fillRule, ctxI->finalTransformFixed(), ctxI->finalTransformFixedType());
+  return fill_unclipped_polygon_t<kRM>(ctx_impl, di, ds, pts, size, fill_rule, ctx_impl->final_transform_fixed(), ctx_impl->final_transform_fixed_type());
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Fill Unclipped Box & Rect
 // ======================================================================
 
 template<RenderingMode kRM>
-static BL_INLINE BLResult fillUnclippedBoxD(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const BLBox& boxD, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
+static BL_INLINE BLResult fill_unclipped_box_d(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const BLBox& box_d, const BLMatrix2D& transform, BLTransformType transform_type) noexcept {
 
-  if (transformType <= BL_TRANSFORM_TYPE_SWAP) {
+  if (transform_type <= BL_TRANSFORM_TYPE_SWAP) {
     BLBox finalBoxD;
-    if (!Geometry::intersect(finalBoxD, TransformInternal::mapBoxScaledSwapped(transform, boxD), ctxI->finalClipBoxFixedD()))
+    if (!Geometry::intersect(finalBoxD, TransformInternal::map_box_scaled_swapped(transform, box_d), ctx_impl->final_clip_box_fixed_d()))
       return BL_SUCCESS;
 
-    BLBoxI boxU = Math::truncToInt(finalBoxD);
-    if (boxU.x0 >= boxU.x1 || boxU.y0 >= boxU.y1)
+    BLBoxI box_u = Math::trunc_to_int(finalBoxD);
+    if (box_u.x0 >= box_u.x1 || box_u.y0 >= box_u.y1)
       return BL_SUCCESS;
 
-    return fillClippedBoxF<kRM>(ctxI, di, ds, boxU);
+    return fill_clipped_box_f<kRM>(ctx_impl, di, ds, box_u);
   }
   else {
-    BLPoint polyD[] = {BLPoint(boxD.x0, boxD.y0), BLPoint(boxD.x1, boxD.y0), BLPoint(boxD.x1, boxD.y1), BLPoint(boxD.x0, boxD.y1)};
-    return fillUnclippedPolygonT<kRM>(ctxI, di, ds, polyD, BL_ARRAY_SIZE(polyD), BL_RASTER_CONTEXT_PREFERRED_FILL_RULE, transform, transformType);
+    BLPoint poly_d[] = {BLPoint(box_d.x0, box_d.y0), BLPoint(box_d.x1, box_d.y0), BLPoint(box_d.x1, box_d.y1), BLPoint(box_d.x0, box_d.y1)};
+    return fill_unclipped_polygon_t<kRM>(ctx_impl, di, ds, poly_d, BL_ARRAY_SIZE(poly_d), BL_RASTER_CONTEXT_PREFERRED_FILL_RULE, transform, transform_type);
   }
 }
 
 template<RenderingMode kRM>
-static BL_INLINE BLResult fillUnclippedBoxD(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBox& boxD) noexcept {
-  return fillUnclippedBoxD<kRM>(ctxI, di, ds, boxD, ctxI->finalTransformFixed(), ctxI->finalTransformFixedType());
+static BL_INLINE BLResult fill_unclipped_box_d(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLBox& box_d) noexcept {
+  return fill_unclipped_box_d<kRM>(ctx_impl, di, ds, box_d, ctx_impl->final_transform_fixed(), ctx_impl->final_transform_fixed_type());
 }
 
 template<RenderingMode kRM>
-static BL_INLINE BLResult fillUnclippedRectI(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLRectI& rectI) noexcept {
-  int rw = rectI.w;
-  int rh = rectI.h;
+static BL_INLINE BLResult fillUnclippedRectI(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLRectI& rect_i) noexcept {
+  int rw = rect_i.w;
+  int rh = rect_i.h;
 
-  if (!blTestFlag(ctxI->contextFlags, ContextFlags::kInfoIntegralTranslation)) {
+  if (!bl_test_flag(ctx_impl->context_flags, ContextFlags::kInfoIntegralTranslation)) {
     // Clipped out.
     if ((rw <= 0) | (rh <= 0))
       return BL_SUCCESS;
 
-    BLBox boxD(double(rectI.x), double(rectI.y), double(rectI.x) + double(rectI.w), double(rectI.y) + double(rectI.h));
-    return fillUnclippedBoxD<kRM>(ctxI, di, ds, boxD);
+    BLBox box_d(double(rect_i.x), double(rect_i.y), double(rect_i.x) + double(rect_i.w), double(rect_i.y) + double(rect_i.h));
+    return fill_unclipped_box_d<kRM>(ctx_impl, di, ds, box_d);
   }
 
   BLBoxI dstBoxI;
-  if (!translateAndClipRectToFillI(ctxI, &rectI, &dstBoxI))
+  if (!translateAndClipRectToFillI(ctx_impl, &rect_i, &dstBoxI))
     return BL_SUCCESS;
 
-  return fillClippedBoxA<kRM>(ctxI, di, ds, dstBoxI);
+  return fill_clipped_box_a<kRM>(ctx_impl, di, ds, dstBoxI);
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Fill Unclipped Geometry
 // ====================================================================
 
 template<RenderingMode kRM>
-static BLResult fillUnclippedGeometry(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept;
+static BLResult fill_unclipped_geometry(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept;
 
 template<>
-BLResult BL_NOINLINE fillUnclippedGeometry<kSync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept {
+BLResult BL_NOINLINE fill_unclipped_geometry<kSync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept {
   // The most common primary geometry operation would be rendering rectangles - so check these first.
   if (type <= BL_GEOMETRY_TYPE_RECTD) {
-    BLBox temporaryBox;
+    BLBox temporary_box;
 
     if (type == BL_GEOMETRY_TYPE_RECTI)
-      return fillUnclippedRectI<kSync>(ctxI, di, ds, *static_cast<const BLRectI*>(data));
+      return fillUnclippedRectI<kSync>(ctx_impl, di, ds, *static_cast<const BLRectI*>(data));
 
     if (type == BL_GEOMETRY_TYPE_RECTD) {
       const BLRect* r = static_cast<const BLRect*>(data);
-      temporaryBox.reset(r->x, r->y, r->x + r->w, r->y + r->h);
-      data = &temporaryBox;
+      temporary_box.reset(r->x, r->y, r->x + r->w, r->y + r->h);
+      data = &temporary_box;
     }
     else if (type == BL_GEOMETRY_TYPE_BOXI) {
-      const BLBoxI* boxI = static_cast<const BLBoxI*>(data);
-      temporaryBox.reset(double(boxI->x0), double(boxI->y0), double(boxI->x1), double(boxI->y1));
-      data = &temporaryBox;
+      const BLBoxI* box_i = static_cast<const BLBoxI*>(data);
+      temporary_box.reset(double(box_i->x0), double(box_i->y0), double(box_i->x1), double(box_i->y1));
+      data = &temporary_box;
     }
     else if (type == BL_GEOMETRY_TYPE_NONE) {
       return BL_SUCCESS;
     }
 
-    return fillUnclippedBoxD<kSync>(ctxI, di, ds, *static_cast<const BLBox*>(data));
+    return fill_unclipped_box_d<kSync>(ctx_impl, di, ds, *static_cast<const BLBox*>(data));
   }
 
   // The most common second geometry operation would be rendering paths.
@@ -2956,7 +2956,7 @@ BLResult BL_NOINLINE fillUnclippedGeometry<kSync>(BLRasterContextImpl* ctxI, Dis
       if (BL_UNLIKELY(array->size < 3))
         return BL_SUCCESS;
 
-      return fillUnclippedPolygonT<kSync>(ctxI, di, ds, array->data, array->size, ctxI->fillRule());
+      return fill_unclipped_polygon_t<kSync>(ctx_impl, di, ds, array->data, array->size, ctx_impl->fill_rule());
     }
 
     if (type == BL_GEOMETRY_TYPE_POLYGOND || type == BL_GEOMETRY_TYPE_POLYLINED) {
@@ -2964,48 +2964,48 @@ BLResult BL_NOINLINE fillUnclippedGeometry<kSync>(BLRasterContextImpl* ctxI, Dis
       if (BL_UNLIKELY(array->size < 3))
         return BL_SUCCESS;
 
-      return fillUnclippedPolygonT<kSync>(ctxI, di, ds, array->data, array->size, ctxI->fillRule());
+      return fill_unclipped_polygon_t<kSync>(ctx_impl, di, ds, array->data, array->size, ctx_impl->fill_rule());
     }
 
-    BLPath* temporaryPath = &ctxI->syncWorkData.tmpPath[3];
-    temporaryPath->clear();
-    BL_PROPAGATE(temporaryPath->addGeometry(type, data));
-    data = temporaryPath;
+    BLPath* temporary_path = &ctx_impl->sync_work_data.tmp_path[3];
+    temporary_path->clear();
+    BL_PROPAGATE(temporary_path->add_geometry(type, data));
+    data = temporary_path;
   }
 
   const BLPath* path = static_cast<const BLPath*>(data);
-  if (BL_UNLIKELY(path->empty()))
+  if (BL_UNLIKELY(path->is_empty()))
     return BL_SUCCESS;
 
-  return fillUnclippedPath<kSync>(ctxI, di, ds, *path, ctxI->fillRule());
+  return fill_unclipped_path<kSync>(ctx_impl, di, ds, *path, ctx_impl->fill_rule());
 }
 
 template<>
-BLResult BL_NOINLINE fillUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept {
+BLResult BL_NOINLINE fill_unclipped_geometry<kAsync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept {
   if (type <= BL_GEOMETRY_TYPE_RECTD) {
-    BLBox temporaryBox;
+    BLBox temporary_box;
 
     if (type == BL_GEOMETRY_TYPE_RECTI)
-      return fillUnclippedRectI<kAsync>(ctxI, di, ds, *static_cast<const BLRectI*>(data));
+      return fillUnclippedRectI<kAsync>(ctx_impl, di, ds, *static_cast<const BLRectI*>(data));
 
     if (type == BL_GEOMETRY_TYPE_RECTD) {
       const BLRect* r = static_cast<const BLRect*>(data);
-      temporaryBox.reset(r->x, r->y, r->x + r->w, r->y + r->h);
-      data = &temporaryBox;
+      temporary_box.reset(r->x, r->y, r->x + r->w, r->y + r->h);
+      data = &temporary_box;
     }
     else if (type == BL_GEOMETRY_TYPE_BOXI) {
-      const BLBoxI* boxI = static_cast<const BLBoxI*>(data);
-      temporaryBox.reset(double(boxI->x0), double(boxI->y0), double(boxI->x1), double(boxI->y1));
-      data = &temporaryBox;
+      const BLBoxI* box_i = static_cast<const BLBoxI*>(data);
+      temporary_box.reset(double(box_i->x0), double(box_i->y0), double(box_i->x1), double(box_i->y1));
+      data = &temporary_box;
     }
     else if (type == BL_GEOMETRY_TYPE_NONE) {
       return BL_SUCCESS;
     }
 
-    return fillUnclippedBoxD<kAsync>(ctxI, di, ds, *static_cast<const BLBox*>(data));
+    return fill_unclipped_box_d<kAsync>(ctx_impl, di, ds, *static_cast<const BLBox*>(data));
   }
 
-  BLFillRule fillRule = ctxI->fillRule();
+  BLFillRule fill_rule = ctx_impl->fill_rule();
 
   switch (type) {
     case BL_GEOMETRY_TYPE_POLYGONI:
@@ -3013,7 +3013,7 @@ BLResult BL_NOINLINE fillUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, Di
       const BLArrayView<BLPointI>* array = static_cast<const BLArrayView<BLPointI>*>(data);
       if (BL_UNLIKELY(array->size < 3))
         return BL_SUCCESS;
-      return fillUnclippedPolygonT<kAsync>(ctxI, di, ds, array->data, array->size, fillRule);
+      return fill_unclipped_polygon_t<kAsync>(ctx_impl, di, ds, array->data, array->size, fill_rule);
     }
 
     case BL_GEOMETRY_TYPE_POLYGOND:
@@ -3021,19 +3021,19 @@ BLResult BL_NOINLINE fillUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, Di
       const BLArrayView<BLPoint>* array = static_cast<const BLArrayView<BLPoint>*>(data);
       if (BL_UNLIKELY(array->size < 3))
         return BL_SUCCESS;
-      return fillUnclippedPolygonT<kAsync>(ctxI, di, ds, array->data, array->size, fillRule);
+      return fill_unclipped_polygon_t<kAsync>(ctx_impl, di, ds, array->data, array->size, fill_rule);
     }
 
     case BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTI:
     case BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTD:
     case BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXI:
     case BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXD: {
-      BLPath* temporaryPath = &ctxI->syncWorkData.tmpPath[3];
-      temporaryPath->clear();
-      BL_PROPAGATE(temporaryPath->addGeometry(type, data));
+      BLPath* temporary_path = &ctx_impl->sync_work_data.tmp_path[3];
+      temporary_path->clear();
+      BL_PROPAGATE(temporary_path->add_geometry(type, data));
 
       type = BL_GEOMETRY_TYPE_PATH;
-      data = temporaryPath;
+      data = temporary_path;
 
       [[fallthrough]];
     }
@@ -3041,34 +3041,34 @@ BLResult BL_NOINLINE fillUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, Di
     case BL_GEOMETRY_TYPE_PATH: {
       const BLPath* path = static_cast<const BLPath*>(data);
       if (path->size() <= BL_RASTER_CONTEXT_MINIMUM_ASYNC_PATH_SIZE)
-        return fillUnclippedPath<kAsync>(ctxI, di, ds, *path, fillRule);
+        return fill_unclipped_path<kAsync>(ctx_impl, di, ds, *path, fill_rule);
 
-      size_t jobSize = sizeof(RenderJob_GeometryOp) + sizeof(BLPathCore);
-      BLPoint originFixed(ctxI->finalTransformFixed().m20, ctxI->finalTransformFixed().m21);
+      size_t job_size = sizeof(RenderJob_GeometryOp) + sizeof(BLPathCore);
+      BLPoint origin_fixed(ctx_impl->final_transform_fixed().m20, ctx_impl->final_transform_fixed().m21);
 
-      di.addFillType(Pipeline::FillType::kAnalytic);
+      di.add_fill_type(Pipeline::FillType::kAnalytic);
 
-      RenderCommand* command = ctxI->workerMgr->currentCommand();
-      command->initCommand(di.alpha);
-      command->initFillAnalytic(nullptr, 0, fillRule);
-      return enqueueCommandWithFillJob<RenderJob_GeometryOp>(ctxI, di, ds, jobSize, originFixed, [&](RenderJob_GeometryOp* job) noexcept { job->setGeometryWithPath(path); });
+      RenderCommand* command = ctx_impl->worker_mgr->current_command();
+      command->init_command(di.alpha);
+      command->init_fill_analytic(nullptr, 0, fill_rule);
+      return enqueue_command_with_fill_job<RenderJob_GeometryOp>(ctx_impl, di, ds, job_size, origin_fixed, [&](RenderJob_GeometryOp* job) noexcept { job->set_geometry_with_path(path); });
     }
 
     default: {
-      if (!Geometry::isSimpleGeometryType(type))
-        return blTraceError(BL_ERROR_INVALID_VALUE);
+      if (!Geometry::is_simple_geometry_type(type))
+        return bl_trace_error(BL_ERROR_INVALID_VALUE);
 
-      size_t geometrySize = Geometry::geometryTypeSizeTable[type];
-      size_t jobSize = sizeof(RenderJob_GeometryOp) + geometrySize;
-      BLPoint originFixed(ctxI->finalTransformFixed().m20, ctxI->finalTransformFixed().m21);
+      size_t geometry_size = Geometry::geometry_type_size_table[type];
+      size_t job_size = sizeof(RenderJob_GeometryOp) + geometry_size;
+      BLPoint origin_fixed(ctx_impl->final_transform_fixed().m20, ctx_impl->final_transform_fixed().m21);
 
-      di.addFillType(Pipeline::FillType::kAnalytic);
+      di.add_fill_type(Pipeline::FillType::kAnalytic);
 
-      RenderCommand* command = ctxI->workerMgr->currentCommand();
-      command->initCommand(di.alpha);
-      command->initFillAnalytic(nullptr, 0, fillRule);
+      RenderCommand* command = ctx_impl->worker_mgr->current_command();
+      command->init_command(di.alpha);
+      command->init_fill_analytic(nullptr, 0, fill_rule);
 
-      return enqueueCommandWithFillJob<RenderJob_GeometryOp>(ctxI, di, ds, jobSize, originFixed, [&](RenderJob_GeometryOp* job) noexcept { job->setGeometryWithShape(type, data, geometrySize); });
+      return enqueue_command_with_fill_job<RenderJob_GeometryOp>(ctx_impl, di, ds, job_size, origin_fixed, [&](RenderJob_GeometryOp* job) noexcept { job->set_geometry_with_shape(type, data, geometry_size); });
     }
   }
 }
@@ -3077,55 +3077,55 @@ BLResult BL_NOINLINE fillUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, Di
 // ================================================================
 
 template<RenderingMode kRM>
-static BLResult fillUnclippedText(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* data) noexcept;
+static BLResult fill_unclipped_text(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* data) noexcept;
 
 template<>
-BL_NOINLINE BLResult fillUnclippedText<kSync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* data) noexcept {
-  const BLGlyphRun* glyphRun = nullptr;
+BL_NOINLINE BLResult fill_unclipped_text<kSync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* data) noexcept {
+  const BLGlyphRun* glyph_run = nullptr;
 
-  if (opType <= BLContextRenderTextOp(BL_TEXT_ENCODING_MAX_VALUE)) {
-    BLTextEncoding encoding = static_cast<BLTextEncoding>(opType);
+  if (op_type <= BLContextRenderTextOp(BL_TEXT_ENCODING_MAX_VALUE)) {
+    BLTextEncoding encoding = static_cast<BLTextEncoding>(op_type);
     const BLDataView* view = static_cast<const BLDataView*>(data);
 
-    BLGlyphBuffer& gb = ctxI->syncWorkData.glyphBuffer;
-    BL_PROPAGATE(gb.setText(view->data, view->size, encoding));
+    BLGlyphBuffer& gb = ctx_impl->sync_work_data.glyph_buffer;
+    BL_PROPAGATE(gb.set_text(view->data, view->size, encoding));
     BL_PROPAGATE(font->dcast().shape(gb));
-    glyphRun = &gb.glyphRun();
+    glyph_run = &gb.glyph_run();
   }
-  else if (opType == BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN) {
-    glyphRun = static_cast<const BLGlyphRun*>(data);
+  else if (op_type == BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN) {
+    glyph_run = static_cast<const BLGlyphRun*>(data);
   }
   else {
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
   }
 
-  if (glyphRun->empty())
+  if (glyph_run->is_empty())
     return BL_SUCCESS;
 
-  BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-  WorkData* workData = &ctxI->syncWorkData;
+  BLPoint origin_fixed = ctx_impl->final_transform_fixed().map_point(*origin);
+  WorkData* work_data = &ctx_impl->sync_work_data;
 
-  BL_PROPAGATE(addFilledGlyphRunEdges(workData, DirectStateAccessor(ctxI), originFixed, font, glyphRun));
-  return fillClippedEdges<kSync>(ctxI, di, ds, BL_FILL_RULE_NON_ZERO);
+  BL_PROPAGATE(add_filled_glyph_run_edges(work_data, DirectStateAccessor(ctx_impl), origin_fixed, font, glyph_run));
+  return fill_clipped_edges<kSync>(ctx_impl, di, ds, BL_FILL_RULE_NON_ZERO);
 }
 
 template<>
-BL_NOINLINE BLResult fillUnclippedText<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* data) noexcept {
-  if (opType <= BLContextRenderTextOp(BL_TEXT_ENCODING_MAX_VALUE)) {
+BL_NOINLINE BLResult fill_unclipped_text<kAsync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* data) noexcept {
+  if (op_type <= BLContextRenderTextOp(BL_TEXT_ENCODING_MAX_VALUE)) {
     const BLDataView* view = static_cast<const BLDataView*>(data);
-    BLTextEncoding encoding = static_cast<BLTextEncoding>(opType);
+    BLTextEncoding encoding = static_cast<BLTextEncoding>(op_type);
 
     if (view->size == 0)
       return BL_SUCCESS;
 
-    return enqueueFillOrStrokeText<BL_CONTEXT_STYLE_SLOT_FILL>(ctxI, di, ds, origin, font, view->data, view->size, encoding);
+    return enqueue_fill_or_stroke_text<BL_CONTEXT_STYLE_SLOT_FILL>(ctx_impl, di, ds, origin, font, view->data, view->size, encoding);
   }
-  else if (opType == BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN) {
-    const BLGlyphRun* glyphRun = static_cast<const BLGlyphRun*>(data);
-    return enqueueFillOrStrokeGlyphRun<BL_CONTEXT_STYLE_SLOT_FILL>(ctxI, di, ds, origin, font, glyphRun);
+  else if (op_type == BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN) {
+    const BLGlyphRun* glyph_run = static_cast<const BLGlyphRun*>(data);
+    return enqueue_fill_or_stroke_glyph_run<BL_CONTEXT_STYLE_SLOT_FILL>(ctx_impl, di, ds, origin, font, glyph_run);
   }
   else {
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
   }
 }
 
@@ -3133,44 +3133,44 @@ BL_NOINLINE BLResult fillUnclippedText<kAsync>(BLRasterContextImpl* ctxI, Dispat
 // ======================================================
 
 template<RenderingMode kRM>
-static BLResult fillClippedBoxMaskedA(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const BLBoxI& boxA, const BLImageCore* mask, const BLPointI& maskOffsetI) noexcept;
+static BLResult fill_clipped_box_masked_a(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const BLBoxI& box_a, const BLImageCore* mask, const BLPointI& mask_offset_i) noexcept;
 
 template<>
-BL_NOINLINE BLResult fillClippedBoxMaskedA<kSync>(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const BLBoxI& boxA, const BLImageCore* mask, const BLPointI& maskOffsetI) noexcept {
+BL_NOINLINE BLResult fill_clipped_box_masked_a<kSync>(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const BLBoxI& box_a, const BLImageCore* mask, const BLPointI& mask_offset_i) noexcept {
 
-  Pipeline::DispatchData dispatchData;
+  Pipeline::DispatchData dispatch_data;
 
-  di.addFillType(Pipeline::FillType::kMask);
-  BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, &dispatchData));
+  di.add_fill_type(Pipeline::FillType::kMask);
+  BL_PROPAGATE(ensure_fetch_and_dispatch_data(ctx_impl, di.signature, ds.fetch_data, &dispatch_data));
 
   RenderCommand::FillBoxMaskA payload;
-  payload.maskImageI.ptr = ImageInternal::getImpl(mask);
-  payload.maskOffsetI = maskOffsetI;
-  payload.boxI = boxA;
-  return CommandProcSync::fillBoxMaskedA(ctxI->syncWorkData, dispatchData, di.alpha, payload, ds.fetchData->getPipelineData());
+  payload.mask_image_i.ptr = ImageInternal::get_impl(mask);
+  payload.mask_offset_i = mask_offset_i;
+  payload.box_i = box_a;
+  return CommandProcSync::fill_box_masked_a(ctx_impl->sync_work_data, dispatch_data, di.alpha, payload, ds.fetch_data->get_pipeline_data());
 }
 
 template<>
-BL_NOINLINE BLResult fillClippedBoxMaskedA<kAsync>(
-    BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
-    const BLBoxI& boxA, const BLImageCore* mask, const BLPointI& maskOffsetI) noexcept {
+BL_NOINLINE BLResult fill_clipped_box_masked_a<kAsync>(
+    BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds,
+    const BLBoxI& box_a, const BLImageCore* mask, const BLPointI& mask_offset_i) noexcept {
 
-  RenderCommand* command = ctxI->workerMgr->currentCommand();
+  RenderCommand* command = ctx_impl->worker_mgr->current_command();
 
-  di.addFillType(Pipeline::FillType::kMask);
-  BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
+  di.add_fill_type(Pipeline::FillType::kMask);
+  BL_PROPAGATE(ensure_fetch_and_dispatch_data(ctx_impl, di.signature, ds.fetch_data, command->pipe_dispatch_data()));
 
-  command->initCommand(di.alpha);
-  command->initFillBoxMaskA(boxA, mask, maskOffsetI);
+  command->init_command(di.alpha);
+  command->init_fill_box_mask_a(box_a, mask, mask_offset_i);
 
-  uint8_t qy0 = uint8_t(boxA.y0 >> ctxI->commandQuantizationShiftAA());
+  uint8_t qy0 = uint8_t(box_a.y0 >> ctx_impl->command_quantization_shift_aa());
 
-  return enqueueCommand(ctxI, command, qy0, ds.fetchData, [&](RenderCommand* command) noexcept {
-    ObjectInternal::retainImpl<RCMode::kMaybe>(command->_payload.boxMaskA.maskImageI.ptr);
+  return enqueue_command(ctx_impl, command, qy0, ds.fetch_data, [&](RenderCommand* command) noexcept {
+    ObjectInternal::retain_impl<RCMode::kMaybe>(command->_payload.box_mask_a.mask_image_i.ptr);
   });
 }
 
@@ -3178,27 +3178,27 @@ BL_NOINLINE BLResult fillClippedBoxMaskedA<kAsync>(
 // ==================================================================
 
 template<RenderingMode kRM>
-static BLResult strokeUnclippedPath(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint& originFixed, const BLPath& path) noexcept;
+static BLResult stroke_unclipped_path(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLPoint& origin_fixed, const BLPath& path) noexcept;
 
 template<>
-BL_NOINLINE BLResult strokeUnclippedPath<kSync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint& originFixed, const BLPath& path) noexcept {
-  WorkData* workData = &ctxI->syncWorkData;
-  BL_PROPAGATE(addStrokedPathEdges(workData, DirectStateAccessor(ctxI), originFixed, &path));
+BL_NOINLINE BLResult stroke_unclipped_path<kSync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLPoint& origin_fixed, const BLPath& path) noexcept {
+  WorkData* work_data = &ctx_impl->sync_work_data;
+  BL_PROPAGATE(add_stroked_path_edges(work_data, DirectStateAccessor(ctx_impl), origin_fixed, &path));
 
-  return fillClippedEdges<kSync>(ctxI, di, ds, BL_FILL_RULE_NON_ZERO);
+  return fill_clipped_edges<kSync>(ctx_impl, di, ds, BL_FILL_RULE_NON_ZERO);
 }
 
 template<>
-BL_NOINLINE BLResult strokeUnclippedPath<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint& originFixed, const BLPath& path) noexcept {
-  size_t jobSize = sizeof(RenderJob_GeometryOp) + sizeof(BLPathCore);
-  di.addFillType(Pipeline::FillType::kAnalytic);
+BL_NOINLINE BLResult stroke_unclipped_path<kAsync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLPoint& origin_fixed, const BLPath& path) noexcept {
+  size_t job_size = sizeof(RenderJob_GeometryOp) + sizeof(BLPathCore);
+  di.add_fill_type(Pipeline::FillType::kAnalytic);
 
-  RenderCommand* command = ctxI->workerMgr->currentCommand();
-  command->initCommand(di.alpha);
-  command->initFillAnalytic(nullptr, 0, BL_FILL_RULE_NON_ZERO);
+  RenderCommand* command = ctx_impl->worker_mgr->current_command();
+  command->init_command(di.alpha);
+  command->init_fill_analytic(nullptr, 0, BL_FILL_RULE_NON_ZERO);
 
-  return enqueueCommandWithStrokeJob<RenderJob_GeometryOp>(ctxI, di, ds, jobSize, originFixed, [&](RenderJob_GeometryOp* job) noexcept {
-    job->setGeometryWithPath(&path);
+  return enqueue_command_with_stroke_job<RenderJob_GeometryOp>(ctx_impl, di, ds, job_size, origin_fixed, [&](RenderJob_GeometryOp* job) noexcept {
+    job->set_geometry_with_path(&path);
   });
 }
 
@@ -3206,52 +3206,52 @@ BL_NOINLINE BLResult strokeUnclippedPath<kAsync>(BLRasterContextImpl* ctxI, Disp
 // ======================================================================
 
 template<RenderingMode kRM>
-static BLResult strokeUnclippedGeometry(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept;
+static BLResult stroke_unclipped_geometry(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept;
 
 template<>
-BL_NOINLINE BLResult strokeUnclippedGeometry<kSync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept {
-  WorkData* workData = &ctxI->syncWorkData;
+BL_NOINLINE BLResult stroke_unclipped_geometry<kSync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept {
+  WorkData* work_data = &ctx_impl->sync_work_data;
   BLPath* path = const_cast<BLPath*>(static_cast<const BLPath*>(data));
 
   if (type != BL_GEOMETRY_TYPE_PATH) {
-    path = &workData->tmpPath[3];
+    path = &work_data->tmp_path[3];
     path->clear();
-    BL_PROPAGATE(path->addGeometry(type, data));
+    BL_PROPAGATE(path->add_geometry(type, data));
   }
 
-  BLPoint originFixed(ctxI->finalTransformFixed().m20, ctxI->finalTransformFixed().m21);
-  BL_PROPAGATE(addStrokedPathEdges(workData, DirectStateAccessor(ctxI), originFixed, path));
+  BLPoint origin_fixed(ctx_impl->final_transform_fixed().m20, ctx_impl->final_transform_fixed().m21);
+  BL_PROPAGATE(add_stroked_path_edges(work_data, DirectStateAccessor(ctx_impl), origin_fixed, path));
 
-  return fillClippedEdges<kSync>(ctxI, di, ds, BL_FILL_RULE_NON_ZERO);
+  return fill_clipped_edges<kSync>(ctx_impl, di, ds, BL_FILL_RULE_NON_ZERO);
 }
 
 template<>
-BL_NOINLINE BLResult strokeUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept {
-  size_t geometrySize = sizeof(BLPathCore);
-  if (Geometry::isSimpleGeometryType(type)) {
-    geometrySize = Geometry::geometryTypeSizeTable[type];
+BL_NOINLINE BLResult stroke_unclipped_geometry<kAsync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept {
+  size_t geometry_size = sizeof(BLPathCore);
+  if (Geometry::is_simple_geometry_type(type)) {
+    geometry_size = Geometry::geometry_type_size_table[type];
   }
   else if (type != BL_GEOMETRY_TYPE_PATH) {
-    BLPath* temporaryPath = &ctxI->syncWorkData.tmpPath[3];
+    BLPath* temporary_path = &ctx_impl->sync_work_data.tmp_path[3];
 
-    temporaryPath->clear();
-    BL_PROPAGATE(temporaryPath->addGeometry(type, data));
+    temporary_path->clear();
+    BL_PROPAGATE(temporary_path->add_geometry(type, data));
 
     type = BL_GEOMETRY_TYPE_PATH;
-    data = temporaryPath;
+    data = temporary_path;
   }
 
-  size_t jobSize = sizeof(RenderJob_GeometryOp) + geometrySize;
-  BLPoint originFixed(ctxI->finalTransformFixed().m20, ctxI->finalTransformFixed().m21);
+  size_t job_size = sizeof(RenderJob_GeometryOp) + geometry_size;
+  BLPoint origin_fixed(ctx_impl->final_transform_fixed().m20, ctx_impl->final_transform_fixed().m21);
 
-  di.addFillType(Pipeline::FillType::kAnalytic);
+  di.add_fill_type(Pipeline::FillType::kAnalytic);
 
-  RenderCommand* command = ctxI->workerMgr->currentCommand();
-  command->initCommand(di.alpha);
-  command->initFillAnalytic(nullptr, 0, BL_FILL_RULE_NON_ZERO);
+  RenderCommand* command = ctx_impl->worker_mgr->current_command();
+  command->init_command(di.alpha);
+  command->init_fill_analytic(nullptr, 0, BL_FILL_RULE_NON_ZERO);
 
-  return enqueueCommandWithStrokeJob<RenderJob_GeometryOp>(ctxI, di, ds, jobSize, originFixed, [&](RenderJob_GeometryOp* job) noexcept {
-    job->setGeometry(type, data, geometrySize);
+  return enqueue_command_with_stroke_job<RenderJob_GeometryOp>(ctx_impl, di, ds, job_size, origin_fixed, [&](RenderJob_GeometryOp* job) noexcept {
+    job->set_geometry(type, data, geometry_size);
   });
 }
 
@@ -3259,55 +3259,55 @@ BL_NOINLINE BLResult strokeUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, 
 // ==================================================================
 
 template<RenderingMode kRM>
-static BLResult strokeUnclippedText(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* data) noexcept;
+static BLResult stroke_unclipped_text(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* data) noexcept;
 
 template<>
-BL_NOINLINE BLResult strokeUnclippedText<kSync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* data) noexcept {
-  const BLGlyphRun* glyphRun = nullptr;
+BL_NOINLINE BLResult stroke_unclipped_text<kSync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* data) noexcept {
+  const BLGlyphRun* glyph_run = nullptr;
 
-  if (opType <= BLContextRenderTextOp(BL_TEXT_ENCODING_MAX_VALUE)) {
-    BLTextEncoding encoding = static_cast<BLTextEncoding>(opType);
+  if (op_type <= BLContextRenderTextOp(BL_TEXT_ENCODING_MAX_VALUE)) {
+    BLTextEncoding encoding = static_cast<BLTextEncoding>(op_type);
     const BLDataView* view = static_cast<const BLDataView*>(data);
 
-    BLGlyphBuffer& gb = ctxI->syncWorkData.glyphBuffer;
-    BL_PROPAGATE(gb.setText(view->data, view->size, encoding));
+    BLGlyphBuffer& gb = ctx_impl->sync_work_data.glyph_buffer;
+    BL_PROPAGATE(gb.set_text(view->data, view->size, encoding));
     BL_PROPAGATE(font->dcast().shape(gb));
-    glyphRun = &gb.glyphRun();
+    glyph_run = &gb.glyph_run();
   }
-  else if (opType == BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN) {
-    glyphRun = static_cast<const BLGlyphRun*>(data);
+  else if (op_type == BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN) {
+    glyph_run = static_cast<const BLGlyphRun*>(data);
   }
   else {
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
   }
 
-  if (glyphRun->empty())
+  if (glyph_run->is_empty())
     return BL_SUCCESS;
 
-  BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-  WorkData* workData = &ctxI->syncWorkData;
+  BLPoint origin_fixed = ctx_impl->final_transform_fixed().map_point(*origin);
+  WorkData* work_data = &ctx_impl->sync_work_data;
 
-  BL_PROPAGATE(addStrokedGlyphRunEdges(workData, DirectStateAccessor(ctxI), originFixed, font, glyphRun));
-  return fillClippedEdges<kSync>(ctxI, di, ds, BL_FILL_RULE_NON_ZERO);
+  BL_PROPAGATE(add_stroked_glyph_run_edges(work_data, DirectStateAccessor(ctx_impl), origin_fixed, font, glyph_run));
+  return fill_clipped_edges<kSync>(ctx_impl, di, ds, BL_FILL_RULE_NON_ZERO);
 }
 
 template<>
-BL_NOINLINE BLResult strokeUnclippedText<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* data) noexcept {
-  if (opType <= BLContextRenderTextOp(BL_TEXT_ENCODING_MAX_VALUE)) {
+BL_NOINLINE BLResult stroke_unclipped_text<kAsync>(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* data) noexcept {
+  if (op_type <= BLContextRenderTextOp(BL_TEXT_ENCODING_MAX_VALUE)) {
     const BLDataView* view = static_cast<const BLDataView*>(data);
-    BLTextEncoding encoding = static_cast<BLTextEncoding>(opType);
+    BLTextEncoding encoding = static_cast<BLTextEncoding>(op_type);
 
     if (view->size == 0)
       return BL_SUCCESS;
 
-    return enqueueFillOrStrokeText<BL_CONTEXT_STYLE_SLOT_STROKE>(ctxI, di, ds, origin, font, view->data, view->size, encoding);
+    return enqueue_fill_or_stroke_text<BL_CONTEXT_STYLE_SLOT_STROKE>(ctx_impl, di, ds, origin, font, view->data, view->size, encoding);
   }
-  else if (opType == BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN) {
-    const BLGlyphRun* glyphRun = static_cast<const BLGlyphRun*>(data);
-    return enqueueFillOrStrokeGlyphRun<BL_CONTEXT_STYLE_SLOT_STROKE>(ctxI, di, ds, origin, font, glyphRun);
+  else if (op_type == BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN) {
+    const BLGlyphRun* glyph_run = static_cast<const BLGlyphRun*>(data);
+    return enqueue_fill_or_stroke_glyph_run<BL_CONTEXT_STYLE_SLOT_STROKE>(ctx_impl, di, ds, origin, font, glyph_run);
   }
   else {
-    return blTraceError(BL_ERROR_INVALID_VALUE);
+    return bl_trace_error(BL_ERROR_INVALID_VALUE);
   }
 }
 
@@ -3315,997 +3315,997 @@ BL_NOINLINE BLResult strokeUnclippedText<kAsync>(BLRasterContextImpl* ctxI, Disp
 // =====================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL clearAllImpl(BLContextImpl* baseImpl) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL clear_all_impl(BLContextImpl* base_impl) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_CLEAR_OP(ContextFlags::kNoClearOpAll);
-  return fillAll<kRM>(ctxI, di, ds);
+  return fill_all<kRM>(ctx_impl, di, ds);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Clear Rect
 // ======================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL clearRectIImpl(BLContextImpl* baseImpl, const BLRectI* rect) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL clear_rectiImpl(BLContextImpl* base_impl, const BLRectI* rect) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_CLEAR_OP(ContextFlags::kNoClearOp);
-  return fillUnclippedRectI<kRM>(ctxI, di, ds, *rect);
+  return fillUnclippedRectI<kRM>(ctx_impl, di, ds, *rect);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL clearRectDImpl(BLContextImpl* baseImpl, const BLRect* rect) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL clear_rectdImpl(BLContextImpl* base_impl, const BLRect* rect) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_CLEAR_OP(ContextFlags::kNoClearOp);
-  BLBox boxD(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
-  return fillUnclippedBoxD<kRM>(ctxI, di, ds, boxD);
+  BLBox box_d(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
+  return fill_unclipped_box_d<kRM>(ctx_impl, di, ds, box_d);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Fill All
 // ====================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillAllImpl(BLContextImpl* baseImpl) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_all_impl(BLContextImpl* base_impl) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoFillOpAllImplicit, BL_CONTEXT_STYLE_SLOT_FILL, kNoBail);
-  return fillAll<kRM>(ctxI, di, ds);
+  return fill_all<kRM>(ctx_impl, di, ds);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillAllRgba32Impl(BLContextImpl* baseImpl, uint32_t rgba32) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_all_rgba32Impl(BLContextImpl* base_impl, uint32_t rgba32) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoFillOpAllExplicit, BL_CONTEXT_STYLE_SLOT_FILL, rgba32, kNoBail);
-  return fillAll<kRM>(ctxI, di, ds);
+  return fill_all<kRM>(ctx_impl, di, ds);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillAllExtImpl(BLContextImpl* baseImpl, const BLObjectCore* style) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_all_ext_impl(BLContextImpl* base_impl, const BLObjectCore* style) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoFillOpAllExplicit, BL_CONTEXT_STYLE_SLOT_FILL, style, kNoBail);
-  BLResult result = fillAll<kRM>(ctxI, di, ds);
+  BLResult result = fill_all<kRM>(ctx_impl, di, ds);
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), result);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Fill Rect
 // =====================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillRectIImpl(BLContextImpl* baseImpl, const BLRectI* rect) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_rect_iImpl(BLContextImpl* base_impl, const BLRectI* rect) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, kNoBail);
-  return fillUnclippedRectI<kRM>(ctxI, di, ds, *rect);
+  return fillUnclippedRectI<kRM>(ctx_impl, di, ds, *rect);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillRectIRgba32Impl(BLContextImpl* baseImpl, const BLRectI* rect, uint32_t rgba32) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_rect_i_rgba32Impl(BLContextImpl* base_impl, const BLRectI* rect, uint32_t rgba32) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoFillOpExplicit, BL_CONTEXT_STYLE_SLOT_FILL, rgba32, kNoBail);
-  return fillUnclippedRectI<kRM>(ctxI, di, ds, *rect);
+  return fillUnclippedRectI<kRM>(ctx_impl, di, ds, *rect);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillRectIExtImpl(BLContextImpl* baseImpl, const BLRectI* rect, const BLObjectCore* style) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_rect_i_extImpl(BLContextImpl* base_impl, const BLRectI* rect, const BLObjectCore* style) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoFillOpExplicit, BL_CONTEXT_STYLE_SLOT_FILL, style, kNoBail);
-  BLResult result = fillUnclippedRectI<kRM>(ctxI, di, ds, *rect);
+  BLResult result = fillUnclippedRectI<kRM>(ctx_impl, di, ds, *rect);
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), result);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillRectDImpl(BLContextImpl* baseImpl, const BLRect* rect) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_rect_dImpl(BLContextImpl* base_impl, const BLRect* rect) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, kNoBail);
-  BLBox boxD(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
-  return fillUnclippedBoxD<kRM>(ctxI, di, ds, boxD);
+  BLBox box_d(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
+  return fill_unclipped_box_d<kRM>(ctx_impl, di, ds, box_d);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillRectDRgba32Impl(BLContextImpl* baseImpl, const BLRect* rect, uint32_t rgba32) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_rect_d_rgba32Impl(BLContextImpl* base_impl, const BLRect* rect, uint32_t rgba32) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoFillOpExplicit, BL_CONTEXT_STYLE_SLOT_FILL, rgba32, kNoBail);
-  BLBox boxD(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
-  return fillUnclippedBoxD<kRM>(ctxI, di, ds, boxD);
+  BLBox box_d(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
+  return fill_unclipped_box_d<kRM>(ctx_impl, di, ds, box_d);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillRectDExtImpl(BLContextImpl* baseImpl, const BLRect* rect, const BLObjectCore* style) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_rect_d_extImpl(BLContextImpl* base_impl, const BLRect* rect, const BLObjectCore* style) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoFillOpExplicit, BL_CONTEXT_STYLE_SLOT_FILL, style, kNoBail);
-  BLBox boxD(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
-  BLResult result = fillUnclippedBoxD<kRM>(ctxI, di, ds, boxD);
+  BLBox box_d(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
+  BLResult result = fill_unclipped_box_d<kRM>(ctx_impl, di, ds, box_d);
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), result);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Fill Path
 // =====================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillPathDImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLPathCore* path) noexcept {
-  BL_ASSERT(path->_d.isPath());
+static BLResult BL_CDECL fill_path_dImpl(BLContextImpl* base_impl, const BLPoint* origin, const BLPathCore* path) noexcept {
+  BL_ASSERT(path->_d.is_path());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  bool bail = path->dcast().empty();
-  BLResult bailResult = BL_SUCCESS;
+  bool bail = path->dcast().is_empty();
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, bail);
-  BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-  return fillUnclippedPathWithOrigin<kRM>(ctxI, di, ds, originFixed, path->dcast(), ctxI->fillRule());
+  BLPoint origin_fixed = ctx_impl->final_transform_fixed().map_point(*origin);
+  return fill_unclipped_path_with_origin<kRM>(ctx_impl, di, ds, origin_fixed, path->dcast(), ctx_impl->fill_rule());
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillPathDRgba32Impl(BLContextImpl* baseImpl, const BLPoint* origin, const BLPathCore* path, uint32_t rgba32) noexcept {
-  BL_ASSERT(path->_d.isPath());
+static BLResult BL_CDECL fill_path_d_rgba32Impl(BLContextImpl* base_impl, const BLPoint* origin, const BLPathCore* path, uint32_t rgba32) noexcept {
+  BL_ASSERT(path->_d.is_path());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  bool bail = path->dcast().empty();
-  BLResult bailResult = BL_SUCCESS;
+  bool bail = path->dcast().is_empty();
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoFillOpExplicit, BL_CONTEXT_STYLE_SLOT_FILL, rgba32, bail);
-  BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-  return fillUnclippedPathWithOrigin<kRM>(ctxI, di, ds, originFixed, path->dcast(), ctxI->fillRule());
+  BLPoint origin_fixed = ctx_impl->final_transform_fixed().map_point(*origin);
+  return fill_unclipped_path_with_origin<kRM>(ctx_impl, di, ds, origin_fixed, path->dcast(), ctx_impl->fill_rule());
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillPathDExtImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLPathCore* path, const BLObjectCore* style) noexcept {
-  BL_ASSERT(path->_d.isPath());
+static BLResult BL_CDECL fill_path_d_extImpl(BLContextImpl* base_impl, const BLPoint* origin, const BLPathCore* path, const BLObjectCore* style) noexcept {
+  BL_ASSERT(path->_d.is_path());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  bool bail = path->dcast().empty();
-  BLResult bailResult = BL_SUCCESS;
+  bool bail = path->dcast().is_empty();
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoFillOpExplicit, BL_CONTEXT_STYLE_SLOT_FILL, style, bail);
-  BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-  BLResult result = fillUnclippedPathWithOrigin<kRM>(ctxI, di, ds, originFixed, path->dcast(), ctxI->fillRule());
+  BLPoint origin_fixed = ctx_impl->final_transform_fixed().map_point(*origin);
+  BLResult result = fill_unclipped_path_with_origin<kRM>(ctx_impl, di, ds, origin_fixed, path->dcast(), ctx_impl->fill_rule());
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), result);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Fill Geometry
 // =========================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillGeometryImpl(BLContextImpl* baseImpl, BLGeometryType type, const void* data) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_geometry_impl(BLContextImpl* base_impl, BLGeometryType type, const void* data) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, kNoBail);
-  return fillUnclippedGeometry<kRM>(ctxI, di, ds, type, data);
+  return fill_unclipped_geometry<kRM>(ctx_impl, di, ds, type, data);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillGeometryRgba32Impl(BLContextImpl* baseImpl, BLGeometryType type, const void* data, uint32_t rgba32) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_geometry_rgba32Impl(BLContextImpl* base_impl, BLGeometryType type, const void* data, uint32_t rgba32) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoFillOpExplicit, BL_CONTEXT_STYLE_SLOT_FILL, rgba32, kNoBail);
-  return fillUnclippedGeometry<kRM>(ctxI, di, ds, type, data);
+  return fill_unclipped_geometry<kRM>(ctx_impl, di, ds, type, data);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillGeometryExtImpl(BLContextImpl* baseImpl, BLGeometryType type, const void* data, const BLObjectCore* style) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL fill_geometry_ext_impl(BLContextImpl* base_impl, BLGeometryType type, const void* data, const BLObjectCore* style) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoFillOpExplicit, BL_CONTEXT_STYLE_SLOT_FILL, style, kNoBail);
-  BLResult result = fillUnclippedGeometry<kRM>(ctxI, di, ds, type, data);
+  BLResult result = fill_unclipped_geometry<kRM>(ctx_impl, di, ds, type, data);
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), result);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Fill Unclipped Text
 // ===============================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillTextOpDImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL fill_text_op_dImpl(BLContextImpl* base_impl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  bool bail = !font->dcast().isValid();
-  BLResult bailResult = bail ? blTraceError(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
+  bool bail = !font->dcast().is_valid();
+  BLResult bail_result = bail ? bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
 
   BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, bail);
-  return fillUnclippedText<kRM>(ctxI, di, ds, origin, font, opType, opData);
+  return fill_unclipped_text<kRM>(ctx_impl, di, ds, origin, font, op_type, op_data);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillTextOpIImpl(BLContextImpl* baseImpl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL fill_text_op_iImpl(BLContextImpl* base_impl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLPoint originD(*origin);
-  return fillTextOpDImpl<kRM>(baseImpl, &originD, font, opType, opData);
+  BLPoint origin_d(*origin);
+  return fill_text_op_dImpl<kRM>(base_impl, &origin_d, font, op_type, op_data);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillTextOpDRgba32Impl(BLContextImpl* baseImpl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData, uint32_t rgba32) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL fill_text_op_d_rgba32Impl(BLContextImpl* base_impl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data, uint32_t rgba32) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  bool bail = !font->dcast().isValid();
-  BLResult bailResult = bail ? blTraceError(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
+  bool bail = !font->dcast().is_valid();
+  BLResult bail_result = bail ? bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
 
   BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoFillOpExplicit, BL_CONTEXT_STYLE_SLOT_FILL, rgba32, bail);
-  return fillUnclippedText<kRM>(ctxI, di, ds, origin, font, opType, opData);
+  return fill_unclipped_text<kRM>(ctx_impl, di, ds, origin, font, op_type, op_data);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillTextOpDExtImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData, const BLObjectCore* style) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL fill_text_op_d_extImpl(BLContextImpl* base_impl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data, const BLObjectCore* style) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  bool bail = !font->dcast().isValid();
-  BLResult bailResult = bail ? blTraceError(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
+  bool bail = !font->dcast().is_valid();
+  BLResult bail_result = bail ? bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
 
   BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoFillOpExplicit, BL_CONTEXT_STYLE_SLOT_FILL, style, bail);
-  BLResult result = fillUnclippedText<kRM>(ctxI, di, ds, origin, font, opType, opData);
+  BLResult result = fill_unclipped_text<kRM>(ctx_impl, di, ds, origin, font, op_type, op_data);
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), result);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillTextOpIRgba32Impl(BLContextImpl* baseImpl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData, uint32_t rgba32) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL fill_text_op_i_rgba32Impl(BLContextImpl* base_impl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data, uint32_t rgba32) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLPoint originD(*origin);
-  return fillTextOpDRgba32Impl<kRM>(baseImpl, &originD, font, opType, opData, rgba32);
+  BLPoint origin_d(*origin);
+  return fill_text_op_d_rgba32Impl<kRM>(base_impl, &origin_d, font, op_type, op_data, rgba32);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillTextOpIExtImpl(BLContextImpl* baseImpl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData, const BLObjectCore* style) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL fill_text_op_i_extImpl(BLContextImpl* base_impl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data, const BLObjectCore* style) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLPoint originD(*origin);
-  return fillTextOpDExtImpl<kRM>(baseImpl, &originD, font, opType, opData, style);
+  BLPoint origin_d(*origin);
+  return fill_text_op_d_extImpl<kRM>(base_impl, &origin_d, font, op_type, op_data, style);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Fill Mask
 // =====================================================
 
 template<RenderingMode kRM>
-static BL_INLINE BLResult fillUnclippedMaskD(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLPoint dst, const BLImageCore* mask, BLRectI maskRect) noexcept {
-  if (ctxI->finalTransformType() <= BL_TRANSFORM_TYPE_TRANSLATE) {
-    double startX = dst.x * ctxI->finalTransformFixed().m00 + ctxI->finalTransformFixed().m20;
-    double startY = dst.y * ctxI->finalTransformFixed().m11 + ctxI->finalTransformFixed().m21;
+static BL_INLINE BLResult fill_unclipped_mask_d(BLRasterContextImpl* ctx_impl, DispatchInfo di, DispatchStyle ds, BLPoint dst, const BLImageCore* mask, BLRectI mask_rect) noexcept {
+  if (ctx_impl->final_transform_type() <= BL_TRANSFORM_TYPE_TRANSLATE) {
+    double startX = dst.x * ctx_impl->final_transform_fixed().m00 + ctx_impl->final_transform_fixed().m20;
+    double startY = dst.y * ctx_impl->final_transform_fixed().m11 + ctx_impl->final_transform_fixed().m21;
 
-    BLBox dstBoxD(blMax(startX, ctxI->finalClipBoxFixedD().x0),
-                  blMax(startY, ctxI->finalClipBoxFixedD().y0),
-                  blMin(startX + double(maskRect.w) * ctxI->finalTransformFixed().m00, ctxI->finalClipBoxFixedD().x1),
-                  blMin(startY + double(maskRect.h) * ctxI->finalTransformFixed().m11, ctxI->finalClipBoxFixedD().y1));
+    BLBox dst_box_d(bl_max(startX, ctx_impl->final_clip_box_fixed_d().x0),
+                    bl_max(startY, ctx_impl->final_clip_box_fixed_d().y0),
+                    bl_min(startX + double(mask_rect.w) * ctx_impl->final_transform_fixed().m00, ctx_impl->final_clip_box_fixed_d().x1),
+                    bl_min(startY + double(mask_rect.h) * ctx_impl->final_transform_fixed().m11, ctx_impl->final_clip_box_fixed_d().y1));
 
-    // Clipped out, invalid coordinates, or empty `maskArea`.
-    if (!((dstBoxD.x0 < dstBoxD.x1) & (dstBoxD.y0 < dstBoxD.y1)))
+    // Clipped out, invalid coordinates, or empty `mask_area`.
+    if (!((dst_box_d.x0 < dst_box_d.x1) & (dst_box_d.y0 < dst_box_d.y1)))
       return BL_SUCCESS;
 
-    int64_t startFx = Math::floorToInt64(startX);
-    int64_t startFy = Math::floorToInt64(startY);
+    int64_t start_fx = Math::floorToInt64(startX);
+    int64_t start_fy = Math::floorToInt64(startY);
 
-    BLBoxI dstBoxU = Math::truncToInt(dstBoxD);
+    BLBoxI dst_box_u = Math::trunc_to_int(dst_box_d);
 
-    if (!((startFx | startFy) & ctxI->renderTargetInfo.fpMaskI)) {
+    if (!((start_fx | start_fy) & ctx_impl->render_target_info.fpMaskI)) {
       // Pixel aligned mask.
-      int x0 = dstBoxU.x0 >> ctxI->renderTargetInfo.fpShiftI;
-      int y0 = dstBoxU.y0 >> ctxI->renderTargetInfo.fpShiftI;
-      int x1 = (dstBoxU.x1 + ctxI->renderTargetInfo.fpMaskI) >> ctxI->renderTargetInfo.fpShiftI;
-      int y1 = (dstBoxU.y1 + ctxI->renderTargetInfo.fpMaskI) >> ctxI->renderTargetInfo.fpShiftI;
+      int x0 = dst_box_u.x0 >> ctx_impl->render_target_info.fpShiftI;
+      int y0 = dst_box_u.y0 >> ctx_impl->render_target_info.fpShiftI;
+      int x1 = (dst_box_u.x1 + ctx_impl->render_target_info.fpMaskI) >> ctx_impl->render_target_info.fpShiftI;
+      int y1 = (dst_box_u.y1 + ctx_impl->render_target_info.fpMaskI) >> ctx_impl->render_target_info.fpShiftI;
 
-      int tx = int(startFx >> ctxI->renderTargetInfo.fpShiftI);
-      int ty = int(startFy >> ctxI->renderTargetInfo.fpShiftI);
+      int tx = int(start_fx >> ctx_impl->render_target_info.fpShiftI);
+      int ty = int(start_fy >> ctx_impl->render_target_info.fpShiftI);
 
-      maskRect.x += x0 - tx;
-      maskRect.y += y0 - ty;
-      maskRect.w = x1 - x0;
-      maskRect.h = y1 - y0;
+      mask_rect.x += x0 - tx;
+      mask_rect.y += y0 - ty;
+      mask_rect.w = x1 - x0;
+      mask_rect.h = y1 - y0;
 
       // Pixel aligned fill with a pixel aligned mask.
-      if (isBoxAligned24x8(dstBoxU)) {
-        return fillClippedBoxMaskedA<kRM>(ctxI, di, ds, BLBoxI(x0, y0, x1, y1), mask, BLPointI(maskRect.x, maskRect.y));
+      if (isBoxAligned24x8(dst_box_u)) {
+        return fill_clipped_box_masked_a<kRM>(ctx_impl, di, ds, BLBoxI(x0, y0, x1, y1), mask, BLPointI(mask_rect.x, mask_rect.y));
       }
 
       // TODO: [Rendering Context] Masking support.
       /*
-      BL_PROPAGATE(serializer.initFetchDataForMask(ctxI));
-      serializer.maskFetchData()->initImageSource(mask, maskRect);
-      if (!serializer.maskFetchData()->setupPatternBlit(x0, y0))
+      BL_PROPAGATE(serializer.init_fetch_data_for_mask(ctx_impl));
+      serializer.mask_fetch_data()->init_image_source(mask, mask_rect);
+      if (!serializer.mask_fetch_data()->setup_pattern_blit(x0, y0))
         return BL_SUCCESS;
       */
     }
     else {
       // TODO: [Rendering Context] Masking support.
       /*
-      BL_PROPAGATE(serializer.initFetchDataForMask(ctxI));
-      serializer.maskFetchData()->initImageSource(mask, maskRect);
-      if (!serializer.maskFetchData()->setupPatternFxFy(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->hints().patternQuality, startFx, startFy))
+      BL_PROPAGATE(serializer.init_fetch_data_for_mask(ctx_impl));
+      serializer.mask_fetch_data()->init_image_source(mask, mask_rect);
+      if (!serializer.mask_fetch_data()->setup_pattern_fx_fy(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctx_impl->hints().pattern_quality, start_fx, start_fy))
         return BL_SUCCESS;
       */
     }
 
     /*
-    return fillClippedBoxU<RenderCommandSerializerFlags::kMask>(ctxI, serializer, dstBoxU);
+    return fill_clipped_box_u<RenderCommandSerializerFlags::kMask>(ctx_impl, serializer, dst_box_u);
     */
   }
 
-  return blTraceError(BL_ERROR_NOT_IMPLEMENTED);
+  return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
 
   // TODO: [Rendering Context] Masking support.
   /*
   else {
-    BLMatrix2D m(ctxI->finalTransform());
+    BLMatrix2D m(ctx_impl->final_transform());
     m.translate(dst.x, dst.y);
 
-    BL_PROPAGATE(serializer.initFetchDataForMask(ctxI));
-    serializer.maskFetchData()->initImageSource(mask, maskRect);
-    if (!serializer.maskFetchData()->setupPatternAffine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->hints().patternQuality, m)) {
-      serializer.rollbackFetchData(ctxI);
+    BL_PROPAGATE(serializer.init_fetch_data_for_mask(ctx_impl));
+    serializer.mask_fetch_data()->init_image_source(mask, mask_rect);
+    if (!serializer.mask_fetch_data()->setup_pattern_affine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctx_impl->hints().pattern_quality, m)) {
+      serializer.rollback_fetch_data(ctx_impl);
       return BL_SUCCESS;
     }
   }
 
-  BLBox finalBox(dst.x, dst.y, dst.x + double(maskRect.w), dst.y + double(maskRect.h));
-  return blRasterContextImplFinalizeBlit(ctxI, serializer,
-         fillUnclippedBox<RenderCommandSerializerFlags::kMask>(ctxI, serializer, finalBox));
+  BLBox final_box(dst.x, dst.y, dst.x + double(mask_rect.w), dst.y + double(mask_rect.h));
+  return bl_raster_context_impl_finalize_blit(ctx_impl, serializer,
+         fill_unclipped_box<RenderCommandSerializerFlags::kMask>(ctx_impl, serializer, final_box));
   */
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillMaskDImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* maskArea) noexcept {
-  BL_ASSERT(mask->_d.isImage());
+static BLResult BL_CDECL fill_mask_dImpl(BLContextImpl* base_impl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* mask_area) noexcept {
+  BL_ASSERT(mask->_d.is_image());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  BLRectI maskRect;
-  BLResult bailResult = checkImageArea(maskRect, ImageInternal::getImpl(mask), maskArea);
-  bool bail = bailResult != BL_SUCCESS;
-
-  BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, bail);
-  return fillUnclippedMaskD<kRM>(ctxI, di, ds, *origin, mask, maskRect);
-}
-
-template<RenderingMode kRM>
-static BLResult BL_CDECL fillMaskDRgba32Impl(BLContextImpl* baseImpl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* maskArea, uint32_t rgba32) noexcept {
-  BL_ASSERT(mask->_d.isImage());
-
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-
-  BLRectI maskRect;
-  BLResult bailResult = checkImageArea(maskRect, ImageInternal::getImpl(mask), maskArea);
-  bool bail = bailResult != BL_SUCCESS;
-
-  BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, rgba32, bail);
-  return fillUnclippedMaskD<kRM>(ctxI, di, ds, *origin, mask, maskRect);
-}
-
-template<RenderingMode kRM>
-static BLResult BL_CDECL fillMaskDExtImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* maskArea, const BLObjectCore* style) noexcept {
-  BL_ASSERT(mask->_d.isImage());
-
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-
-  BLRectI maskRect;
-  BLResult bailResult = checkImageArea(maskRect, ImageInternal::getImpl(mask), maskArea);
-  bool bail = bailResult != BL_SUCCESS;
-
-  BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, style, bail);
-  BLResult result = fillUnclippedMaskD<kRM>(ctxI, di, ds, *origin, mask, maskRect);
-
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
-}
-
-template<RenderingMode kRM>
-static BLResult BL_CDECL fillMaskIImpl(BLContextImpl* baseImpl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* maskArea) noexcept {
-  BL_ASSERT(mask->_d.isImage());
-
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  if (!blTestFlag(ctxI->contextFlags, ContextFlags::kInfoIntegralTranslation)) {
-    BLPoint originD(*origin);
-    return fillMaskDImpl<kRM>(ctxI, &originD, mask, maskArea);
-  }
-
-  BLImageImpl* maskI = ImageInternal::getImpl(mask);
-
-  BLBoxI dstBox;
-  BLPointI srcOffset;
-
-  BLResult bailResult;
-  bool bail = !translateAndClipRectToBlitI(ctxI, origin, maskArea, &maskI->size, &bailResult, &dstBox, &srcOffset);
+  BLRectI mask_rect;
+  BLResult bail_result = check_image_area(mask_rect, ImageInternal::get_impl(mask), mask_area);
+  bool bail = bail_result != BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, bail);
-  return fillClippedBoxMaskedA<kRM>(ctxI, di, ds, dstBox, mask, srcOffset);
+  return fill_unclipped_mask_d<kRM>(ctx_impl, di, ds, *origin, mask, mask_rect);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillMaskIRgba32Impl(BLContextImpl* baseImpl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* maskArea, uint32_t rgba32) noexcept {
-  BL_ASSERT(mask->_d.isImage());
+static BLResult BL_CDECL fill_mask_d_Rgba32Impl(BLContextImpl* base_impl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* mask_area, uint32_t rgba32) noexcept {
+  BL_ASSERT(mask->_d.is_image());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  if (!blTestFlag(ctxI->contextFlags, ContextFlags::kInfoIntegralTranslation)) {
-    BLPoint originD(*origin);
-    return fillMaskDRgba32Impl<kRM>(ctxI, &originD, mask, maskArea, rgba32);
-  }
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  BLImageImpl* maskI = ImageInternal::getImpl(mask);
-
-  BLBoxI dstBox;
-  BLPointI srcOffset;
-
-  BLResult bailResult;
-  bool bail = !translateAndClipRectToBlitI(ctxI, origin, maskArea, &maskI->size, &bailResult, &dstBox, &srcOffset);
+  BLRectI mask_rect;
+  BLResult bail_result = check_image_area(mask_rect, ImageInternal::get_impl(mask), mask_area);
+  bool bail = bail_result != BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, rgba32, bail);
-  return fillClippedBoxMaskedA<kRM>(ctxI, di, ds, dstBox, mask, srcOffset);
+  return fill_unclipped_mask_d<kRM>(ctx_impl, di, ds, *origin, mask, mask_rect);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL fillMaskIExtImpl(BLContextImpl* baseImpl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* maskArea, const BLObjectCore* style) noexcept {
-  BL_ASSERT(mask->_d.isImage());
+static BLResult BL_CDECL fill_mask_d_extImpl(BLContextImpl* base_impl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* mask_area, const BLObjectCore* style) noexcept {
+  BL_ASSERT(mask->_d.is_image());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  if (!blTestFlag(ctxI->contextFlags, ContextFlags::kInfoIntegralTranslation)) {
-    BLPoint originD(*origin);
-    return fillMaskDExtImpl<kRM>(ctxI, &originD, mask, maskArea, style);
-  }
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  BLImageImpl* maskI = ImageInternal::getImpl(mask);
-
-  BLBoxI dstBox;
-  BLPointI srcOffset;
-
-  BLResult bailResult;
-  bool bail = !translateAndClipRectToBlitI(ctxI, origin, maskArea, &maskI->size, &bailResult, &dstBox, &srcOffset);
+  BLRectI mask_rect;
+  BLResult bail_result = check_image_area(mask_rect, ImageInternal::get_impl(mask), mask_area);
+  bool bail = bail_result != BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, style, bail);
-  BLResult result = fillClippedBoxMaskedA<kRM>(ctxI, di, ds, dstBox, mask, srcOffset);
+  BLResult result = fill_unclipped_mask_d<kRM>(ctx_impl, di, ds, *origin, mask, mask_rect);
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), result);
+}
+
+template<RenderingMode kRM>
+static BLResult BL_CDECL fill_mask_iImpl(BLContextImpl* base_impl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* mask_area) noexcept {
+  BL_ASSERT(mask->_d.is_image());
+
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  if (!bl_test_flag(ctx_impl->context_flags, ContextFlags::kInfoIntegralTranslation)) {
+    BLPoint origin_d(*origin);
+    return fill_mask_dImpl<kRM>(ctx_impl, &origin_d, mask, mask_area);
+  }
+
+  BLImageImpl* mask_impl = ImageInternal::get_impl(mask);
+
+  BLBoxI dst_box;
+  BLPointI src_offset;
+
+  BLResult bail_result;
+  bool bail = !translateAndClipRectToBlitI(ctx_impl, origin, mask_area, &mask_impl->size, &bail_result, &dst_box, &src_offset);
+
+  BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, bail);
+  return fill_clipped_box_masked_a<kRM>(ctx_impl, di, ds, dst_box, mask, src_offset);
+}
+
+template<RenderingMode kRM>
+static BLResult BL_CDECL fill_mask_i_rgba32Impl(BLContextImpl* base_impl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* mask_area, uint32_t rgba32) noexcept {
+  BL_ASSERT(mask->_d.is_image());
+
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  if (!bl_test_flag(ctx_impl->context_flags, ContextFlags::kInfoIntegralTranslation)) {
+    BLPoint origin_d(*origin);
+    return fill_mask_d_Rgba32Impl<kRM>(ctx_impl, &origin_d, mask, mask_area, rgba32);
+  }
+
+  BLImageImpl* mask_impl = ImageInternal::get_impl(mask);
+
+  BLBoxI dst_box;
+  BLPointI src_offset;
+
+  BLResult bail_result;
+  bool bail = !translateAndClipRectToBlitI(ctx_impl, origin, mask_area, &mask_impl->size, &bail_result, &dst_box, &src_offset);
+
+  BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, rgba32, bail);
+  return fill_clipped_box_masked_a<kRM>(ctx_impl, di, ds, dst_box, mask, src_offset);
+}
+
+template<RenderingMode kRM>
+static BLResult BL_CDECL fill_mask_i_extImpl(BLContextImpl* base_impl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* mask_area, const BLObjectCore* style) noexcept {
+  BL_ASSERT(mask->_d.is_image());
+
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  if (!bl_test_flag(ctx_impl->context_flags, ContextFlags::kInfoIntegralTranslation)) {
+    BLPoint origin_d(*origin);
+    return fill_mask_d_extImpl<kRM>(ctx_impl, &origin_d, mask, mask_area, style);
+  }
+
+  BLImageImpl* mask_impl = ImageInternal::get_impl(mask);
+
+  BLBoxI dst_box;
+  BLPointI src_offset;
+
+  BLResult bail_result;
+  bool bail = !translateAndClipRectToBlitI(ctx_impl, origin, mask_area, &mask_impl->size, &bail_result, &dst_box, &src_offset);
+
+  BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, style, bail);
+  BLResult result = fill_clipped_box_masked_a<kRM>(ctx_impl, di, ds, dst_box, mask, src_offset);
+
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), result);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Stroke Geometry
 // ===========================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokeGeometryImpl(BLContextImpl* baseImpl, BLGeometryType type, const void* data) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL stroke_geometry_impl(BLContextImpl* base_impl, BLGeometryType type, const void* data) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoStrokeOpImplicit, BL_CONTEXT_STYLE_SLOT_STROKE, kNoBail);
-  return strokeUnclippedGeometry<kRM>(ctxI, di, ds, type, data);
+  return stroke_unclipped_geometry<kRM>(ctx_impl, di, ds, type, data);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokeGeometryRgba32Impl(BLContextImpl* baseImpl, BLGeometryType type, const void* data, uint32_t rgba32) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL stroke_geometry_rgba32Impl(BLContextImpl* base_impl, BLGeometryType type, const void* data, uint32_t rgba32) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoStrokeOpExplicit, BL_CONTEXT_STYLE_SLOT_STROKE, rgba32, kNoBail);
-  return strokeUnclippedGeometry<kRM>(ctxI, di, ds, type, data);
+  return stroke_unclipped_geometry<kRM>(ctx_impl, di, ds, type, data);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokeGeometryExtImpl(BLContextImpl* baseImpl, BLGeometryType type, const void* data, const BLObjectCore* style) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLResult bailResult = BL_SUCCESS;
+static BLResult BL_CDECL stroke_geometry_ext_impl(BLContextImpl* base_impl, BLGeometryType type, const void* data, const BLObjectCore* style) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoStrokeOpExplicit, BL_CONTEXT_STYLE_SLOT_STROKE, style, kNoBail);
-  BLResult result = strokeUnclippedGeometry<kRM>(ctxI, di, ds, type, data);
+  BLResult result = stroke_unclipped_geometry<kRM>(ctx_impl, di, ds, type, data);
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), result);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Stroke Path
 // =======================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokePathDImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLPathCore* path) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL stroke_path_dImpl(BLContextImpl* base_impl, const BLPoint* origin, const BLPathCore* path) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  BL_ASSERT(path->_d.isPath());
+  BL_ASSERT(path->_d.is_path());
 
-  bool bail = path->dcast().empty();
-  BLResult bailResult = BL_SUCCESS;
+  bool bail = path->dcast().is_empty();
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoStrokeOpImplicit, BL_CONTEXT_STYLE_SLOT_STROKE, bail);
-  BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-  return strokeUnclippedPath<kRM>(ctxI, di, ds, originFixed, path->dcast());
+  BLPoint origin_fixed = ctx_impl->final_transform_fixed().map_point(*origin);
+  return stroke_unclipped_path<kRM>(ctx_impl, di, ds, origin_fixed, path->dcast());
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokePathDRgba32Impl(BLContextImpl* baseImpl, const BLPoint* origin, const BLPathCore* path, uint32_t rgba32) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL stroke_path_d_rgba32Impl(BLContextImpl* base_impl, const BLPoint* origin, const BLPathCore* path, uint32_t rgba32) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  BL_ASSERT(path->_d.isPath());
+  BL_ASSERT(path->_d.is_path());
 
-  bool bail = path->dcast().empty();
-  BLResult bailResult = BL_SUCCESS;
+  bool bail = path->dcast().is_empty();
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoStrokeOpExplicit, BL_CONTEXT_STYLE_SLOT_STROKE, rgba32, bail);
-  BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-  return strokeUnclippedPath<kRM>(ctxI, di, ds, originFixed, path->dcast());
+  BLPoint origin_fixed = ctx_impl->final_transform_fixed().map_point(*origin);
+  return stroke_unclipped_path<kRM>(ctx_impl, di, ds, origin_fixed, path->dcast());
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokePathDExtImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLPathCore* path, const BLObjectCore* style) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+static BLResult BL_CDECL stroke_path_d_extImpl(BLContextImpl* base_impl, const BLPoint* origin, const BLPathCore* path, const BLObjectCore* style) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  BL_ASSERT(path->_d.isPath());
+  BL_ASSERT(path->_d.is_path());
 
-  bool bail = path->dcast().empty();
-  BLResult bailResult = BL_SUCCESS;
+  bool bail = path->dcast().is_empty();
+  BLResult bail_result = BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoStrokeOpExplicit, BL_CONTEXT_STYLE_SLOT_STROKE, style, bail);
-  BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-  BLResult result = strokeUnclippedPath<kRM>(ctxI, di, ds, originFixed, path->dcast());
+  BLPoint origin_fixed = ctx_impl->final_transform_fixed().map_point(*origin);
+  BLResult result = stroke_unclipped_path<kRM>(ctx_impl, di, ds, origin_fixed, path->dcast());
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), result);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Stroke Text
 // =======================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokeTextOpDImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL stroke_text_op_dImpl(BLContextImpl* base_impl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  bool bail = !font->dcast().isValid();
-  BLResult bailResult = bail ? blTraceError(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
+  bool bail = !font->dcast().is_valid();
+  BLResult bail_result = bail ? bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
 
   BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoStrokeOpImplicit, BL_CONTEXT_STYLE_SLOT_STROKE, bail);
-  return strokeUnclippedText<kRM>(ctxI, di, ds, origin, font, opType, opData);
+  return stroke_unclipped_text<kRM>(ctx_impl, di, ds, origin, font, op_type, op_data);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokeTextOpIImpl(BLContextImpl* baseImpl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL stroke_text_op_iImpl(BLContextImpl* base_impl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLPoint originD(*origin);
-  return strokeTextOpDImpl<kRM>(baseImpl, &originD, font, opType, opData);
+  BLPoint origin_d(*origin);
+  return stroke_text_op_dImpl<kRM>(base_impl, &origin_d, font, op_type, op_data);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokeTextOpDRgba32Impl(BLContextImpl* baseImpl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData, uint32_t rgba32) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL stroke_text_op_d_rgba32Impl(BLContextImpl* base_impl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data, uint32_t rgba32) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  bool bail = !font->dcast().isValid();
-  BLResult bailResult = bail ? blTraceError(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
+  bool bail = !font->dcast().is_valid();
+  BLResult bail_result = bail ? bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
 
   BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoStrokeOpExplicit, BL_CONTEXT_STYLE_SLOT_STROKE, rgba32, bail);
-  return strokeUnclippedText<kRM>(ctxI, di, ds, origin, font, opType, opData);
+  return stroke_unclipped_text<kRM>(ctx_impl, di, ds, origin, font, op_type, op_data);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokeTextOpDExtImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData, const BLObjectCore* style) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL stroke_text_op_d_extImpl(BLContextImpl* base_impl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data, const BLObjectCore* style) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
 
-  bool bail = !font->dcast().isValid();
-  BLResult bailResult = bail ? blTraceError(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
+  bool bail = !font->dcast().is_valid();
+  BLResult bail_result = bail ? bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED) : BLResult(BL_SUCCESS);
 
   BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoStrokeOpExplicit, BL_CONTEXT_STYLE_SLOT_STROKE, style, bail);
-  BLResult result = strokeUnclippedText<kRM>(ctxI, di, ds, origin, font, opType, opData);
+  BLResult result = stroke_unclipped_text<kRM>(ctx_impl, di, ds, origin, font, op_type, op_data);
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), result);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokeTextOpIRgba32Impl(BLContextImpl* baseImpl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData, uint32_t rgba32) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL stroke_text_op_i_rgba32Impl(BLContextImpl* base_impl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data, uint32_t rgba32) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLPoint originD(*origin);
-  return strokeTextOpDRgba32Impl<kRM>(baseImpl, &originD, font, opType, opData, rgba32);
+  BLPoint origin_d(*origin);
+  return stroke_text_op_d_rgba32Impl<kRM>(base_impl, &origin_d, font, op_type, op_data, rgba32);
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL strokeTextOpIExtImpl(BLContextImpl* baseImpl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData, const BLObjectCore* style) noexcept {
-  BL_ASSERT(font->_d.isFont());
+static BLResult BL_CDECL stroke_text_op_i_extImpl(BLContextImpl* base_impl, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op_type, const void* op_data, const BLObjectCore* style) noexcept {
+  BL_ASSERT(font->_d.is_font());
 
-  BLPoint originD(*origin);
-  return strokeTextOpDExtImpl<kRM>(baseImpl, &originD, font, opType, opData, style);
+  BLPoint origin_d(*origin);
+  return stroke_text_op_d_extImpl<kRM>(base_impl, &origin_d, font, op_type, op_data, style);
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Blit Image
 // ======================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL blitImageDImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLImageCore* img, const BLRectI* imgArea) noexcept {
-  BL_ASSERT(img->_d.isImage());
+static BLResult BL_CDECL blit_image_dImpl(BLContextImpl* base_impl, const BLPoint* origin, const BLImageCore* img, const BLRectI* img_area) noexcept {
+  BL_ASSERT(img->_d.is_image());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLImageImpl* imgI = ImageInternal::getImpl(img);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLImageImpl* image_impl = ImageInternal::get_impl(img);
 
   BLPoint dst(*origin);
-  BLRectI srcRect;
+  BLRectI src_rect;
 
-  BLResult bailResult = checkImageArea(srcRect, imgI, imgArea);
-  bool bail = bailResult != BL_SUCCESS;
-  BL_CONTEXT_RESOLVE_BLIT_OP(ContextFlags::kNoBlitFlags, imgI->format, bail);
+  BLResult bail_result = check_image_area(src_rect, image_impl, img_area);
+  bool bail = bail_result != BL_SUCCESS;
+  BL_CONTEXT_RESOLVE_BLIT_OP(ContextFlags::kNoBlitFlags, image_impl->format, bail);
 
-  BLBox finalBox;
+  BLBox final_box;
 
   if (BL_LIKELY(resolved.unmodified())) {
-    uint32_t imgBytesPerPixel = imgI->depth / 8u;
+    uint32_t img_bytes_per_pixel = image_impl->depth / 8u;
 
     if constexpr (kRM == RenderingMode::kAsync)
-      fetchData->initStyleObjectAndDestroyFunc(img, destroyFetchDataImage);
+      fetch_data->init_style_object_and_destroy_func(img, destroy_fetch_data_image);
 
-    if (ctxI->finalTransformType() <= BL_TRANSFORM_TYPE_TRANSLATE) {
-      double startX = dst.x * ctxI->finalTransformFixed().m00 + ctxI->finalTransformFixed().m20;
-      double startY = dst.y * ctxI->finalTransformFixed().m11 + ctxI->finalTransformFixed().m21;
+    if (ctx_impl->final_transform_type() <= BL_TRANSFORM_TYPE_TRANSLATE) {
+      double startX = dst.x * ctx_impl->final_transform_fixed().m00 + ctx_impl->final_transform_fixed().m20;
+      double startY = dst.y * ctx_impl->final_transform_fixed().m11 + ctx_impl->final_transform_fixed().m21;
 
-      double dx0 = blMax(startX, ctxI->finalClipBoxFixedD().x0);
-      double dy0 = blMax(startY, ctxI->finalClipBoxFixedD().y0);
-      double dx1 = blMin(startX + double(srcRect.w) * ctxI->finalTransformFixed().m00, ctxI->finalClipBoxFixedD().x1);
-      double dy1 = blMin(startY + double(srcRect.h) * ctxI->finalTransformFixed().m11, ctxI->finalClipBoxFixedD().y1);
+      double dx0 = bl_max(startX, ctx_impl->final_clip_box_fixed_d().x0);
+      double dy0 = bl_max(startY, ctx_impl->final_clip_box_fixed_d().y0);
+      double dx1 = bl_min(startX + double(src_rect.w) * ctx_impl->final_transform_fixed().m00, ctx_impl->final_clip_box_fixed_d().x1);
+      double dy1 = bl_min(startY + double(src_rect.h) * ctx_impl->final_transform_fixed().m11, ctx_impl->final_clip_box_fixed_d().y1);
 
-      // Clipped out, invalid coordinates, or empty `imgArea`.
+      // Clipped out, invalid coordinates, or empty `img_area`.
       if (!(unsigned(dx0 < dx1) & unsigned(dy0 < dy1)))
         return BL_SUCCESS;
 
-      int ix0 = Math::truncToInt(dx0);
-      int iy0 = Math::truncToInt(dy0);
-      int ix1 = Math::truncToInt(dx1);
-      int iy1 = Math::truncToInt(dy1);
+      int ix0 = Math::trunc_to_int(dx0);
+      int iy0 = Math::trunc_to_int(dy0);
+      int ix1 = Math::trunc_to_int(dx1);
+      int iy1 = Math::trunc_to_int(dy1);
 
       // Clipped out - this is required as the difference between x0 & x1 and y0 & y1 could be smaller than our fixed point.
       if (!(unsigned(ix0 < ix1) & unsigned(iy0 < iy1)))
         return BL_SUCCESS;
 
-      int64_t startFx = Math::floorToInt64(startX);
-      int64_t startFy = Math::floorToInt64(startY);
+      int64_t start_fx = Math::floorToInt64(startX);
+      int64_t start_fy = Math::floorToInt64(startY);
 
-      if (!((startFx | startFy) & ctxI->renderTargetInfo.fpMaskI)) {
+      if (!((start_fx | start_fy) & ctx_impl->render_target_info.fpMaskI)) {
         // Pixel aligned blit. At this point we still don't know whether the area where the pixels will be composited
         // is aligned, but we know for sure that the pixels of `src` image don't require any interpolation.
-        int x0 = ix0 >> ctxI->renderTargetInfo.fpShiftI;
-        int y0 = iy0 >> ctxI->renderTargetInfo.fpShiftI;
-        int x1 = (ix1 + ctxI->renderTargetInfo.fpMaskI) >> ctxI->renderTargetInfo.fpShiftI;
-        int y1 = (iy1 + ctxI->renderTargetInfo.fpMaskI) >> ctxI->renderTargetInfo.fpShiftI;
+        int x0 = ix0 >> ctx_impl->render_target_info.fpShiftI;
+        int y0 = iy0 >> ctx_impl->render_target_info.fpShiftI;
+        int x1 = (ix1 + ctx_impl->render_target_info.fpMaskI) >> ctx_impl->render_target_info.fpShiftI;
+        int y1 = (iy1 + ctx_impl->render_target_info.fpMaskI) >> ctx_impl->render_target_info.fpShiftI;
 
-        int tx = int(startFx >> ctxI->renderTargetInfo.fpShiftI);
-        int ty = int(startFy >> ctxI->renderTargetInfo.fpShiftI);
+        int tx = int(start_fx >> ctx_impl->render_target_info.fpShiftI);
+        int ty = int(start_fy >> ctx_impl->render_target_info.fpShiftI);
 
-        srcRect.x += x0 - tx;
-        srcRect.y += y0 - ty;
-        srcRect.w = x1 - x0;
-        srcRect.h = y1 - y0;
+        src_rect.x += x0 - tx;
+        src_rect.y += y0 - ty;
+        src_rect.w = x1 - x0;
+        src_rect.h = y1 - y0;
 
-        fetchData->initImageSource(imgI, srcRect);
-        fetchData->setupPatternBlit(x0, y0);
+        fetch_data->init_image_source(image_impl, src_rect);
+        fetch_data->setup_pattern_blit(x0, y0);
       }
       else {
-        fetchData->initImageSource(imgI, srcRect);
-        fetchData->setupPatternFxFy(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), imgBytesPerPixel, startFx, startFy);
+        fetch_data->init_image_source(image_impl, src_rect);
+        fetch_data->setup_pattern_fx_fy(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctx_impl->hints().pattern_quality), img_bytes_per_pixel, start_fx, start_fy);
       }
 
-      prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
-      return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), fillClippedBoxF<kRM>(ctxI, di, ds, BLBoxI(ix0, iy0, ix1, iy1)));
+      prepare_non_solid_fetch(ctx_impl, di, ds, fetch_data.ptr());
+      return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), fill_clipped_box_f<kRM>(ctx_impl, di, ds, BLBoxI(ix0, iy0, ix1, iy1)));
     }
 
-    BLMatrix2D ft(ctxI->finalTransform());
+    BLMatrix2D ft(ctx_impl->final_transform());
     ft.translate(dst.x, dst.y);
 
-    fetchData->initImageSource(imgI, srcRect);
-    if (!fetchData->setupPatternAffine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), imgBytesPerPixel, ft))
+    fetch_data->init_image_source(image_impl, src_rect);
+    if (!fetch_data->setup_pattern_affine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctx_impl->hints().pattern_quality), img_bytes_per_pixel, ft))
       return BL_SUCCESS;
 
-    prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
-    finalBox = BLBox(dst.x, dst.y, dst.x + double(srcRect.w), dst.y + double(srcRect.h));
+    prepare_non_solid_fetch(ctx_impl, di, ds, fetch_data.ptr());
+    final_box = BLBox(dst.x, dst.y, dst.x + double(src_rect.w), dst.y + double(src_rect.h));
   }
   else {
-    prepareOverriddenFetch(ctxI, di, ds, CompOpSolidId(resolved.flags));
-    finalBox = BLBox(dst.x, dst.y, dst.x + double(srcRect.w), dst.y + double(srcRect.h));
+    prepare_overridden_fetch(ctx_impl, di, ds, CompOpSolidId(resolved.flags));
+    final_box = BLBox(dst.x, dst.y, dst.x + double(src_rect.w), dst.y + double(src_rect.h));
   }
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), fillUnclippedBoxD<kRM>(ctxI, di, ds, finalBox));
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), fill_unclipped_box_d<kRM>(ctx_impl, di, ds, final_box));
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL blitImageIImpl(BLContextImpl* baseImpl, const BLPointI* origin, const BLImageCore* img, const BLRectI* imgArea) noexcept {
-  BL_ASSERT(img->_d.isImage());
+static BLResult BL_CDECL blit_image_iImpl(BLContextImpl* base_impl, const BLPointI* origin, const BLImageCore* img, const BLRectI* img_area) noexcept {
+  BL_ASSERT(img->_d.is_image());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLImageImpl* imgI = ImageInternal::getImpl(img);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLImageImpl* image_impl = ImageInternal::get_impl(img);
 
-  if (!blTestFlag(ctxI->contextFlags, ContextFlags::kInfoIntegralTranslation)) {
-    BLPoint originD(*origin);
-    return blitImageDImpl<kRM>(ctxI, &originD, img, imgArea);
+  if (!bl_test_flag(ctx_impl->context_flags, ContextFlags::kInfoIntegralTranslation)) {
+    BLPoint origin_d(*origin);
+    return blit_image_dImpl<kRM>(ctx_impl, &origin_d, img, img_area);
   }
 
-  BLBoxI dstBox;
-  BLPointI srcOffset;
+  BLBoxI dst_box;
+  BLPointI src_offset;
 
-  BLResult bailResult;
-  bool bail = !translateAndClipRectToBlitI(ctxI, origin, imgArea, &imgI->size, &bailResult, &dstBox, &srcOffset);
+  BLResult bail_result;
+  bool bail = !translateAndClipRectToBlitI(ctx_impl, origin, img_area, &image_impl->size, &bail_result, &dst_box, &src_offset);
 
-  BL_CONTEXT_RESOLVE_BLIT_OP(ContextFlags::kNoBlitFlags, imgI->format, bail);
+  BL_CONTEXT_RESOLVE_BLIT_OP(ContextFlags::kNoBlitFlags, image_impl->format, bail);
 
   if (BL_LIKELY(resolved.unmodified())) {
     if constexpr (kRM == RenderingMode::kAsync)
-      fetchData->initStyleObjectAndDestroyFunc(img, destroyFetchDataImage);
+      fetch_data->init_style_object_and_destroy_func(img, destroy_fetch_data_image);
 
-    fetchData->initImageSource(imgI, BLRectI(srcOffset.x, srcOffset.y, dstBox.x1 - dstBox.x0, dstBox.y1 - dstBox.y0));
-    fetchData->setupPatternBlit(dstBox.x0, dstBox.y0);
+    fetch_data->init_image_source(image_impl, BLRectI(src_offset.x, src_offset.y, dst_box.x1 - dst_box.x0, dst_box.y1 - dst_box.y0));
+    fetch_data->setup_pattern_blit(dst_box.x0, dst_box.y0);
 
-    prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
+    prepare_non_solid_fetch(ctx_impl, di, ds, fetch_data.ptr());
   }
   else {
-    prepareOverriddenFetch(ctxI, di, ds, CompOpSolidId(resolved.flags));
+    prepare_overridden_fetch(ctx_impl, di, ds, CompOpSolidId(resolved.flags));
   }
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), fillClippedBoxA<kRM>(ctxI, di, ds, dstBox));
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), fill_clipped_box_a<kRM>(ctx_impl, di, ds, dst_box));
 }
 
 // bl::RasterEngine - ContextImpl - Frontend - Blit Scaled Image
 // =============================================================
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL blitScaledImageDImpl(BLContextImpl* baseImpl, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) noexcept {
-  BL_ASSERT(img->_d.isImage());
+static BLResult BL_CDECL blit_scaled_image_dImpl(BLContextImpl* base_impl, const BLRect* rect, const BLImageCore* img, const BLRectI* img_area) noexcept {
+  BL_ASSERT(img->_d.is_image());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLImageImpl* imgI = ImageInternal::getImpl(img);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLImageImpl* image_impl = ImageInternal::get_impl(img);
 
-  BLRectI srcRect;
-  BL_PROPAGATE(checkImageArea(srcRect, imgI, imgArea));
+  BLRectI src_rect;
+  BL_PROPAGATE(check_image_area(src_rect, image_impl, img_area));
 
   // OPTIMIZATION: Don't go over all the transformations if the destination and source rects have the same size.
-  if (unsigned(rect->w == double(srcRect.w)) & unsigned(rect->h == double(srcRect.h)))
-    return blitImageDImpl<kRM>(ctxI, reinterpret_cast<const BLPoint*>(rect), img, imgArea);
+  if (unsigned(rect->w == double(src_rect.w)) & unsigned(rect->h == double(src_rect.h)))
+    return blit_image_dImpl<kRM>(ctx_impl, reinterpret_cast<const BLPoint*>(rect), img, img_area);
 
-  BLResult bailResult = BL_SUCCESS;
-  BL_CONTEXT_RESOLVE_BLIT_OP(ContextFlags::kNoBlitFlags, imgI->format, kNoBail);
+  BLResult bail_result = BL_SUCCESS;
+  BL_CONTEXT_RESOLVE_BLIT_OP(ContextFlags::kNoBlitFlags, image_impl->format, kNoBail);
 
-  BLBox finalBox(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
+  BLBox final_box(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
   if (BL_LIKELY(resolved.unmodified())) {
     if constexpr (kRM == RenderingMode::kAsync)
-      fetchData->initStyleObjectAndDestroyFunc(img, destroyFetchDataImage);
+      fetch_data->init_style_object_and_destroy_func(img, destroy_fetch_data_image);
 
-    BLMatrix2D ft(rect->w / double(srcRect.w), 0.0, 0.0, rect->h / double(srcRect.h), rect->x, rect->y);
-    TransformInternal::multiply(ft, ft, ctxI->finalTransform());
+    BLMatrix2D ft(rect->w / double(src_rect.w), 0.0, 0.0, rect->h / double(src_rect.h), rect->x, rect->y);
+    TransformInternal::multiply(ft, ft, ctx_impl->final_transform());
 
-    uint32_t imgBytesPerPixel = imgI->depth / 8u;
-    fetchData->initImageSource(imgI, srcRect);
+    uint32_t img_bytes_per_pixel = image_impl->depth / 8u;
+    fetch_data->init_image_source(image_impl, src_rect);
 
-    if (!fetchData->setupPatternAffine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), imgBytesPerPixel, ft))
+    if (!fetch_data->setup_pattern_affine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctx_impl->hints().pattern_quality), img_bytes_per_pixel, ft))
       return BL_SUCCESS;
 
-    prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
+    prepare_non_solid_fetch(ctx_impl, di, ds, fetch_data.ptr());
   }
   else {
-    prepareOverriddenFetch(ctxI, di, ds, CompOpSolidId(resolved.flags));
+    prepare_overridden_fetch(ctx_impl, di, ds, CompOpSolidId(resolved.flags));
   }
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), fillUnclippedBoxD<kRM>(ctxI, di, ds, finalBox));
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), fill_unclipped_box_d<kRM>(ctx_impl, di, ds, final_box));
 }
 
 template<RenderingMode kRM>
-static BLResult BL_CDECL blitScaledImageIImpl(BLContextImpl* baseImpl, const BLRectI* rect, const BLImageCore* img, const BLRectI* imgArea) noexcept {
-  BL_ASSERT(img->_d.isImage());
+static BLResult BL_CDECL blit_scaled_image_iImpl(BLContextImpl* base_impl, const BLRectI* rect, const BLImageCore* img, const BLRectI* img_area) noexcept {
+  BL_ASSERT(img->_d.is_image());
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLImageImpl* imgI = ImageInternal::getImpl(img);
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(base_impl);
+  BLImageImpl* image_impl = ImageInternal::get_impl(img);
 
-  BLRectI srcRect;
-  BL_PROPAGATE(checkImageArea(srcRect, imgI, imgArea));
+  BLRectI src_rect;
+  BL_PROPAGATE(check_image_area(src_rect, image_impl, img_area));
 
   // OPTIMIZATION: Don't go over all the transformations if the destination and source rects have the same size.
-  if (rect->w == srcRect.w && rect->h == srcRect.h)
-    return blitImageIImpl<kRM>(ctxI, reinterpret_cast<const BLPointI*>(rect), img, imgArea);
+  if (rect->w == src_rect.w && rect->h == src_rect.h)
+    return blit_image_iImpl<kRM>(ctx_impl, reinterpret_cast<const BLPointI*>(rect), img, img_area);
 
-  BLResult bailResult = BL_SUCCESS;
-  BL_CONTEXT_RESOLVE_BLIT_OP(ContextFlags::kNoBlitFlags, imgI->format, kNoBail);
+  BLResult bail_result = BL_SUCCESS;
+  BL_CONTEXT_RESOLVE_BLIT_OP(ContextFlags::kNoBlitFlags, image_impl->format, kNoBail);
 
-  BLBox finalBox(double(rect->x), double(rect->y), double(rect->x) + double(rect->w), double(rect->y) + double(rect->h));
+  BLBox final_box(double(rect->x), double(rect->y), double(rect->x) + double(rect->w), double(rect->y) + double(rect->h));
   if (BL_LIKELY(resolved.unmodified())) {
     if constexpr (kRM == RenderingMode::kAsync)
-      fetchData->initStyleObjectAndDestroyFunc(img, destroyFetchDataImage);
+      fetch_data->init_style_object_and_destroy_func(img, destroy_fetch_data_image);
 
-    BLMatrix2D transform(double(rect->w) / double(srcRect.w), 0.0, 0.0, double(rect->h) / double(srcRect.h), double(rect->x), double(rect->y));
-    TransformInternal::multiply(transform, transform, ctxI->finalTransform());
+    BLMatrix2D transform(double(rect->w) / double(src_rect.w), 0.0, 0.0, double(rect->h) / double(src_rect.h), double(rect->x), double(rect->y));
+    TransformInternal::multiply(transform, transform, ctx_impl->final_transform());
 
-    uint32_t imgBytesPerPixel = imgI->depth / 8u;
-    fetchData->initImageSource(imgI, srcRect);
-    if (!fetchData->setupPatternAffine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), imgBytesPerPixel, transform))
+    uint32_t img_bytes_per_pixel = image_impl->depth / 8u;
+    fetch_data->init_image_source(image_impl, src_rect);
+    if (!fetch_data->setup_pattern_affine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctx_impl->hints().pattern_quality), img_bytes_per_pixel, transform))
       return BL_SUCCESS;
 
-    prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
+    prepare_non_solid_fetch(ctx_impl, di, ds, fetch_data.ptr());
   }
   else {
-    prepareOverriddenFetch(ctxI, di, ds, CompOpSolidId(resolved.flags));
+    prepare_overridden_fetch(ctx_impl, di, ds, CompOpSolidId(resolved.flags));
   }
 
-  return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), fillUnclippedBoxD<kRM>(ctxI, di, ds, finalBox));
+  return finalize_explicit_op<kRM>(ctx_impl, fetch_data.ptr(), fill_unclipped_box_d<kRM>(ctx_impl, di, ds, final_box));
 }
 
 // bl::RasterEngine - ContextImpl - Attach & Detach
 // ================================================
 
-static BL_INLINE uint32_t calculateBandHeight(uint32_t format, const BLSizeI& size, const BLContextCreateInfo* options) noexcept {
+static BL_INLINE uint32_t calculate_band_height(uint32_t format, const BLSizeI& size, const BLContextCreateInfo* options) noexcept {
   // TODO: [Rendering Context] We should use the format and calculate how many bytes are used by raster storage per band.
-  blUnused(format);
+  bl_unused(format);
 
   // Maximum band height we start at is 64, then decrease to 16.
   uint32_t kMinBandHeight = 8;
   uint32_t kMaxBandHeight = 64;
 
-  uint32_t bandHeight = kMaxBandHeight;
+  uint32_t band_height = kMaxBandHeight;
 
   // TODO: [Rendering Context] We should read this number from the CPU and adjust.
-  size_t cacheSizeLimit = 1024 * 256;
-  size_t pixelCount = size_t(uint32_t(size.w)) * bandHeight;
+  size_t cache_size_limit = 1024 * 256;
+  size_t pixel_count = size_t(uint32_t(size.w)) * band_height;
 
   do {
-    size_t cellStorage = pixelCount * sizeof(uint32_t);
-    if (cellStorage <= cacheSizeLimit)
+    size_t cell_storage = pixel_count * sizeof(uint32_t);
+    if (cell_storage <= cache_size_limit)
       break;
 
-    bandHeight >>= 1;
-    pixelCount >>= 1;
-  } while (bandHeight > kMinBandHeight);
+    band_height >>= 1;
+    pixel_count >>= 1;
+  } while (band_height > kMinBandHeight);
 
-  uint32_t threadCount = options->threadCount;
-  if (bandHeight > kMinBandHeight && threadCount > 1) {
-    uint32_t bandHeightShift = IntOps::ctz(bandHeight);
-    uint32_t minimumBandCount = threadCount;
+  uint32_t thread_count = options->thread_count;
+  if (band_height > kMinBandHeight && thread_count > 1) {
+    uint32_t band_height_shift = IntOps::ctz(band_height);
+    uint32_t minimum_band_count = thread_count;
 
     do {
-      uint32_t bandCount = (uint32_t(size.h) + bandHeight - 1) >> bandHeightShift;
-      if (bandCount >= minimumBandCount)
+      uint32_t band_count = (uint32_t(size.h) + band_height - 1) >> band_height_shift;
+      if (band_count >= minimum_band_count)
         break;
 
-      bandHeight >>= 1;
-      bandHeightShift--;
-    } while (bandHeight > kMinBandHeight);
+      band_height >>= 1;
+      band_height_shift--;
+    } while (band_height > kMinBandHeight);
   }
 
-  return bandHeight;
+  return band_height;
 }
 
-static BL_INLINE uint32_t calculateCommandQuantizationShift(uint32_t bandHeight, uint32_t bandCount) noexcept {
-  uint32_t bandQuantization = IntOps::ctz(bandHeight);
-  uint32_t coordinateQuantization = blMax<uint32_t>(32 - IntOps::clz(bandHeight * bandCount), 8) - 8u;
+static BL_INLINE uint32_t calculate_command_quantization_shift(uint32_t band_height, uint32_t band_count) noexcept {
+  uint32_t band_quantization = IntOps::ctz(band_height);
+  uint32_t coordinate_quantization = bl_max<uint32_t>(32 - IntOps::clz(band_height * band_count), 8) - 8u;
 
   // We should never quantize to less than a band height.
-  return blMax(bandQuantization, coordinateQuantization);
+  return bl_max(band_quantization, coordinate_quantization);
 }
 
-static BL_INLINE size_t calculateZeroedMemorySize(uint32_t width, uint32_t height) noexcept {
-  size_t alignedWidth = IntOps::alignUp(size_t(width) + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, 16);
+static BL_INLINE size_t calculate_zeroed_memory_size(uint32_t width, uint32_t height) noexcept {
+  size_t aligned_width = IntOps::align_up(size_t(width) + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, 16);
 
-  size_t bitStride = IntOps::wordCountFromBitCount<BLBitWord>(alignedWidth / BL_PIPE_PIXELS_PER_ONE_BIT) * sizeof(BLBitWord);
-  size_t cellStride = alignedWidth * sizeof(uint32_t);
+  size_t bit_stride = IntOps::word_count_from_bit_count<BLBitWord>(aligned_width / BL_PIPE_PIXELS_PER_ONE_BIT) * sizeof(BLBitWord);
+  size_t cell_stride = aligned_width * sizeof(uint32_t);
 
-  size_t minimumSize = bitStride * size_t(height) + cellStride * size_t(height);
-  return IntOps::alignUp(minimumSize + sizeof(BLBitWord) * 16, BL_CACHE_LINE_SIZE);
+  size_t minimum_size = bit_stride * size_t(height) + cell_stride * size_t(height);
+  return IntOps::align_up(minimum_size + sizeof(BLBitWord) * 16, BL_CACHE_LINE_SIZE);
 }
 
-static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLContextCreateInfo* options) noexcept {
+static BLResult attach(BLRasterContextImpl* ctx_impl, BLImageCore* image, const BLContextCreateInfo* options) noexcept {
   BL_ASSERT(image != nullptr);
   BL_ASSERT(options != nullptr);
 
-  uint32_t format = ImageInternal::getImpl(image)->format;
-  BLSizeI size = ImageInternal::getImpl(image)->size;
+  uint32_t format = ImageInternal::get_impl(image)->format;
+  BLSizeI size = ImageInternal::get_impl(image)->size;
 
   // TODO: [Rendering Context] Hardcoded for 8bpc.
-  uint32_t targetComponentType = RenderTargetInfo::kPixelComponentUInt8;
+  uint32_t target_component_type = RenderTargetInfo::kPixelComponentUInt8;
 
-  uint32_t bandHeight = calculateBandHeight(format, size, options);
-  uint32_t bandCount = (uint32_t(size.h) + bandHeight - 1) >> IntOps::ctz(bandHeight);
-  uint32_t commandQuantizationShift = calculateCommandQuantizationShift(bandHeight, bandCount);
+  uint32_t band_height = calculate_band_height(format, size, options);
+  uint32_t band_count = (uint32_t(size.h) + band_height - 1) >> IntOps::ctz(band_height);
+  uint32_t command_quantization_shift = calculate_command_quantization_shift(band_height, band_count);
 
-  size_t zeroedMemorySize = calculateZeroedMemorySize(uint32_t(size.w), bandHeight);
+  size_t zeroed_memory_size = calculate_zeroed_memory_size(uint32_t(size.w), band_height);
 
   // Initialization.
   BLResult result = BL_SUCCESS;
-  Pipeline::PipeRuntime* pipeRuntime = nullptr;
+  Pipeline::PipeRuntime* pipe_runtime = nullptr;
 
   // If anything fails we would restore the zone state to match this point.
-  ArenaAllocator& baseZone = ctxI->baseZone;
-  ArenaAllocator::StatePtr zoneState = baseZone.saveState();
+  ArenaAllocator& base_zone = ctx_impl->base_zone;
+  ArenaAllocator::StatePtr zone_state = base_zone.save_state();
 
   // Not a real loop, just a scope we can escape early via 'break'.
   do {
     // Step 1: Initialize edge storage of the sync worker.
-    result = ctxI->syncWorkData.initBandData(bandHeight, bandCount, commandQuantizationShift);
+    result = ctx_impl->sync_work_data.init_band_data(band_height, band_count, command_quantization_shift);
     if (result != BL_SUCCESS)
       break;
 
     // Step 2: Initialize the thread manager if multi-threaded rendering is enabled.
-    if (options->threadCount) {
-      ctxI->ensureWorkerMgr();
-      result = ctxI->workerMgr->init(ctxI, options);
+    if (options->thread_count) {
+      ctx_impl->ensure_worker_mgr();
+      result = ctx_impl->worker_mgr->init(ctx_impl, options);
 
       if (result != BL_SUCCESS)
         break;
 
-      if (ctxI->workerMgr->isActive())
-        ctxI->renderingMode = uint8_t(RenderingMode::kAsync);
+      if (ctx_impl->worker_mgr->is_active())
+        ctx_impl->rendering_mode = uint8_t(RenderingMode::kAsync);
     }
 
     // Step 3: Initialize pipeline runtime (JIT or fixed).
 #if !defined(BL_BUILD_NO_JIT)
     if (!(options->flags & BL_CONTEXT_CREATE_FLAG_DISABLE_JIT)) {
-      pipeRuntime = &Pipeline::JIT::PipeDynamicRuntime::_global;
+      pipe_runtime = &Pipeline::JIT::PipeDynamicRuntime::_global;
 
       if (options->flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_RUNTIME) {
         // Create an isolated `BLPipeGenRuntime` if specified. It will be used to store all functions
         // generated during the rendering and will be destroyed together with the context.
         Pipeline::JIT::PipeDynamicRuntime* isolatedRT =
-          baseZone.newT<Pipeline::JIT::PipeDynamicRuntime>(Pipeline::PipeRuntimeFlags::kIsolated);
+          base_zone.new_t<Pipeline::JIT::PipeDynamicRuntime>(Pipeline::PipeRuntimeFlags::kIsolated);
 
         // This should not really happen as the first block is allocated with the impl.
         if (BL_UNLIKELY(!isolatedRT)) {
-          result = blTraceError(BL_ERROR_OUT_OF_MEMORY);
+          result = bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
           break;
         }
 
         // Enable logger if required.
         if (options->flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_LOGGING) {
-          isolatedRT->setLoggerEnabled(true);
+          isolatedRT->set_logger_enabled(true);
         }
 
         // Feature restrictions are related to JIT compiler - it allows us to test the code generated by JIT
         // with less features than the current CPU has, to make sure that we support older hardware or to
         // compare between implementations.
         if (options->flags & BL_CONTEXT_CREATE_FLAG_OVERRIDE_CPU_FEATURES) {
-          isolatedRT->_restrictFeatures(options->cpuFeatures);
+          isolatedRT->_restrict_features(options->cpu_features);
         }
 
-        pipeRuntime = isolatedRT;
-        baseZone.align(baseZone.blockAlignment());
+        pipe_runtime = isolatedRT;
+        base_zone.align(base_zone.block_alignment());
       }
     }
 #endif
 
-    if (!pipeRuntime) {
-      pipeRuntime = &Pipeline::PipeStaticRuntime::_global;
+    if (!pipe_runtime) {
+      pipe_runtime = &Pipeline::PipeStaticRuntime::_global;
     }
 
     // Step 4: Allocate zeroed memory for the user thread and all worker threads.
-    result = ctxI->syncWorkData.zeroBuffer.ensure(zeroedMemorySize);
+    result = ctx_impl->sync_work_data.zero_buffer.ensure(zeroed_memory_size);
     if (result != BL_SUCCESS)
       break;
 
-    if (!ctxI->isSync()) {
-      result = ctxI->workerMgr->initWorkMemory(zeroedMemorySize);
+    if (!ctx_impl->is_sync()) {
+      result = ctx_impl->worker_mgr->init_work_memory(zeroed_memory_size);
       if (result != BL_SUCCESS)
         break;
     }
 
     // Step 5: Make the destination image mutable.
-    result = blImageMakeMutable(image, &ctxI->dstData);
+    result = bl_image_make_mutable(image, &ctx_impl->dst_data);
     if (result != BL_SUCCESS)
       break;
   } while (0);
@@ -4314,175 +4314,175 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
   if (result != BL_SUCCESS) {
     // Switch back to a synchronous rendering mode if asynchronous rendering was already setup.
     // We have already acquired worker threads that must be released now.
-    if (ctxI->renderingMode == uint8_t(RenderingMode::kAsync)) {
-      ctxI->workerMgr->reset();
-      ctxI->renderingMode = uint8_t(RenderingMode::kSync);
+    if (ctx_impl->rendering_mode == uint8_t(RenderingMode::kAsync)) {
+      ctx_impl->worker_mgr->reset();
+      ctx_impl->rendering_mode = uint8_t(RenderingMode::kSync);
     }
 
     // If we failed we don't want the pipeline runtime associated with the
     // context so we simply destroy it and pretend like nothing happened.
-    if (pipeRuntime) {
-      if (blTestFlag(pipeRuntime->runtimeFlags(), Pipeline::PipeRuntimeFlags::kIsolated))
-        pipeRuntime->destroy();
+    if (pipe_runtime) {
+      if (bl_test_flag(pipe_runtime->runtime_flags(), Pipeline::PipeRuntimeFlags::kIsolated))
+        pipe_runtime->destroy();
     }
 
-    baseZone.restoreState(zoneState);
+    base_zone.restore_state(zone_state);
     return result;
   }
 
-  ctxI->contextFlags = ContextFlags::kInfoIntegralTranslation;
+  ctx_impl->context_flags = ContextFlags::kInfoIntegralTranslation;
 
-  if (!ctxI->isSync()) {
-    ctxI->virt = &rasterImplVirtAsync;
-    ctxI->syncWorkData.synchronization = &ctxI->workerMgr->_synchronization;
+  if (!ctx_impl->is_sync()) {
+    ctx_impl->virt = &raster_impl_virt_async;
+    ctx_impl->sync_work_data.synchronization = &ctx_impl->worker_mgr->_synchronization;
   }
 
-  // Increase `writerCount` of the image, will be decreased by `detach()`.
-  BLImagePrivateImpl* imageI = ImageInternal::getImpl(image);
-  blAtomicFetchAddRelaxed(&imageI->writerCount);
-  ctxI->dstImage._d = image->_d;
+  // Increase `writer_count` of the image, will be decreased by `detach()`.
+  BLImagePrivateImpl* image_impl = ImageInternal::get_impl(image);
+  bl_atomic_fetch_add_relaxed(&image_impl->writer_count);
+  ctx_impl->dst_image._d = image->_d;
 
   // Initialize the pipeline runtime and pipeline lookup cache.
-  ctxI->pipeProvider.init(pipeRuntime);
-  ctxI->pipeLookupCache.reset();
+  ctx_impl->pipe_provider.init(pipe_runtime);
+  ctx_impl->pipe_lookup_cache.reset();
 
   // Initialize the sync work data.
-  ctxI->syncWorkData.initContextData(ctxI->dstData, options->pixelOrigin);
+  ctx_impl->sync_work_data.init_context_data(ctx_impl->dst_data, options->pixel_origin);
 
   // Initialize destination image information available in a public rendering context state.
-  ctxI->internalState.targetSize.reset(size.w, size.h);
-  ctxI->internalState.targetImage = &ctxI->dstImage;
+  ctx_impl->internal_state.target_size.reset(size.w, size.h);
+  ctx_impl->internal_state.target_image = &ctx_impl->dst_image;
 
   // Initialize members that are related to target precision.
-  ctxI->renderTargetInfo = renderTargetInfoByComponentType[targetComponentType];
-  ctxI->fpMinSafeCoordD = Math::floor(double(Traits::minValue<int32_t>() + 1) * ctxI->fpScaleD());
-  ctxI->fpMaxSafeCoordD = Math::floor(double(Traits::maxValue<int32_t>() - 1 - blMax(size.w, size.h)) * ctxI->fpScaleD());
+  ctx_impl->render_target_info = render_target_info_by_component_type[target_component_type];
+  ctx_impl->fp_min_safe_coord_d = Math::floor(double(Traits::min_value<int32_t>() + 1) * ctx_impl->fp_scale_d());
+  ctx_impl->fp_max_safe_coord_d = Math::floor(double(Traits::max_value<int32_t>() - 1 - bl_max(size.w, size.h)) * ctx_impl->fp_scale_d());
 
   // Initialize members that are related to alpha blending and composition.
-  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ARGB] = uint8_t(FormatExt::kPRGB32);
-  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB] = uint8_t(FormatExt::kFRGB32);
-  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ZERO] = uint8_t(FormatExt::kZERO32);
+  ctx_impl->solid_format_table[BL_RASTER_CONTEXT_SOLID_FORMAT_ARGB] = uint8_t(FormatExt::kPRGB32);
+  ctx_impl->solid_format_table[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB] = uint8_t(FormatExt::kFRGB32);
+  ctx_impl->solid_format_table[BL_RASTER_CONTEXT_SOLID_FORMAT_ZERO] = uint8_t(FormatExt::kZERO32);
 
-  // Const-casted, because this would replace fetchData, which is non-const, but guaranteed to not modify solid styles.
-  RenderFetchDataSolid* solidOverrideFillTable =
-    targetComponentType == RenderTargetInfo::kPixelComponentUInt8
+  // Const-casted, because this would replace fetch_data, which is non-const, but guaranteed to not modify solid styles.
+  RenderFetchDataSolid* solid_override_fill_table =
+    target_component_type == RenderTargetInfo::kPixelComponentUInt8
       ? (RenderFetchDataSolid*)solidOverrideFillU8
       : (RenderFetchDataSolid*)solidOverrideFillU16;
 
-  ctxI->solidOverrideFillTable = solidOverrideFillTable;
-  ctxI->solidFetchDataOverrideTable[size_t(CompOpSolidId::kNone       )] = nullptr;
-  ctxI->solidFetchDataOverrideTable[size_t(CompOpSolidId::kTransparent)] = &solidOverrideFillTable[size_t(CompOpSolidId::kTransparent)];
-  ctxI->solidFetchDataOverrideTable[size_t(CompOpSolidId::kOpaqueBlack)] = &solidOverrideFillTable[size_t(CompOpSolidId::kOpaqueBlack)];
-  ctxI->solidFetchDataOverrideTable[size_t(CompOpSolidId::kOpaqueWhite)] = &solidOverrideFillTable[size_t(CompOpSolidId::kOpaqueWhite)];
-  ctxI->solidFetchDataOverrideTable[size_t(CompOpSolidId::kAlwaysNop  )] = &solidOverrideFillTable[size_t(CompOpSolidId::kAlwaysNop  )];
+  ctx_impl->solid_override_fill_table = solid_override_fill_table;
+  ctx_impl->solid_fetch_data_override_table[size_t(CompOpSolidId::kNone       )] = nullptr;
+  ctx_impl->solid_fetch_data_override_table[size_t(CompOpSolidId::kTransparent)] = &solid_override_fill_table[size_t(CompOpSolidId::kTransparent)];
+  ctx_impl->solid_fetch_data_override_table[size_t(CompOpSolidId::kOpaqueBlack)] = &solid_override_fill_table[size_t(CompOpSolidId::kOpaqueBlack)];
+  ctx_impl->solid_fetch_data_override_table[size_t(CompOpSolidId::kOpaqueWhite)] = &solid_override_fill_table[size_t(CompOpSolidId::kOpaqueWhite)];
+  ctx_impl->solid_fetch_data_override_table[size_t(CompOpSolidId::kAlwaysNop  )] = &solid_override_fill_table[size_t(CompOpSolidId::kAlwaysNop  )];
 
   // Initialize the rendering state to defaults.
-  ctxI->stateIdCounter = 0;
-  ctxI->savedState = nullptr;
-  ctxI->sharedFillState = nullptr;
-  ctxI->sharedStrokeState = nullptr;
+  ctx_impl->state_id_counter = 0;
+  ctx_impl->saved_state = nullptr;
+  ctx_impl->shared_fill_state = nullptr;
+  ctx_impl->shared_stroke_state = nullptr;
 
   // Initialize public state.
-  ctxI->internalState.hints.reset();
-  ctxI->internalState.hints.patternQuality = BL_PATTERN_QUALITY_BILINEAR;
-  ctxI->internalState.compOp = uint8_t(BL_COMP_OP_SRC_OVER);
-  ctxI->internalState.fillRule = uint8_t(BL_FILL_RULE_NON_ZERO);
-  ctxI->internalState.styleType[BL_CONTEXT_STYLE_SLOT_FILL] = uint8_t(BL_OBJECT_TYPE_RGBA);
-  ctxI->internalState.styleType[BL_CONTEXT_STYLE_SLOT_STROKE] = uint8_t(BL_OBJECT_TYPE_RGBA);
-  ctxI->internalState.savedStateCount = 0;
-  ctxI->internalState.approximationOptions = PathInternal::makeDefaultApproximationOptions();
-  ctxI->internalState.globalAlpha = 1.0;
-  ctxI->internalState.styleAlpha[0] = 1.0;
-  ctxI->internalState.styleAlpha[1] = 1.0;
-  ctxI->internalState.styleAlphaI[0] = uint32_t(ctxI->renderTargetInfo.fullAlphaI);
-  ctxI->internalState.styleAlphaI[1] = uint32_t(ctxI->renderTargetInfo.fullAlphaI);
-  blCallCtor(ctxI->internalState.strokeOptions.dcast());
-  ctxI->internalState.metaTransform.reset();
-  ctxI->internalState.userTransform.reset();
+  ctx_impl->internal_state.hints.reset();
+  ctx_impl->internal_state.hints.pattern_quality = BL_PATTERN_QUALITY_BILINEAR;
+  ctx_impl->internal_state.comp_op = uint8_t(BL_COMP_OP_SRC_OVER);
+  ctx_impl->internal_state.fill_rule = uint8_t(BL_FILL_RULE_NON_ZERO);
+  ctx_impl->internal_state.style_type[BL_CONTEXT_STYLE_SLOT_FILL] = uint8_t(BL_OBJECT_TYPE_RGBA);
+  ctx_impl->internal_state.style_type[BL_CONTEXT_STYLE_SLOT_STROKE] = uint8_t(BL_OBJECT_TYPE_RGBA);
+  ctx_impl->internal_state.saved_state_count = 0;
+  ctx_impl->internal_state.approximation_options = PathInternal::make_default_approximation_options();
+  ctx_impl->internal_state.global_alpha = 1.0;
+  ctx_impl->internal_state.style_alpha[0] = 1.0;
+  ctx_impl->internal_state.style_alpha[1] = 1.0;
+  ctx_impl->internal_state.styleAlphaI[0] = uint32_t(ctx_impl->render_target_info.fullAlphaI);
+  ctx_impl->internal_state.styleAlphaI[1] = uint32_t(ctx_impl->render_target_info.fullAlphaI);
+  bl_call_ctor(ctx_impl->internal_state.stroke_options.dcast());
+  ctx_impl->internal_state.meta_transform.reset();
+  ctx_impl->internal_state.user_transform.reset();
 
   // Initialize private state.
-  ctxI->internalState.finalTransformFixedType = BL_TRANSFORM_TYPE_SCALE;
-  ctxI->internalState.metaTransformFixedType = BL_TRANSFORM_TYPE_SCALE;
-  ctxI->internalState.metaTransformType = BL_TRANSFORM_TYPE_TRANSLATE;
-  ctxI->internalState.finalTransformType = BL_TRANSFORM_TYPE_TRANSLATE;
-  ctxI->internalState.identityTransformType = BL_TRANSFORM_TYPE_IDENTITY;
-  ctxI->internalState.globalAlphaI = uint32_t(ctxI->renderTargetInfo.fullAlphaI);
+  ctx_impl->internal_state.final_transform_fixed_type = BL_TRANSFORM_TYPE_SCALE;
+  ctx_impl->internal_state.meta_transform_fixed_type = BL_TRANSFORM_TYPE_SCALE;
+  ctx_impl->internal_state.meta_transform_type = BL_TRANSFORM_TYPE_TRANSLATE;
+  ctx_impl->internal_state.final_transform_type = BL_TRANSFORM_TYPE_TRANSLATE;
+  ctx_impl->internal_state.identity_transform_type = BL_TRANSFORM_TYPE_IDENTITY;
+  ctx_impl->internal_state.global_alpha_i = uint32_t(ctx_impl->render_target_info.fullAlphaI);
 
-  ctxI->internalState.finalTransform.reset();
-  ctxI->internalState.metaTransformFixed.resetToScaling(ctxI->renderTargetInfo.fpScaleD);
-  ctxI->internalState.finalTransformFixed.resetToScaling(ctxI->renderTargetInfo.fpScaleD);
-  ctxI->internalState.translationI.reset(0, 0);
+  ctx_impl->internal_state.final_transform.reset();
+  ctx_impl->internal_state.meta_transform_fixed.reset_to_scaling(ctx_impl->render_target_info.fp_scale_d);
+  ctx_impl->internal_state.final_transform_fixed.reset_to_scaling(ctx_impl->render_target_info.fp_scale_d);
+  ctx_impl->internal_state.translation_i.reset(0, 0);
 
-  ctxI->internalState.metaClipBoxI.reset(0, 0, size.w, size.h);
-  // `finalClipBoxI` and `finalClipBoxD` are initialized by `resetClippingToMetaClipBox()`.
+  ctx_impl->internal_state.meta_clip_box_i.reset(0, 0, size.w, size.h);
+  // `final_clip_box_i` and `final_clip_box_d` are initialized by `reset_clipping_to_meta_clip_box()`.
 
-  if (options->savedStateLimit)
-    ctxI->savedStateLimit = options->savedStateLimit;
+  if (options->saved_state_limit)
+    ctx_impl->saved_state_limit = options->saved_state_limit;
   else
-    ctxI->savedStateLimit = BL_RASTER_CONTEXT_DEFAULT_SAVED_STATE_LIMIT;
+    ctx_impl->saved_state_limit = BL_RASTER_CONTEXT_DEFAULT_SAVED_STATE_LIMIT;
 
   // Make sure the state is initialized properly.
-  onAfterCompOpChanged(ctxI);
-  onAfterFlattenToleranceChanged(ctxI);
-  onAfterOffsetParameterChanged(ctxI);
-  resetClippingToMetaClipBox(ctxI);
+  on_after_comp_op_changed(ctx_impl);
+  on_after_flatten_tolerance_changed(ctx_impl);
+  on_after_offset_parameter_changed(ctx_impl);
+  reset_clipping_to_meta_clip_box(ctx_impl);
 
   // Initialize styles.
-  initStyleToDefault(ctxI, BL_CONTEXT_STYLE_SLOT_FILL);
-  initStyleToDefault(ctxI, BL_CONTEXT_STYLE_SLOT_STROKE);
+  init_style_to_default(ctx_impl, BL_CONTEXT_STYLE_SLOT_FILL);
+  init_style_to_default(ctx_impl, BL_CONTEXT_STYLE_SLOT_STROKE);
 
   return BL_SUCCESS;
 }
 
-static BLResult detach(BLRasterContextImpl* ctxI) noexcept {
+static BLResult detach(BLRasterContextImpl* ctx_impl) noexcept {
   // Release the ImageImpl.
-  BLImagePrivateImpl* imageI = ImageInternal::getImpl(&ctxI->dstImage);
-  BL_ASSERT(imageI != nullptr);
+  BLImagePrivateImpl* image_impl = ImageInternal::get_impl(&ctx_impl->dst_image);
+  BL_ASSERT(image_impl != nullptr);
 
-  flushImpl(ctxI, BL_CONTEXT_FLUSH_SYNC);
+  flush_impl(ctx_impl, BL_CONTEXT_FLUSH_SYNC);
 
   // Release Threads/WorkerContexts used by asynchronous rendering.
-  if (ctxI->workerMgrInitialized)
-    ctxI->workerMgr->reset();
+  if (ctx_impl->worker_mgr_initialized)
+    ctx_impl->worker_mgr->reset();
 
   // Release PipeRuntime.
-  if (blTestFlag(ctxI->pipeProvider.runtime()->runtimeFlags(), Pipeline::PipeRuntimeFlags::kIsolated))
-    ctxI->pipeProvider.runtime()->destroy();
-  ctxI->pipeProvider.reset();
+  if (bl_test_flag(ctx_impl->pipe_provider.runtime()->runtime_flags(), Pipeline::PipeRuntimeFlags::kIsolated))
+    ctx_impl->pipe_provider.runtime()->destroy();
+  ctx_impl->pipe_provider.reset();
 
   // Release all states.
   //
   // Important as the user doesn't have to restore all states, in that case we basically need to iterate
   // over all of them and release resources they hold.
-  discardStates(ctxI, nullptr);
-  blCallDtor(ctxI->internalState.strokeOptions);
+  discard_states(ctx_impl, nullptr);
+  bl_call_dtor(ctx_impl->internal_state.stroke_options);
 
-  ContextFlags contextFlags = ctxI->contextFlags;
-  if (blTestFlag(contextFlags, ContextFlags::kFetchDataFill))
-    destroyValidStyle(ctxI, &ctxI->internalState.style[BL_CONTEXT_STYLE_SLOT_FILL]);
+  ContextFlags context_flags = ctx_impl->context_flags;
+  if (bl_test_flag(context_flags, ContextFlags::kFetchDataFill))
+    destroy_valid_style(ctx_impl, &ctx_impl->internal_state.style[BL_CONTEXT_STYLE_SLOT_FILL]);
 
-  if (blTestFlag(contextFlags, ContextFlags::kFetchDataStroke))
-    destroyValidStyle(ctxI, &ctxI->internalState.style[BL_CONTEXT_STYLE_SLOT_STROKE]);
+  if (bl_test_flag(context_flags, ContextFlags::kFetchDataStroke))
+    destroy_valid_style(ctx_impl, &ctx_impl->internal_state.style[BL_CONTEXT_STYLE_SLOT_STROKE]);
 
   // Clear other important members. We don't have to clear everything as if we re-attach an image again
   // all members will be overwritten anyway.
-  ctxI->contextFlags = ContextFlags::kNoFlagsSet;
+  ctx_impl->context_flags = ContextFlags::kNoFlagsSet;
 
-  ctxI->baseZone.clear();
-  ctxI->fetchDataPool.reset();
-  ctxI->savedStatePool.reset();
-  ctxI->syncWorkData.ctxData.reset();
-  ctxI->syncWorkData.workZone.clear();
+  ctx_impl->base_zone.clear();
+  ctx_impl->fetch_data_pool.reset();
+  ctx_impl->saved_state_pool.reset();
+  ctx_impl->sync_work_data.ctx_data.reset();
+  ctx_impl->sync_work_data.work_zone.clear();
 
   // If the image was dereferenced during rendering it's our responsibility to destroy it. This is not useful
   // from the consumer's perspective as the resulting image can never be used again, but it can happen in some
   // cases (for example when an asynchronous rendering is terminated and the target image released with it).
-  if (blAtomicFetchSubStrong(&imageI->writerCount) == 1)
-    if (ObjectInternal::getImplRefCount(imageI) == 0)
-      ImageInternal::freeImpl(imageI);
+  if (bl_atomic_fetch_sub_strong(&image_impl->writer_count) == 1)
+    if (ObjectInternal::get_impl_ref_count(image_impl) == 0)
+      ImageInternal::free_impl(image_impl);
 
-  ctxI->dstImage._d.impl = nullptr;
-  ctxI->dstData.reset();
+  ctx_impl->dst_image._d.impl = nullptr;
+  ctx_impl->dst_data.reset();
 
   return BL_SUCCESS;
 }
@@ -4490,127 +4490,127 @@ static BLResult detach(BLRasterContextImpl* ctxI) noexcept {
 // bl::RasterEngine - ContextImpl - Destroy
 // ========================================
 
-static BLResult BL_CDECL destroyImpl(BLObjectImpl* impl) noexcept {
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(impl);
+static BLResult BL_CDECL destroy_impl(BLObjectImpl* impl) noexcept {
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(impl);
 
-  if (ctxI->dstImage._d.impl)
-    detach(ctxI);
+  if (ctx_impl->dst_image._d.impl)
+    detach(ctx_impl);
 
-  ctxI->~BLRasterContextImpl();
-  return blObjectFreeImpl(ctxI);
+  ctx_impl->~BLRasterContextImpl();
+  return bl_object_free_impl(ctx_impl);
 }
 
 // bl::RasterEngine - ContextImpl - Virtual Function Table
 // =======================================================
 
 template<RenderingMode kRM>
-static void initVirt(BLContextVirt* virt) noexcept {
-  virt->base.destroy             = destroyImpl;
-  virt->base.getProperty         = getPropertyImpl;
-  virt->base.setProperty         = setPropertyImpl;
-  virt->flush                    = flushImpl;
+static void init_virt(BLContextVirt* virt) noexcept {
+  virt->base.destroy             = destroy_impl;
+  virt->base.get_property         = get_property_impl;
+  virt->base.set_property         = set_property_impl;
+  virt->flush                    = flush_impl;
 
-  virt->save                     = saveImpl;
-  virt->restore                  = restoreImpl;
+  virt->save                     = save_impl;
+  virt->restore                  = restore_impl;
 
-  virt->applyTransformOp         = applyTransformOpImpl;
-  virt->userToMeta               = userToMetaImpl;
+  virt->apply_transform_op         = apply_transform_op_impl;
+  virt->user_to_meta               = user_to_meta_impl;
 
-  virt->setHint                  = setHintImpl;
-  virt->setHints                 = setHintsImpl;
+  virt->set_hint                  = set_hint_impl;
+  virt->set_hints                 = set_hints_impl;
 
-  virt->setFlattenMode           = setFlattenModeImpl;
-  virt->setFlattenTolerance      = setFlattenToleranceImpl;
-  virt->setApproximationOptions  = setApproximationOptionsImpl;
+  virt->set_flatten_mode           = set_flatten_mode_impl;
+  virt->set_flatten_tolerance      = set_flatten_tolerance_impl;
+  virt->set_approximation_options  = set_approximation_options_impl;
 
-  virt->getStyle                 = getStyleImpl;
-  virt->setStyle                 = setStyleImpl;
-  virt->disableStyle             = disableStyleImpl;
-  virt->setStyleRgba             = setStyleRgbaImpl;
-  virt->setStyleRgba32           = setStyleRgba32Impl;
-  virt->setStyleRgba64           = setStyleRgba64Impl;
-  virt->setStyleAlpha            = setStyleAlphaImpl;
-  virt->swapStyles               = swapStylesImpl;
+  virt->get_style                 = get_style_impl;
+  virt->set_style                 = set_style_impl;
+  virt->disable_style             = disable_style_impl;
+  virt->set_style_rgba             = set_style_rgba_impl;
+  virt->set_style_rgba32           = set_style_rgba32Impl;
+  virt->set_style_rgba64           = set_style_rgba64Impl;
+  virt->set_style_alpha            = set_style_alpha_impl;
+  virt->swap_styles               = swap_styles_impl;
 
-  virt->setGlobalAlpha           = setGlobalAlphaImpl;
-  virt->setCompOp                = setCompOpImpl;
+  virt->set_global_alpha           = set_global_alpha_impl;
+  virt->set_comp_op                = set_comp_op_impl;
 
-  virt->setFillRule              = setFillRuleImpl;
-  virt->setStrokeWidth           = setStrokeWidthImpl;
-  virt->setStrokeMiterLimit      = setStrokeMiterLimitImpl;
-  virt->setStrokeCap             = setStrokeCapImpl;
-  virt->setStrokeCaps            = setStrokeCapsImpl;
-  virt->setStrokeJoin            = setStrokeJoinImpl;
-  virt->setStrokeTransformOrder  = setStrokeTransformOrderImpl;
-  virt->setStrokeDashOffset      = setStrokeDashOffsetImpl;
-  virt->setStrokeDashArray       = setStrokeDashArrayImpl;
-  virt->setStrokeOptions         = setStrokeOptionsImpl;
+  virt->set_fill_rule              = set_fill_rule_impl;
+  virt->set_stroke_width           = set_stroke_width_impl;
+  virt->set_stroke_miter_limit      = set_stroke_miter_limit_impl;
+  virt->set_stroke_cap             = set_stroke_cap_impl;
+  virt->set_stroke_caps            = set_stroke_caps_impl;
+  virt->set_stroke_join            = set_stroke_join_impl;
+  virt->set_stroke_transform_order  = set_stroke_transform_order_impl;
+  virt->set_stroke_dash_offset      = set_stroke_dash_offset_impl;
+  virt->set_stroke_dash_array       = set_stroke_dash_array_impl;
+  virt->set_stroke_options         = set_stroke_options_impl;
 
-  virt->clipToRectI              = clipToRectIImpl;
-  virt->clipToRectD              = clipToRectDImpl;
-  virt->restoreClipping          = restoreClippingImpl;
+  virt->clip_to_rect_i              = clip_to_rect_iImpl;
+  virt->clip_to_rect_d              = clip_to_rect_dImpl;
+  virt->restore_clipping          = restore_clipping_impl;
 
-  virt->clearAll                 = clearAllImpl<kRM>;
-  virt->clearRectI               = clearRectIImpl<kRM>;
-  virt->clearRectD               = clearRectDImpl<kRM>;
+  virt->clear_all                 = clear_all_impl<kRM>;
+  virt->clear_recti               = clear_rectiImpl<kRM>;
+  virt->clear_rectd               = clear_rectdImpl<kRM>;
 
-  virt->fillAll                  = fillAllImpl<kRM>;
-  virt->fillAllRgba32            = fillAllRgba32Impl<kRM>;
-  virt->fillAllExt               = fillAllExtImpl<kRM>;
+  virt->fill_all                  = fill_all_impl<kRM>;
+  virt->fill_all_rgba32            = fill_all_rgba32Impl<kRM>;
+  virt->fill_all_ext               = fill_all_ext_impl<kRM>;
 
-  virt->fillRectI                = fillRectIImpl<kRM>;
-  virt->fillRectIRgba32          = fillRectIRgba32Impl<kRM>;
-  virt->fillRectIExt             = fillRectIExtImpl<kRM>;
+  virt->fill_rect_i                = fill_rect_iImpl<kRM>;
+  virt->fill_rect_i_rgba32          = fill_rect_i_rgba32Impl<kRM>;
+  virt->fill_rect_i_ext             = fill_rect_i_extImpl<kRM>;
 
-  virt->fillRectD                = fillRectDImpl<kRM>;
-  virt->fillRectDRgba32          = fillRectDRgba32Impl<kRM>;
-  virt->fillRectDExt             = fillRectDExtImpl<kRM>;
+  virt->fill_rect_d                = fill_rect_dImpl<kRM>;
+  virt->fill_rect_d_rgba32          = fill_rect_d_rgba32Impl<kRM>;
+  virt->fill_rect_d_ext             = fill_rect_d_extImpl<kRM>;
 
-  virt->fillPathD                = fillPathDImpl<kRM>;
-  virt->fillPathDRgba32          = fillPathDRgba32Impl<kRM>;
-  virt->fillPathDExt             = fillPathDExtImpl<kRM>;
+  virt->fill_path_d                = fill_path_dImpl<kRM>;
+  virt->fill_path_d_rgba32          = fill_path_d_rgba32Impl<kRM>;
+  virt->fill_path_d_ext             = fill_path_d_extImpl<kRM>;
 
-  virt->fillGeometry             = fillGeometryImpl<kRM>;
-  virt->fillGeometryRgba32       = fillGeometryRgba32Impl<kRM>;
-  virt->fillGeometryExt          = fillGeometryExtImpl<kRM>;
+  virt->fill_geometry             = fill_geometry_impl<kRM>;
+  virt->fill_geometry_rgba32       = fill_geometry_rgba32Impl<kRM>;
+  virt->fill_geometry_ext          = fill_geometry_ext_impl<kRM>;
 
-  virt->fillTextOpI              = fillTextOpIImpl<kRM>;
-  virt->fillTextOpIRgba32        = fillTextOpIRgba32Impl<kRM>;
-  virt->fillTextOpIExt           = fillTextOpIExtImpl<kRM>;
+  virt->fill_text_op_i              = fill_text_op_iImpl<kRM>;
+  virt->fill_text_op_i_rgba32        = fill_text_op_i_rgba32Impl<kRM>;
+  virt->fill_text_op_i_ext           = fill_text_op_i_extImpl<kRM>;
 
-  virt->fillTextOpD              = fillTextOpDImpl<kRM>;
-  virt->fillTextOpDRgba32        = fillTextOpDRgba32Impl<kRM>;
-  virt->fillTextOpDExt           = fillTextOpDExtImpl<kRM>;
+  virt->fill_text_op_d              = fill_text_op_dImpl<kRM>;
+  virt->fill_text_op_d_rgba32        = fill_text_op_d_rgba32Impl<kRM>;
+  virt->fill_text_op_d_ext           = fill_text_op_d_extImpl<kRM>;
 
-  virt->fillMaskI                = fillMaskIImpl<kRM>;
-  virt->fillMaskIRgba32          = fillMaskIRgba32Impl<kRM>;
-  virt->fillMaskIExt             = fillMaskIExtImpl<kRM>;
+  virt->fill_mask_i                = fill_mask_iImpl<kRM>;
+  virt->fill_mask_i_rgba32          = fill_mask_i_rgba32Impl<kRM>;
+  virt->fill_mask_i_ext             = fill_mask_i_extImpl<kRM>;
 
-  virt->fillMaskD                = fillMaskDImpl<kRM>;
-  virt->fillMaskDRgba32          = fillMaskDRgba32Impl<kRM>;
-  virt->fillMaskDExt             = fillMaskDExtImpl<kRM>;
+  virt->fill_mask_d                = fill_mask_dImpl<kRM>;
+  virt->fill_mask_d_Rgba32          = fill_mask_d_Rgba32Impl<kRM>;
+  virt->fill_mask_d_ext             = fill_mask_d_extImpl<kRM>;
 
-  virt->strokePathD              = strokePathDImpl<kRM>;
-  virt->strokePathDRgba32        = strokePathDRgba32Impl<kRM>;
-  virt->strokePathDExt           = strokePathDExtImpl<kRM>;
+  virt->stroke_path_d              = stroke_path_dImpl<kRM>;
+  virt->stroke_path_d_rgba32        = stroke_path_d_rgba32Impl<kRM>;
+  virt->stroke_path_d_ext           = stroke_path_d_extImpl<kRM>;
 
-  virt->strokeGeometry           = strokeGeometryImpl<kRM>;
-  virt->strokeGeometryRgba32     = strokeGeometryRgba32Impl<kRM>;
-  virt->strokeGeometryExt        = strokeGeometryExtImpl<kRM>;
+  virt->stroke_geometry           = stroke_geometry_impl<kRM>;
+  virt->stroke_geometry_rgba32     = stroke_geometry_rgba32Impl<kRM>;
+  virt->stroke_geometry_ext        = stroke_geometry_ext_impl<kRM>;
 
-  virt->strokeTextOpI            = strokeTextOpIImpl<kRM>;
-  virt->strokeTextOpIRgba32      = strokeTextOpIRgba32Impl<kRM>;
-  virt->strokeTextOpIExt         = strokeTextOpIExtImpl<kRM>;
+  virt->stroke_text_op_i            = stroke_text_op_iImpl<kRM>;
+  virt->stroke_text_op_i_rgba32      = stroke_text_op_i_rgba32Impl<kRM>;
+  virt->stroke_text_op_i_ext         = stroke_text_op_i_extImpl<kRM>;
 
-  virt->strokeTextOpD            = strokeTextOpDImpl<kRM>;
-  virt->strokeTextOpDRgba32      = strokeTextOpDRgba32Impl<kRM>;
-  virt->strokeTextOpDExt         = strokeTextOpDExtImpl<kRM>;
+  virt->stroke_text_op_d            = stroke_text_op_dImpl<kRM>;
+  virt->stroke_text_op_d_rgba32      = stroke_text_op_d_rgba32Impl<kRM>;
+  virt->stroke_text_op_d_ext         = stroke_text_op_d_extImpl<kRM>;
 
-  virt->blitImageI               = blitImageIImpl<kRM>;
-  virt->blitImageD               = blitImageDImpl<kRM>;
+  virt->blit_image_i               = blit_image_iImpl<kRM>;
+  virt->blit_image_d               = blit_image_dImpl<kRM>;
 
-  virt->blitScaledImageI         = blitScaledImageIImpl<kRM>;
-  virt->blitScaledImageD         = blitScaledImageDImpl<kRM>;
+  virt->blit_scaled_image_i         = blit_scaled_image_iImpl<kRM>;
+  virt->blit_scaled_image_d         = blit_scaled_image_dImpl<kRM>;
 }
 
 } // {bl::RasterEngine}
@@ -4618,30 +4618,30 @@ static void initVirt(BLContextVirt* virt) noexcept {
 // bl::RasterEngine - ContextImpl - Runtime Registration
 // =====================================================
 
-BLResult blRasterContextInitImpl(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) noexcept {
+BLResult bl_raster_context_init_impl(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) noexcept {
   // NOTE: Initially static data was part of `BLRasterContextImpl`, however, that doesn't work with MSAN
   // as it would consider it destroyed when `bl::ArenaAllocator` iterates that block during destruction.
   constexpr size_t kStaticDataSize = 2048;
   constexpr size_t kContextImplSize = sizeof(BLRasterContextImpl) + kStaticDataSize;
 
-  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_CONTEXT);
-  BL_PROPAGATE(bl::ObjectInternal::allocImplAlignedT<BLRasterContextImpl>(self, info, BLObjectImplSize{kContextImplSize}, 64));
+  BLObjectInfo info = BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_CONTEXT);
+  BL_PROPAGATE(bl::ObjectInternal::alloc_impl_aligned_t<BLRasterContextImpl>(self, info, BLObjectImplSize{kContextImplSize}, 64));
 
-  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(self->_d.impl);
-  void* staticData = static_cast<void*>(reinterpret_cast<uint8_t*>(self->_d.impl) + sizeof(BLRasterContextImpl));
+  BLRasterContextImpl* ctx_impl = static_cast<BLRasterContextImpl*>(self->_d.impl);
+  void* static_data = static_cast<void*>(reinterpret_cast<uint8_t*>(self->_d.impl) + sizeof(BLRasterContextImpl));
 
-  blCallCtor(*ctxI, &bl::RasterEngine::rasterImplVirtSync, staticData, kStaticDataSize);
-  BLResult result = bl::RasterEngine::attach(ctxI, image, options);
+  bl_call_ctor(*ctx_impl, &bl::RasterEngine::raster_impl_virt_sync, static_data, kStaticDataSize);
+  BLResult result = bl::RasterEngine::attach(ctx_impl, image, options);
 
   if (result != BL_SUCCESS)
-    ctxI->virt->base.destroy(ctxI);
+    ctx_impl->virt->base.destroy(ctx_impl);
 
   return result;
 }
 
-void blRasterContextOnInit(BLRuntimeContext* rt) noexcept {
-  blUnused(rt);
+void bl_raster_context_on_init(BLRuntimeContext* rt) noexcept {
+  bl_unused(rt);
 
-  bl::RasterEngine::initVirt<bl::RasterEngine::RenderingMode::kSync>(&bl::RasterEngine::rasterImplVirtSync);
-  bl::RasterEngine::initVirt<bl::RasterEngine::RenderingMode::kAsync>(&bl::RasterEngine::rasterImplVirtAsync);
+  bl::RasterEngine::init_virt<bl::RasterEngine::RenderingMode::kSync>(&bl::RasterEngine::raster_impl_virt_sync);
+  bl::RasterEngine::init_virt<bl::RasterEngine::RenderingMode::kAsync>(&bl::RasterEngine::raster_impl_virt_async);
 }

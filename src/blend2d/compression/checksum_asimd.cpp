@@ -14,8 +14,8 @@ namespace bl::Compression::Checksum {
 // bl::Compression - CheckSum - ADLER32 (ASIMD)
 // ============================================
 
-uint32_t adler32Update_ASIMD(uint32_t checksum, const uint8_t* data, size_t size) noexcept {
-  return adler32Update_SIMD(checksum, data, size);
+uint32_t adler32_update_asimd(uint32_t checksum, const uint8_t* data, size_t size) noexcept {
+  return adler32_update_simd(checksum, data, size);
 }
 
 } // {bl::Compression::Checksum}

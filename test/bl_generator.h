@@ -35,14 +35,14 @@ static uint32_t alignUpToPowerOf2(uint32_t n) {
   return n + 1;
 }
 
-static uint32_t countTrailingBits(uint32_t n) {
+static uint32_t count_trailing_bits(uint32_t n) {
   for (uint32_t i = 0; i < 32; i++)
     if (n & (1u << i))
       return i;
   return 32;
 }
 
-static size_t replaceInString(std::string& str, const std::string& pattern, const std::string& replacement) {
+static size_t replace_in_string(std::string& str, const std::string& pattern, const std::string& replacement) {
   size_t pos = 0;
   size_t count = 0;
 
@@ -100,11 +100,11 @@ public:
     }
   }
 
-  inline uint32_t nextUInt32() noexcept {
-    return uint32_t(nextUInt64() >> 32);
+  inline uint32_t next_uint32() noexcept {
+    return uint32_t(next_uint64() >> 32);
   }
 
-  inline uint64_t nextUInt64() noexcept {
+  inline uint64_t next_uint64() noexcept {
     uint64_t x = _state[0];
     uint64_t y = _state[1];
 
@@ -130,8 +130,8 @@ class BitArray {
 
 public:
   inline void resize(size_t size) {
-    size_t sizeInWords = (size + kBitWordSize - 1) / kBitWordSize;
-    _bits.resize(sizeInWords);
+    size_t size_in_words = (size + kBitWordSize - 1) / kBitWordSize;
+    _bits.resize(size_in_words);
     clear();
   }
 
@@ -139,16 +139,16 @@ public:
     std::fill(_bits.begin(), _bits.end(), size_t(0));
   }
 
-  inline bool hasBit(size_t bitIndex) const {
-    size_t wordIndex = bitIndex / kBitWordSize;
-    size_t mask = size_t(1) << (bitIndex % kBitWordSize);
-    return (_bits[wordIndex] & mask) != 0;
+  inline bool has_bit(size_t bit_index) const {
+    size_t word_index = bit_index / kBitWordSize;
+    size_t mask = size_t(1) << (bit_index % kBitWordSize);
+    return (_bits[word_index] & mask) != 0;
   }
 
-  inline void setBit(size_t bitIndex) {
-    size_t wordIndex = bitIndex / kBitWordSize;
-    size_t mask = size_t(1) << (bitIndex % kBitWordSize);
-    _bits[wordIndex] |= mask;
+  inline void set_bit(size_t bit_index) {
+    size_t word_index = bit_index / kBitWordSize;
+    size_t mask = size_t(1) << (bit_index % kBitWordSize);
+    _bits[word_index] |= mask;
   }
 };
 
@@ -167,16 +167,16 @@ public:
   Param params[2];
   std::vector<std::pair<uint32_t, uint32_t>> remaining;
 
-  std::string body(const std::string& prototype, const std::string& inputValue, const std::string& checkIdBefore, const std::string& checkIdAfter) const {
+  std::string body(const std::string& prototype, const std::string& input_value, const std::string& check_id_before, const std::string& check_id_after) const {
     // Single hash table.
     const char function_template_1[] =
       "{\n"
-      "  static const $TABLE_TYPE_A$ hashTable[$TABLE_SIZE_A$] = {\n"
+      "  static const $TABLE_TYPE_A$ hash_table[$TABLE_SIZE_A$] = {\n"
       "$TABLE_VALUES_A$\n"
       "  };\n"
       "\n"
       "  uint32_t h1 = ($INPUT_VALUE$ * $HASH_MULTIPLIER_A$u) >> $HASH_SHIFT_A$u;\n"
-      "  uint32_t i1 = hashTable[h1];\n"
+      "  uint32_t i1 = hash_table[h1];\n"
       "  uint32_t index = 0xFFFFFFFFu;\n"
       "\n"
       "  if ($CHECK_ID_BEFORE$i1$CHECK_ID_AFTER$ == $INPUT_VALUE$)\n"
@@ -189,15 +189,15 @@ public:
     // Single hash table, two hash functions.
     const char function_template_2[] =
       "{\n"
-      "  static const $TABLE_TYPE_A$ hashTable[$TABLE_SIZE_A$] = {\n"
+      "  static const $TABLE_TYPE_A$ hash_table[$TABLE_SIZE_A$] = {\n"
       "$TABLE_VALUES_A$\n"
       "  };\n"
       "\n"
       "  uint32_t h1 = ($INPUT_VALUE$ * $HASH_MULTIPLIER_A$u) >> $HASH_SHIFT_A$u;\n"
       "  uint32_t h2 = ($INPUT_VALUE$ * $HASH_MULTIPLIER_B$u) >> $HASH_SHIFT_B$u;\n"
       "\n"
-      "  uint32_t i1 = hashTable[h1];\n"
-      "  uint32_t i2 = hashTable[h2];\n"
+      "  uint32_t i1 = hash_table[h1];\n"
+      "  uint32_t i2 = hash_table[h2];\n"
       "\n"
       "  uint32_t index = 0xFFFFFFFFu;\n"
       "\n"
@@ -242,7 +242,7 @@ public:
 
     std::string body;
 
-    auto formatTable = [](const std::vector<uint32_t>& t) {
+    auto format_table = [](const std::vector<uint32_t>& t) {
       std::string s("    ");
       for (size_t i = 0; i < t.size(); i++) {
         if (i != 0) {
@@ -256,7 +256,7 @@ public:
       return s;
     };
 
-    auto valueTypeOfTable = [](const std::vector<uint32_t>& t) {
+    auto value_type_of_table = [](const std::vector<uint32_t>& t) {
       uint32_t greatest = 0;
       for (size_t i = 0; i < t.size(); i++) {
         if (t[i] == 0xFFFFFFFFu)
@@ -280,36 +280,36 @@ public:
     else
       body = function_template_1;
 
-    std::string remainingChecks;
+    std::string remaining_checks;
     if (!remaining.empty()) {
       for (auto p : remaining) {
         std::string condition("\n"
                               "  if ($INPUT_VALUE$ == $KEY$)\n"
                               "    index = $KEY_VALUE$;\n");
-        replaceInString(condition, std::string("$INPUT_VALUE$"), inputValue);
-        replaceInString(condition, std::string("$KEY$"), std::to_string(p.first));
-        replaceInString(condition, std::string("$KEY_VALUE$"), std::to_string(p.second));
-        remainingChecks += condition;
+        replace_in_string(condition, std::string("$INPUT_VALUE$"), input_value);
+        replace_in_string(condition, std::string("$KEY$"), std::to_string(p.first));
+        replace_in_string(condition, std::string("$KEY_VALUE$"), std::to_string(p.second));
+        remaining_checks += condition;
       }
     }
 
-    replaceInString(body, std::string("$INPUT_VALUE$"), inputValue);
-    replaceInString(body, std::string("$CHECK_ID_BEFORE$"), checkIdBefore);
-    replaceInString(body, std::string("$CHECK_ID_AFTER$"), checkIdAfter);
+    replace_in_string(body, std::string("$INPUT_VALUE$"), input_value);
+    replace_in_string(body, std::string("$CHECK_ID_BEFORE$"), check_id_before);
+    replace_in_string(body, std::string("$CHECK_ID_AFTER$"), check_id_after);
 
-    replaceInString(body, std::string("$HASH_MULTIPLIER_A$"), std::to_string(params[0].multiplier));
-    replaceInString(body, std::string("$HASH_MULTIPLIER_B$"), std::to_string(params[1].multiplier));
-    replaceInString(body, std::string("$HASH_SHIFT_A$"), std::to_string(params[0].shift));
-    replaceInString(body, std::string("$HASH_SHIFT_B$"), std::to_string(params[1].shift));
-    replaceInString(body, std::string("$HASH_MASK_A$"), std::to_string(bitMask0));
-    replaceInString(body, std::string("$HASH_MASK_B$"), std::to_string(bitMask1));
-    replaceInString(body, std::string("$TABLE_TYPE_A$"), valueTypeOfTable(params[0].table));
-    replaceInString(body, std::string("$TABLE_TYPE_B$"), valueTypeOfTable(params[1].table));
-    replaceInString(body, std::string("$TABLE_SIZE_A$"), std::to_string(params[0].table.size()));
-    replaceInString(body, std::string("$TABLE_SIZE_B$"), std::to_string(params[1].table.size()));
-    replaceInString(body, std::string("$TABLE_VALUES_A$"), formatTable(params[0].table));
-    replaceInString(body, std::string("$TABLE_VALUES_B$"), formatTable(params[1].table));
-    replaceInString(body, std::string("$REMAINING_CHECKS$"), remainingChecks);
+    replace_in_string(body, std::string("$HASH_MULTIPLIER_A$"), std::to_string(params[0].multiplier));
+    replace_in_string(body, std::string("$HASH_MULTIPLIER_B$"), std::to_string(params[1].multiplier));
+    replace_in_string(body, std::string("$HASH_SHIFT_A$"), std::to_string(params[0].shift));
+    replace_in_string(body, std::string("$HASH_SHIFT_B$"), std::to_string(params[1].shift));
+    replace_in_string(body, std::string("$HASH_MASK_A$"), std::to_string(bitMask0));
+    replace_in_string(body, std::string("$HASH_MASK_B$"), std::to_string(bitMask1));
+    replace_in_string(body, std::string("$TABLE_TYPE_A$"), value_type_of_table(params[0].table));
+    replace_in_string(body, std::string("$TABLE_TYPE_B$"), value_type_of_table(params[1].table));
+    replace_in_string(body, std::string("$TABLE_SIZE_A$"), std::to_string(params[0].table.size()));
+    replace_in_string(body, std::string("$TABLE_SIZE_B$"), std::to_string(params[1].table.size()));
+    replace_in_string(body, std::string("$TABLE_VALUES_A$"), format_table(params[0].table));
+    replace_in_string(body, std::string("$TABLE_VALUES_B$"), format_table(params[1].table));
+    replace_in_string(body, std::string("$REMAINING_CHECKS$"), remaining_checks);
     body = std::string(prototype) + " " + body;
 
     return body;
@@ -317,10 +317,10 @@ public:
 };
 
 template<typename Lambda>
-static void runAsync(Lambda&& fn, size_t threadCount) {
+static void run_async(Lambda&& fn, size_t thread_count) {
   std::vector<std::thread> threads;
 
-  for (size_t threadId = 0; threadId < threadCount; threadId++)
+  for (size_t thread_id = 0; thread_id < thread_count; thread_id++)
     threads.push_back(std::thread(fn));
 
   for (std::thread& thread : threads)
@@ -341,7 +341,7 @@ public:
     _size = size;
   }
 /*
-  void tryAnother(uint32_t bucketCount1) {
+  void try_another(uint32_t bucketCount1) {
     BitArray occupied1;
     BitArray occupied2;
 
@@ -355,16 +355,16 @@ public:
     uint32_t size = _size;
     uint32_t localBestCollisions1 = 0xFFFFFFFFu;
     uint32_t localBestCollisions2 = 0xFFFFFFFFu;
-    uint32_t bestScore = 0xFFFFFFFFu;
+    uint32_t best_score = 0xFFFFFFFFu;
 
-    uint32_t shift1 = 64 - countTrailingBits(bucketCount1);
+    uint32_t shift1 = 64 - count_trailing_bits(bucketCount1);
     Random r;
 
-    uint64_t m1Base = r.nextUInt64();
+    uint64_t m1_base = r.next_uint64();
     uint32_t attempt = 0;
 
     for (;;) {
-      uint64_t bestM1 = m1Base;
+      uint64_t bestM1 = m1_base;
 
       uint64_t pattern1;
       uint64_t pattern2;
@@ -374,18 +374,18 @@ public:
         pattern2 = 0x1;
       }
       else if (attempt % 16 == 0) {
-        pattern1 = r.nextUInt64() & 0x00FF00FF00FF00FF;
-        pattern2 = r.nextUInt64() & 0xFF00FF00FF00FF00;
+        pattern1 = r.next_uint64() & 0x00FF00FF00FF00FF;
+        pattern2 = r.next_uint64() & 0xFF00FF00FF00FF00;
       }
       else {
-        pattern1 = r.nextUInt64() & 0xF;
-        pattern2 = r.nextUInt64() & 0xF000000000000000;
+        pattern1 = r.next_uint64() & 0xF;
+        pattern2 = r.next_uint64() & 0xF000000000000000;
       }
 
       for (uint32_t a = 0; a < 100; a++) {
         for (uint32_t bit1 = 0; bit1 < 64; bit1++) {
           for (uint32_t bit2 = 0; bit2 < 64; bit2++) {
-            uint64_t m1 = m1Base ^ (uint64_t(pattern1) << bit1)
+            uint64_t m1 = m1_base ^ (uint64_t(pattern1) << bit1)
                                  ^ (uint64_t(pattern2) >> bit2);
             uint32_t collisions = 0;
             uint32_t moreThan2Collisions = 0;
@@ -396,10 +396,10 @@ public:
 
             for (size_t i = 0; i < size; i++) {
               uint32_t index = mul64Op1(values[i], 0, m1, shift1);
-              if (occupied1.hasBit(index)) {
+              if (occupied1.has_bit(index)) {
                 collisions++;
-                moreThan2Collisions += occupied2.hasBit(index);
-                occupied2.setBit(index);
+                moreThan2Collisions += occupied2.has_bit(index);
+                occupied2.set_bit(index);
                 if (hits[index] > 1)
                   score += 1000;
                 else
@@ -407,17 +407,17 @@ public:
                 hits[index]++;
               }
               else {
-                occupied1.setBit(index);
+                occupied1.set_bit(index);
                 hits[index] = 1;
                 score--;
               }
             }
 
-            if (score < bestScore) {
+            if (score < best_score) {
               localBestCollisions1 = collisions;
 
-              if (score < bestScore)
-                bestScore = score;
+              if (score < best_score)
+                best_score = score;
 
               bestM1 = m1;
               attempt = 0;
@@ -426,7 +426,7 @@ public:
               _hf.params[0].multiplier = m1;
               _hf.params[0].shift = shift1;
 
-              // bestCollisions = collisions;
+              // best_collisions = collisions;
               printf("  Found (mul=0x%08llX) (collisions=%u) %s\n", (unsigned long long)bestM1, collisions, moreThan2Collisions ? "" : "(max 2 collisions per bucket)");
 
               if (collisions == 0) {
@@ -437,61 +437,61 @@ public:
         }
       }
 
-      if (m1Base == bestM1) {
-        // m1Base += r.nextUInt64();
+      if (m1_base == bestM1) {
+        // m1_base += r.next_uint64();
         if (++attempt > 10000000) {
           printf("Maximum attempts reached\n");
           return;
         }
       }
       else {
-        m1Base = bestM1;
+        m1_base = bestM1;
       }
     }
   }
 */
-  bool findHashFunction(uint32_t bucketCount1) {
-    constexpr uint32_t threadCount = 30;
+  bool find_hash_function(uint32_t bucketCount1) {
+    constexpr uint32_t thread_count = 30;
     constexpr uint32_t mStep = 0x00100000u;
 
     uint32_t mGlobal = 0;
     uint32_t mMaxGlobal = 0x7FFFFFFFu;
 
-    uint32_t bestCollisions = 0xFFFFFFFFu;
+    uint32_t best_collisions = 0xFFFFFFFFu;
     uint32_t bucketCount2 = 0;
     std::mutex mutex;
 
-    auto stopWorkers = [&]() { mGlobal = 0xFFFFFFFFu; };
+    auto stop_workers = [&]() { mGlobal = 0xFFFFFFFFu; };
 
-    auto nextMultiplierBase = [&]() -> uint32_t {
+    auto next_multiplier_base = [&]() -> uint32_t {
       std::lock_guard<std::mutex> guard(mutex);
       if (mGlobal == 0xFFFFFFFFu)
         return 0xFFFFFFFFu;
 
-      uint32_t m1Base = mGlobal;
+      uint32_t m1_base = mGlobal;
       mGlobal += mStep;
       if (mGlobal >= mMaxGlobal)
         mGlobal = 0xFFFFFFFFu;
 
-      return m1Base;
+      return m1_base;
     };
 
-    auto resetMultiplier = [&](uint32_t bucketCount, bool guessMaxGlobal = false) {
+    auto reset_multiplier = [&](uint32_t bucket_count, bool guess_max_global = false) {
       mGlobal = 0;
-      uint32_t t = countTrailingBits(bucketCount);
-      if (t <= 5 || !guessMaxGlobal)
+      uint32_t t = count_trailing_bits(bucket_count);
+      if (t <= 5 || !guess_max_global)
         mMaxGlobal = 0x7FFFFFFFu;
       else
         mMaxGlobal = 0xFFFFFFFFu >> (t - 5);
     };
 
-    printf("Finder::findHashFunction() - Trying to find a first hash function for %u values [%u buckets]\n", _size, bucketCount1);
-    bestCollisions = 0xFFFFFFFFu;
-    resetMultiplier(bucketCount1, true);
+    printf("Finder::find_hash_function() - Trying to find a first hash function for %u values [%u buckets]\n", _size, bucketCount1);
+    best_collisions = 0xFFFFFFFFu;
+    reset_multiplier(bucketCount1, true);
 
-    uint32_t shift1 = 32 - countTrailingBits(bucketCount1);
+    uint32_t shift1 = 32 - count_trailing_bits(bucketCount1);
 
-    runAsync([&]() {
+    run_async([&]() {
       BitArray occupied1;
       BitArray occupied2;
 
@@ -504,12 +504,12 @@ public:
       uint32_t localBestCollisions2 = 0xFFFFFFFFu;
 
       for (;;) {
-        uint32_t m1Base = nextMultiplierBase();
-        if (m1Base == 0xFFFFFFFFu)
+        uint32_t m1_base = next_multiplier_base();
+        if (m1_base == 0xFFFFFFFFu)
           return;
 
-        for (uint32_t m1Index = 0; m1Index < mStep; m1Index++) {
-          uint32_t m1 = m1Base + m1Index;
+        for (uint32_t m1_index = 0; m1_index < mStep; m1_index++) {
+          uint32_t m1 = m1_base + m1_index;
           uint32_t collisions = 0;
           uint32_t moreThan2Collisions = 0;
 
@@ -518,12 +518,12 @@ public:
 
           for (size_t i = 0; i < size; i++) {
             uint32_t index = mulOp1(values[i], m1, shift1);
-            if (occupied1.hasBit(index)) {
+            if (occupied1.has_bit(index)) {
               collisions++;
-              moreThan2Collisions += occupied2.hasBit(index);
-              occupied2.setBit(index);
+              moreThan2Collisions += occupied2.has_bit(index);
+              occupied2.set_bit(index);
             }
-            occupied1.setBit(index);
+            occupied1.set_bit(index);
           }
 
           if (collisions < localBestCollisions2 && moreThan2Collisions == 0) {
@@ -534,27 +534,27 @@ public:
 
           if (collisions < localBestCollisions1) {
             std::lock_guard<std::mutex> guard(mutex);
-            localBestCollisions1 = bestCollisions;
+            localBestCollisions1 = best_collisions;
 
-            if (collisions < bestCollisions) {
+            if (collisions < best_collisions) {
               _hf.params[0].used = true;
               _hf.params[0].multiplier = m1;
               _hf.params[0].shift = shift1;
 
-              bestCollisions = collisions;
+              best_collisions = collisions;
               printf("  Found 0x%08X (collisions=%u)\n", m1, collisions);
 
               if (collisions == 0)
-                stopWorkers();
+                stop_workers();
             }
           }
         }
       }
-    }, threadCount);
+    }, thread_count);
 
-    printf("Finder::findHashFunction() - Found a hash function with %u collision(s)\n", bestCollisions);
-    std::vector<std::pair<uint32_t, uint32_t>> remainingPairs;
-    std::vector<uint32_t> remainingValues;
+    printf("Finder::find_hash_function() - Found a hash function with %u collision(s)\n", best_collisions);
+    std::vector<std::pair<uint32_t, uint32_t>> remaining_pairs;
+    std::vector<uint32_t> remaining_values;
 
     BitArray occupied1;
     occupied1.resize(bucketCount1);
@@ -562,63 +562,63 @@ public:
     {
       for (uint32_t i = 0; i < _size; i++) {
         uint32_t index = (_values[i] * _hf.params[0].multiplier) >> _hf.params[0].shift;
-        if (occupied1.hasBit(index)) {
-          remainingPairs.push_back(std::pair<uint32_t, uint32_t>(_values[i], i));
-          remainingValues.push_back(_values[i]);
+        if (occupied1.has_bit(index)) {
+          remaining_pairs.push_back(std::pair<uint32_t, uint32_t>(_values[i], i));
+          remaining_values.push_back(_values[i]);
         }
         else {
-          occupied1.setBit(index);
+          occupied1.set_bit(index);
         }
       }
     }
 
     // Try to find another hash function that would use the same table.
-    bool m2Found = false;
-    bool m2SameBucketTable = false;
+    bool m2_found = false;
+    bool m2_same_bucket_table = false;
 
     // Don't create a secondary hash table for 1 value.
-    if (remainingValues.size() == 1) {
-      _hf.remaining = std::move(remainingPairs);
-      m2Found = true;
+    if (remaining_values.size() == 1) {
+      _hf.remaining = std::move(remaining_pairs);
+      m2_found = true;
     }
 
-    if (!m2Found && bestCollisions > 0) {
-      printf("Finder::findHashFunction() - Trying to find a second hash function using the same bucket list [%u buckets]\n", bucketCount1);
+    if (!m2_found && best_collisions > 0) {
+      printf("Finder::find_hash_function() - Trying to find a second hash function using the same bucket list [%u buckets]\n", bucketCount1);
 
-      resetMultiplier(bucketCount1);
-      runAsync([&]() {
-        const uint32_t* valuesData = remainingValues.data();
-        size_t valuesCount = remainingValues.size();
+      reset_multiplier(bucketCount1);
+      run_async([&]() {
+        const uint32_t* values_data = remaining_values.data();
+        size_t values_count = remaining_values.size();
 
         BitArray occupied;
         occupied.resize(bucketCount1);
 
         for (;;) {
-          uint32_t m2Base = nextMultiplierBase();
-          if (m2Base == 0xFFFFFFFFu)
+          uint32_t m2_base = next_multiplier_base();
+          if (m2_base == 0xFFFFFFFFu)
             return;
 
-          for (uint32_t m2Index = 0; m2Index < mStep; m2Index++) {
+          for (uint32_t m2_index = 0; m2_index < mStep; m2_index++) {
             bool found = true;
-            uint32_t m2 = m2Base + m2Index;
+            uint32_t m2 = m2_base + m2_index;
             occupied.clear();
 
-            for (size_t i = 0; i < valuesCount; i++) {
-              uint32_t index = mulOp2(valuesData[i], m2, shift1);
-              if (occupied1.hasBit(index) || occupied.hasBit(index)) {
+            for (size_t i = 0; i < values_count; i++) {
+              uint32_t index = mulOp2(values_data[i], m2, shift1);
+              if (occupied1.has_bit(index) || occupied.has_bit(index)) {
                 found = false;
                 break;
               }
-              occupied.setBit(index);
+              occupied.set_bit(index);
             }
 
             if (found) {
               std::lock_guard<std::mutex> guard(mutex);
-              if (!m2Found) {
+              if (!m2_found) {
                 printf("FOUND\n");
-                m2Found = true;
-                m2SameBucketTable = true;
-                stopWorkers();
+                m2_found = true;
+                m2_same_bucket_table = true;
+                stop_workers();
 
                 _hf.params[1].used = true;
                 _hf.params[1].multiplier = m2;
@@ -628,50 +628,50 @@ public:
             }
           }
         }
-      }, threadCount);
+      }, thread_count);
     }
 
     // Reset the global multiplier - we want to start from zero again, to find the second hash function M.
-    if (!m2Found && bestCollisions > 0) {
-      bucketCount2 = alignUpToPowerOf2(bestCollisions);
+    if (!m2_found && best_collisions > 0) {
+      bucketCount2 = alignUpToPowerOf2(best_collisions);
       for (;;) {
-        printf("Finder::findHashFunction() - Trying to find a second hash function [%u buckets]\n", bucketCount2);
+        printf("Finder::find_hash_function() - Trying to find a second hash function [%u buckets]\n", bucketCount2);
 
-        resetMultiplier(bucketCount2);
-        uint32_t shift2 = 32 - countTrailingBits(bucketCount2);
-        bool m2Found = false;
+        reset_multiplier(bucketCount2);
+        uint32_t shift2 = 32 - count_trailing_bits(bucketCount2);
+        bool m2_found = false;
 
-        runAsync([&]() {
-          const uint32_t* valuesData = remainingValues.data();
-          size_t valuesCount = remainingValues.size();
+        run_async([&]() {
+          const uint32_t* values_data = remaining_values.data();
+          size_t values_count = remaining_values.size();
 
           BitArray occupied;
           occupied.resize(bucketCount2);
 
           for (;;) {
-            uint32_t m2Base = nextMultiplierBase();
-            if (m2Base == 0xFFFFFFFFu)
+            uint32_t m2_base = next_multiplier_base();
+            if (m2_base == 0xFFFFFFFFu)
               return;
 
-            for (uint32_t m2Index = 0; m2Index < mStep; m2Index++) {
+            for (uint32_t m2_index = 0; m2_index < mStep; m2_index++) {
               bool found = true;
-              uint32_t m2 = m2Base + m2Index;
+              uint32_t m2 = m2_base + m2_index;
               occupied.clear();
 
-              for (size_t i = 0; i < valuesCount; i++) {
-                uint32_t index = mulOp2(valuesData[i], m2, shift2);
-                if (occupied.hasBit(index)) {
+              for (size_t i = 0; i < values_count; i++) {
+                uint32_t index = mulOp2(values_data[i], m2, shift2);
+                if (occupied.has_bit(index)) {
                   found = false;
                   break;
                 }
-                occupied.setBit(index);
+                occupied.set_bit(index);
               }
 
               if (found) {
                 std::lock_guard<std::mutex> guard(mutex);
-                if (!m2Found) {
-                  m2Found = true;
-                  stopWorkers();
+                if (!m2_found) {
+                  m2_found = true;
+                  stop_workers();
 
                   _hf.params[1].used = true;
                   _hf.params[1].multiplier = m2;
@@ -681,9 +681,9 @@ public:
               }
             }
           }
-        }, threadCount);
+        }, thread_count);
 
-        if (m2Found)
+        if (m2_found)
           break;
         bucketCount2 *= 2u;
       }
@@ -692,7 +692,7 @@ public:
     // Build tables.
     {
       BitArray occupied;
-      std::vector<uint32_t> remainingIndexes;
+      std::vector<uint32_t> remaining_indexes;
 
       occupied.resize(bucketCount1);
       _hf.params[0].table.resize(bucketCount1, uint32_t(0xFFFFFFFFu));
@@ -702,19 +702,19 @@ public:
         std::vector<uint32_t>& table = _hf.params[0].table;
         for (uint32_t i = 0; i < _size; i++) {
           uint32_t index1 = (_values[i] * _hf.params[0].multiplier) >> _hf.params[0].shift;
-          if (!occupied.hasBit(index1)) {
+          if (!occupied.has_bit(index1)) {
             table[index1] = i;
-            occupied.setBit(index1);
+            occupied.set_bit(index1);
           }
           else {
-            remainingIndexes.push_back(i);
+            remaining_indexes.push_back(i);
           }
         }
       }
 
-      if (m2SameBucketTable || bucketCount2) {
-        std::vector<uint32_t>& table = m2SameBucketTable ? _hf.params[0].table : _hf.params[1].table;
-        for (uint32_t i : remainingIndexes) {
+      if (m2_same_bucket_table || bucketCount2) {
+        std::vector<uint32_t>& table = m2_same_bucket_table ? _hf.params[0].table : _hf.params[1].table;
+        for (uint32_t i : remaining_indexes) {
           uint32_t index2 = (_values[i] * _hf.params[1].multiplier) >> _hf.params[1].shift;
           if (table[index2] == 0xFFFFFFFFu)
             table[index2] = i;
@@ -722,17 +722,17 @@ public:
       }
     }
 
-    return bestCollisions != 0xFFFFFFFFu;
+    return best_collisions != 0xFFFFFFFFu;
   }
 
-  bool findSolution() {
-    uint32_t bucketCount = alignUpToPowerOf2(_size);
+  bool find_solution() {
+    uint32_t bucket_count = alignUpToPowerOf2(_size);
     for (;;) {
-      if (findHashFunction(bucketCount))
+      if (find_hash_function(bucket_count))
         return true;
 
-      bucketCount <<= 1;
-      if (bucketCount > _size * 8)
+      bucket_count <<= 1;
+      if (bucket_count > _size * 8)
         return false;
     }
   }

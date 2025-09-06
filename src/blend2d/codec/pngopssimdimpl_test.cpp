@@ -28,11 +28,11 @@ static void fill_random_image(uint8_t* p, uint32_t w, uint32_t h, uint32_t bpp, 
       *p++ = static_cast<uint8_t>(filter);
     }
     else {
-      *p++ = uint8_t(rnd.nextUInt32() % kFilterTypeCount);
+      *p++ = uint8_t(rnd.next_uint32() % kFilterTypeCount);
     }
 
     for (uint32_t x = 0; x < w; x++) {
-      *p++ = uint8_t(rnd.nextUInt32() >> 24u);
+      *p++ = uint8_t(rnd.next_uint32() >> 24u);
     }
   }
 }
@@ -45,12 +45,12 @@ static const uint8_t buffer_overrun_guard[16] = {
 static void test_simd_impl(
   Ops::FunctionTable& reference,
   Ops::FunctionTable& optimized,
-  const char* implName
+  const char* impl_name
 ) noexcept {
   // First test individual filters with each supported BPP.
   BLRandom rnd(0xFEEDFEEDFEEDFEEDu);
 
-  INFO("Testing %s implementation", implName);
+  INFO("Testing %s implementation", impl_name);
 
   uint32_t min_width = 1;
   uint32_t max_width = 111;
@@ -76,14 +76,14 @@ static void test_simd_impl(
         fill_random_image(ref_image, w, h, bpp, filter, rnd);
 
         memcpy(ref_output, ref_image, png_size);
-        reference.inverseFilter[bpp](ref_output, bpp, bpl, h);
+        reference.inverse_filter[bpp](ref_output, bpp, bpl, h);
 
         for (uint32_t misalignment = 0; misalignment < 64; misalignment++) {
-          uint8_t* opt_output = IntOps::alignUp(opt_output_base, 64) + misalignment;
+          uint8_t* opt_output = IntOps::align_up(opt_output_base, 64) + misalignment;
 
           memcpy(opt_output, ref_image, png_size);
           memcpy(opt_output + png_size, buffer_overrun_guard, buffer_overrun_guard_size);
-          optimized.inverseFilter[bpp](opt_output, bpp, bpl, h);
+          optimized.inverse_filter[bpp](opt_output, bpp, bpl, h);
 
           bool output_match = memcmp(ref_output, opt_output, png_size) == 0;
           EXPECT_TRUE(output_match).message(
@@ -93,7 +93,7 @@ static void test_simd_impl(
             bpp,
             misalignment,
             png_filter_names[filter],
-            implName
+            impl_name
           );
 
           bool guard_match = memcmp(opt_output + png_size, buffer_overrun_guard, buffer_overrun_guard_size) == 0;
@@ -104,7 +104,7 @@ static void test_simd_impl(
             bpp,
             misalignment,
             png_filter_names[filter],
-            implName
+            impl_name
           );
         }
       }
@@ -118,28 +118,28 @@ static void test_simd_impl(
 
 UNIT(codec_png_simd_inverse_filter, BL_TEST_GROUP_IMAGE_CODEC_OPS) {
   Ops::FunctionTable reference;
-  Ops::initFuncTable_Ref(reference);
+  Ops::init_func_table_ref(reference);
 
 #ifdef BL_BUILD_OPT_SSE2
-  if (blRuntimeHasSSE2(&blRuntimeContext)) {
+  if (bl_runtime_has_sse2(&bl_runtime_context)) {
     Ops::FunctionTable optimized;
-    initFuncTable_SSE2(optimized);
+    init_func_table_sse2(optimized);
     test_simd_impl(reference, optimized, "SSE2");
   }
 #endif // BL_BUILD_OPT_SSE2
 
 #ifdef BL_BUILD_OPT_AVX
-  if (blRuntimeHasAVX(&blRuntimeContext)) {
+  if (bl_runtime_has_avx(&bl_runtime_context)) {
     Ops::FunctionTable optimized;
-    initFuncTable_AVX(optimized);
+    init_func_table_avx(optimized);
     test_simd_impl(reference, optimized, "AVX");
   }
 #endif // BL_BUILD_OPT_AVX
 
 #ifdef BL_BUILD_OPT_ASIMD
-  if (blRuntimeHasASIMD(&blRuntimeContext)) {
+  if (bl_runtime_has_asimd(&bl_runtime_context)) {
     Ops::FunctionTable optimized;
-    initFuncTable_ASIMD(optimized);
+    init_func_table_asimd(optimized);
     test_simd_impl(reference, optimized, "ASIMD");
   }
 #endif // BL_BUILD_OPT_ASIMD

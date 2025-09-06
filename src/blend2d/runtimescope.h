@@ -21,9 +21,9 @@ struct BLRuntimeScopeCore {
 
 BL_BEGIN_C_DECLS
 
-BL_API BLResult BL_CDECL blRuntimeScopeBegin(BLRuntimeScopeCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRuntimeScopeEnd(BLRuntimeScopeCore* self) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blRuntimeScopeIsActive(const BLRuntimeScopeCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_runtime_scope_begin(BLRuntimeScopeCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_runtime_scope_end(BLRuntimeScopeCore* self) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL bl_runtime_scope_is_active(const BLRuntimeScopeCore* self) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
@@ -74,16 +74,16 @@ public:
   //! \{
 
   //! Establishes a new runtime scope by possibly changing the state of FPU control word.
-  BL_INLINE_NODEBUG BLRuntimeScope() noexcept { blRuntimeScopeBegin(this); }
+  BL_INLINE_NODEBUG BLRuntimeScope() noexcept { bl_runtime_scope_begin(this); }
   //! Restores the scope to the previous state.
-  BL_INLINE_NODEBUG ~BLRuntimeScope() noexcept { blRuntimeScopeEnd(this); }
+  BL_INLINE_NODEBUG ~BLRuntimeScope() noexcept { bl_runtime_scope_end(this); }
 
   //! \}
 
   //! \name Accessors
   //! \{
 
-  BL_INLINE_NODEBUG bool isActive() const noexcept { return blRuntimeScopeIsActive(this); }
+  BL_INLINE_NODEBUG bool is_active() const noexcept { return bl_runtime_scope_is_active(this); }
 
   //! \}
 };

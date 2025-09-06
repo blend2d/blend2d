@@ -48,9 +48,9 @@ static constexpr uint8_t kMinimumInputSizeToCompress[13] = {
 };
 
 struct EncoderCompressionOptions {
-  uint16_t maxSearchDepth;
-  uint16_t niceMatchLength;
-  uint16_t optimalPasses;
+  uint16_t max_search_depth;
+  uint16_t nice_match_length;
+  uint16_t optimal_passes;
 };
 
 static constexpr EncoderCompressionOptions kEncoderCompressionOptions[] = {
@@ -200,7 +200,7 @@ struct DeflateOffsetSlotGen {
            index + 1 < 257   ? 16 - 1 : 0;
   }
 };
-static constexpr LookupTable<uint8_t, 256> kEncoderOffsetSlotLUT = makeLookupTable<uint8_t, 256, DeflateOffsetSlotGen>();
+static constexpr LookupTable<uint8_t, 256> kEncoderOffsetSlotLUT = make_lookup_table<uint8_t, 256, DeflateOffsetSlotGen>();
 
 // Offset => Offset Slot.
 static BL_INLINE uint32_t deflate_get_offset_slot(uint32_t offset) noexcept {
@@ -335,30 +335,30 @@ struct EncoderImpl {
   // Format type.
   FormatType format;
   // The compression level with which this compressor was created.
-  uint32_t compressionLevel;
+  uint32_t compression_level;
   // Minimum input size to actually attempt to compress it (depends on compression level).
-  size_t minInputSize;
+  size_t min_input_size;
 
   // Pointer to the prepare() implementation.
-  PrepareFunc prepareFunc;
+  PrepareFunc prepare_func;
   // Pointer to the compress() implementation.
-  CompressFunc compressFunc;
+  CompressFunc compress_func;
 
   // Frequency counters for the current block.
   Freqs freqs;
   // Dynamic Huffman codes for the current block.
   Codes codes;
   // Static Huffman codes.
-  Codes staticCodes;
+  Codes static_codes;
   // Block split statistics for the currently pending block.
-  BlockSplitStats splitStats;
+  BlockSplitStats split_stats;
 
   // The "nice" match length: if a match of this length is found, choose it immediately without further
   // consideration.
-  uint32_t niceMatchLength;
+  uint32_t nice_match_length;
 
   // The maximum search depth: consider at most this many potential matches at each position.
-  uint32_t maxSearchDepth;
+  uint32_t max_search_depth;
 
   // Precode space.
   struct Precode {
@@ -366,10 +366,10 @@ struct EncoderImpl {
     uint8_t lens[kNumPrecodeSymbols];
     uint32_t codewords[kNumPrecodeSymbols];
     uint32_t items[kNumLitLenSymbols + kNumOffsetSymbols];
-    uint32_t litlenSymbolCount;
-    uint32_t offsetSymbolCount;
-    uint32_t explicitLenCount;
-    uint32_t itemCount;
+    uint32_t litlen_symbol_count;
+    uint32_t offset_symbol_count;
+    uint32_t explicit_len_count;
+    uint32_t item_count;
   };
 
   // Temporary space for Huffman code output.
@@ -497,7 +497,7 @@ static constexpr uint32_t SYMBOL_MASK = (1u << NUM_SYMBOL_BITS) - 1u;
 //
 // Returns the number of entries in 'symout' that were filled. This is the number of symbols that have
 // nonzero frequency.
-static uint32_t sortSymbols(uint32_t num_syms, const uint32_t* BL_RESTRICT freqs, uint8_t* BL_RESTRICT lens, uint32_t* BL_RESTRICT symout) noexcept {
+static uint32_t sort_symbols(uint32_t num_syms, const uint32_t* BL_RESTRICT freqs, uint8_t* BL_RESTRICT lens, uint32_t* BL_RESTRICT symout) noexcept {
   uint32_t sym;
 
   uint32_t num_counters = num_syms;
@@ -505,7 +505,7 @@ static uint32_t sortSymbols(uint32_t num_syms, const uint32_t* BL_RESTRICT freqs
 
   // Count the frequencies.
   for (sym = 0; sym < num_syms; sym++)
-    counters[blMin(freqs[sym], num_counters - 1)]++;
+    counters[bl_min(freqs[sym], num_counters - 1)]++;
 
   // Make the counters cumulative, ignoring the zero-th, which counted symbols with zero
   // frequency. As a side effect, this calculates the number of symbols with nonzero frequency.
@@ -521,7 +521,7 @@ static uint32_t sortSymbols(uint32_t num_syms, const uint32_t* BL_RESTRICT freqs
   for (sym = 0; sym < num_syms; sym++) {
     uint32_t freq = freqs[sym];
     if (freq != 0)
-      symout[counters[blMin(freq, num_counters - 1)]++] = sym | (freq << NUM_SYMBOL_BITS);
+      symout[counters[bl_min(freq, num_counters - 1)]++] = sym | (freq << NUM_SYMBOL_BITS);
     else
       lens[sym] = 0;
   }
@@ -558,7 +558,7 @@ static uint32_t sortSymbols(uint32_t num_syms, const uint32_t* BL_RESTRICT freqs
 // will, in fact, contain a symbol value, this symbol will have *no relationship* with the Huffman tree node that
 // happens to occupy the same slot. This is because this implementation only generates the non-leaf nodes of the
 // tree.
-static void buildTree(uint32_t* A, uint32_t sym_count) noexcept {
+static void build_tree(uint32_t* A, uint32_t sym_count) noexcept {
   uint32_t i = 0u; // Index, in `A`, of next lowest frequency symbol that has not yet been processed.
   uint32_t b = 0u; // Index, in `A`, of next lowest frequency parentless non-leaf node; or, if equal to `e`,
                    // then no such node exists yet.
@@ -587,11 +587,11 @@ static void buildTree(uint32_t* A, uint32_t sym_count) noexcept {
   // were handled separately)
 }
 
-// Given the stripped-down Huffman tree constructed by buildTree(), determine the number of codewords that should
+// Given the stripped-down Huffman tree constructed by build_tree(), determine the number of codewords that should
 // be assigned each possible length, taking into account the length-limited constraint.
 //
 // \param A
-//     The array produced by buildTree(), containing parent index information for the non-leaf nodes of the Huffman
+//     The array produced by build_tree(), containing parent index information for the non-leaf nodes of the Huffman
 //     tree. Each entry in this array is a node; a node's parent always has a greater index than that node itself.
 //     This function will overwrite the parent index information in this array, so essentially it will destroy the
 //     tree. However, the data in the low NUM_SYMBOL_BITS of each entry will be preserved.
@@ -606,7 +606,7 @@ static void buildTree(uint32_t* A, uint32_t sym_count) noexcept {
 //
 // \param max_codeword_len
 //     The maximum permissible codeword length.
-static void computeLengthCounts(uint32_t* BL_RESTRICT A, uint32_t root_idx, uint32_t* BL_RESTRICT len_counts, uint32_t max_codeword_len) noexcept {
+static void compute_length_counts(uint32_t* BL_RESTRICT A, uint32_t root_idx, uint32_t* BL_RESTRICT len_counts, uint32_t max_codeword_len) noexcept {
   // The key observations are:
   //
   // (1) We can traverse the non-leaf nodes of the tree, always visiting a parent before its children, by simply
@@ -779,7 +779,7 @@ static void make_canonical_huffman_code(uint32_t num_syms, uint32_t max_codeword
   // We begin by sorting the symbols primarily by frequency and secondarily by symbol value. As an optimization,
   // the array used for this purpose ('A') shares storage with the space in which we will eventually return the
   // codewords.
-  uint32_t num_used_syms = sortSymbols(num_syms, freqs, lens, codewords);
+  uint32_t num_used_syms = sort_symbols(num_syms, freqs, lens, codewords);
 
   // 'num_used_syms' is the number of symbols with nonzero frequency. This may be less than @num_syms. `num_used_syms`
   // is also the number of entries in 'A' that are valid. Each entry consists of a distinct symbol and a non-zero
@@ -817,11 +817,11 @@ static void make_canonical_huffman_code(uint32_t num_syms, uint32_t max_codeword
   // Build a stripped-down version of the Huffman tree, sharing the array 'A' with
   // the symbol values. Then extract length counts from the tree and use them to
   // generate the final codewords.
-  buildTree(codewords, num_used_syms);
+  build_tree(codewords, num_used_syms);
 
   {
     uint32_t len_counts[kMaxCodeWordLen + 1];
-    computeLengthCounts(codewords, num_used_syms - 2, len_counts, max_codeword_len);
+    compute_length_counts(codewords, num_used_syms - 2, len_counts, max_codeword_len);
     gen_codewords(codewords, lens, len_counts, max_codeword_len, num_syms);
   }
 }
@@ -829,12 +829,12 @@ static void make_canonical_huffman_code(uint32_t num_syms, uint32_t max_codeword
 // Clear the Huffman symbol frequency counters.
 //
 // This must be called when starting a new DEFLATE block.
-static BL_INLINE void resetSymbolFrequencies(EncoderImpl* impl) noexcept {
+static BL_INLINE void reset_symbol_frequencies(EncoderImpl* impl) noexcept {
   memset(&impl->freqs, 0, sizeof(impl->freqs));
 }
 
 // Reverse the Huffman codeword 'codeword', which is 'len' bits in length.
-static BL_INLINE uint32_t reverse16BitCode(uint32_t codeword, uint32_t len) noexcept {
+static BL_INLINE uint32_t reverse16_bit_code(uint32_t codeword, uint32_t len) noexcept {
   // The following branchless algorithm is faster than going bit by bit.
   //
   // NOTE: since no codewords are longer than 16 bits, we only need to
@@ -896,7 +896,7 @@ static BL_NOINLINE void deflate_make_huffman_code(
   }
 
   while (sym < num_syms) {
-    codewords[sym] = reverse16BitCode(codewords[sym], lens[sym]);
+    codewords[sym] = reverse16_bit_code(codewords[sym], lens[sym]);
     sym++;
   }
 }
@@ -912,8 +912,8 @@ static BL_NOINLINE void deflate_make_huffman_codes(const Freqs *freqs, Codes *co
   deflate_make_huffman_code(kNumOffsetSymbols, kMaxOffsetCodeWordLen, freqs->offset, codes->lens.offset, codes->codewords.offset);
 }
 
-// Initialize impl->staticCodes.
-static BL_NOINLINE void initStaticCodes(EncoderImpl* impl) noexcept {
+// Initialize impl->static_codes.
+static BL_NOINLINE void init_static_codes(EncoderImpl* impl) noexcept {
   uint32_t i;
 
   for (i = 0; i < 144; i++)
@@ -928,7 +928,7 @@ static BL_NOINLINE void initStaticCodes(EncoderImpl* impl) noexcept {
   for (i = 0; i < 32; i++)
     impl->freqs.offset[i] = 1 << (5 - 5);
 
-  deflate_make_huffman_codes(&impl->freqs, &impl->staticCodes);
+  deflate_make_huffman_codes(&impl->freqs, &impl->static_codes);
 }
 
 static uint32_t deflate_compute_precode_items(
@@ -959,7 +959,7 @@ static uint32_t deflate_compute_precode_items(
 
       // Symbol 18: RLE 11 to 138 zeroes at a time.
       while ((run_end - run_start) >= 11) {
-        uint32_t extra_bits = blMin<uint32_t>((run_end - run_start) - 11, 0x7F);
+        uint32_t extra_bits = bl_min<uint32_t>((run_end - run_start) - 11, 0x7F);
         precode_freqs[18]++;
         *itemptr++ = 18 | (extra_bits << 5);
         run_start += 11 + extra_bits;
@@ -967,7 +967,7 @@ static uint32_t deflate_compute_precode_items(
 
       // Symbol 17: RLE 3 to 10 zeroes at a time.
       if ((run_end - run_start) >= 3) {
-        uint32_t extra_bits = blMin<uint32_t>((run_end - run_start) - 3, 0x7);
+        uint32_t extra_bits = bl_min<uint32_t>((run_end - run_start) - 3, 0x7);
         precode_freqs[17]++;
         *itemptr++ = 17 | (extra_bits << 5);
         run_start += 3 + extra_bits;
@@ -982,7 +982,7 @@ static uint32_t deflate_compute_precode_items(
         *itemptr++ = len;
         run_start++;
         do {
-          uint32_t extra_bits = blMin<uint32_t>((run_end - run_start) - 3, 0x3);
+          uint32_t extra_bits = bl_min<uint32_t>((run_end - run_start) - 3, 0x3);
           precode_freqs[16]++;
           *itemptr++ = 16 | (extra_bits << 5);
           run_start += 3 + extra_bits;
@@ -1012,14 +1012,14 @@ static void deflate_precompute_huffman_header(EncoderImpl* impl) noexcept {
   EncoderImpl::Precode& precode = impl->precode;
 
   // Compute how many litlen and offset symbols are needed.
-  for (precode.litlenSymbolCount = kNumLitLenSymbols; precode.litlenSymbolCount > 257; precode.litlenSymbolCount--) {
-    if (impl->codes.lens.litlen[precode.litlenSymbolCount - 1] != 0) {
+  for (precode.litlen_symbol_count = kNumLitLenSymbols; precode.litlen_symbol_count > 257; precode.litlen_symbol_count--) {
+    if (impl->codes.lens.litlen[precode.litlen_symbol_count - 1] != 0) {
       break;
     }
   }
 
-  for (precode.offsetSymbolCount = kNumOffsetSymbols; precode.offsetSymbolCount > 1; precode.offsetSymbolCount--) {
-    if (impl->codes.lens.offset[precode.offsetSymbolCount - 1] != 0) {
+  for (precode.offset_symbol_count = kNumOffsetSymbols; precode.offset_symbol_count > 1; precode.offset_symbol_count--) {
+    if (impl->codes.lens.offset[precode.offset_symbol_count - 1] != 0) {
       break;
     }
   }
@@ -1028,27 +1028,27 @@ static void deflate_precompute_huffman_header(EncoderImpl* impl) noexcept {
   // lengths over so that the literal/length and offset codeword lengths are contiguous.
   BL_STATIC_ASSERT(offsetof(Lens, offset) == kNumLitLenSymbols);
 
-  if (precode.litlenSymbolCount != kNumLitLenSymbols) {
-    memmove((uint8_t *)&impl->codes.lens + precode.litlenSymbolCount, (uint8_t *)&impl->codes.lens + kNumLitLenSymbols, precode.offsetSymbolCount);
+  if (precode.litlen_symbol_count != kNumLitLenSymbols) {
+    memmove((uint8_t *)&impl->codes.lens + precode.litlen_symbol_count, (uint8_t *)&impl->codes.lens + kNumLitLenSymbols, precode.offset_symbol_count);
   }
 
   // Compute the "items" (RLE / literal tokens and extra bits) with which the codeword lengths in the larger code
   // will be output.
-  precode.itemCount = deflate_compute_precode_items((uint8_t *)&impl->codes.lens, precode.litlenSymbolCount + precode.offsetSymbolCount, precode.freqs, precode.items);
+  precode.item_count = deflate_compute_precode_items((uint8_t *)&impl->codes.lens, precode.litlen_symbol_count + precode.offset_symbol_count, precode.freqs, precode.items);
 
   // Build the precode.
   deflate_make_huffman_code(kNumPrecodeSymbols, kMaxPreCodeWordLen, precode.freqs, precode.lens, precode.codewords);
 
   // Count how many precode lengths we actually need to output.
-  for (precode.explicitLenCount = kNumPrecodeSymbols; precode.explicitLenCount > 4; precode.explicitLenCount--) {
-    if (precode.lens[kPrecodeLensPermutation[precode.explicitLenCount - 1]] != 0) {
+  for (precode.explicit_len_count = kNumPrecodeSymbols; precode.explicit_len_count > 4; precode.explicit_len_count--) {
+    if (precode.lens[kPrecodeLensPermutation[precode.explicit_len_count - 1]] != 0) {
       break;
     }
   }
 
   // Restore the offset codeword lengths if needed.
-  if (precode.litlenSymbolCount != kNumLitLenSymbols) {
-    memmove((uint8_t *)&impl->codes.lens + kNumLitLenSymbols, (uint8_t *)&impl->codes.lens + precode.litlenSymbolCount, precode.offsetSymbolCount);
+  if (precode.litlen_symbol_count != kNumLitLenSymbols) {
+    memmove((uint8_t *)&impl->codes.lens + kNumLitLenSymbols, (uint8_t *)&impl->codes.lens + precode.litlen_symbol_count, precode.offset_symbol_count);
   }
 }
 
@@ -1056,24 +1056,24 @@ static void deflate_precompute_huffman_header(EncoderImpl* impl) noexcept {
 // =======================================================
 
 static void write_uncompressed_blocks(OutputStream& os, const uint8_t* data, size_t data_size, bool is_final) noexcept {
-  BL_ASSERT(os.bits.wasProperlyFlushed());
+  BL_ASSERT(os.bits.was_properly_flushed());
 
   OutputBits bits = os.bits;
   OutputBuffer buf = os.buffer;
 
-  size_t block_size = blMin<size_t>(data_size, 0xFFFFu);
+  size_t block_size = bl_min<size_t>(data_size, 0xFFFFu);
   uint32_t block_is_final = uint32_t(is_final && data_size == block_size);
 
   // The first uncompressed block header must use the remaining BYTE (if any). All consecutive block headers always
   // start with new BYTE (as uncompressed data is not a bit-stream, it's a byte-stream, so it ends on a byte boundary).
   bits.add(block_is_final, 1);
   bits.add(uint32_t(BlockType::kUncompressed), 2);
-  bits.alignToBytes();
+  bits.align_to_bytes();
   bits.flush(buf);
 
   // Aligning to bytes means the bit-buffer must be completely clean.
   BL_ASSERT(bits.length() == 0);
-  BL_ASSERT(buf.remainingBytes() >= 4 + block_size);
+  BL_ASSERT(buf.remaining_bytes() >= 4 + block_size);
 
   os.bits = bits;
 
@@ -1094,10 +1094,10 @@ static void write_uncompressed_blocks(OutputStream& os, const uint8_t* data, siz
     }
 
     // Start another block.
-    block_size = blMin<size_t>(data_size, 0xFFFFu);
+    block_size = bl_min<size_t>(data_size, 0xFFFFu);
     block_is_final = uint32_t(is_final && data_size == block_size);
 
-    BL_ASSERT(buf.remainingBytes() >= 5 + block_size);
+    BL_ASSERT(buf.remaining_bytes() >= 5 + block_size);
     buf.ptr[0] = uint8_t(block_is_final | (uint32_t(BlockType::kUncompressed) << 1));
     buf.ptr++;
   }
@@ -1109,8 +1109,8 @@ static void write_uncompressed_blocks(OutputStream& os, const uint8_t* data, siz
 // =================================================
 
 // Choose the best type of block to use (dynamic Huffman, static Huffman, or uncompressed), then output it.
-static void flushBlock(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RESTRICT block_begin, uint32_t block_length, bool is_final_block, bool use_item_list) noexcept {
-  BL_ASSERT(os.bits.wasProperlyFlushed());
+static void flush_block(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RESTRICT block_begin, uint32_t block_length, bool is_final_block, bool use_item_list) noexcept {
+  BL_ASSERT(os.bits.was_properly_flushed());
 
   // Costs are measured in bits.
   uint32_t static_cost = 0;
@@ -1124,7 +1124,7 @@ static void flushBlock(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RE
 
   // Account for the cost of sending dynamic Huffman codes.
   deflate_precompute_huffman_header(impl);
-  dynamic_cost += 5 + 5 + 4 + (3 * impl->precode.explicitLenCount);
+  dynamic_cost += 5 + 5 + 4 + (3 * impl->precode.explicit_len_count);
 
   for (uint32_t sym = 0; sym < kNumPrecodeSymbols; sym++) {
     uint32_t extra = kDeflateExtraPrecodeBitCount[sym];
@@ -1151,7 +1151,7 @@ static void flushBlock(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RE
   // Account for the cost of encoding lengths.
   for (uint32_t sym = kFirstLengthSymbol; sym < kFirstLengthSymbol + BL_ARRAY_SIZE(kEncoderExtraLengthBitCount); sym++) {
     uint32_t extra = kEncoderExtraLengthBitCount[sym - kFirstLengthSymbol];
-    static_cost += impl->freqs.litlen[sym] * (extra + impl->staticCodes.lens.litlen[sym]);
+    static_cost += impl->freqs.litlen[sym] * (extra + impl->static_codes.lens.litlen[sym]);
     dynamic_cost += impl->freqs.litlen[sym] * (extra + impl->codes.lens.litlen[sym]);
   }
 
@@ -1166,13 +1166,13 @@ static void flushBlock(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RE
   uint32_t uncompressed_cost = (IntOps::negate(uint32_t(os.bits.length()) + 3u) & 7u) + 32u + (40u * (DIV_ROUND_UP(block_length, uint32_t(UINT16_MAX)) - 1u)) + (8u * block_length);
 
   // Choose the cheapest block type.
-  uint32_t huffman_cost = blMin(static_cost, dynamic_cost);
+  uint32_t huffman_cost = bl_min(static_cost, dynamic_cost);
   if (uncompressed_cost < huffman_cost) {
     write_uncompressed_blocks(os, block_begin, block_length, is_final_block);
   }
   else {
     BlockType block_type = static_cost < dynamic_cost ? BlockType::kStaticHuffman : BlockType::kDynamicHuffman;
-    Codes& codes = static_cost < dynamic_cost ? impl->staticCodes : impl->codes;
+    Codes& codes = static_cost < dynamic_cost ? impl->static_codes : impl->codes;
 
     OutputBits bits = os.bits;
     OutputBuffer buf = os.buffer;
@@ -1190,9 +1190,9 @@ static void flushBlock(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RE
       const EncoderImpl::Precode& precode = impl->precode;
 
       // Total bits - header(3) + 5 + 5 + 4 + 2 * 3 -> 22 bits for block header and precode with 2 lens.
-      bits.add(precode.litlenSymbolCount - 257u, 5u);
-      bits.add(precode.offsetSymbolCount - 1u, 5u);
-      bits.add(precode.explicitLenCount - 4u, 4u);
+      bits.add(precode.litlen_symbol_count - 257u, 5u);
+      bits.add(precode.offset_symbol_count - 1u, 5u);
+      bits.add(precode.explicit_len_count - 4u, 4u);
       bits.add(precode.lens[kPrecodeLensPermutation[0]], 3);
       bits.add(precode.lens[kPrecodeLensPermutation[1]], 3);
       bits.flush(buf);
@@ -1200,20 +1200,20 @@ static void flushBlock(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RE
       // Output the remaining lens of the codewords in the precode.
       if constexpr (sizeof(BLBitWord) >= 8) {
         // kNumPrecodeSymbols == 19 -> at most (19 - 2) * 3 bits will be written (51 bits).
-        for (uint32_t i = 2; i < precode.explicitLenCount; i++) {
+        for (uint32_t i = 2; i < precode.explicit_len_count; i++) {
           bits.add(precode.lens[kPrecodeLensPermutation[i]], 3);
         }
         bits.flush(buf);
       }
       else {
-        for (uint32_t i = 2; i < precode.explicitLenCount; i++) {
+        for (uint32_t i = 2; i < precode.explicit_len_count; i++) {
           bits.add(precode.lens[kPrecodeLensPermutation[i]], 3);
           bits.flush(buf);
         }
       }
 
       // Output the encoded lengths of the codewords in the larger code.
-      for (uint32_t i = 0; i < precode.itemCount; i++) {
+      for (uint32_t i = 0; i < precode.item_count; i++) {
         uint32_t precode_item = precode.items[i];
         uint32_t precode_sym = precode_item & 0x1Fu;
         bits.add(precode.codewords[precode_sym], precode.lens[precode_sym]);
@@ -1238,8 +1238,8 @@ static void flushBlock(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RE
     // ---------------------------
 
     if (!use_item_list) {
-      GreedyEncoderImpl* greedyImpl = static_cast<GreedyEncoderImpl*>(impl);
-      const Sequence* seq = greedyImpl->sequences;
+      GreedyEncoderImpl* greedy_impl = static_cast<GreedyEncoderImpl*>(impl);
+      const Sequence* seq = greedy_impl->sequences;
       const uint8_t* in_next = block_begin;
 
       for (;;) {
@@ -1316,10 +1316,10 @@ static void flushBlock(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RE
     else {
       // Follow the minimum-cost path in the graph of possible match/literal choices for the
       // current block and write out the matches/literals using the specified Huffman codes.
-      NearOptimalEncoderImpl* optimalImpl = static_cast<NearOptimalEncoderImpl*>(impl);
+      NearOptimalEncoderImpl* optimal_impl = static_cast<NearOptimalEncoderImpl*>(impl);
 
-      OptimumNode* cur_node = &optimalImpl->optimum_nodes[0];
-      OptimumNode* end_node = &optimalImpl->optimum_nodes[block_length];
+      OptimumNode* cur_node = &optimal_impl->optimum_nodes[0];
+      OptimumNode* end_node = &optimal_impl->optimum_nodes[block_length];
 
       do {
         uint32_t length = cur_node->item & kNOOptimumLengthMask;
@@ -1341,7 +1341,7 @@ static void flushBlock(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RE
           bits.flushIfCannotBufferN<kEncoderMaxLitlenCodewordLen + kMaxExtraLengthBits + kMaxOffsetCodeWordLen>(buf);
 
           // Match offset + extra bits.
-          uint32_t offset_slot = optimalImpl->offset_slot_full[offset];
+          uint32_t offset_slot = optimal_impl->offset_slot_full[offset];
           bits.add(codes.codewords.offset[offset_slot], codes.lens.offset[offset_slot]);
           bits.flushIfCannotBufferN<kEncoderMaxLitlenCodewordLen + kMaxExtraLengthBits + kMaxOffsetCodeWordLen + kMaxExtraOffsetBits>(buf);
           bits.add(offset - kEncoderOffsetSlotBase[offset_slot], kEncoderExtraOffsetBitCount[offset_slot]);
@@ -1362,12 +1362,12 @@ static void flushBlock(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RE
   }
 }
 
-static BL_INLINE void chooseLiteral(EncoderImpl* impl, uint32_t literal, uint32_t* litrunlen_p) noexcept {
+static BL_INLINE void choose_literal(EncoderImpl* impl, uint32_t literal, uint32_t* litrunlen_p) noexcept {
   impl->freqs.litlen[literal]++;
   ++*litrunlen_p;
 }
 
-static BL_INLINE void chooseMatch(EncoderImpl* impl, uint32_t length, uint32_t offset, uint32_t* litrunlen_p, Sequence** next_seq_p) noexcept {
+static BL_INLINE void choose_match(EncoderImpl* impl, uint32_t length, uint32_t offset, uint32_t* litrunlen_p, Sequence** next_seq_p) noexcept {
   Sequence *seq = *next_seq_p;
   uint32_t length_slot = kEncoderLengthSlotLUT[length];
   uint32_t offset_slot = deflate_get_offset_slot(offset);
@@ -1384,7 +1384,7 @@ static BL_INLINE void chooseMatch(EncoderImpl* impl, uint32_t length, uint32_t o
   *next_seq_p = seq + 1;
 }
 
-static BL_INLINE void finishSequence(Sequence *seq, uint32_t litrunlen) noexcept {
+static BL_INLINE void finish_sequence(Sequence *seq, uint32_t litrunlen) noexcept {
   seq->litrunlen_and_length = litrunlen;
 }
 
@@ -1414,7 +1414,7 @@ static BL_INLINE void finishSequence(Sequence *seq, uint32_t litrunlen) noexcept
 // preliminary "greedy" choices instead.
 
 // Initialize the block split statistics when starting a new block.
-static void initBlockSplitStats(BlockSplitStats* stats) noexcept {
+static void init_block_split_stats(BlockSplitStats* stats) noexcept {
   uint32_t i;
 
   for (i = 0; i < NUM_OBSERVATION_TYPES; i++) {
@@ -1428,7 +1428,7 @@ static void initBlockSplitStats(BlockSplitStats* stats) noexcept {
 // Literal observation.
 //
 // Heuristic: use the top 2 bits and low 1 bits of the literal, for 8 possible literal observation types.
-static BL_INLINE void observeLiteral(BlockSplitStats* stats, uint8_t lit) noexcept {
+static BL_INLINE void observe_literal(BlockSplitStats* stats, uint8_t lit) noexcept {
   stats->new_observations[((lit >> 5) & 0x6) | (lit & 1)]++;
   stats->num_new_observations++;
 }
@@ -1436,7 +1436,7 @@ static BL_INLINE void observeLiteral(BlockSplitStats* stats, uint8_t lit) noexce
 // Match observation.
 //
 // Heuristic: use one observation type for "short match" and one observation type for "long match".
-static BL_INLINE void observeMatch(BlockSplitStats* stats, uint32_t length) noexcept {
+static BL_INLINE void observe_match(BlockSplitStats* stats, uint32_t length) noexcept {
   stats->new_observations[NUM_LITERAL_OBSERVATION_TYPES + (length >= 9)]++;
   stats->num_new_observations++;
 }
@@ -1475,8 +1475,8 @@ static bool do_end_block_check(BlockSplitStats* stats, uint32_t block_length) no
 static BL_INLINE bool should_end_block(BlockSplitStats* stats, const uint8_t* in_block_begin, const uint8_t* in_next, const uint8_t* in_end) noexcept {
   // Ready to check block split statistics?
   if (stats->num_new_observations < kEncoderNumObservationsPerBlockCheck ||
-      PtrOps::byteOffset(in_block_begin, in_next) < kEncoderMinBlockLength ||
-      PtrOps::bytesUntil(in_next, in_end) < kEncoderMinBlockLength) {
+      PtrOps::byte_offset(in_block_begin, in_next) < kEncoderMinBlockLength ||
+      PtrOps::bytes_until(in_next, in_end) < kEncoderMinBlockLength) {
     return false;
   }
 
@@ -1487,7 +1487,7 @@ static BL_INLINE bool should_end_block(BlockSplitStats* stats, const uint8_t* in
 // ===========================================
 
 // Initialize impl->offset_slot_full.
-static BL_INLINE void initOffsetSlotFull(NearOptimalEncoderImpl* impl) noexcept {
+static BL_INLINE void init_offset_slot_full(NearOptimalEncoderImpl* impl) noexcept {
   uint32_t offset_slot;
   uint32_t offset;
   uint32_t offset_end;
@@ -1501,20 +1501,20 @@ static BL_INLINE void initOffsetSlotFull(NearOptimalEncoderImpl* impl) noexcept 
   }
 }
 
-static void BL_CDECL prepareGreedyOrLazy(EncoderImpl* impl) noexcept {
-  initStaticCodes(impl);
+static void BL_CDECL prepare_greedy_or_lazy(EncoderImpl* impl) noexcept {
+  init_static_codes(impl);
 }
 
-static void BL_CDECL prepareNearOptimal(EncoderImpl* impl) noexcept {
-  initStaticCodes(impl);
-  initOffsetSlotFull(static_cast<NearOptimalEncoderImpl*>(impl));
+static void BL_CDECL prepare_near_optimal(EncoderImpl* impl) noexcept {
+  init_static_codes(impl);
+  init_offset_slot_full(static_cast<NearOptimalEncoderImpl*>(impl));
 }
 
 // bl::Compression::Deflate::Encoder - Greedy Compressor
 // =====================================================
 
 // This is the "greedy" DEFLATE compressor. It always chooses the longest match.
-static size_t BL_CDECL compressGreedy(EncoderImpl* impl_, const uint8_t* BL_RESTRICT in, size_t in_nbytes, uint8_t* BL_RESTRICT out, size_t out_nbytes_avail) noexcept {
+static size_t BL_CDECL compress_greedy(EncoderImpl* impl_, const uint8_t* BL_RESTRICT in, size_t in_nbytes, uint8_t* BL_RESTRICT out, size_t out_nbytes_avail) noexcept {
   GreedyEncoderImpl* impl = static_cast<GreedyEncoderImpl*>(impl_);
 
   OutputStream os{};
@@ -1525,7 +1525,7 @@ static size_t BL_CDECL compressGreedy(EncoderImpl* impl_, const uint8_t* BL_REST
   const uint8_t* in_cur_base = in_next;
 
   uint32_t max_len = kMaxMatchLen;
-  uint32_t nice_len = blMin(impl->niceMatchLength, max_len);
+  uint32_t nice_len = bl_min(impl->nice_match_length, max_len);
   uint32_t next_hashes[2] = {0, 0};
 
   hc_matchfinder_init(&impl->hc_mf);
@@ -1533,46 +1533,46 @@ static size_t BL_CDECL compressGreedy(EncoderImpl* impl_, const uint8_t* BL_REST
   do {
     // Starting a new DEFLATE block.
     const uint8_t* in_block_begin = in_next;
-    const uint8_t* in_max_block_end = in_next + blMin<size_t>(PtrOps::bytesUntil(in_next, in_end), kEncoderSoftMaxBlockLength);
+    const uint8_t* in_max_block_end = in_next + bl_min<size_t>(PtrOps::bytes_until(in_next, in_end), kEncoderSoftMaxBlockLength);
 
     uint32_t litrunlen = 0;
     Sequence *next_seq = impl->sequences;
 
-    initBlockSplitStats(&impl->splitStats);
-    resetSymbolFrequencies(impl);
+    init_block_split_stats(&impl->split_stats);
+    reset_symbol_frequencies(impl);
 
     do {
       // Decrease the maximum and nice match lengths if we're approaching the end of the input buffer.
-      if (BL_UNLIKELY(max_len > PtrOps::bytesUntil(in_next, in_end))) {
-        max_len = uint32_t(PtrOps::bytesUntil(in_next, in_end));
-        nice_len = blMin(nice_len, max_len);
+      if (BL_UNLIKELY(max_len > PtrOps::bytes_until(in_next, in_end))) {
+        max_len = uint32_t(PtrOps::bytes_until(in_next, in_end));
+        nice_len = bl_min(nice_len, max_len);
       }
 
       uint32_t offset;
-      uint32_t length = hc_matchfinder_longest_match(&impl->hc_mf, &in_cur_base, in_next, kMinMatchLen - 1, max_len, nice_len, impl->maxSearchDepth, next_hashes, &offset);
+      uint32_t length = hc_matchfinder_longest_match(&impl->hc_mf, &in_cur_base, in_next, kMinMatchLen - 1, max_len, nice_len, impl->max_search_depth, next_hashes, &offset);
 
       if (length >= kMinMatchLen) {
         // Match found.
-        chooseMatch(impl, length, offset, &litrunlen, &next_seq);
-        observeMatch(&impl->splitStats, length);
+        choose_match(impl, length, offset, &litrunlen, &next_seq);
+        observe_match(&impl->split_stats, length);
         in_next = hc_matchfinder_skip_positions(&impl->hc_mf, &in_cur_base, in_next + 1, in_end, length - 1, next_hashes);
       }
       else {
         // No match found.
-        chooseLiteral(impl, *in_next, &litrunlen);
-        observeLiteral(&impl->splitStats, *in_next);
+        choose_literal(impl, *in_next, &litrunlen);
+        observe_literal(&impl->split_stats, *in_next);
         in_next++;
       }
 
       // Check if it's time to output another block.
-    } while (in_next < in_max_block_end && !should_end_block(&impl->splitStats, in_block_begin, in_next, in_end));
+    } while (in_next < in_max_block_end && !should_end_block(&impl->split_stats, in_block_begin, in_next, in_end));
 
-    finishSequence(next_seq, litrunlen);
-    flushBlock(impl, os, in_block_begin, uint32_t(in_next - in_block_begin), in_next == in_end, false);
+    finish_sequence(next_seq, litrunlen);
+    flush_block(impl, os, in_block_begin, uint32_t(in_next - in_block_begin), in_next == in_end, false);
   } while (in_next != in_end);
 
-  os.bits.flushFinalByte(os.buffer);
-  return os.buffer.byteOffset();
+  os.bits.flush_final_byte(os.buffer);
+  return os.buffer.byte_offset();
 }
 
 // bl::Compression::Deflate::Encoder - Lazy Compressor
@@ -1580,7 +1580,7 @@ static size_t BL_CDECL compressGreedy(EncoderImpl* impl_, const uint8_t* BL_REST
 
 // This is the "lazy" DEFLATE compressor. Before choosing a match, it checks to see if there's a longer match at the
 // next position. If yes, it outputs a literal and continues to the next position. If no, it outputs the match.
-static size_t BL_CDECL compressLazy(EncoderImpl* impl_, const uint8_t* BL_RESTRICT in, size_t in_nbytes, uint8_t* BL_RESTRICT out, size_t out_nbytes_avail) noexcept {
+static size_t BL_CDECL compress_lazy(EncoderImpl* impl_, const uint8_t* BL_RESTRICT in, size_t in_nbytes, uint8_t* BL_RESTRICT out, size_t out_nbytes_avail) noexcept {
   GreedyEncoderImpl* impl = static_cast<GreedyEncoderImpl*>(impl_);
 
   OutputStream os{};
@@ -1590,7 +1590,7 @@ static size_t BL_CDECL compressLazy(EncoderImpl* impl_, const uint8_t* BL_RESTRI
   const uint8_t *in_end = in_next + in_nbytes;
   const uint8_t *in_cur_base = in_next;
   uint32_t max_len = kMaxMatchLen;
-  uint32_t nice_len = blMin(impl->niceMatchLength, max_len);
+  uint32_t nice_len = bl_min(impl->nice_match_length, max_len);
   uint32_t next_hashes[2] = {0, 0};
 
   hc_matchfinder_init(&impl->hc_mf);
@@ -1598,83 +1598,83 @@ static size_t BL_CDECL compressLazy(EncoderImpl* impl_, const uint8_t* BL_RESTRI
   do {
     // Starting a new DEFLATE block.
     const uint8_t * const in_block_begin = in_next;
-    const uint8_t * const in_max_block_end = in_next + blMin<size_t>(PtrOps::bytesUntil(in_next, in_end), kEncoderSoftMaxBlockLength);
+    const uint8_t * const in_max_block_end = in_next + bl_min<size_t>(PtrOps::bytes_until(in_next, in_end), kEncoderSoftMaxBlockLength);
     uint32_t litrunlen = 0;
     Sequence *next_seq = impl->sequences;
 
-    initBlockSplitStats(&impl->splitStats);
-    resetSymbolFrequencies(impl);
+    init_block_split_stats(&impl->split_stats);
+    reset_symbol_frequencies(impl);
 
     do {
       uint32_t cur_offset;
       uint32_t next_len;
       uint32_t next_offset;
 
-      if (BL_UNLIKELY(PtrOps::bytesUntil(in_next, in_end) < kMaxMatchLen)) {
-        max_len = uint32_t(PtrOps::bytesUntil(in_next, in_end));
-        nice_len = blMin(nice_len, max_len);
+      if (BL_UNLIKELY(PtrOps::bytes_until(in_next, in_end) < kMaxMatchLen)) {
+        max_len = uint32_t(PtrOps::bytes_until(in_next, in_end));
+        nice_len = bl_min(nice_len, max_len);
       }
 
       // Find the longest match at the current position.
-      uint32_t cur_len = hc_matchfinder_longest_match(&impl->hc_mf, &in_cur_base, in_next, kMinMatchLen - 1, max_len, nice_len, impl->maxSearchDepth, next_hashes, &cur_offset);
+      uint32_t cur_len = hc_matchfinder_longest_match(&impl->hc_mf, &in_cur_base, in_next, kMinMatchLen - 1, max_len, nice_len, impl->max_search_depth, next_hashes, &cur_offset);
       in_next += 1;
 
       if (cur_len < kMinMatchLen) {
         // No match found. Choose a literal.
-        chooseLiteral(impl, *(in_next - 1), &litrunlen);
-        observeLiteral(&impl->splitStats, *(in_next - 1));
+        choose_literal(impl, *(in_next - 1), &litrunlen);
+        observe_literal(&impl->split_stats, *(in_next - 1));
         continue;
       }
 
 have_cur_match:
       // We have a match at the current position.
-      observeMatch(&impl->splitStats, cur_len);
+      observe_match(&impl->split_stats, cur_len);
 
       // If the current match is very long, choose it immediately.
       if (cur_len >= nice_len) {
-        chooseMatch(impl, cur_len, cur_offset, &litrunlen, &next_seq);
+        choose_match(impl, cur_len, cur_offset, &litrunlen, &next_seq);
         in_next = hc_matchfinder_skip_positions(&impl->hc_mf, &in_cur_base, in_next, in_end, cur_len - 1, next_hashes);
         continue;
       }
 
       // Try to find a match at the next position.
       //
-      // NOTE: since we already have a match at the *current* position, we use only half the `maxSearchDepth` when
+      // NOTE: since we already have a match at the *current* position, we use only half the `max_search_depth` when
       // checking the *next* position. This is a useful trade-off because it's more worthwhile to use a greater
       // search depth on the initial match.
       //
       // NOTE: it's possible to structure the code such that there's only one call to `longest_match()`, which
       // handles both the "find the initial match" and "try to find a longer match" cases. However, it is faster
       // to have two call sites, with `longest_match()` inlined at each.
-      if (BL_UNLIKELY(PtrOps::bytesUntil(in_next, in_end) < kMaxMatchLen)) {
-        max_len = uint32_t(PtrOps::bytesUntil(in_next, in_end));
-        nice_len = blMin(nice_len, max_len);
+      if (BL_UNLIKELY(PtrOps::bytes_until(in_next, in_end) < kMaxMatchLen)) {
+        max_len = uint32_t(PtrOps::bytes_until(in_next, in_end));
+        nice_len = bl_min(nice_len, max_len);
       }
 
-      next_len = hc_matchfinder_longest_match(&impl->hc_mf, &in_cur_base, in_next, cur_len, max_len, nice_len, impl->maxSearchDepth / 2, next_hashes, &next_offset);
+      next_len = hc_matchfinder_longest_match(&impl->hc_mf, &in_cur_base, in_next, cur_len, max_len, nice_len, impl->max_search_depth / 2, next_hashes, &next_offset);
       in_next += 1;
 
       if (next_len > cur_len) {
         // Found a longer match at the next position. Output a literal. Then the next match becomes the current match.
-        chooseLiteral(impl, *(in_next - 2), &litrunlen);
+        choose_literal(impl, *(in_next - 2), &litrunlen);
         cur_len = next_len;
         cur_offset = next_offset;
         goto have_cur_match;
       }
 
       // No longer match at the next position. Output the current match.
-      chooseMatch(impl, cur_len, cur_offset, &litrunlen, &next_seq);
+      choose_match(impl, cur_len, cur_offset, &litrunlen, &next_seq);
       in_next = hc_matchfinder_skip_positions(&impl->hc_mf, &in_cur_base, in_next, in_end, cur_len - 2, next_hashes);
 
       // Check if it's time to output another block.
-    } while (in_next < in_max_block_end && !should_end_block(&impl->splitStats, in_block_begin, in_next, in_end));
+    } while (in_next < in_max_block_end && !should_end_block(&impl->split_stats, in_block_begin, in_next, in_end));
 
-    finishSequence(next_seq, litrunlen);
-    flushBlock(impl, os, in_block_begin, uint32_t(in_next - in_block_begin), in_next == in_end, false);
+    finish_sequence(next_seq, litrunlen);
+    flush_block(impl, os, in_block_begin, uint32_t(in_next - in_block_begin), in_next == in_end, false);
   } while (in_next != in_end);
 
-  os.bits.flushFinalByte(os.buffer);
-  return os.buffer.byteOffset();
+  os.bits.flush_final_byte(os.buffer);
+  return os.buffer.byte_offset();
 }
 
 // bl::Compression::Deflate::Encoder - Near-Optimal Compressor
@@ -1682,7 +1682,7 @@ have_cur_match:
 
 // Follow the minimum-cost path in the graph of possible match/literal choices for the current block and compute the
 // frequencies of the Huffman symbols that would be needed to output those matches and literals.
-static void nearOptimalTallyItemList(NearOptimalEncoderImpl* impl, uint32_t block_length) noexcept {
+static void near_optimal_tally_item_list(NearOptimalEncoderImpl* impl, uint32_t block_length) noexcept {
   OptimumNode* cur_node = &impl->optimum_nodes[0];
   OptimumNode* end_node = &impl->optimum_nodes[block_length];
 
@@ -1714,16 +1714,16 @@ static constexpr uint32_t kNOLiteralCost = 66;    // 8.25 bits/symbol.
 static constexpr uint32_t kNOLengthSlotCost = 60; // 7.5 bits/symbol.
 static constexpr uint32_t kNOOffsetSlotCost = 39; // 4.875 bits/symbol.
 
-static BL_INLINE uint32_t defaultLiteralCost(uint32_t literal) noexcept {
-  blUnused(literal);
+static BL_INLINE uint32_t default_literal_cost(uint32_t literal) noexcept {
+  bl_unused(literal);
   return kNOLiteralCost;
 }
 
-static BL_INLINE uint32_t defaultLengthSlotCost(uint32_t length_slot) noexcept {
+static BL_INLINE uint32_t default_length_slot_cost(uint32_t length_slot) noexcept {
   return kNOLengthSlotCost + ((uint32_t)kEncoderExtraLengthBitCount[length_slot] << kNOCostShift);
 }
 
-static BL_INLINE uint32_t defaultOffsetSlotCost(uint32_t offset_slot) noexcept {
+static BL_INLINE uint32_t default_offset_slot_cost(uint32_t offset_slot) noexcept {
   return kNOOffsetSlotCost + ((uint32_t)kEncoderExtraOffsetBitCount[offset_slot] << kNOCostShift);
 }
 
@@ -1733,23 +1733,23 @@ static BL_INLINE uint32_t defaultOffsetSlotCost(uint32_t offset_slot) noexcept {
 // of (-log2(1.0/num_syms) * (1 << kNOCostShift)) where 'num_syms' is the number of symbols in the corresponding
 // alphabet. However, we intentionally bias the parse towards matches rather than literals by using a slightly lower
 // default cost for length symbols than for literals. This often improves the compression ratio slightly.
-static void nearOptimalSetDefaultCosts(NearOptimalEncoderImpl* impl) noexcept {
+static void near_optimal_set_default_costs(NearOptimalEncoderImpl* impl) noexcept {
   uint32_t i;
 
   // Literals.
   for (i = 0; i < kNumLiterals; i++)
-    impl->costs.literal[i] = defaultLiteralCost(i);
+    impl->costs.literal[i] = default_literal_cost(i);
 
   // Lengths.
   for (i = kMinMatchLen; i <= kMaxMatchLen; i++)
-    impl->costs.length[i] = defaultLengthSlotCost(kEncoderLengthSlotLUT[i]);
+    impl->costs.length[i] = default_length_slot_cost(kEncoderLengthSlotLUT[i]);
 
   // Offset slots.
   for (i = 0; i < BL_ARRAY_SIZE(kEncoderOffsetSlotBase); i++)
-    impl->costs.offset_slot[i] = defaultOffsetSlotCost(i);
+    impl->costs.offset_slot[i] = default_offset_slot_cost(i);
 }
 
-static BL_INLINE void nearOptimalAdjustCost(uint32_t *cost_p, uint32_t default_cost) noexcept {
+static BL_INLINE void near_optimal_adjust_cost(uint32_t *cost_p, uint32_t default_cost) noexcept {
   *cost_p += uint32_t((int32_t(default_cost) - int32_t(*cost_p)) >> 1);
 }
 
@@ -1759,20 +1759,20 @@ static BL_INLINE void nearOptimalAdjustCost(uint32_t *cost_p, uint32_t default_c
 // with the default costs. At the same time, we don't want to bias the parse by assuming that the next block will
 // be similar to the current block. As a compromise, make the costs closer to the defaults, but don't simply set
 // them to the defaults.
-static void nearOptimalAdjustCosts(NearOptimalEncoderImpl* impl) noexcept {
+static void near_optimal_adjust_costs(NearOptimalEncoderImpl* impl) noexcept {
   uint32_t i;
 
   // Literals.
   for (i = 0; i < kNumLiterals; i++)
-    nearOptimalAdjustCost(&impl->costs.literal[i], defaultLiteralCost(i));
+    near_optimal_adjust_cost(&impl->costs.literal[i], default_literal_cost(i));
 
   // Lengths.
   for (i = kMinMatchLen; i <= kMaxMatchLen; i++)
-    nearOptimalAdjustCost(&impl->costs.length[i], defaultLengthSlotCost( kEncoderLengthSlotLUT[i]));
+    near_optimal_adjust_cost(&impl->costs.length[i], default_length_slot_cost( kEncoderLengthSlotLUT[i]));
 
   // Offset slots.
   for (i = 0; i < BL_ARRAY_SIZE(kEncoderOffsetSlotBase); i++)
-    nearOptimalAdjustCost(&impl->costs.offset_slot[i], defaultOffsetSlotCost(i));
+    near_optimal_adjust_cost(&impl->costs.offset_slot[i], default_offset_slot_cost(i));
 }
 
 // Find the minimum-cost path through the graph of possible match/literal choices for this block.
@@ -1784,7 +1784,7 @@ static void nearOptimalAdjustCosts(NearOptimalEncoderImpl* impl) noexcept {
 // The algorithm works backwards, starting at the end node and proceeding backwards one node at a
 // time. At each node, the minimum cost to reach the end node is computed and the match/literal
 // choice that begins that path is saved.
-static void nearOptimalFindMinCostPath(NearOptimalEncoderImpl* impl, const uint32_t block_length, const lz_match* cache_ptr) noexcept {
+static void near_optimal_find_min_cost_path(NearOptimalEncoderImpl* impl, const uint32_t block_length, const lz_match* cache_ptr) noexcept {
   OptimumNode *end_node = &impl->optimum_nodes[block_length];
   OptimumNode *cur_node = end_node;
 
@@ -1829,7 +1829,7 @@ static void nearOptimalFindMinCostPath(NearOptimalEncoderImpl* impl, const uint3
 }
 
 // Set the current cost model from the codeword lengths specified in `lens`.
-static void nearOptimalSetCostsFromCodes(NearOptimalEncoderImpl* impl, const Lens* lens) noexcept {
+static void near_optimal_set_costs_from_codes(NearOptimalEncoderImpl* impl, const Lens* lens) noexcept {
   uint32_t i;
 
   // Literals.
@@ -1861,33 +1861,33 @@ static void nearOptimalSetCostsFromCodes(NearOptimalEncoderImpl* impl, const Len
 // the frequencies of chosen symbols. Consequently, multiple passes must be used to try to approximate an optimal
 // solution. The first pass uses default costs, mixed with the costs from the previous block if any. Later passes
 // use the Huffman codeword lengths from the previous pass as the costs.
-static void nearOptimalOptimizeBlock(NearOptimalEncoderImpl* impl, uint32_t block_length, const lz_match* cache_ptr, bool is_first_block) noexcept {
+static void near_optimal_optimize_block(NearOptimalEncoderImpl* impl, uint32_t block_length, const lz_match* cache_ptr, bool is_first_block) noexcept {
   // Force the block to really end at the desired length, even if some matches extend beyond it.
   uint32_t num_passes_remaining = impl->num_optim_passes;
-  for (uint32_t i = block_length; i <= blMin(block_length - 1 + kMaxMatchLen, BL_ARRAY_SIZE(impl->optimum_nodes) - 1); i++) {
+  for (uint32_t i = block_length; i <= bl_min(block_length - 1 + kMaxMatchLen, BL_ARRAY_SIZE(impl->optimum_nodes) - 1); i++) {
     impl->optimum_nodes[i].cost_to_end = 0x80000000u;
   }
 
   // Set the initial costs.
   if (is_first_block)
-    nearOptimalSetDefaultCosts(impl);
+    near_optimal_set_default_costs(impl);
   else
-    nearOptimalAdjustCosts(impl);
+    near_optimal_adjust_costs(impl);
 
   for (;;) {
     // Find the minimum cost path for this pass.
-    nearOptimalFindMinCostPath(impl, block_length, cache_ptr);
+    near_optimal_find_min_cost_path(impl, block_length, cache_ptr);
 
     // Compute frequencies of the chosen symbols.
-    resetSymbolFrequencies(impl);
-    nearOptimalTallyItemList(impl, block_length);
+    reset_symbol_frequencies(impl);
+    near_optimal_tally_item_list(impl, block_length);
 
     if (--num_passes_remaining == 0)
       break;
 
     // At least one optimization pass remains; update the costs.
     deflate_make_huffman_codes(&impl->freqs, &impl->codes);
-    nearOptimalSetCostsFromCodes(impl, &impl->codes.lens);
+    near_optimal_set_costs_from_codes(impl, &impl->codes.lens);
   }
 }
 
@@ -1899,7 +1899,7 @@ static void nearOptimalOptimizeBlock(NearOptimalEncoderImpl* impl, uint32_t bloc
 //   - Heuristic limitations on which matches are actually considered
 //   - Symbol costs are unknown until the symbols have already been chosen
 //     (so iterative optimization must be used)
-static size_t BL_CDECL compressNearOptimal(EncoderImpl* impl_, const uint8_t* BL_RESTRICT in, size_t in_nbytes, uint8_t* BL_RESTRICT out, size_t out_nbytes_avail) noexcept {
+static size_t BL_CDECL compress_near_optimal(EncoderImpl* impl_, const uint8_t* BL_RESTRICT in, size_t in_nbytes, uint8_t* BL_RESTRICT out, size_t out_nbytes_avail) noexcept {
   NearOptimalEncoderImpl* impl = static_cast<NearOptimalEncoderImpl*>(impl_);
 
   OutputStream os{};
@@ -1908,10 +1908,10 @@ static size_t BL_CDECL compressNearOptimal(EncoderImpl* impl_, const uint8_t* BL
   const uint8_t *in_next = in;
   const uint8_t *in_end = in_next + in_nbytes;
   const uint8_t *in_cur_base = in_next;
-  const uint8_t *in_next_slide = in_next + blMin<size_t>(PtrOps::bytesUntil(in_next, in_end), MATCHFINDER_WINDOW_SIZE);
+  const uint8_t *in_next_slide = in_next + bl_min<size_t>(PtrOps::bytes_until(in_next, in_end), MATCHFINDER_WINDOW_SIZE);
 
   uint32_t max_len = kMaxMatchLen;
-  uint32_t nice_len = blMin(impl->niceMatchLength, max_len);
+  uint32_t nice_len = bl_min(impl->nice_match_length, max_len);
   uint32_t next_hashes[2] = {0, 0};
 
   bt_matchfinder_init(&impl->bt_mf);
@@ -1920,10 +1920,10 @@ static size_t BL_CDECL compressNearOptimal(EncoderImpl* impl_, const uint8_t* BL
     // Starting a new DEFLATE block.
     lz_match* cache_ptr = impl->match_cache;
     const uint8_t* in_block_begin = in_next;
-    const uint8_t* in_max_block_end = in_next + blMin<size_t>(PtrOps::bytesUntil(in_next, in_end), kEncoderSoftMaxBlockLength);
+    const uint8_t* in_max_block_end = in_next + bl_min<size_t>(PtrOps::bytes_until(in_next, in_end), kEncoderSoftMaxBlockLength);
     const uint8_t* next_observation = in_next;
 
-    initBlockSplitStats(&impl->splitStats);
+    init_block_split_stats(&impl->split_stats);
 
     // Find matches until we decide to end the block. We end the block if any of the following is true:
     //   1. Maximum block length has been reached.
@@ -1934,13 +1934,13 @@ static size_t BL_CDECL compressNearOptimal(EncoderImpl* impl_, const uint8_t* BL
       if (in_next == in_next_slide) {
         bt_matchfinder_slide_window(&impl->bt_mf);
         in_cur_base = in_next;
-        in_next_slide = in_next + blMin<size_t>(PtrOps::bytesUntil(in_next, in_end), MATCHFINDER_WINDOW_SIZE);
+        in_next_slide = in_next + bl_min<size_t>(PtrOps::bytes_until(in_next, in_end), MATCHFINDER_WINDOW_SIZE);
       }
 
       // Decrease the maximum and nice match lengths if we're approaching the end of the input buffer.
-      if (BL_UNLIKELY(max_len > PtrOps::bytesUntil(in_next, in_end))) {
+      if (BL_UNLIKELY(max_len > PtrOps::bytes_until(in_next, in_end))) {
         max_len = uint32_t(in_end - in_next);
-        nice_len = blMin(nice_len, max_len);
+        nice_len = bl_min(nice_len, max_len);
       }
 
       // Find matches with the current position using the  binary tree matchfinder and save them in
@@ -1957,15 +1957,15 @@ static size_t BL_CDECL compressNearOptimal(EncoderImpl* impl_, const uint8_t* BL
       uint32_t best_len = 0;
 
       if (BL_LIKELY(max_len >= BT_MATCHFINDER_REQUIRED_NBYTES))
-        cache_ptr = bt_matchfinder_get_matches(&impl->bt_mf, in_cur_base, in_next - in_cur_base, max_len, nice_len, impl->maxSearchDepth, next_hashes, &best_len, matches);
+        cache_ptr = bt_matchfinder_get_matches(&impl->bt_mf, in_cur_base, in_next - in_cur_base, max_len, nice_len, impl->max_search_depth, next_hashes, &best_len, matches);
 
       if (in_next >= next_observation) {
         if (best_len >= 4) {
-          observeMatch(&impl->splitStats, best_len);
+          observe_match(&impl->split_stats, best_len);
           next_observation = in_next + best_len;
         }
         else {
-          observeLiteral(&impl->splitStats, *in_next);
+          observe_literal(&impl->split_stats, *in_next);
           next_observation = in_next + 1;
         }
       }
@@ -1986,14 +1986,14 @@ static size_t BL_CDECL compressNearOptimal(EncoderImpl* impl_, const uint8_t* BL
           if (in_next == in_next_slide) {
             bt_matchfinder_slide_window(&impl->bt_mf);
             in_cur_base = in_next;
-            in_next_slide = in_next + blMin<size_t>(PtrOps::bytesUntil(in_next, in_end), MATCHFINDER_WINDOW_SIZE);
+            in_next_slide = in_next + bl_min<size_t>(PtrOps::bytes_until(in_next, in_end), MATCHFINDER_WINDOW_SIZE);
           }
-          if (BL_UNLIKELY(max_len > PtrOps::bytesUntil(in_next, in_end))) {
-            max_len = uint32_t(PtrOps::bytesUntil(in_next, in_end));
-            nice_len = blMin(nice_len, max_len);
+          if (BL_UNLIKELY(max_len > PtrOps::bytes_until(in_next, in_end))) {
+            max_len = uint32_t(PtrOps::bytes_until(in_next, in_end));
+            nice_len = bl_min(nice_len, max_len);
           }
           if (max_len >= BT_MATCHFINDER_REQUIRED_NBYTES) {
-            bt_matchfinder_skip_position(&impl->bt_mf, in_cur_base, in_next - in_cur_base, nice_len, impl->maxSearchDepth, next_hashes);
+            bt_matchfinder_skip_position(&impl->bt_mf, in_cur_base, in_next - in_cur_base, nice_len, impl->max_search_depth, next_hashes);
           }
           cache_ptr->length = 0;
           cache_ptr->offset = *in_next;
@@ -2001,61 +2001,61 @@ static size_t BL_CDECL compressNearOptimal(EncoderImpl* impl_, const uint8_t* BL
           cache_ptr++;
         } while (--best_len);
       }
-    } while (in_next < in_max_block_end && cache_ptr < &impl->match_cache[kEncoderMatchCacheLength] && !should_end_block(&impl->splitStats, in_block_begin, in_next, in_end));
+    } while (in_next < in_max_block_end && cache_ptr < &impl->match_cache[kEncoderMatchCacheLength] && !should_end_block(&impl->split_stats, in_block_begin, in_next, in_end));
 
     // All the matches for this block have been cached. Now choose the sequence of items to output and flush the block.
-    nearOptimalOptimizeBlock(impl, uint32_t(in_next - in_block_begin), cache_ptr, in_block_begin == in);
-    flushBlock(impl, os, in_block_begin, uint32_t(in_next - in_block_begin), in_next == in_end, true);
+    near_optimal_optimize_block(impl, uint32_t(in_next - in_block_begin), cache_ptr, in_block_begin == in);
+    flush_block(impl, os, in_block_begin, uint32_t(in_next - in_block_begin), in_next == in_end, true);
   } while (in_next != in_end);
 
-  os.bits.flushFinalByte(os.buffer);
-  return os.buffer.byteOffset();
+  os.bits.flush_final_byte(os.buffer);
+  return os.buffer.byte_offset();
 }
 
 // bl::Compression::Deflate::Encoder - Public API
 // ==============================================
 
-static size_t getMinimumInputSizeToCompress(uint32_t compressionLevel) noexcept {
-  BL_ASSERT(compressionLevel <= BL_ARRAY_SIZE(kMinimumInputSizeToCompress));
-  return size_t(kMinimumInputSizeToCompress[compressionLevel]) - 1u;
+static size_t get_minimum_input_size_to_compress(uint32_t compression_level) noexcept {
+  BL_ASSERT(compression_level <= BL_ARRAY_SIZE(kMinimumInputSizeToCompress));
+  return size_t(kMinimumInputSizeToCompress[compression_level]) - 1u;
 }
 
-static BL_INLINE uint32_t getZlibCompressionLevelHint(uint32_t compressionLevel) noexcept {
+static BL_INLINE uint32_t get_zlib_compression_level_hint(uint32_t compression_level) noexcept {
   constexpr uint32_t kZlibCompressionFastest = 0;
   constexpr uint32_t kZlibCompressionFast    = 1;
   constexpr uint32_t kZlibCompressionDefault = 2;
   constexpr uint32_t kZlibCompressionSlowest = 3;
 
-  return compressionLevel < 2u ? kZlibCompressionFastest :
-         compressionLevel < 6u ? kZlibCompressionFast    :
-         compressionLevel < 8u ? kZlibCompressionDefault : kZlibCompressionSlowest;
+  return compression_level < 2u ? kZlibCompressionFastest :
+         compression_level < 6u ? kZlibCompressionFast    :
+         compression_level < 8u ? kZlibCompressionDefault : kZlibCompressionSlowest;
 }
 
-BLResult Encoder::init(FormatType format, uint32_t compressionLevel) noexcept {
-  compressionLevel = blMin(compressionLevel, kMaxCompressionLevel);
+BLResult Encoder::init(FormatType format, uint32_t compression_level) noexcept {
+  compression_level = bl_min(compression_level, kMaxCompressionLevel);
 
   constexpr size_t kImplAlignment = 64;
-  size_t implSize = compressionLevel == 0u ? sizeof(EncoderImpl) :
-                    compressionLevel  < 8u ? sizeof(GreedyEncoderImpl) : sizeof(NearOptimalEncoderImpl);
+  size_t impl_size = compression_level == 0u ? sizeof(EncoderImpl) :
+                    compression_level  < 8u ? sizeof(GreedyEncoderImpl) : sizeof(NearOptimalEncoderImpl);
 
-  void* allocatedPtr = malloc(implSize + kImplAlignment);
-  if (BL_UNLIKELY(!allocatedPtr)) {
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+  void* allocated_ptr = malloc(impl_size + kImplAlignment);
+  if (BL_UNLIKELY(!allocated_ptr)) {
+    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
   }
 
-  EncoderImpl* newImpl = static_cast<EncoderImpl*>(IntOps::alignUp(allocatedPtr, kImplAlignment));
-  newImpl->allocated_ptr = allocatedPtr;
-  newImpl->format = format;
-  newImpl->compressionLevel = compressionLevel;
-  newImpl->minInputSize = getMinimumInputSizeToCompress(compressionLevel);
-  newImpl->prepareFunc = nullptr;
-  newImpl->compressFunc = nullptr;
+  EncoderImpl* new_impl = static_cast<EncoderImpl*>(IntOps::align_up(allocated_ptr, kImplAlignment));
+  new_impl->allocated_ptr = allocated_ptr;
+  new_impl->format = format;
+  new_impl->compression_level = compression_level;
+  new_impl->min_input_size = get_minimum_input_size_to_compress(compression_level);
+  new_impl->prepare_func = nullptr;
+  new_impl->compress_func = nullptr;
 
-  EncoderCompressionOptions encoderOptions = kEncoderCompressionOptions[compressionLevel];
-  newImpl->maxSearchDepth = encoderOptions.maxSearchDepth;
-  newImpl->niceMatchLength = encoderOptions.niceMatchLength;
+  EncoderCompressionOptions encoder_options = kEncoderCompressionOptions[compression_level];
+  new_impl->max_search_depth = encoder_options.max_search_depth;
+  new_impl->nice_match_length = encoder_options.nice_match_length;
 
-  switch (compressionLevel) {
+  switch (compression_level) {
     case 0: {
       break;
     }
@@ -2064,16 +2064,16 @@ BLResult Encoder::init(FormatType format, uint32_t compressionLevel) noexcept {
     case 2:
     case 3:
     case 4: {
-      newImpl->prepareFunc = prepareGreedyOrLazy;
-      newImpl->compressFunc = compressGreedy;
+      new_impl->prepare_func = prepare_greedy_or_lazy;
+      new_impl->compress_func = compress_greedy;
       break;
     }
 
     case 5:
     case 6:
     case 7: {
-      newImpl->prepareFunc = prepareGreedyOrLazy;
-      newImpl->compressFunc = compressLazy;
+      new_impl->prepare_func = prepare_greedy_or_lazy;
+      new_impl->compress_func = compress_lazy;
       break;
     }
 
@@ -2082,16 +2082,16 @@ BLResult Encoder::init(FormatType format, uint32_t compressionLevel) noexcept {
     case 10:
     case 11:
     case 12: {
-      NearOptimalEncoderImpl* optimalImpl = static_cast<NearOptimalEncoderImpl*>(newImpl);
-      optimalImpl->prepareFunc = prepareNearOptimal;
-      optimalImpl->compressFunc = compressNearOptimal;
-      optimalImpl->num_optim_passes = encoderOptions.optimalPasses;
+      NearOptimalEncoderImpl* optimal_impl = static_cast<NearOptimalEncoderImpl*>(new_impl);
+      optimal_impl->prepare_func = prepare_near_optimal;
+      optimal_impl->compress_func = compress_near_optimal;
+      optimal_impl->num_optim_passes = encoder_options.optimal_passes;
       break;
     }
   }
 
   reset();
-  impl = newImpl;
+  impl = new_impl;
 
   return BL_SUCCESS;
 }
@@ -2106,52 +2106,52 @@ void Encoder::reset() noexcept {
 // The worst case is all uncompressed blocks where one block has `length <= kEncoderMinBlockLength` and
 // the others have length `kEncoderMinBlockLength`. Each uncompressed block has 5 bytes of overhead: 1
 // for BFINAL, BTYPE, and alignment to a byte boundary; 2 for LEN; and 2 for NLEN.
-size_t Encoder::minimumOutputBufferSize(size_t inputSize) const noexcept {
+size_t Encoder::minimum_output_buffer_size(size_t input_size) const noexcept {
   constexpr size_t kUncompressedBlockOverhead = 1u + 2u + 2u;
 
-  size_t maxBlockCount = blMax<size_t>(DIV_ROUND_UP(inputSize, kEncoderMinBlockLength), 1);
-  size_t extraBytes = size_t(kMinOutputBufferPadding) + kDeflateMinOutputSizeByFormat[size_t(impl->format)] + 1u;
+  size_t max_block_count = bl_max<size_t>(DIV_ROUND_UP(input_size, kEncoderMinBlockLength), 1);
+  size_t extra_bytes = size_t(kMinOutputBufferPadding) + kDeflateMinOutputSizeByFormat[size_t(impl->format)] + 1u;
 
-  return extraBytes + (maxBlockCount * kUncompressedBlockOverhead) + inputSize;
+  return extra_bytes + (max_block_count * kUncompressedBlockOverhead) + input_size;
 }
 
-static BL_NOINLINE size_t compress_deflate(EncoderImpl* impl, uint8_t* output, size_t outputSize, const void* input, size_t inputSize) noexcept {
-  if (inputSize <= impl->minInputSize) {
+static BL_NOINLINE size_t compress_deflate(EncoderImpl* impl, uint8_t* output, size_t output_size, const void* input, size_t input_size) noexcept {
+  if (input_size <= impl->min_input_size) {
     // For extremely small inputs just use uncompressed blocks.
     OutputStream os{};
-    os.buffer.init(output, outputSize);
-    write_uncompressed_blocks(os, static_cast<const uint8_t*>(input), inputSize, true);
-    return os.buffer.byteOffset();
+    os.buffer.init(output, output_size);
+    write_uncompressed_blocks(os, static_cast<const uint8_t*>(input), input_size, true);
+    return os.buffer.byte_offset();
   }
   else {
-    BL_ASSERT(impl->prepareFunc != nullptr);
-    BL_ASSERT(impl->compressFunc != nullptr);
+    BL_ASSERT(impl->prepare_func != nullptr);
+    BL_ASSERT(impl->compress_func != nullptr);
 
-    impl->prepareFunc(impl);
-    return impl->compressFunc(impl, static_cast<const uint8_t*>(input), inputSize, static_cast<uint8_t*>(output), outputSize);
+    impl->prepare_func(impl);
+    return impl->compress_func(impl, static_cast<const uint8_t*>(input), input_size, static_cast<uint8_t*>(output), output_size);
   }
 }
 
-size_t Encoder::compressTo(uint8_t* output, size_t outputSize, const uint8_t* input, size_t inputSize) noexcept {
-  if (BL_UNLIKELY(outputSize < kMinOutputBufferPadding + kDeflateMinOutputSizeByFormat[size_t(impl->format)]))
+size_t Encoder::compress_to(uint8_t* output, size_t output_size, const uint8_t* input, size_t input_size) noexcept {
+  if (BL_UNLIKELY(output_size < kMinOutputBufferPadding + kDeflateMinOutputSizeByFormat[size_t(impl->format)]))
     return 0;
 
   switch (impl->format) {
     case FormatType::kRaw: {
-      return compress_deflate(impl, output, outputSize, input, inputSize);
+      return compress_deflate(impl, output, output_size, input, input_size);
     }
 
     case FormatType::kZlib: {
       static constexpr uint32_t kZlibCompressionMethodDeflate = 8;
       static constexpr uint32_t kZlibCompressionWindow32KiB = 7;
 
-      size_t compressedSize = compress_deflate(impl, static_cast<uint8_t*>(output) + 2, outputSize - 6, input, inputSize);
-      if (compressedSize == 0) {
+      size_t compressed_size = compress_deflate(impl, static_cast<uint8_t*>(output) + 2, output_size - 6, input, input_size);
+      if (compressed_size == 0) {
         return 0;
       }
 
       // Zlib header - 2 bytes (CMF and FLG).
-      uint32_t hdr = (getZlibCompressionLevelHint(impl->compressionLevel) << 6) |
+      uint32_t hdr = (get_zlib_compression_level_hint(impl->compression_level) << 6) |
                      (kZlibCompressionMethodDeflate << 8) |
                      (kZlibCompressionWindow32KiB << 12);
 
@@ -2159,10 +2159,10 @@ size_t Encoder::compressTo(uint8_t* output, size_t outputSize, const uint8_t* in
       MemOps::writeU16uBE(output, hdr);
 
       // Zlib checksum - ADLER32 (4 bytes).
-      uint32_t checksum = Checksum::adler32(static_cast<const uint8_t*>(input), inputSize);
-      MemOps::writeU32uBE(static_cast<uint8_t*>(output) + 2 + compressedSize, checksum);
+      uint32_t checksum = Checksum::adler32(static_cast<const uint8_t*>(input), input_size);
+      MemOps::writeU32uBE(static_cast<uint8_t*>(output) + 2 + compressed_size, checksum);
 
-      return compressedSize + 6;
+      return compressed_size + 6;
     }
 
     default:
@@ -2170,20 +2170,20 @@ size_t Encoder::compressTo(uint8_t* output, size_t outputSize, const uint8_t* in
   }
 }
 
-BLResult Encoder::compress(BLArray<uint8_t>& dst, BLModifyOp modifyOp, BLDataView input) noexcept {
-  size_t inputSize = input.size;
+BLResult Encoder::compress(BLArray<uint8_t>& dst, BLModifyOp modify_op, BLDataView input) noexcept {
+  size_t input_size = input.size;
 
-  if (inputSize == 0) {
-    return blTraceError(BL_ERROR_DATA_TRUNCATED);
+  if (input_size == 0) {
+    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
   }
 
-  size_t minOutputSize = minimumOutputBufferSize(inputSize);
-  uint8_t* outputBuffer;
+  size_t min_output_size = minimum_output_buffer_size(input_size);
+  uint8_t* output_buffer;
 
-  BL_PROPAGATE(dst.modifyOp(modifyOp, minOutputSize, &outputBuffer));
+  BL_PROPAGATE(dst.modify_op(modify_op, min_output_size, &output_buffer));
 
-  size_t outputSize = compressTo(outputBuffer, minOutputSize, input.data, input.size);
-  return dst.truncate(outputSize);
+  size_t output_size = compress_to(output_buffer, min_output_size, input.data, input.size);
+  return dst.truncate(output_size);
 }
 
 } // {bl::Compression::Deflate}

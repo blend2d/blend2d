@@ -17,11 +17,11 @@ void BLDebugTrace::log(uint32_t severity, uint32_t indentation, const char* fmt,
       case 1: prefix = "[WARN] "; break;
       case 2: prefix = "[FAIL] "; break;
     }
-    blRuntimeMessageFmt("%*s%s", indentation * 2, "", prefix);
+    bl_runtime_message_fmt("%*s%s", indentation * 2, "", prefix);
   }
 
   va_list ap;
   va_start(ap, fmt);
-  blRuntimeMessageVFmt(fmt, ap);
+  bl_runtime_message_vfmt(fmt, ap);
   va_end(ap);
 }

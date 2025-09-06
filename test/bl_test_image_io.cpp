@@ -14,7 +14,7 @@
 
 namespace CodecTests {
 
-static bool isAbsolutePath(const char* s) {
+static bool is_absolute_path(const char* s) {
   size_t len = strlen(s);
   return len > 0 && s[0] == '/';
 }
@@ -24,7 +24,7 @@ struct CodecFeatureNameEntry {
   char name[12];
 };
 
-static constexpr CodecFeatureNameEntry codecFeaturesTable[] = {
+static constexpr CodecFeatureNameEntry codec_features_table[] = {
   { BL_IMAGE_CODEC_FEATURE_READ       , "read"        },
   { BL_IMAGE_CODEC_FEATURE_WRITE      , "write"       },
   { BL_IMAGE_CODEC_FEATURE_LOSSLESS   , "lossless"    },
@@ -42,9 +42,9 @@ enum class TestKind : uint8_t {
 };
 
 struct TestOptions {
-  TestKind testKind = TestKind::kNone;
+  TestKind test_kind = TestKind::kNone;
   bool quiet {};
-  const char* baseDir {};
+  const char* base_dir {};
   const char* file1 {};
   const char* file2 {};
 };
@@ -55,11 +55,11 @@ struct LoadedImage {
   BLImage image;
 };
 
-static const char* boolToString(bool value) {
+static const char* bool_to_string(bool value) {
   return value ? "true" : "false";
 }
 
-static const char* formatToString(BLFormat format) {
+static const char* format_to_string(BLFormat format) {
   switch (format) {
     case BL_FORMAT_PRGB32:
       return "prgb32";
@@ -74,37 +74,37 @@ static const char* formatToString(BLFormat format) {
 
 class TestApp {
 public:
-  TestOptions defaultOptions {};
+  TestOptions default_options {};
   TestOptions options {};
 
   TestApp();
   ~TestApp();
 
-  static TestOptions makeDefaultOptions();
+  static TestOptions make_default_options();
 
   int help();
 
-  void printAppInfo(const char* title, bool quiet) const;
-  void printOptions(const TestOptions& options) const;
-  void printBuiltInCodecs() const;
+  void print_app_info(const char* title, bool quiet) const;
+  void print_options(const TestOptions& options) const;
+  void print_built_in_codecs() const;
 
-  bool parseOptions(CmdLine cmdLine);
+  bool parse_options(CmdLine cmd_line);
 
-  LoadedImage loadImage(const char* baseDir, const char* fileName);
+  LoadedImage load_image(const char* base_dir, const char* file_name);
 
-  bool testSingleFile(const char* baseDir, const char* fileName);
-  bool compareFiles(const char* baseDir, const char* fileName1, const char* fileName2);
+  bool test_single_file(const char* base_dir, const char* file_name);
+  bool compare_files(const char* base_dir, const char* fileName1, const char* fileName2);
 
-  int run(CmdLine cmdLine);
+  int run(CmdLine cmd_line);
 };
 
 TestApp::TestApp()
-  : defaultOptions(makeDefaultOptions()) {
+  : default_options(make_default_options()) {
 }
 
 TestApp::~TestApp() {}
 
-TestOptions TestApp::makeDefaultOptions() {
+TestOptions TestApp::make_default_options() {
   TestOptions options {};
   return options;
 }
@@ -118,41 +118,41 @@ int TestApp::help() {
   printf("  Verify that image codecs can decode and encode images properly.\n");
   printf("\n");
 
-  printOptions(options);
-  printBuiltInCodecs();
+  print_options(options);
+  print_built_in_codecs();
 
   return 0;
 }
 
-bool TestApp::parseOptions(CmdLine cmdLine) {
-  options.baseDir = cmdLine.valueOf("--base-dir", nullptr);
-  options.quiet = cmdLine.hasArg("--quiet") || defaultOptions.quiet;
+bool TestApp::parse_options(CmdLine cmd_line) {
+  options.base_dir = cmd_line.value_of("--base-dir", nullptr);
+  options.quiet = cmd_line.has_arg("--quiet") || default_options.quiet;
 
   TestKind kind = TestKind::kNone;
 
-  if (cmdLine.valueOf("--file", nullptr)) {
+  if (cmd_line.value_of("--file", nullptr)) {
     kind = TestKind::kSingleImage;
   }
-  else if (cmdLine.hasArg("--compare")) {
+  else if (cmd_line.has_arg("--compare")) {
     kind = TestKind::kCompareImages;
   }
 
   switch (kind) {
     case TestKind::kSingleImage: {
-      options.file1 = cmdLine.valueOf("--file", nullptr);
+      options.file1 = cmd_line.value_of("--file", nullptr);
       break;
     }
 
     case TestKind::kCompareImages: {
-      int index = cmdLine.findArg("--compare");
+      int index = cmd_line.find_arg("--compare");
 
-      if (index + 3 > cmdLine.count()) {
+      if (index + 3 > cmd_line.count()) {
         printf("Failed to process command line arguments: Invalid --compare <path1> <path2> (missing arguments)\n");
         return false;
       }
 
-      options.file1 = cmdLine.args()[index + 1];
-      options.file2 = cmdLine.args()[index + 2];
+      options.file1 = cmd_line.args()[index + 1];
+      options.file2 = cmd_line.args()[index + 2];
       break;
     }
 
@@ -160,40 +160,40 @@ bool TestApp::parseOptions(CmdLine cmdLine) {
       break;
   }
 
-  options.testKind = kind;
+  options.test_kind = kind;
   return true;
 }
 
-void TestApp::printAppInfo(const char* title, bool quiet) const {
+void TestApp::print_app_info(const char* title, bool quiet) const {
   printf("%s [use --help for command line options]\n", title);
 
   if (!quiet) {
-    BLRuntimeBuildInfo buildInfo;
-    BLRuntime::queryBuildInfo(&buildInfo);
+    BLRuntimeBuildInfo build_info;
+    BLRuntime::query_build_info(&build_info);
     printf("  Version    : %u.%u.%u\n"
            "  Build Type : %s\n"
            "  Compiled By: %s\n\n",
-           buildInfo.majorVersion,
-           buildInfo.minorVersion,
-           buildInfo.patchVersion,
-           buildInfo.buildType == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
-           buildInfo.compilerInfo);
+           build_info.major_version,
+           build_info.minor_version,
+           build_info.patch_version,
+           build_info.build_type == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
+           build_info.compiler_info);
   }
 
   fflush(stdout);
 }
 
-void TestApp::printOptions(const TestOptions& options) const {
+void TestApp::print_options(const TestOptions& options) const {
   printf("Options:\n");
   printf("  --base-dir=<string>         - Base working directory                [default=<none>]\n");
   printf("  --file=<string>             - Path to a single file to decode       [default=<none>]\n");
   printf("  --compare <string> <string> - Path to two files to decode & compare [default=<none>]\n");
-  printf("  --quiet                     - Don't write log unless necessary      [default=%s]\n", boolToString(defaultOptions.quiet));
+  printf("  --quiet                     - Don't write log unless necessary      [default=%s]\n", bool_to_string(default_options.quiet));
   printf("\n");
 }
 
-void TestApp::printBuiltInCodecs() const {
-  BLArray<BLImageCodec> codecs = BLImageCodec::builtInCodecs();
+void TestApp::print_built_in_codecs() const {
+  BLArray<BLImageCodec> codecs = BLImageCodec::built_in_codecs();
 
   printf("List of image codecs:\n");
 
@@ -201,61 +201,61 @@ void TestApp::printBuiltInCodecs() const {
     BLImageCodecFeatures features = codec.features();
     BLString f;
 
-    for (uint32_t i = 0; i < ARRAY_SIZE(codecFeaturesTable); i++) {
-      if ((features & codecFeaturesTable[i].feature) != 0) {
-        if (!f.empty())
+    for (uint32_t i = 0; i < ARRAY_SIZE(codec_features_table); i++) {
+      if ((features & codec_features_table[i].feature) != 0) {
+        if (!f.is_empty())
           f.append("|");
-        f.append(codecFeaturesTable[i].name);
+        f.append(codec_features_table[i].name);
       }
     }
 
     printf("  %-4s (%-7s) - mime=%-12s files=%-22s features=%s\n",
       codec.name().data(),
       codec.vendor().data(),
-      codec.mimeType().data(),
+      codec.mime_type().data(),
       codec.extensions().data(),
       f.data());
   }
 }
 
-LoadedImage TestApp::loadImage(const char* baseDir, const char* fileName) {
-  BLString fullPath;
+LoadedImage TestApp::load_image(const char* base_dir, const char* file_name) {
+  BLString full_path;
 
-  if (baseDir && !isAbsolutePath(fileName)) {
-    fullPath.append(baseDir);
-    if (fullPath.size() > 0 && fullPath[fullPath.size() - 1] != '/')
-      fullPath.append('/');
-    fullPath.append(fileName);
+  if (base_dir && !is_absolute_path(file_name)) {
+    full_path.append(base_dir);
+    if (full_path.size() > 0 && full_path[full_path.size() - 1] != '/')
+      full_path.append('/');
+    full_path.append(file_name);
   }
   else {
-    fullPath.append(fileName);
+    full_path.append(file_name);
   }
 
   BLImage img;
   PerformanceTimer timer;
 
   timer.start();
-  BLResult result = img.readFromFile(fullPath.data());
+  BLResult result = img.read_from_file(full_path.data());
   timer.stop();
 
   return LoadedImage{result, timer.duration(), img};
 }
 
-bool TestApp::testSingleFile(const char* baseDir, const char* fileName) {
-  LoadedImage i = loadImage(baseDir, fileName);
+bool TestApp::test_single_file(const char* base_dir, const char* file_name) {
+  LoadedImage i = load_image(base_dir, file_name);
 
   if (i.result != BL_SUCCESS) {
-    printf("[%s] Error loading image (result=0x%80u)\n", fileName, i.result);
+    printf("[%s] Error loading image (result=0x%80u)\n", file_name, i.result);
     return false;
   }
 
-  printf("[%s] loaded in %0.3f [ms] size=%ux%u format=%s\n", fileName, i.duration, i.image.size().w, i.image.size().h, formatToString(i.image.format()));
+  printf("[%s] loaded in %0.3f [ms] size=%ux%u format=%s\n", file_name, i.duration, i.image.size().w, i.image.size().h, format_to_string(i.image.format()));
   return true;
 }
 
-bool TestApp::compareFiles(const char* baseDir, const char* fileName1, const char* fileName2) {
-  LoadedImage i1 = loadImage(baseDir, fileName1);
-  LoadedImage i2 = loadImage(baseDir, fileName2);
+bool TestApp::compare_files(const char* base_dir, const char* fileName1, const char* fileName2) {
+  LoadedImage i1 = load_image(base_dir, fileName1);
+  LoadedImage i2 = load_image(base_dir, fileName2);
 
   BLImage& img1 = i1.image;
   BLImage& img2 = i2.image;
@@ -265,22 +265,22 @@ bool TestApp::compareFiles(const char* baseDir, const char* fileName1, const cha
     return false;
   }
 
-  printf("[%s] loaded in %0.3f [ms] size=%ux%u format=%s\n", fileName1, i1.duration, img1.size().w, img1.size().h, formatToString(img1.format()));
+  printf("[%s] loaded in %0.3f [ms] size=%ux%u format=%s\n", fileName1, i1.duration, img1.size().w, img1.size().h, format_to_string(img1.format()));
 
   if (i2.result != BL_SUCCESS) {
     printf("[%s] Error loading second image (result=0x%80u)\n", fileName2, i2.result);
     return false;
   }
 
-  printf("[%s] loaded in %0.3f [ms] size=%ux%u format=%s\n", fileName2, i2.duration, img2.size().w, img2.size().h, formatToString(img2.format()));
+  printf("[%s] loaded in %0.3f [ms] size=%ux%u format=%s\n", fileName2, i2.duration, img2.size().w, img2.size().h, format_to_string(img2.format()));
 
   if (img1.size() != img2.size()) {
     printf("Image sizes don't match!\n");
     return false;
   }
 
-  ImageUtils::DiffInfo diff = ImageUtils::diffInfo(img1, img2);
-  if (diff.maxDiff == 0xFFFFFFFFu) {
+  ImageUtils::DiffInfo diff = ImageUtils::diff_info(img1, img2);
+  if (diff.max_diff == 0xFFFFFFFFu) {
     if (img1.format() != img2.format()) {
       printf("Image formats don't match!\n");
       return false;
@@ -291,12 +291,12 @@ bool TestApp::compareFiles(const char* baseDir, const char* fileName1, const cha
     }
   }
 
-  if (diff.cumulativeDiff) {
+  if (diff.cumulative_diff) {
     printf("Images don't match:\n"
            "  MaximumDifference=%llu\n"
            "  CumulativeDifference=%llu\n",
-           (unsigned long long)diff.maxDiff,
-           (unsigned long long)diff.cumulativeDiff
+           (unsigned long long)diff.max_diff,
+           (unsigned long long)diff.cumulative_diff
     );
     return false;
   }
@@ -305,31 +305,31 @@ bool TestApp::compareFiles(const char* baseDir, const char* fileName1, const cha
   return true;
 }
 
-int TestApp::run(CmdLine cmdLine) {
-  printAppInfo("Blend2D Image Codecs Tester", cmdLine.hasArg("--quiet"));
+int TestApp::run(CmdLine cmd_line) {
+  print_app_info("Blend2D Image Codecs Tester", cmd_line.has_arg("--quiet"));
 
-  if (cmdLine.hasArg("--help")) {
+  if (cmd_line.has_arg("--help")) {
     return help();
   }
 
-  if (!parseOptions(cmdLine)) {
+  if (!parse_options(cmd_line)) {
     return 1;
   }
 
-  switch (options.testKind) {
+  switch (options.test_kind) {
     case TestKind::kNone: {
       return help();
     }
 
     case TestKind::kSingleImage: {
-      if (!testSingleFile(options.baseDir, options.file1))
+      if (!test_single_file(options.base_dir, options.file1))
         return 1;
       else
         return 0;
     }
 
     case TestKind::kCompareImages: {
-      if (!compareFiles(options.baseDir, options.file1, options.file2))
+      if (!compare_files(options.base_dir, options.file1, options.file2))
         return 1;
       else
         return 0;
@@ -343,7 +343,7 @@ int TestApp::run(CmdLine cmdLine) {
 } // {CodecTests}
 
 int main(int argc, char* argv[]) {
-  BLRuntimeScope rtScope;
+  BLRuntimeScope rt_scope;
   CodecTests::TestApp app;
 
   return app.run(CmdLine(argc, argv));

@@ -53,7 +53,7 @@ static constexpr uint32_t kFirstLengthSymbol = 257;
 static constexpr uint32_t kNumLengthSymbols = 31;
 
 //! The maximum number of symbols across all codes.
-static constexpr uint32_t kMaxSymbolCount = blMax(blMax(kNumPrecodeSymbols, kNumLitLenSymbols), kNumOffsetSymbols);
+static constexpr uint32_t kMaxSymbolCount = bl_max(bl_max(kNumPrecodeSymbols, kNumLitLenSymbols), kNumOffsetSymbols);
 
 // Maximum codeword length, in bits, within each Huffman code.
 static constexpr uint32_t kMaxPreCodeWordLen = 7;

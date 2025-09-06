@@ -23,7 +23,7 @@ public:
     : BaseTestApp() {}
 
   int help() {
-    using StringUtils::boolToString;
+    using StringUtils::bool_to_string;
 
     printf("Usage:\n");
     printf("  bl_test_context_simple [options] [--help for help]\n");
@@ -39,36 +39,36 @@ public:
     printf("  output like other testers do, because it's not its purpose.\n");
     printf("\n");
 
-    printCommonOptions(defaultOptions);
-    printCommands();
-    printFormats();
-    printCompOps();
-    printOpacityOps();
-    printStyleIds();
-    printStyleOps();
+    print_common_options(default_options);
+    print_commands();
+    print_formats();
+    print_comp_ops();
+    print_opacity_ops();
+    print_style_ids();
+    print_style_ops();
 
     fflush(stdout);
     return 0;
   }
 
-  int run(CmdLine cmdLine) {
-    printAppInfo("Blend2D Rendering Context Tester", cmdLine.hasArg("--quiet"));
+  int run(CmdLine cmd_line) {
+    print_app_info("Blend2D Rendering Context Tester", cmd_line.has_arg("--quiet"));
 
-    if (cmdLine.hasArg("--help"))
+    if (cmd_line.has_arg("--help"))
       return help();
 
-    if (!parseCommonOptions(cmdLine))
+    if (!parse_common_options(cmd_line))
       return 1;
 
-    for (BLFormat format : testCases.formatIds) {
-      ContextTester tester(testCases, "simple");
+    for (BLFormat format : test_cases.format_ids) {
+      ContextTester tester(test_cases, "simple");
 
       tester.seed(options.seed);
-      tester.setFontData(fontData);
-      tester.setFlushSync(options.flushSync);
+      tester.set_font_data(font_data);
+      tester.set_flush_sync(options.flush_sync);
 
       BLContextCreateInfo cci {};
-      cci.threadCount = options.threadCount;
+      cci.thread_count = options.thread_count;
 
       if (tester.init(int(options.width), int(options.height), format, cci) != BL_SUCCESS) {
         printf("Failed to initialize the rendering context\n");
@@ -76,21 +76,21 @@ public:
       }
 
       TestInfo info;
-      dispatchRuns([&](CommandId commandId, StyleId styleId, StyleOp styleOp, CompOp compOp, OpacityOp opacityOp) {
+      dispatch_runs([&](CommandId command_id, StyleId style_id, StyleOp style_op, CompOp comp_op, OpacityOp opacity_op) {
         BLString s0;
-        s0.appendFormat("%s/%s",
-          StringUtils::styleIdToString(styleId),
-          StringUtils::styleOpToString(styleOp));
+        s0.append_format("%s/%s",
+          StringUtils::style_id_to_string(style_id),
+          StringUtils::style_op_to_string(style_op));
 
         BLString s1;
-        s1.appendFormat("%s/%s",
-          StringUtils::compOpToString(compOp),
-          StringUtils::opacityOpToString(opacityOp));
+        s1.append_format("%s/%s",
+          StringUtils::comp_op_to_string(comp_op),
+          StringUtils::opacity_op_to_string(opacity_op));
 
-        info.name.assignFormat(
+        info.name.assign_format(
             "%-21s | fmt=%-7s| style+api=%-30s| comp+op=%-20s",
-            StringUtils::commandIdToString(commandId),
-            StringUtils::formatToString(format),
+            StringUtils::command_id_to_string(command_id),
+            StringUtils::format_to_string(format),
             s0.data(),
             s1.data());
 
@@ -98,20 +98,20 @@ public:
           printf("Running [%s]\n", info.name.data());
         }
 
-        info.id.assignFormat("ctx-simple-%s-%s-%s-%s-%s-%s",
-          StringUtils::formatToString(format),
-          StringUtils::commandIdToString(commandId),
-          StringUtils::styleIdToString(styleId),
-          StringUtils::styleOpToString(styleOp),
-          StringUtils::compOpToString(compOp),
-          StringUtils::opacityOpToString(opacityOp));
+        info.id.assign_format("ctx-simple-%s-%s-%s-%s-%s-%s",
+          StringUtils::format_to_string(format),
+          StringUtils::command_id_to_string(command_id),
+          StringUtils::style_id_to_string(style_id),
+          StringUtils::style_op_to_string(style_op),
+          StringUtils::comp_op_to_string(comp_op),
+          StringUtils::opacity_op_to_string(opacity_op));
 
         tester.clear();
-        tester.setOptions(compOp, opacityOp, styleId, options.styleOp);
-        tester.render(commandId, options.count, options);
+        tester.set_options(comp_op, opacity_op, style_id, options.style_op);
+        tester.render(command_id, options.count, options);
 
-        if (options.storeImages) {
-          storeImage(tester.image(), info.id.data());
+        if (options.store_images) {
+          store_image(tester.image(), info.id.data());
         }
       });
 
@@ -126,7 +126,7 @@ public:
 } // {ContextTests}
 
 int main(int argc, char* argv[]) {
-  BLRuntimeScope rtScope;
+  BLRuntimeScope rt_scope;
   ContextTests::SimpleTestApp app;
 
   return app.run(CmdLine(argc, argv));

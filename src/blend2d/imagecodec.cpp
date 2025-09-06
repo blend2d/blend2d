@@ -23,9 +23,9 @@ namespace ImageCodecInternal {
 // bl::ImageCodec - Globals
 // ========================
 
-static BLObjectEternalVirtualImpl<BLImageCodecImpl, BLImageCodecVirt> defaultCodec;
-static Wrap<BLArray<BLImageCodec>> builtinCodecsArray;
-static Wrap<BLSharedMutex> builtinCodecsMutex;
+static BLObjectEternalVirtualImpl<BLImageCodecImpl, BLImageCodecVirt> default_codec;
+static Wrap<BLArray<BLImageCodec>> builtin_codecs_array;
+static Wrap<BLSharedMutex> builtin_codecs_mutex;
 
 } // {BLImageCodecInternal}
 } // {bl}
@@ -33,73 +33,73 @@ static Wrap<BLSharedMutex> builtinCodecsMutex;
 // bl::ImageCodec - API - Init & Destroy
 // =====================================
 
-BL_API_IMPL BLResult blImageCodecInit(BLImageCodecCore* self) noexcept {
-  self->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d;
+BL_API_IMPL BLResult bl_image_codec_init(BLImageCodecCore* self) noexcept {
+  self->_d = bl_object_defaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d;
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blImageCodecInitMove(BLImageCodecCore* self, BLImageCodecCore* other) noexcept {
+BL_API_IMPL BLResult bl_image_codec_init_move(BLImageCodecCore* self, BLImageCodecCore* other) noexcept {
   BL_ASSERT(self != other);
-  BL_ASSERT(other->_d.isImageCodec());
+  BL_ASSERT(other->_d.is_image_codec());
 
   self->_d = other->_d;
-  other->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d;
+  other->_d = bl_object_defaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d;
 
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blImageCodecInitWeak(BLImageCodecCore* self, const BLImageCodecCore* other) noexcept {
+BL_API_IMPL BLResult bl_image_codec_init_weak(BLImageCodecCore* self, const BLImageCodecCore* other) noexcept {
   BL_ASSERT(self != other);
-  BL_ASSERT(other->_d.isImageCodec());
+  BL_ASSERT(other->_d.is_image_codec());
 
-  return blObjectPrivateInitWeakTagged(self, other);
+  return bl_object_private_init_weak_tagged(self, other);
 }
 
-BL_API_IMPL BLResult blImageCodecInitByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
-  self->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d;
-  return blImageCodecFindByName(self, name, size, codecs);
+BL_API_IMPL BLResult bl_image_codec_init_by_name(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
+  self->_d = bl_object_defaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d;
+  return bl_image_codec_find_by_name(self, name, size, codecs);
 }
 
-BL_API_IMPL BLResult blImageCodecDestroy(BLImageCodecCore* self) noexcept {
-  return bl::ObjectInternal::releaseVirtualInstance(self);
+BL_API_IMPL BLResult bl_image_codec_destroy(BLImageCodecCore* self) noexcept {
+  return bl::ObjectInternal::release_virtual_instance(self);
 }
 
 // bl::ImageCodec - API - Reset
 // ============================
 
-BL_API_IMPL BLResult blImageCodecReset(BLImageCodecCore* self) noexcept {
-  BL_ASSERT(self->_d.isImageCodec());
+BL_API_IMPL BLResult bl_image_codec_reset(BLImageCodecCore* self) noexcept {
+  BL_ASSERT(self->_d.is_image_codec());
 
-  return bl::ObjectInternal::replaceVirtualInstance(self, static_cast<BLImageCodecCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]));
+  return bl::ObjectInternal::replace_virtual_instance(self, static_cast<BLImageCodecCore*>(&bl_object_defaults[BL_OBJECT_TYPE_IMAGE_CODEC]));
 }
 
 // bl::ImageCodec - API - Assign
 // =============================
 
-BL_API_IMPL BLResult blImageCodecAssignMove(BLImageCodecCore* self, BLImageCodecCore* other) noexcept {
-  BL_ASSERT(self->_d.isImageCodec());
-  BL_ASSERT(other->_d.isImageCodec());
+BL_API_IMPL BLResult bl_image_codec_assign_move(BLImageCodecCore* self, BLImageCodecCore* other) noexcept {
+  BL_ASSERT(self->_d.is_image_codec());
+  BL_ASSERT(other->_d.is_image_codec());
 
   BLImageCodecCore tmp = *other;
-  other->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d;
-  return bl::ObjectInternal::replaceVirtualInstance(self, &tmp);
+  other->_d = bl_object_defaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d;
+  return bl::ObjectInternal::replace_virtual_instance(self, &tmp);
 }
 
-BL_API_IMPL BLResult blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* other) noexcept {
-  BL_ASSERT(self->_d.isImageCodec());
-  BL_ASSERT(other->_d.isImageCodec());
+BL_API_IMPL BLResult bl_image_codec_assign_weak(BLImageCodecCore* self, const BLImageCodecCore* other) noexcept {
+  BL_ASSERT(self->_d.is_image_codec());
+  BL_ASSERT(other->_d.is_image_codec());
 
-  return bl::ObjectInternal::assignVirtualInstance(self, other);
+  return bl::ObjectInternal::assign_virtual_instance(self, other);
 }
 
 // bl::ImageCodec - API - Inspect Data
 // ===================================
 
-BL_API_IMPL uint32_t blImageCodecInspectData(const BLImageCodecCore* self, const void* data, size_t size) noexcept {
-  BL_ASSERT(self->_d.isImageCodec());
-  BLImageCodecImpl* selfI = self->dcast()._impl();
+BL_API_IMPL uint32_t bl_image_codec_inspect_data(const BLImageCodecCore* self, const void* data, size_t size) noexcept {
+  BL_ASSERT(self->_d.is_image_codec());
+  BLImageCodecImpl* self_impl = self->dcast()._impl();
 
-  return selfI->virt->inspectData(selfI, static_cast<const uint8_t*>(data), size);
+  return self_impl->virt->inspect_data(self_impl, static_cast<const uint8_t*>(data), size);
 }
 
 // bl::ImageCodec - API - Find By Name & Extension & Data
@@ -108,167 +108,190 @@ BL_API_IMPL uint32_t blImageCodecInspectData(const BLImageCodecCore* self, const
 namespace bl {
 namespace ImageCodecInternal {
 
-static bool matchExtension(const char* extensions, const char* match, size_t matchSize) noexcept {
+static bool match_extension(const char* extensions, const char* match, size_t match_size) noexcept {
   while (*extensions) {
     // Match each extension in `extensions` string list delimited by '|'.
     const char* p = extensions;
-    while (*p && *p != '|')
-      p++;
 
-    size_t extSize = (size_t)(p - extensions);
-    if (extSize == matchSize && StringOps::memeqCI(extensions, match, matchSize))
+    while (*p && *p != '|') {
+      p++;
+    }
+
+    size_t ext_size = (size_t)(p - extensions);
+    if (ext_size == match_size && StringOps::memeq_ci(extensions, match, match_size)) {
       return true;
+    }
 
-    if (*p == '|')
+    if (*p == '|') {
       p++;
+    }
+
     extensions = p;
   }
   return false;
 }
 
 // Returns possibly advanced `match` and fixes the `size`.
-static const char* keepOnlyExtensionInMatch(const char* match, size_t& size) noexcept {
+static const char* keep_only_extension_in_match(const char* match, size_t& size) noexcept {
   const char* end = match + size;
   const char* p = end;
 
-  while (p != match && p[-1] != '.')
+  while (p != match && p[-1] != '.') {
     p--;
+  }
 
   size = (size_t)(end - p);
   return p;
 }
 
-static BLResult findCodecByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
-  for (const BLImageCodec& codec : codecs->dcast<BLArray<BLImageCodec>>().view())
-    if (codec.name() == BLStringView{name, size})
-      return blImageCodecAssignWeak(self, &codec);
+static BLResult find_codec_by_name(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
+  for (const BLImageCodec& codec : codecs->dcast<BLArray<BLImageCodec>>().view()) {
+    if (codec.name() == BLStringView{name, size}) {
+      return bl_image_codec_assign_weak(self, &codec);
+    }
+  }
 
-  return blTraceError(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
+  return bl_trace_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
 }
 
-static BLResult findCodecByExtension(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
-  for (const BLImageCodec& codec : codecs->dcast<BLArray<BLImageCodec>>().view())
-    if (matchExtension(codec.extensions().data(), name, size))
-      return blImageCodecAssignWeak(self, &codec);
+static BLResult find_codec_by_extension(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
+  for (const BLImageCodec& codec : codecs->dcast<BLArray<BLImageCodec>>().view()) {
+    if (match_extension(codec.extensions().data(), name, size)) {
+      return bl_image_codec_assign_weak(self, &codec);
+    }
+  }
 
-  return blTraceError(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
+  return bl_trace_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
 }
 
-static BLResult findCodecByData(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
-  uint32_t bestScore = 0;
+static BLResult find_codec_by_data(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
+  uint32_t best_score = 0;
   const BLImageCodec* candidate = nullptr;
 
   for (const BLImageCodec& codec : codecs->dcast<BLArray<BLImageCodec>>().view()) {
-    uint32_t score = codec.inspectData(data, size);
-    if (bestScore < score) {
-      bestScore = score;
+    uint32_t score = codec.inspect_data(data, size);
+    if (best_score < score) {
+      best_score = score;
       candidate = &codec;
     }
   }
 
-  if (candidate)
-    return blImageCodecAssignWeak(self, candidate);
+  if (candidate) {
+    return bl_image_codec_assign_weak(self, candidate);
+  }
 
-  return blTraceError(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
+  return bl_trace_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
 }
 
 } // {ImageCodecInternal}
 } // {bl}
 
-BL_API_IMPL BLResult blImageCodecFindByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
+BL_API_IMPL BLResult bl_image_codec_find_by_name(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
   using namespace bl::ImageCodecInternal;
-  BL_ASSERT(self->_d.isImageCodec());
+  BL_ASSERT(self->_d.is_image_codec());
 
-  if (size == SIZE_MAX)
+  if (size == SIZE_MAX) {
     size = strlen(name);
+  }
 
-  if (!size)
-    return blTraceError(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
+  if (!size) {
+    return bl_trace_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
+  }
 
-  if (codecs)
-    return findCodecByName(self, name, size, codecs);
-  else
-    return builtinCodecsMutex->protectShared([&] { return findCodecByName(self, name, size, &builtinCodecsArray); });
+  if (codecs) {
+    return find_codec_by_name(self, name, size, codecs);
+  }
+  else {
+    return builtin_codecs_mutex->protect_shared([&] { return find_codec_by_name(self, name, size, &builtin_codecs_array); });
+  }
 }
 
-BL_API_IMPL BLResult blImageCodecFindByExtension(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
+BL_API_IMPL BLResult bl_image_codec_find_by_extension(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
   using namespace bl::ImageCodecInternal;
-  BL_ASSERT(self->_d.isImageCodec());
+  BL_ASSERT(self->_d.is_image_codec());
 
-  if (size == SIZE_MAX)
+  if (size == SIZE_MAX) {
     size = strlen(name);
+  }
 
-  name = keepOnlyExtensionInMatch(name, size);
-  if (codecs)
-    return findCodecByExtension(self, name, size, codecs);
-  else
-    return builtinCodecsMutex->protectShared([&] { return findCodecByExtension(self, name, size, &builtinCodecsArray); });
+  name = keep_only_extension_in_match(name, size);
+  if (codecs) {
+    return find_codec_by_extension(self, name, size, codecs);
+  }
+  else {
+    return builtin_codecs_mutex->protect_shared([&] { return find_codec_by_extension(self, name, size, &builtin_codecs_array); });
+  }
 }
 
-BL_API_IMPL BLResult blImageCodecFindByData(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
+BL_API_IMPL BLResult bl_image_codec_find_by_data(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
   using namespace bl::ImageCodecInternal;
-  BL_ASSERT(self->_d.isImageCodec());
+  BL_ASSERT(self->_d.is_image_codec());
 
-  if (codecs)
-    return findCodecByData(self, data, size, codecs);
-  else
-    return builtinCodecsMutex->protectShared([&] { return findCodecByData(self, data, size, &builtinCodecsArray); });
+  if (codecs) {
+    return find_codec_by_data(self, data, size, codecs);
+  }
+  else {
+    return builtin_codecs_mutex->protect_shared([&] { return find_codec_by_data(self, data, size, &builtin_codecs_array); });
+  }
 }
 
-BL_API_IMPL BLResult blImageCodecCreateDecoder(const BLImageCodecCore* self, BLImageDecoderCore* dst) noexcept {
-  BL_ASSERT(self->_d.isImageCodec());
-  BLImageCodecImpl* selfI = self->dcast()._impl();
+BL_API_IMPL BLResult bl_image_codec_create_decoder(const BLImageCodecCore* self, BLImageDecoderCore* dst) noexcept {
+  BL_ASSERT(self->_d.is_image_codec());
+  BLImageCodecImpl* self_impl = self->dcast()._impl();
 
-  return selfI->virt->createDecoder(selfI, dst);
+  return self_impl->virt->create_decoder(self_impl, dst);
 }
 
-BL_API_IMPL BLResult blImageCodecCreateEncoder(const BLImageCodecCore* self, BLImageEncoderCore* dst) noexcept {
-  BL_ASSERT(self->_d.isImageCodec());
-  BLImageCodecImpl* selfI = self->dcast()._impl();
+BL_API_IMPL BLResult bl_image_codec_create_encoder(const BLImageCodecCore* self, BLImageEncoderCore* dst) noexcept {
+  BL_ASSERT(self->_d.is_image_codec());
+  BLImageCodecImpl* self_impl = self->dcast()._impl();
 
-  return selfI->virt->createEncoder(selfI, dst);
+  return self_impl->virt->create_encoder(self_impl, dst);
 }
 
 // bl::ImageCodec - API - Built-In Codecs (Global)
 // ===============================================
 
-BL_API_IMPL BLResult blImageCodecArrayInitBuiltInCodecs(BLArrayCore* self) noexcept {
+BL_API_IMPL BLResult bl_image_codec_array_init_built_in_codecs(BLArrayCore* self) noexcept {
   using namespace bl::ImageCodecInternal;
 
-  *self = builtinCodecsMutex->protectShared([&] {
-    BLArrayCore tmp = builtinCodecsArray();
-    bl::ObjectInternal::retainInstance(&tmp);
+  *self = builtin_codecs_mutex->protect_shared([&] {
+    BLArrayCore tmp = builtin_codecs_array();
+    bl::ObjectInternal::retain_instance(&tmp);
     return tmp;
   });
+
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult blImageCodecArrayAssignBuiltInCodecs(BLArrayCore* self) noexcept {
-  blArrayDestroy(self);
-  return blImageCodecArrayInitBuiltInCodecs(self);
+BL_API_IMPL BLResult bl_image_codec_array_assign_built_in_codecs(BLArrayCore* self) noexcept {
+  bl_array_destroy(self);
+  return bl_image_codec_array_init_built_in_codecs(self);
 }
 
-BL_API_IMPL BLResult blImageCodecAddToBuiltIn(const BLImageCodecCore* codec) noexcept {
+BL_API_IMPL BLResult bl_image_codec_add_to_built_in(const BLImageCodecCore* codec) noexcept {
   using namespace bl::ImageCodecInternal;
-  BL_ASSERT(codec->_d.isImageCodec());
+  BL_ASSERT(codec->_d.is_image_codec());
 
-  return builtinCodecsMutex->protect([&] {
-    size_t i = builtinCodecsArray->indexOf(codec->dcast());
-    if (i != SIZE_MAX)
-      return blTraceError(BL_ERROR_ALREADY_EXISTS);
-    return builtinCodecsArray->append(codec->dcast());
+  return builtin_codecs_mutex->protect([&] {
+    size_t i = builtin_codecs_array->index_of(codec->dcast());
+    if (i != SIZE_MAX) {
+      return bl_trace_error(BL_ERROR_ALREADY_EXISTS);
+    }
+    return builtin_codecs_array->append(codec->dcast());
   });
 }
 
-BL_API_IMPL BLResult blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* codec) noexcept {
+BL_API_IMPL BLResult bl_image_codec_remove_from_built_in(const BLImageCodecCore* codec) noexcept {
   using namespace bl::ImageCodecInternal;
-  BL_ASSERT(codec->_d.isImageCodec());
+  BL_ASSERT(codec->_d.is_image_codec());
 
-  return builtinCodecsMutex->protect([&] {
-    size_t i = builtinCodecsArray->indexOf(codec->dcast());
-    if (i == SIZE_MAX)
-      return blTraceError(BL_ERROR_NO_ENTRY);
-    return builtinCodecsArray->remove(i);
+  return builtin_codecs_mutex->protect([&] {
+    size_t i = builtin_codecs_array->index_of(codec->dcast());
+    if (i == SIZE_MAX) {
+      return bl_trace_error(BL_ERROR_NO_ENTRY);
+    }
+    return builtin_codecs_array->remove(i);
   });
 }
 
@@ -277,53 +300,53 @@ BL_API_IMPL BLResult blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* codec
 
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
 
-static BLResult BL_CDECL blImageCodecImplDestroy(BLObjectImpl* impl) noexcept { return BL_SUCCESS; }
-static uint32_t BL_CDECL blImageCodecImplInspectData(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept { return 0; }
-static BLResult BL_CDECL blImageCodecImplCreateDecoder(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept { return BL_ERROR_IMAGE_DECODER_NOT_PROVIDED; }
-static BLResult BL_CDECL blImageCodecImplCreateEncoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept { return BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED; }
+static BLResult BL_CDECL bl_image_codec_impl_destroy(BLObjectImpl* impl) noexcept { return BL_SUCCESS; }
+static uint32_t BL_CDECL bl_image_codec_impl_inspect_data(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept { return 0; }
+static BLResult BL_CDECL bl_image_codec_impl_create_decoder(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept { return BL_ERROR_IMAGE_DECODER_NOT_PROVIDED; }
+static BLResult BL_CDECL bl_image_codec_impl_create_encoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept { return BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED; }
 
 BL_DIAGNOSTIC_POP
 
 // bl::ImageCodec - Runtime Registration
 // =====================================
 
-static void BL_CDECL blImageCodecRtShutdown(BLRuntimeContext* rt) noexcept {
+static void BL_CDECL bl_image_codec_rt_shutdown(BLRuntimeContext* rt) noexcept {
   using namespace bl::ImageCodecInternal;
-  blUnused(rt);
+  bl_unused(rt);
 
-  builtinCodecsArray.destroy();
-  builtinCodecsMutex.destroy();
+  builtin_codecs_array.destroy();
+  builtin_codecs_mutex.destroy();
 }
 
-void blImageCodecRtInit(BLRuntimeContext* rt) noexcept {
+void bl_image_codec_rt_init(BLRuntimeContext* rt) noexcept {
   using namespace bl::ImageCodecInternal;
 
-  builtinCodecsMutex.init();
-  builtinCodecsArray.init();
+  builtin_codecs_mutex.init();
+  builtin_codecs_array.init();
 
   // Initialize default BLImageCodec.
-  defaultCodec.virt.base.destroy = blImageCodecImplDestroy;
-  defaultCodec.virt.base.getProperty = blObjectImplGetProperty;
-  defaultCodec.virt.base.setProperty = blObjectImplSetProperty;
-  defaultCodec.virt.inspectData = blImageCodecImplInspectData;
-  defaultCodec.virt.createDecoder = blImageCodecImplCreateDecoder;
-  defaultCodec.virt.createEncoder = blImageCodecImplCreateEncoder;
-  defaultCodec.impl->ctor(&defaultCodec.virt);
+  default_codec.virt.base.destroy = bl_image_codec_impl_destroy;
+  default_codec.virt.base.get_property = bl_object_impl_get_property;
+  default_codec.virt.base.set_property = bl_object_impl_set_property;
+  default_codec.virt.inspect_data = bl_image_codec_impl_inspect_data;
+  default_codec.virt.create_decoder = bl_image_codec_impl_create_decoder;
+  default_codec.virt.create_encoder = bl_image_codec_impl_create_encoder;
+  default_codec.impl->ctor(&default_codec.virt);
 
-  blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d.initDynamic(
-    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_CODEC),
-    &defaultCodec.impl);
+  bl_object_defaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d.init_dynamic(
+    BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_IMAGE_CODEC),
+    &default_codec.impl);
 
-  rt->shutdownHandlers.add(blImageCodecRtShutdown);
+  rt->shutdown_handlers.add(bl_image_codec_rt_shutdown);
 }
 
-void blRegisterBuiltInCodecs(BLRuntimeContext* rt) noexcept {
+void bl_register_built_in_codecs(BLRuntimeContext* rt) noexcept {
   using namespace bl::ImageCodecInternal;
 
-  BLArray<BLImageCodec>* codecs = &builtinCodecsArray;
+  BLArray<BLImageCodec>* codecs = &builtin_codecs_array;
   codecs->reserve(4);
-  bl::Bmp::bmpCodecOnInit(rt, codecs);
-  bl::Jpeg::jpegCodecOnInit(rt, codecs);
-  bl::Png::pngCodecOnInit(rt, codecs);
-  bl::Qoi::qoiCodecOnInit(rt, codecs);
+  bl::Bmp::bmp_codec_on_init(rt, codecs);
+  bl::Jpeg::jpeg_codec_on_init(rt, codecs);
+  bl::Png::png_codec_on_init(rt, codecs);
+  bl::Qoi::qoi_codec_on_init(rt, codecs);
 }

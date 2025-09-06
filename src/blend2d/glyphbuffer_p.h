@@ -33,16 +33,16 @@ struct BLGlyphBufferPrivateImpl : public BLGlyphBufferImpl {
   uint8_t* buffer[2];
   size_t capacity[2];
 
-  BLDebugMessageSinkFunc debugSink;
-  void* debugSinkUserData;
+  BLDebugMessageSinkFunc debug_sink;
+  void* debug_sink_user_data;
 
   // Default-constructed data should not be initialized.
   BL_INLINE constexpr BLGlyphBufferPrivateImpl() noexcept
     : BLGlyphBufferImpl {},
       buffer { nullptr, nullptr },
       capacity { 0, 0 },
-      debugSink(nullptr),
-      debugSinkUserData(nullptr) {}
+      debug_sink(nullptr),
+      debug_sink_user_data(nullptr) {}
 
   static BLGlyphBufferPrivateImpl* create() noexcept {
     BLGlyphBufferPrivateImpl* d = (BLGlyphBufferPrivateImpl*)malloc(sizeof(BLGlyphBufferPrivateImpl));
@@ -50,31 +50,31 @@ struct BLGlyphBufferPrivateImpl : public BLGlyphBufferImpl {
       return nullptr;
 
     d->content = nullptr;
-    d->placementData = nullptr;
+    d->placement_data = nullptr;
     d->size = 0;
-    d->glyphRun.reserved = uint8_t(0);
-    d->glyphRun.placementType = BL_GLYPH_PLACEMENT_TYPE_NONE;
-    d->glyphRun.glyphAdvance = int8_t(sizeof(uint32_t));
-    d->glyphRun.placementAdvance = int8_t(sizeof(BLGlyphPlacement));
+    d->glyph_run.reserved = uint8_t(0);
+    d->glyph_run.placement_type = BL_GLYPH_PLACEMENT_TYPE_NONE;
+    d->glyph_run.glyph_advance = int8_t(sizeof(uint32_t));
+    d->glyph_run.placement_advance = int8_t(sizeof(BLGlyphPlacement));
     d->flags = 0;
 
-    d->infoData = nullptr;
+    d->info_data = nullptr;
     d->buffer[0] = nullptr;
     d->buffer[1] = nullptr;
     d->capacity[0] = 0;
     d->capacity[1] = 0;
-    d->debugSink = nullptr;
-    d->debugSinkUserData = nullptr;
+    d->debug_sink = nullptr;
+    d->debug_sink_user_data = nullptr;
 
     return d;
   }
 
   BL_INLINE void destroy() noexcept {
-    resetBuffers();
+    reset_buffers();
     free(this);
   }
 
-  BL_INLINE void resetBuffers() noexcept {
+  BL_INLINE void reset_buffers() noexcept {
     free(buffer[0]);
     free(buffer[1]);
 
@@ -84,17 +84,17 @@ struct BLGlyphBufferPrivateImpl : public BLGlyphBufferImpl {
 
   BL_INLINE void clear() noexcept {
     size = 0;
-    glyphRun.placementType = BL_GLYPH_PLACEMENT_TYPE_NONE;
-    glyphRun.flags = 0;
-    placementData = nullptr;
-    getGlyphDataPtrs(0, &content, &infoData);
+    glyph_run.placement_type = BL_GLYPH_PLACEMENT_TYPE_NONE;
+    glyph_run.flags = 0;
+    placement_data = nullptr;
+    get_glyph_data_ptrs(0, &content, &info_data);
   }
 
-  BL_HIDDEN BLResult ensureBuffer(size_t bufferId, size_t copySize, size_t minCapacity) noexcept;
+  BL_HIDDEN BLResult ensure_buffer(size_t buffer_id, size_t copy_size, size_t min_capacity) noexcept;
 
-  BL_INLINE BLResult ensurePlacement() noexcept {
-    BL_PROPAGATE(ensureBuffer(1, 0, size));
-    placementData = reinterpret_cast<BLGlyphPlacement*>(buffer[1]);
+  BL_INLINE BLResult ensure_placement() noexcept {
+    BL_PROPAGATE(ensure_buffer(1, 0, size));
+    placement_data = reinterpret_cast<BLGlyphPlacement*>(buffer[1]);
     return BL_SUCCESS;
   }
 
@@ -103,20 +103,20 @@ struct BLGlyphBufferPrivateImpl : public BLGlyphBufferImpl {
     BLInternal::swap(capacity[0], capacity[1]);
   }
 
-  BL_INLINE void getGlyphDataPtrs(size_t bufferId, uint32_t** glyphDataOut, BLGlyphInfo** infoDataOut) noexcept {
-    *glyphDataOut = reinterpret_cast<uint32_t*>(buffer[bufferId]);
-    *infoDataOut = reinterpret_cast<BLGlyphInfo*>(buffer[bufferId] + capacity[bufferId] * sizeof(uint32_t));
+  BL_INLINE void get_glyph_data_ptrs(size_t buffer_id, uint32_t** glyph_data_out, BLGlyphInfo** info_data_out) noexcept {
+    *glyph_data_out = reinterpret_cast<uint32_t*>(buffer[buffer_id]);
+    *info_data_out = reinterpret_cast<BLGlyphInfo*>(buffer[buffer_id] + capacity[buffer_id] * sizeof(uint32_t));
   }
 };
 
-static BL_INLINE BLGlyphBufferPrivateImpl* blGlyphBufferGetImpl(const BLGlyphBufferCore* self) noexcept {
+static BL_INLINE BLGlyphBufferPrivateImpl* bl_glyph_buffer_get_impl(const BLGlyphBufferCore* self) noexcept {
   return static_cast<BLGlyphBufferPrivateImpl*>(self->impl);
 }
 
-static BL_INLINE void blCopyGlyphData(uint32_t* glyphDst, BLGlyphInfo* infoDst, const uint32_t* glyphSrc, const BLGlyphInfo* infoSrc, size_t n) noexcept {
+static BL_INLINE void bl_copy_glyph_data(uint32_t* glyph_dst, BLGlyphInfo* info_dst, const uint32_t* glyph_src, const BLGlyphInfo* info_src, size_t n) noexcept {
   for (size_t i = 0; i < n; i++) {
-    glyphDst[i] = glyphSrc[i];
-    infoDst[i] = infoSrc[i];
+    glyph_dst[i] = glyph_src[i];
+    info_dst[i] = info_src[i];
   }
 }
 

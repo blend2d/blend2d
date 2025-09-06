@@ -27,7 +27,7 @@ enum class ScalarOpBehavior : uint8_t {
 };
 
 //! The behavior of a floating point min/max instructions when comparing against NaN.
-enum class FMinMaxOpBehavior : uint8_t {
+enum class FMinFMaxOpBehavior : uint8_t {
   //! Min and max selects a finite value if one of the compared values is NaN.
   kFiniteValue,
   //! Min and max is implemented like `if a <|> b ? a : b`.
@@ -35,7 +35,7 @@ enum class FMinMaxOpBehavior : uint8_t {
 };
 
 //! The behavior of floating point `madd` instructions.
-enum class FMulAddOpBehavior : uint8_t {
+enum class FMAddOpBehavior : uint8_t {
   //! FMA is not available, thus `madd` is translated into two instructions (MUL + ADD).
   kNoFMA,
   //! FMA is available, the ISA allows to store the result to any of the inputs (X86).
@@ -1098,88 +1098,88 @@ public:
 
 #if defined(BL_JIT_ARCH_X86)
   //! General purpose extension mask (X86 and X86_64 only).
-  uint32_t _gpExtMask {};
+  uint32_t _gp_ext_mask {};
   //! SSE extension mask (X86 and X86_64 only).
-  uint32_t _sseExtMask {};
+  uint32_t _sse_ext_mask {};
   //! AVX extension mask (X86 and X86_64 only).
-  uint64_t _avxExtMask {};
+  uint64_t _avx_ext_mask {};
 #endif // BL_JIT_ARCH_X86
 
 #if defined(BL_JIT_ARCH_A64)
   //! General purpose extension mask (AArch64).
-  uint64_t _gpExtMask {};
+  uint64_t _gp_ext_mask {};
   //! NEON extensions (AArch64).
-  uint64_t _asimdExtMask {};
+  uint64_t _asimd_ext_mask {};
 #endif // BL_JIT_ARCH_A64
 
   //! The behavior of scalar operations (mostly floating point).
-  ScalarOpBehavior _scalarOpBehavior {};
+  ScalarOpBehavior _scalar_op_behavior {};
   //! The behavior of floating point min/max operation.
-  FMinMaxOpBehavior _fMinMaxOpBehavior {};
+  FMinFMaxOpBehavior _fmin_fmax_op_hehavior {};
   //! The behavior of floating point `madd` operation.
-  FMulAddOpBehavior _fMulAddOpBehavior {};
+  FMAddOpBehavior _fmadd_op_behavior {};
 
   //! Target CPU features.
   CpuFeatures _features {};
   //! Optimization flags.
-  PipeOptFlags _optFlags = PipeOptFlags::kNone;
+  PipeOptFlags _opt_flags = PipeOptFlags::kNone;
 
   //! Number of available vector registers.
-  uint32_t _vecRegCount = 0;
+  uint32_t _vec_reg_count = 0;
 
   //! Empty predicate, used in cases where a predicate is required, but it's empty.
-  PixelPredicate _emptyPredicate {};
+  PixelPredicate _empty_predicate {};
 
   //! SIMD width.
-  VecWidth _vecWidth = VecWidth::k128;
-  //! SIMD multiplier, derived from `_vecWidth` (1, 2, 4).
-  uint8_t _vecMultiplier = 0;
+  VecWidth _vec_width = VecWidth::k128;
+  //! SIMD multiplier, derived from `_vec_width` (1, 2, 4).
+  uint8_t _vec_multiplier = 0;
   //! SIMD register type (AsmJit).
-  asmjit::RegType _vecRegType = asmjit::RegType::kNone;
+  asmjit::RegType _vec_reg_type = asmjit::RegType::kNone;
   //! SIMD type id (AsmJit).
-  asmjit::TypeId _vecTypeId = asmjit::TypeId::kVoid;
+  asmjit::TypeId _vec_type_id = asmjit::TypeId::kVoid;
 
   //! Function node.
-  asmjit::FuncNode* _funcNode = nullptr;
+  asmjit::FuncNode* _func_node = nullptr;
   //! Function initialization hook.
-  asmjit::BaseNode* _funcInit = nullptr;
+  asmjit::BaseNode* _func_init = nullptr;
   //! Function end hook (to add 'unlikely' branches).
-  asmjit::BaseNode* _funcEnd = nullptr;
+  asmjit::BaseNode* _func_end = nullptr;
 
   //! Invalid GP register.
-  Gp _gpNone;
+  Gp _gp_none;
   //! Temporary stack used to transfer SIMD regs to GP/MM.
-  Mem _tmpStack[size_t(StackId::kMaxValue) + 1];
+  Mem _tmp_stack[size_t(StackId::kMaxValue) + 1];
 
-  //! Offset to the first constant to the `commonTable` global.
-  int32_t _commonTableOff = 0;
-  //! Pointer to the `commonTable` constant pool (only used in 64-bit mode).
-  Gp _commonTablePtr;
+  //! Offset to the first constant to the `common_table` global.
+  int32_t _common_table_offset = 0;
+  //! Pointer to the `common_table` constant pool (only used in 64-bit mode).
+  Gp _common_table_ptr;
 
 #if defined(BL_JIT_ARCH_X86)
-  KReg _kReg[kMaxKRegConstCount];
-  uint64_t _kImm[kMaxKRegConstCount] {};
+  KReg _k_reg[kMaxKRegConstCount];
+  uint64_t _k_imm[kMaxKRegConstCount] {};
 #endif // BL_JIT_ARCH_X86
 
   struct VecConst {
     const void* ptr;
-    uint32_t vRegId;
+    uint32_t virt_id;
   };
 
   struct VecConstEx {
     uint8_t data[16];
-    uint32_t vRegId;
+    uint32_t virt_id;
   };
 
-  asmjit::ZoneVector<VecConst> _vecConsts;
-  asmjit::ZoneVector<VecConstEx> _vecConstsEx;
+  asmjit::ArenaVector<VecConst> _vec_consts;
+  asmjit::ArenaVector<VecConstEx> _vec_consts_ex;
 
   //! \}
 
   //! \name Construction & Destruction
   //! \{
 
-  PipeCompiler(AsmCompiler* cc, const asmjit::CpuFeatures& features, PipeOptFlags optFlags) noexcept;
+  PipeCompiler(AsmCompiler* cc, const asmjit::CpuFeatures& features, PipeOptFlags opt_flags) noexcept;
   ~PipeCompiler() noexcept;
 
   //! \}
@@ -1187,201 +1187,201 @@ public:
   //! \name Allocators
   //! \{
 
-  BL_INLINE_NODEBUG asmjit::ZoneAllocator* zoneAllocator() noexcept { return &cc->_allocator; }
+  BL_INLINE_NODEBUG asmjit::Arena& arena() noexcept { return cc->_builder_arena; }
 
   //! \}
 
   //! \name CPU Architecture, Features and Optimization Options
   //! \{
 
-  void _initExtensions(const asmjit::CpuFeatures& features) noexcept;
+  void _init_extensions(const asmjit::CpuFeatures& features) noexcept;
 
-  BL_INLINE_NODEBUG bool is32Bit() const noexcept { return cc->is32Bit(); }
-  BL_INLINE_NODEBUG bool is64Bit() const noexcept { return cc->is64Bit(); }
-  BL_INLINE_NODEBUG uint32_t registerSize() const noexcept { return cc->registerSize(); }
+  BL_INLINE_NODEBUG bool is_32bit() const noexcept { return cc->is_32bit(); }
+  BL_INLINE_NODEBUG bool is_64bit() const noexcept { return cc->is_64bit(); }
+  BL_INLINE_NODEBUG uint32_t register_size() const noexcept { return cc->register_size(); }
 
 #if defined(BL_JIT_ARCH_X86)
-  BL_INLINE_NODEBUG bool hasGPExt(GPExt ext) const noexcept { return (_gpExtMask & (1u << uint32_t(ext))) != 0; }
-  BL_INLINE_NODEBUG bool hasSSEExt(SSEExt ext) const noexcept { return (_sseExtMask & (1u << uint32_t(ext))) != 0; }
-  BL_INLINE_NODEBUG bool hasAVXExt(AVXExt ext) const noexcept { return (_avxExtMask & (uint64_t(1) << uint32_t(ext))) != 0; }
+  BL_INLINE_NODEBUG bool has_gp_ext(GPExt ext) const noexcept { return (_gp_ext_mask & (1u << uint32_t(ext))) != 0; }
+  BL_INLINE_NODEBUG bool has_sse_ext(SSEExt ext) const noexcept { return (_sse_ext_mask & (1u << uint32_t(ext))) != 0; }
+  BL_INLINE_NODEBUG bool has_avx_ext(AVXExt ext) const noexcept { return (_avx_ext_mask & (uint64_t(1) << uint32_t(ext))) != 0; }
 
   //! Tests whether ADX extension is available.
-  BL_INLINE_NODEBUG bool hasADX() const noexcept { return hasGPExt(GPExt::kADX); }
+  BL_INLINE_NODEBUG bool has_adx() const noexcept { return has_gp_ext(GPExt::kADX); }
   //! Tests whether BMI extension is available.
-  BL_INLINE_NODEBUG bool hasBMI() const noexcept { return hasGPExt(GPExt::kBMI); }
+  BL_INLINE_NODEBUG bool has_bmi() const noexcept { return has_gp_ext(GPExt::kBMI); }
   //! Tests whether BMI2 extension is available.
-  BL_INLINE_NODEBUG bool hasBMI2() const noexcept { return hasGPExt(GPExt::kBMI2); }
+  BL_INLINE_NODEBUG bool has_bmi2() const noexcept { return has_gp_ext(GPExt::kBMI2); }
   //! Tests whether LZCNT extension is available.
-  BL_INLINE_NODEBUG bool hasLZCNT() const noexcept { return hasGPExt(GPExt::kLZCNT); }
+  BL_INLINE_NODEBUG bool has_lzcnt() const noexcept { return has_gp_ext(GPExt::kLZCNT); }
   //! Tests whether MOVBE extension is available.
-  BL_INLINE_NODEBUG bool hasMOVBE() const noexcept { return hasGPExt(GPExt::kMOVBE); }
+  BL_INLINE_NODEBUG bool has_movbe() const noexcept { return has_gp_ext(GPExt::kMOVBE); }
   //! Tests whether POPCNT extension is available.
-  BL_INLINE_NODEBUG bool hasPOPCNT() const noexcept { return hasGPExt(GPExt::kPOPCNT); }
+  BL_INLINE_NODEBUG bool has_popcnt() const noexcept { return has_gp_ext(GPExt::kPOPCNT); }
 
   //! Tests whether SSE2 extensions are available (this should always return true).
-  BL_INLINE_NODEBUG bool hasSSE2() const noexcept { return hasSSEExt(SSEExt::kSSE2); }
+  BL_INLINE_NODEBUG bool has_sse2() const noexcept { return has_sse_ext(SSEExt::kSSE2); }
   //! Tests whether SSE3 extension is available.
-  BL_INLINE_NODEBUG bool hasSSE3() const noexcept { return hasSSEExt(SSEExt::kSSE3); }
+  BL_INLINE_NODEBUG bool has_sse3() const noexcept { return has_sse_ext(SSEExt::kSSE3); }
   //! Tests whether SSSE3 extension is available.
-  BL_INLINE_NODEBUG bool hasSSSE3() const noexcept { return hasSSEExt(SSEExt::kSSSE3); }
+  BL_INLINE_NODEBUG bool has_ssse3() const noexcept { return has_sse_ext(SSEExt::kSSSE3); }
   //! Tests whether SSE4.1 extension is available.
-  BL_INLINE_NODEBUG bool hasSSE4_1() const noexcept { return hasSSEExt(SSEExt::kSSE4_1); }
+  BL_INLINE_NODEBUG bool has_sse4_1() const noexcept { return has_sse_ext(SSEExt::kSSE4_1); }
   //! Tests whether SSE4.2 extension is available.
-  BL_INLINE_NODEBUG bool hasSSE4_2() const noexcept { return hasSSEExt(SSEExt::kSSE4_2); }
+  BL_INLINE_NODEBUG bool has_sse4_2() const noexcept { return has_sse_ext(SSEExt::kSSE4_2); }
   //! Tests whether PCLMULQDQ extension is available.
-  BL_INLINE_NODEBUG bool hasPCLMULQDQ() const noexcept { return hasSSEExt(SSEExt::kPCLMULQDQ); }
+  BL_INLINE_NODEBUG bool has_pclmulqdq() const noexcept { return has_sse_ext(SSEExt::kPCLMULQDQ); }
 
   //! Tests whether AVX extension is available.
-  BL_INLINE_NODEBUG bool hasAVX() const noexcept { return hasAVXExt(AVXExt::kAVX); }
+  BL_INLINE_NODEBUG bool has_avx() const noexcept { return has_avx_ext(AVXExt::kAVX); }
   //! Tests whether AVX2 extension is available.
-  BL_INLINE_NODEBUG bool hasAVX2() const noexcept { return hasAVXExt(AVXExt::kAVX2); }
+  BL_INLINE_NODEBUG bool has_avx2() const noexcept { return has_avx_ext(AVXExt::kAVX2); }
   //! Tests whether F16C extension is available.
-  BL_INLINE_NODEBUG bool hasF16C() const noexcept { return hasAVXExt(AVXExt::kF16C); }
+  BL_INLINE_NODEBUG bool has_f16c() const noexcept { return has_avx_ext(AVXExt::kF16C); }
   //! Tests whether FMA extension is available.
-  BL_INLINE_NODEBUG bool hasFMA() const noexcept { return hasAVXExt(AVXExt::kFMA); }
+  BL_INLINE_NODEBUG bool has_fma() const noexcept { return has_avx_ext(AVXExt::kFMA); }
   //! Tests whether GFNI extension is available.
-  BL_INLINE_NODEBUG bool hasGFNI() const noexcept { return hasAVXExt(AVXExt::kGFNI); }
+  BL_INLINE_NODEBUG bool has_gfni() const noexcept { return has_avx_ext(AVXExt::kGFNI); }
   //! Tests whether VPCLMULQDQ extension is available.
-  BL_INLINE_NODEBUG bool hasVPCLMULQDQ() const noexcept { return hasAVXExt(AVXExt::kVPCLMULQDQ); }
+  BL_INLINE_NODEBUG bool has_vpclmulqdq() const noexcept { return has_avx_ext(AVXExt::kVPCLMULQDQ); }
 
   //! Tests whether AVX_IFMA extension is available.
-  BL_INLINE_NODEBUG bool hasAVX_IFMA() const noexcept { return hasAVXExt(AVXExt::kAVX_IFMA); }
+  BL_INLINE_NODEBUG bool has_avx_ifma() const noexcept { return has_avx_ext(AVXExt::kAVX_IFMA); }
   //! Tests whether AVX_NE_CONVERT extension is available.
-  BL_INLINE_NODEBUG bool hasAVX_NE_CONVERT() const noexcept { return hasAVXExt(AVXExt::kAVX_NE_CONVERT); }
+  BL_INLINE_NODEBUG bool has_avx_ne_convert() const noexcept { return has_avx_ext(AVXExt::kAVX_NE_CONVERT); }
   //! Tests whether AVX_VNNI extension is available.
-  BL_INLINE_NODEBUG bool hasAVX_VNNI() const noexcept { return hasAVXExt(AVXExt::kAVX_VNNI); }
+  BL_INLINE_NODEBUG bool has_avx_vnni() const noexcept { return has_avx_ext(AVXExt::kAVX_VNNI); }
   //! Tests whether AVX_VNNI_INT8 extension is available.
-  BL_INLINE_NODEBUG bool hasAVX_VNNI_INT8() const noexcept { return hasAVXExt(AVXExt::kAVX_VNNI_INT8); }
+  BL_INLINE_NODEBUG bool has_avx_vnni_int8() const noexcept { return has_avx_ext(AVXExt::kAVX_VNNI_INT8); }
   //! Tests whether AVX_VNNI_INT16 extension is available.
-  BL_INLINE_NODEBUG bool hasAVX_VNNI_INT16() const noexcept { return hasAVXExt(AVXExt::kAVX_VNNI_INT16); }
+  BL_INLINE_NODEBUG bool has_avx_vnni_int16() const noexcept { return has_avx_ext(AVXExt::kAVX_VNNI_INT16); }
 
   //! Tests whether a baseline AVX-512 extensions are available (F, CD, BW, DQ, and VL).
-  BL_INLINE_NODEBUG bool hasAVX512() const noexcept { return hasAVXExt(AVXExt::kAVX512); }
+  BL_INLINE_NODEBUG bool has_avx512() const noexcept { return has_avx_ext(AVXExt::kAVX512); }
   //! Tests whether AVX512_BF16 extension is available.
-  BL_INLINE_NODEBUG bool hasAVX512_BF16() const noexcept { return hasAVXExt(AVXExt::kAVX512_BF16); }
+  BL_INLINE_NODEBUG bool has_avx512_bf16() const noexcept { return has_avx_ext(AVXExt::kAVX512_BF16); }
   //! Tests whether AVX512_BITALT extension is available.
-  BL_INLINE_NODEBUG bool hasAVX512_BITALG() const noexcept { return hasAVXExt(AVXExt::kAVX512_BITALG); }
+  BL_INLINE_NODEBUG bool has_avx512_bitalg() const noexcept { return has_avx_ext(AVXExt::kAVX512_BITALG); }
   //! Tests whether AVX512_FP16 extension is available.
-  BL_INLINE_NODEBUG bool hasAVX512_FP16() const noexcept { return hasAVXExt(AVXExt::kAVX512_FP16); }
+  BL_INLINE_NODEBUG bool has_avx512_fp16() const noexcept { return has_avx_ext(AVXExt::kAVX512_FP16); }
   //! Tests whether AVX512_IFMA extension is available.
-  BL_INLINE_NODEBUG bool hasAVX512_IFMA() const noexcept { return hasAVXExt(AVXExt::kAVX512_IFMA); }
+  BL_INLINE_NODEBUG bool has_avx512_ifma() const noexcept { return has_avx_ext(AVXExt::kAVX512_IFMA); }
   //! Tests whether AVX512_VBMI extension is available.
-  BL_INLINE_NODEBUG bool hasAVX512_VBMI() const noexcept { return hasAVXExt(AVXExt::kAVX512_VBMI); }
+  BL_INLINE_NODEBUG bool has_avx512_vbmi() const noexcept { return has_avx_ext(AVXExt::kAVX512_VBMI); }
   //! Tests whether AVX512_VBMI2 extension is available.
-  BL_INLINE_NODEBUG bool hasAVX512_VBMI2() const noexcept { return hasAVXExt(AVXExt::kAVX512_VBMI2); }
+  BL_INLINE_NODEBUG bool has_avx512_vbmi2() const noexcept { return has_avx_ext(AVXExt::kAVX512_VBMI2); }
   //! Tests whether AVX512_VNNI extension is available.
-  BL_INLINE_NODEBUG bool hasAVX512_VNNI() const noexcept { return hasAVXExt(AVXExt::kAVX512_VNNI); }
+  BL_INLINE_NODEBUG bool has_avx512_vnni() const noexcept { return has_avx_ext(AVXExt::kAVX512_VNNI); }
   //! Tests whether AVX512_VPOPCNTDQ extension is available.
-  BL_INLINE_NODEBUG bool hasAVX512_VPOPCNTDQ() const noexcept { return hasAVXExt(AVXExt::kAVX512_VPOPCNTDQ); }
+  BL_INLINE_NODEBUG bool has_avx512_vpopcntdq() const noexcept { return has_avx_ext(AVXExt::kAVX512_VPOPCNTDQ); }
 
   //! Tests whether the target SIMD ISA provides instructions with non-destructive source operand (AVX+).
-  BL_INLINE_NODEBUG bool hasNonDestructiveSrc() const noexcept { return hasAVX(); }
+  BL_INLINE_NODEBUG bool has_non_destructive_src() const noexcept { return has_avx(); }
 
 #endif // BL_JIT_ARCH_X86
 
 #if defined(BL_JIT_ARCH_A64)
-  BL_INLINE_NODEBUG bool hasGPExt(GPExt ext) const noexcept { return (_gpExtMask & (uint64_t(1) << uint32_t(ext))) != 0; }
-  BL_INLINE_NODEBUG bool hasASIMDExt(ASIMDExt ext) const noexcept { return (_asimdExtMask & (uint64_t(1) << uint32_t(ext))) != 0; }
+  BL_INLINE_NODEBUG bool has_gp_ext(GPExt ext) const noexcept { return (_gp_ext_mask & (uint64_t(1) << uint32_t(ext))) != 0; }
+  BL_INLINE_NODEBUG bool has_asimd_ext(ASIMDExt ext) const noexcept { return (_asimd_ext_mask & (uint64_t(1) << uint32_t(ext))) != 0; }
 
   //! Tests whether CSSC extension is available.
-  BL_INLINE_NODEBUG bool hasCSSC() const noexcept { return hasGPExt(GPExt::kCSSC); }
+  BL_INLINE_NODEBUG bool has_cssc() const noexcept { return has_gp_ext(GPExt::kCSSC); }
   //! Tests whether FLAGM extension is available.
-  BL_INLINE_NODEBUG bool hasFLAGM() const noexcept { return hasGPExt(GPExt::kFLAGM); }
+  BL_INLINE_NODEBUG bool has_flagm() const noexcept { return has_gp_ext(GPExt::kFLAGM); }
   //! Tests whether FLAGM2 extension is available.
-  BL_INLINE_NODEBUG bool hasFLAGM2() const noexcept { return hasGPExt(GPExt::kFLAGM2); }
+  BL_INLINE_NODEBUG bool has_flagm2() const noexcept { return has_gp_ext(GPExt::kFLAGM2); }
   //! Tests whether LS64 extension is available.
-  BL_INLINE_NODEBUG bool hasLS64() const noexcept { return hasGPExt(GPExt::kLS64); }
+  BL_INLINE_NODEBUG bool has_ls64() const noexcept { return has_gp_ext(GPExt::kLS64); }
   //! Tests whether LS64_V extension is available.
-  BL_INLINE_NODEBUG bool hasLS64_V() const noexcept { return hasGPExt(GPExt::kLS64_V); }
+  BL_INLINE_NODEBUG bool has_ls64_v() const noexcept { return has_gp_ext(GPExt::kLS64_V); }
   //! Tests whether LSE extension is available.
-  BL_INLINE_NODEBUG bool hasLSE() const noexcept { return hasGPExt(GPExt::kLSE); }
+  BL_INLINE_NODEBUG bool has_lse() const noexcept { return has_gp_ext(GPExt::kLSE); }
   //! Tests whether LSE128 extension is available.
-  BL_INLINE_NODEBUG bool hasLSE128() const noexcept { return hasGPExt(GPExt::kLSE128); }
+  BL_INLINE_NODEBUG bool has_lse128() const noexcept { return has_gp_ext(GPExt::kLSE128); }
   //! Tests whether LSE2 extension is available.
-  BL_INLINE_NODEBUG bool hasLSE2() const noexcept { return hasGPExt(GPExt::kLSE2); }
+  BL_INLINE_NODEBUG bool has_lse2() const noexcept { return has_gp_ext(GPExt::kLSE2); }
 
   //! Tests whether ASIMD extension is available (must always return true).
-  BL_INLINE_NODEBUG bool hasASIMD() const noexcept { return hasASIMDExt(ASIMDExt::kASIMD); }
+  BL_INLINE_NODEBUG bool has_asimd() const noexcept { return has_asimd_ext(ASIMDExt::kASIMD); }
   //! Tests whether BF16 extension is available.
-  BL_INLINE_NODEBUG bool hasBF16() const noexcept { return hasASIMDExt(ASIMDExt::kBF16); }
+  BL_INLINE_NODEBUG bool has_bf16() const noexcept { return has_asimd_ext(ASIMDExt::kBF16); }
   //! Tests whether DOTPROD extension is available.
-  BL_INLINE_NODEBUG bool hasDOTPROD() const noexcept { return hasASIMDExt(ASIMDExt::kDOTPROD); }
+  BL_INLINE_NODEBUG bool has_dotprod() const noexcept { return has_asimd_ext(ASIMDExt::kDOTPROD); }
   //! Tests whether FCMA extension is available.
-  BL_INLINE_NODEBUG bool hasFCMA() const noexcept { return hasASIMDExt(ASIMDExt::kFCMA); }
+  BL_INLINE_NODEBUG bool has_fcma() const noexcept { return has_asimd_ext(ASIMDExt::kFCMA); }
   //! Tests whether FHM extension is available.
-  BL_INLINE_NODEBUG bool hasFHM() const noexcept { return hasASIMDExt(ASIMDExt::kFHM); }
+  BL_INLINE_NODEBUG bool has_fhm() const noexcept { return has_asimd_ext(ASIMDExt::kFHM); }
   //! Tests whether FP16 extension is available.
-  BL_INLINE_NODEBUG bool hasFP16() const noexcept { return hasASIMDExt(ASIMDExt::kFP16); }
+  BL_INLINE_NODEBUG bool has_fp16() const noexcept { return has_asimd_ext(ASIMDExt::kFP16); }
   //! Tests whether FP16CONV extension is available.
-  BL_INLINE_NODEBUG bool hasFP16CONV() const noexcept { return hasASIMDExt(ASIMDExt::kFP16CONV); }
+  BL_INLINE_NODEBUG bool has_fp16conv() const noexcept { return has_asimd_ext(ASIMDExt::kFP16CONV); }
   //! Tests whether FP8 extension is available.
-  BL_INLINE_NODEBUG bool hasFP8() const noexcept { return hasASIMDExt(ASIMDExt::kFP8); }
+  BL_INLINE_NODEBUG bool has_fp8() const noexcept { return has_asimd_ext(ASIMDExt::kFP8); }
   //! Tests whether FRINTTS extension is available.
-  BL_INLINE_NODEBUG bool hasFRINTTS() const noexcept { return hasASIMDExt(ASIMDExt::kFRINTTS); }
+  BL_INLINE_NODEBUG bool has_frintts() const noexcept { return has_asimd_ext(ASIMDExt::kFRINTTS); }
   //! Tests whether I8MM extension is available.
-  BL_INLINE_NODEBUG bool hasI8MM() const noexcept { return hasASIMDExt(ASIMDExt::kI8MM); }
+  BL_INLINE_NODEBUG bool has_i8mm() const noexcept { return has_asimd_ext(ASIMDExt::kI8MM); }
   //! Tests whether JSCVT extension is available.
-  BL_INLINE_NODEBUG bool hasJSCVT() const noexcept { return hasASIMDExt(ASIMDExt::kJSCVT); }
+  BL_INLINE_NODEBUG bool has_jscvt() const noexcept { return has_asimd_ext(ASIMDExt::kJSCVT); }
   //! Tests whether PMULL extension is available.
-  BL_INLINE_NODEBUG bool hasPMULL() const noexcept { return hasASIMDExt(ASIMDExt::kPMULL); }
+  BL_INLINE_NODEBUG bool has_pmull() const noexcept { return has_asimd_ext(ASIMDExt::kPMULL); }
   //! Tests whether RDM extension is available.
-  BL_INLINE_NODEBUG bool hasRDM() const noexcept { return hasASIMDExt(ASIMDExt::kRDM); }
+  BL_INLINE_NODEBUG bool has_rdm() const noexcept { return has_asimd_ext(ASIMDExt::kRDM); }
   //! Tests whether SHA1 extension is available.
-  BL_INLINE_NODEBUG bool hasSHA1() const noexcept { return hasASIMDExt(ASIMDExt::kSHA1); }
+  BL_INLINE_NODEBUG bool has_sha1() const noexcept { return has_asimd_ext(ASIMDExt::kSHA1); }
   //! Tests whether SHA256 extension is available.
-  BL_INLINE_NODEBUG bool hasSHA256() const noexcept { return hasASIMDExt(ASIMDExt::kSHA256); }
+  BL_INLINE_NODEBUG bool has_sha256() const noexcept { return has_asimd_ext(ASIMDExt::kSHA256); }
   //! Tests whether SHA3 extension is available.
-  BL_INLINE_NODEBUG bool hasSHA3() const noexcept { return hasASIMDExt(ASIMDExt::kSHA3); }
+  BL_INLINE_NODEBUG bool has_sha3() const noexcept { return has_asimd_ext(ASIMDExt::kSHA3); }
   //! Tests whether SHA512 extension is available.
-  BL_INLINE_NODEBUG bool hasSHA512() const noexcept { return hasASIMDExt(ASIMDExt::kSHA512); }
+  BL_INLINE_NODEBUG bool has_sha512() const noexcept { return has_asimd_ext(ASIMDExt::kSHA512); }
   //! Tests whether SM3 extension is available.
-  BL_INLINE_NODEBUG bool hasSM3() const noexcept { return hasASIMDExt(ASIMDExt::kSM3); }
+  BL_INLINE_NODEBUG bool has_sm3() const noexcept { return has_asimd_ext(ASIMDExt::kSM3); }
   //! Tests whether SM4 extension is available.
-  BL_INLINE_NODEBUG bool hasSM4() const noexcept { return hasASIMDExt(ASIMDExt::kSM4); }
+  BL_INLINE_NODEBUG bool has_sm4() const noexcept { return has_asimd_ext(ASIMDExt::kSM4); }
 
   //! Tests whether the target SIMD ISA provides instructions with non-destructive destination (always on AArch64).
-  BL_INLINE_NODEBUG bool hasNonDestructiveSrc() const noexcept { return true; }
+  BL_INLINE_NODEBUG bool has_non_destructive_src() const noexcept { return true; }
 
 #endif // BL_JIT_ARCH_A64
 
   //! Returns a native register signature, either 32-bit or 64-bit depending on the target architecture).
-  BL_INLINE_NODEBUG OperandSignature gpSignature() const noexcept { return cc->gpSignature(); }
+  BL_INLINE_NODEBUG OperandSignature gp_signature() const noexcept { return cc->gp_signature(); }
   //! Clones the given `reg` register into a native register (either 32-bit or 64-bit depending on the target architecture).
   BL_INLINE_NODEBUG Gp gpz(const Gp& reg) const noexcept { return cc->gpz(reg); }
 
   //! Returns the behavior of scalar operations (mostly floating point).
-  BL_INLINE_NODEBUG ScalarOpBehavior scalarOpBehavior() const noexcept { return _scalarOpBehavior; }
+  BL_INLINE_NODEBUG ScalarOpBehavior scalar_op_behavior() const noexcept { return _scalar_op_behavior; }
   //! Returns the behavior of floating point min/max operations.
-  BL_INLINE_NODEBUG FMinMaxOpBehavior fMinMaxOpBehavior() const noexcept { return _fMinMaxOpBehavior; }
+  BL_INLINE_NODEBUG FMinFMaxOpBehavior fmin_fmax_op_hehavior() const noexcept { return _fmin_fmax_op_hehavior; }
   //! Returns the behavior of floating point mul+add (`madd`) operations.
-  BL_INLINE_NODEBUG FMulAddOpBehavior fMulAddOpBehavior() const noexcept { return _fMulAddOpBehavior; }
+  BL_INLINE_NODEBUG FMAddOpBehavior fmadd_op_behavior() const noexcept { return _fmadd_op_behavior; }
 
   //! Tests whether a scalar operation is zeroing the rest of the destination register (AArch64).
-  BL_INLINE_NODEBUG bool isScalarOpZeroing() const noexcept { return _scalarOpBehavior == ScalarOpBehavior::kZeroing; }
+  BL_INLINE_NODEBUG bool is_scalar_op_zeroing() const noexcept { return _scalar_op_behavior == ScalarOpBehavior::kZeroing; }
   //! Tests whether a scalar operation is preserving the low 128-bit part of the destination register (X86|X86_64).
-  BL_INLINE_NODEBUG bool isScalarOpPreservingVec128() const noexcept { return _scalarOpBehavior == ScalarOpBehavior::kPreservingVec128; }
+  BL_INLINE_NODEBUG bool is_scalar_op_preserving_vec128() const noexcept { return _scalar_op_behavior == ScalarOpBehavior::kPreservingVec128; }
 
   //! Tests whether a floating point min/max operation selects a finite value if one of the values is NaN (AArch64).
-  BL_INLINE_NODEBUG bool isFMinMaxFinite() const noexcept { return _fMinMaxOpBehavior == FMinMaxOpBehavior::kFiniteValue; }
+  BL_INLINE_NODEBUG bool is_fmin_fmax_finite() const noexcept { return _fmin_fmax_op_hehavior == FMinFMaxOpBehavior::kFiniteValue; }
   //! Tests whether a floating point min/max operation works as a ternary if - `if a <|> b ? a : b` (X86|X86_64).
-  BL_INLINE_NODEBUG bool isFMinMaxTernary() const noexcept { return _fMinMaxOpBehavior == FMinMaxOpBehavior::kTernaryLogic; }
+  BL_INLINE_NODEBUG bool is_fmin_fmax_ternary() const noexcept { return _fmin_fmax_op_hehavior == FMinFMaxOpBehavior::kTernaryLogic; }
 
   //! Tests whether a floating point mul+add operation is fused (uses FMA).
-  BL_INLINE_NODEBUG bool isMAddFused() const noexcept { return _fMulAddOpBehavior != FMulAddOpBehavior::kNoFMA; }
+  BL_INLINE_NODEBUG bool is_fmadd_fused() const noexcept { return _fmadd_op_behavior != FMAddOpBehavior::kNoFMA; }
   //! Tests whether a FMA operation is available and that it can store the result to any register (true of X86).
-  BL_INLINE_NODEBUG bool isFMAStoringToAnyRegister() const noexcept { return _fMulAddOpBehavior == FMulAddOpBehavior::kFMAStoreToAny; }
+  BL_INLINE_NODEBUG bool is_fma_storing_to_any_register() const noexcept { return _fmadd_op_behavior == FMAddOpBehavior::kFMAStoreToAny; }
   //! Tests whether a FMA operation is available and that it only stores the result to accumulator register.
-  BL_INLINE_NODEBUG bool isFMAStoringToAccumulator() const noexcept { return _fMulAddOpBehavior == FMulAddOpBehavior::kFMAStoreToAccumulator; }
+  BL_INLINE_NODEBUG bool is_fma_storing_to_any_accumulator() const noexcept { return _fmadd_op_behavior == FMAddOpBehavior::kFMAStoreToAccumulator; }
 
-  BL_INLINE_NODEBUG PipeOptFlags optFlags() const noexcept { return _optFlags; }
-  BL_INLINE_NODEBUG bool hasOptFlag(PipeOptFlags flag) const noexcept { return blTestFlag(_optFlags, flag); }
+  BL_INLINE_NODEBUG PipeOptFlags opt_flags() const noexcept { return _opt_flags; }
+  BL_INLINE_NODEBUG bool has_opt_flag(PipeOptFlags flag) const noexcept { return bl_test_flag(_opt_flags, flag); }
 
-  BL_INLINE_NODEBUG uint32_t vecRegCount() const noexcept { return _vecRegCount; }
+  BL_INLINE_NODEBUG uint32_t vec_reg_count() const noexcept { return _vec_reg_count; }
 
-  VecWidth maxVecWidthFromCpuFeatures() noexcept;
-  void initVecWidth(VecWidth vw) noexcept;
+  VecWidth max_vec_width_from_cpu_features() noexcept;
+  void init_vec_width(VecWidth vw) noexcept;
 
-  bool hasMaskedAccessOf(uint32_t dataSize) const noexcept;
+  bool has_masked_access_of(uint32_t data_size) const noexcept;
 
   //! \}
 
@@ -1392,44 +1392,44 @@ public:
   //!
   //! \note The returned width is in bytes and it's calculated from the maximum supported widths of all pipeline parts.
   //! This means that SIMD width returned could be actually lower than a SIMD width supported by the target CPU.
-  BL_INLINE_NODEBUG VecWidth vecWidth() const noexcept { return _vecWidth; }
+  BL_INLINE_NODEBUG VecWidth vec_width() const noexcept { return _vec_width; }
 
   //! Returns whether the compiler and all parts use 256-bit SIMD.
-  BL_INLINE_NODEBUG bool use256BitSimd() const noexcept { return _vecWidth >= VecWidth::k256; }
+  BL_INLINE_NODEBUG bool use_256bit_simd() const noexcept { return _vec_width >= VecWidth::k256; }
   //! Returns whether the compiler and all parts use 512-bit SIMD.
-  BL_INLINE_NODEBUG bool use512BitSimd() const noexcept { return _vecWidth >= VecWidth::k512; }
+  BL_INLINE_NODEBUG bool use_512bit_simd() const noexcept { return _vec_width >= VecWidth::k512; }
 
-  //! Returns a constant that can be used to multiply a baseline SIMD width to get the value returned by `vecWidth()`.
+  //! Returns a constant that can be used to multiply a baseline SIMD width to get the value returned by `vec_width()`.
   //!
   //! \note A baseline SIMD width would be 16 bytes on most platforms.
-  BL_INLINE_NODEBUG uint32_t vecMultiplier() const noexcept { return _vecMultiplier; }
+  BL_INLINE_NODEBUG uint32_t vec_multiplier() const noexcept { return _vec_multiplier; }
 
-  BL_INLINE_NODEBUG VecWidth vecWidthOf(DataWidth dataWidth, uint32_t n) const noexcept { return VecWidthUtils::vecWidthOf(vecWidth(), dataWidth, n); }
-  BL_INLINE_NODEBUG uint32_t vecCountOf(DataWidth dataWidth, uint32_t n) const noexcept { return VecWidthUtils::vecCountOf(vecWidth(), dataWidth, n); }
+  BL_INLINE_NODEBUG VecWidth vec_width_of(DataWidth data_width, uint32_t n) const noexcept { return VecWidthUtils::vec_width_of(vec_width(), data_width, n); }
+  BL_INLINE_NODEBUG uint32_t vec_count_of(DataWidth data_width, uint32_t n) const noexcept { return VecWidthUtils::vec_count_of(vec_width(), data_width, n); }
 
-  BL_INLINE_NODEBUG VecWidth vecWidthOf(DataWidth dataWidth, PixelCount pixelCount) const noexcept { return VecWidthUtils::vecWidthOf(vecWidth(), dataWidth, pixelCount.value()); }
-  BL_INLINE_NODEBUG uint32_t vecCountOf(DataWidth dataWidth, PixelCount pixelCount) const noexcept { return VecWidthUtils::vecCountOf(vecWidth(), dataWidth, pixelCount.value()); }
+  BL_INLINE_NODEBUG VecWidth vec_width_of(DataWidth data_width, PixelCount pixel_count) const noexcept { return VecWidthUtils::vec_width_of(vec_width(), data_width, pixel_count.value()); }
+  BL_INLINE_NODEBUG uint32_t vec_count_of(DataWidth data_width, PixelCount pixel_count) const noexcept { return VecWidthUtils::vec_count_of(vec_width(), data_width, pixel_count.value()); }
 
   //! \}
 
   //! \name Function
   //! \{
 
-  void initFunction(asmjit::FuncNode* funcNode) noexcept;
+  void init_function(asmjit::FuncNode* func_node) noexcept;
 
   //! \}
 
   //! \name Miscellaneous Helpers
   //! \{
 
-  BL_INLINE void rename(const OpArray& opArray, const char* name) noexcept {
-    for (uint32_t i = 0; i < opArray.size(); i++)
-      cc->rename(opArray[i].as<asmjit::Reg>(), "%s%u", name, unsigned(i));
+  BL_INLINE void rename(const OpArray& op_array, const char* name) noexcept {
+    for (uint32_t i = 0; i < op_array.size(); i++)
+      cc->rename(op_array[i].as<asmjit::Reg>(), "%s%u", name, unsigned(i));
   }
 
-  BL_INLINE void rename(const OpArray& opArray, const char* prefix, const char* name) noexcept {
-    for (uint32_t i = 0; i < opArray.size(); i++)
-      cc->rename(opArray[i].as<asmjit::Reg>(), "%s%s%u", prefix, name, unsigned(i));
+  BL_INLINE void rename(const OpArray& op_array, const char* prefix, const char* name) noexcept {
+    for (uint32_t i = 0; i < op_array.size(); i++)
+      cc->rename(op_array[i].as<asmjit::Reg>(), "%s%s%u", prefix, name, unsigned(i));
   }
 
   //! \}
@@ -1437,10 +1437,10 @@ public:
   //! \name Utilities
   //! \{
 
-  BL_INLINE Label newLabel() const noexcept { return cc->newLabel(); }
-  BL_INLINE PixelPredicate& emptyPredicate() noexcept { return _emptyPredicate; }
+  BL_INLINE Label new_label() const noexcept { return cc->new_label(); }
+  BL_INLINE PixelPredicate& empty_predicate() noexcept { return _empty_predicate; }
 
-  BL_INLINE void align(AlignMode alignMode, uint32_t alignment) noexcept { cc->align(alignMode, alignment); }
+  BL_INLINE void align(AlignMode align_mode, uint32_t alignment) noexcept { cc->align(align_mode, alignment); }
   BL_INLINE void bind(const Label& label) noexcept { cc->bind(label); }
 
   //! \}
@@ -1448,203 +1448,203 @@ public:
   //! \name Virtual Registers & Memory (Target Independent)
   //! \{
 
-  BL_INLINE Gp newGp32() noexcept { return cc->newUInt32(); }
-  BL_INLINE Gp newGp64() noexcept { return cc->newUInt64(); }
-  BL_INLINE Gp newGpPtr() noexcept { return cc->newUIntPtr(); }
+  BL_INLINE Gp new_gp32() noexcept { return cc->new_gp32(); }
+  BL_INLINE Gp new_gp64() noexcept { return cc->new_gp64(); }
+  BL_INLINE Gp new_gp() noexcept { return cc->new_gp_ptr(); }
 
   template<typename... Args>
-  BL_INLINE Gp newGp32(const char* name, Args&&... args) noexcept { return cc->newUInt32(name, BLInternal::forward<Args>(args)...); }
+  BL_INLINE Gp new_gp32(const char* name, Args&&... args) noexcept { return cc->new_gp32(name, BLInternal::forward<Args>(args)...); }
   template<typename... Args>
-  BL_INLINE Gp newGp64(const char* name, Args&&... args) noexcept { return cc->newUInt64(name, BLInternal::forward<Args>(args)...); }
+  BL_INLINE Gp new_gp64(const char* name, Args&&... args) noexcept { return cc->new_gp64(name, BLInternal::forward<Args>(args)...); }
   template<typename... Args>
-  BL_INLINE Gp newGpPtr(const char* name, Args&&... args) noexcept { return cc->newUIntPtr(name, BLInternal::forward<Args>(args)...); }
+  BL_INLINE Gp new_gp(const char* name, Args&&... args) noexcept { return cc->new_gp_ptr(name, BLInternal::forward<Args>(args)...); }
 
   template<typename RegT>
-  BL_INLINE RegT newSimilarReg(const RegT& ref) noexcept { return cc->newSimilarReg(ref); }
+  BL_INLINE RegT new_similar_reg(const RegT& ref) noexcept { return cc->new_similar_reg(ref); }
   template<typename RegT, typename... Args>
-  BL_INLINE RegT newSimilarReg(const RegT& ref, Args&&... args) noexcept { return cc->newSimilarReg(ref, BLInternal::forward<Args>(args)...); }
+  BL_INLINE RegT new_similar_reg(const RegT& ref, Args&&... args) noexcept { return cc->new_similar_reg(ref, BLInternal::forward<Args>(args)...); }
 
   template<typename... Args>
-  BL_INLINE Vec newVec(const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec new_vec(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, _vecTypeId, name, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out<Reg>(reg), _vec_type_id, name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
-  BL_INLINE Vec newVec(VecWidth vw, const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec new_vec(VecWidth vw, const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, VecWidthUtils::typeIdOf(vw), name, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out<Reg>(reg), VecWidthUtils::type_id_of(vw), name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
-  BL_NOINLINE void newRegArray(OpArray& dst, uint32_t n, asmjit::TypeId typeId, const char* name) noexcept {
+  BL_NOINLINE void new_reg_array(OpArray& dst, uint32_t n, asmjit::TypeId type_id, const char* name) noexcept {
     BL_ASSERT(n <= OpArray::kMaxSize);
     dst._size = n;
     for (uint32_t i = 0; i < n; i++) {
-      cc->_newRegFmt(&dst[i].as<asmjit::Reg>(), typeId, "%s%u", name, i);
+      cc->_new_reg_fmt(asmjit::Out(dst[i].as<asmjit::Reg>()), type_id, "%s%u", name, i);
     }
   }
 
-  BL_NOINLINE void newRegArray(OpArray& dst, uint32_t n, asmjit::TypeId typeId, const char* prefix, const char* name) noexcept {
+  BL_NOINLINE void new_reg_array(OpArray& dst, uint32_t n, asmjit::TypeId type_id, const char* prefix, const char* name) noexcept {
     BL_ASSERT(n <= OpArray::kMaxSize);
     dst._size = n;
     for (uint32_t i = 0; i < n; i++) {
-      cc->_newRegFmt(&dst[i].as<asmjit::Reg>(), typeId, "%s%s%u", prefix, name, i);
+      cc->_new_reg_fmt(asmjit::Out(dst[i].as<asmjit::Reg>()), type_id, "%s%s%u", prefix, name, i);
     }
   }
 
-  BL_NOINLINE void newRegArray(OpArray& dst, uint32_t n, const asmjit::Reg& ref, const char* name) noexcept {
+  BL_NOINLINE void new_reg_array(OpArray& dst, uint32_t n, const asmjit::Reg& ref, const char* name) noexcept {
     BL_ASSERT(n <= OpArray::kMaxSize);
     dst._size = n;
     for (uint32_t i = 0; i < n; i++) {
-      cc->_newRegFmt(&dst[i].as<asmjit::Reg>(), ref, "%s%u", name, i);
+      cc->_new_reg_fmt(asmjit::Out(dst[i].as<asmjit::Reg>()), ref, "%s%u", name, i);
     }
   }
 
-  BL_NOINLINE void newRegArray(OpArray& dst, uint32_t n, const asmjit::Reg& ref, const char* prefix, const char* name) noexcept {
+  BL_NOINLINE void new_reg_array(OpArray& dst, uint32_t n, const asmjit::Reg& ref, const char* prefix, const char* name) noexcept {
     BL_ASSERT(n <= OpArray::kMaxSize);
     dst._size = n;
     for (uint32_t i = 0; i < n; i++) {
-      cc->_newRegFmt(&dst[i].as<asmjit::Reg>(), ref, "%s%s%u", prefix, name, i);
+      cc->_new_reg_fmt(asmjit::Out(dst[i].as<asmjit::Reg>()), ref, "%s%s%u", prefix, name, i);
     }
   }
 
-  BL_INLINE void newVecArray(OpArray& dst, uint32_t n, VecWidth vw, const char* name) noexcept {
-    newRegArray(dst, n, VecWidthUtils::typeIdOf(vw), name);
+  BL_INLINE void new_vec_array(OpArray& dst, uint32_t n, VecWidth vw, const char* name) noexcept {
+    new_reg_array(dst, n, VecWidthUtils::type_id_of(vw), name);
   }
 
-  BL_INLINE void newVecArray(OpArray& dst, uint32_t n, VecWidth vw, const char* prefix, const char* name) noexcept {
-    newRegArray(dst, n, VecWidthUtils::typeIdOf(vw), prefix, name);
+  BL_INLINE void new_vec_array(OpArray& dst, uint32_t n, VecWidth vw, const char* prefix, const char* name) noexcept {
+    new_reg_array(dst, n, VecWidthUtils::type_id_of(vw), prefix, name);
   }
 
-  BL_INLINE void newVecArray(OpArray& dst, uint32_t n, const Vec& ref, const char* name) noexcept {
-    newRegArray(dst, n, ref, name);
+  BL_INLINE void new_vec_array(OpArray& dst, uint32_t n, const Vec& ref, const char* name) noexcept {
+    new_reg_array(dst, n, ref, name);
   }
 
-  BL_INLINE void newVecArray(OpArray& dst, uint32_t n, const Vec& ref, const char* prefix, const char* name) noexcept {
-    newRegArray(dst, n, ref, prefix, name);
+  BL_INLINE void new_vec_array(OpArray& dst, uint32_t n, const Vec& ref, const char* prefix, const char* name) noexcept {
+    new_reg_array(dst, n, ref, prefix, name);
   }
 
-  Mem tmpStack(StackId id, uint32_t size) noexcept;
+  Mem tmp_stack(StackId id, uint32_t size) noexcept;
 
   //! \}
 
   //! \name Compiler Utilities
   //! \{
 
-  void embedJumpTable(const Label* jumpTable, size_t jumpTableSize, const Label& jumpTableBase, uint32_t entrySize) noexcept;
+  void embed_jump_table(const Label* jump_table, size_t jump_table_size, const Label& jump_table_base, uint32_t entry_size) noexcept;
 
   //! \}
 
-  void _initCommonTablePtr() noexcept;
+  void _init_common_table_ptr() noexcept;
 
   //! \name Virtual Registers
   //! \{
 
 #if defined(BL_JIT_ARCH_X86)
 
-  BL_INLINE Vec newV128() noexcept {
+  BL_INLINE Vec new_vec128() noexcept {
     Vec reg;
-    cc->_newReg(&reg, asmjit::TypeId::kInt32x4);
+    cc->_new_reg(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kInt32x4);
     return reg;
   }
 
-  BL_INLINE Vec newV32_F32() noexcept {
+  BL_INLINE Vec new_vec128_1xf32() noexcept {
     Vec reg;
-    cc->_newReg(&reg, asmjit::TypeId::kFloat32x1);
+    cc->_new_reg(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat32x1);
     return reg;
   }
 
-  BL_INLINE Vec newV64_F64() noexcept {
+  BL_INLINE Vec new_vec128_1xf64() noexcept {
     Vec reg;
-    cc->_newReg(&reg, asmjit::TypeId::kFloat64x1);
+    cc->_new_reg(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat64x1);
     return reg;
   }
 
-  BL_INLINE Vec newV128_F32() noexcept {
+  BL_INLINE Vec new_vec128_4xf32() noexcept {
     Vec reg;
-    cc->_newReg(&reg, asmjit::TypeId::kFloat32x4);
+    cc->_new_reg(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat32x4);
     return reg;
   }
 
-  BL_INLINE Vec newV128_F64() noexcept {
+  BL_INLINE Vec new_vec128_2xf64() noexcept {
     Vec reg;
-    cc->_newReg(&reg, asmjit::TypeId::kFloat64x2);
-    return reg;
-  }
-
-  template<typename... Args>
-  BL_INLINE Vec newV128(Args&&... args) noexcept {
-    Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x4, BLInternal::forward<Args>(args)...);
+    cc->_new_reg(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat64x2);
     return reg;
   }
 
   template<typename... Args>
-  BL_INLINE Vec newV32_F32(Args&&... args) noexcept {
+  BL_INLINE Vec new_vec128(Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x1, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kInt32x4, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
-  BL_INLINE Vec newV64_F64(Args&&... args) noexcept {
+  BL_INLINE Vec new_vec128_1xf32(Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x1, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat32x1, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
-  BL_INLINE Vec newV128_F32(Args&&... args) noexcept {
+  BL_INLINE Vec new_vec128_1xf64(Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x4, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat64x1, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
-  BL_INLINE Vec newV128_F64(Args&&... args) noexcept {
+  BL_INLINE Vec new_vec128_4xf32(Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x2, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat32x4, BLInternal::forward<Args>(args)...);
     return reg;
-  }
-
-  BL_INLINE void newV128Array(OpArray& dst, uint32_t n, const char* name) noexcept {
-    newRegArray(dst, n, asmjit::TypeId::kInt32x4, name);
-  }
-
-  BL_INLINE void newV128Array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
-    newRegArray(dst, n, asmjit::TypeId::kInt32x4, prefix, name);
   }
 
   template<typename... Args>
-  BL_INLINE Vec newV256(const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec new_vec128_2xf64(Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x8, name, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat64x2, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
-  BL_INLINE void newV256Array(OpArray& dst, uint32_t n, const char* name) noexcept {
-    newRegArray(dst, n, asmjit::TypeId::kInt32x8, name);
+  BL_INLINE void new_vec128_array(OpArray& dst, uint32_t n, const char* name) noexcept {
+    new_reg_array(dst, n, asmjit::TypeId::kInt32x4, name);
   }
 
-  BL_INLINE void newV256Array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
-    newRegArray(dst, n, asmjit::TypeId::kInt32x8, prefix, name);
+  BL_INLINE void new_vec128_array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
+    new_reg_array(dst, n, asmjit::TypeId::kInt32x4, prefix, name);
   }
 
   template<typename... Args>
-  BL_INLINE Vec newV512(const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec new_vec256(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x16, name, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kInt32x8, name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
-  BL_INLINE void newV512Array(OpArray& dst, uint32_t n, const char* name) noexcept {
-    newRegArray(dst, n, asmjit::TypeId::kInt32x16, name);
+  BL_INLINE void new_vec256_array(OpArray& dst, uint32_t n, const char* name) noexcept {
+    new_reg_array(dst, n, asmjit::TypeId::kInt32x8, name);
   }
 
-  BL_INLINE void newV512Array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
-    newRegArray(dst, n, asmjit::TypeId::kInt32x16, prefix, name);
+  BL_INLINE void new_vec256_array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
+    new_reg_array(dst, n, asmjit::TypeId::kInt32x8, prefix, name);
+  }
+
+  template<typename... Args>
+  BL_INLINE Vec new_vec512(const char* name, Args&&... args) noexcept {
+    Vec reg;
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kInt32x16, name, BLInternal::forward<Args>(args)...);
+    return reg;
+  }
+
+  BL_INLINE void new_vec512_array(OpArray& dst, uint32_t n, const char* name) noexcept {
+    new_reg_array(dst, n, asmjit::TypeId::kInt32x16, name);
+  }
+
+  BL_INLINE void new_vec512_array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
+    new_reg_array(dst, n, asmjit::TypeId::kInt32x16, prefix, name);
   }
 
 #endif // BL_JIT_ARCH_X86
@@ -1652,46 +1652,46 @@ public:
 #if defined(BL_JIT_ARCH_A64)
 
   template<typename... Args>
-  BL_INLINE Vec newV128(const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec new_vec128(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x4, name, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kInt32x4, name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
-  BL_INLINE Vec newV32_F32(const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec new_vec128_1xf32(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x1, name, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat32x1, name, BLInternal::forward<Args>(args)...);
     return reg.v128();
   }
 
   template<typename... Args>
-  BL_INLINE Vec newV64_F64(const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec new_vec128_1xf64(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x1, name, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat64x1, name, BLInternal::forward<Args>(args)...);
     return reg.v128();
   }
 
   template<typename... Args>
-  BL_INLINE Vec newV128_F32(const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec new_vec128_4xf32(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x4, name, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat32x4, name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
-  BL_INLINE Vec newV128_F64(const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec new_vec128_2xf64(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x2, name, BLInternal::forward<Args>(args)...);
+    cc->_new_reg_fmt(asmjit::Out(reg.as<Reg>()), asmjit::TypeId::kFloat64x2, name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
-  BL_INLINE void newV128Array(OpArray& dst, uint32_t n, const char* name) noexcept {
-    newRegArray(dst, n, asmjit::TypeId::kInt32x4, name);
+  BL_INLINE void new_vec128_array(OpArray& dst, uint32_t n, const char* name) noexcept {
+    new_reg_array(dst, n, asmjit::TypeId::kInt32x4, name);
   }
 
-  BL_INLINE void newV128Array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
-    newRegArray(dst, n, asmjit::TypeId::kInt32x4, prefix, name);
+  BL_INLINE void new_vec128_array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
+    new_reg_array(dst, n, asmjit::TypeId::kInt32x4, prefix, name);
   }
 
 #endif
@@ -1702,30 +1702,30 @@ public:
   //! \{
 
 #if defined(BL_JIT_ARCH_X86)
-  KReg kConst(uint64_t value) noexcept;
+  KReg k_const(uint64_t value) noexcept;
 #endif // BL_JIT_ARCH_X86
 
-  Operand simdConst(const void* c, Bcst bcstWidth, VecWidth constWidth) noexcept;
-  Operand simdConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept;
-  Operand simdConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept;
+  Operand simd_const(const void* c, Bcst bcst_width, VecWidth const_width) noexcept;
+  Operand simd_const(const void* c, Bcst bcst_width, const Vec& similar_to) noexcept;
+  Operand simd_const(const void* c, Bcst bcst_width, const VecArray& similar_to) noexcept;
 
-  Vec simdVecConst(const void* c, Bcst bcstWidth, VecWidth constWidth) noexcept;
-  Vec simdVecConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept;
-  Vec simdVecConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept;
+  Vec simd_vec_const(const void* c, Bcst bcst_width, VecWidth const_width) noexcept;
+  Vec simd_vec_const(const void* c, Bcst bcst_width, const Vec& similar_to) noexcept;
+  Vec simd_vec_const(const void* c, Bcst bcst_width, const VecArray& similar_to) noexcept;
 
-  Mem simdMemConst(const void* c, Bcst bcstWidth, VecWidth constWidth) noexcept;
-  Mem simdMemConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept;
-  Mem simdMemConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept;
+  Mem simd_mem_const(const void* c, Bcst bcst_width, VecWidth const_width) noexcept;
+  Mem simd_mem_const(const void* c, Bcst bcst_width, const Vec& similar_to) noexcept;
+  Mem simd_mem_const(const void* c, Bcst bcst_width, const VecArray& similar_to) noexcept;
 
-  Mem _getMemConst(const void* c) noexcept;
-  Vec _newVecConst(const void* c, bool isUniqueConst) noexcept;
+  Mem _get_mem_const(const void* c) noexcept;
+  Vec _new_vec_const(const void* c, bool is_unique_const) noexcept;
 
 #if defined(BL_JIT_ARCH_A64)
-  Vec simdConst16B(const void* data16) noexcept;
+  Vec simd_const_16b(const void* data16) noexcept;
 #endif // BL_JIT_ARCH_A64
 
 #if defined(BL_JIT_ARCH_A64)
-  inline Vec simdVecZero(const Vec& similarTo) noexcept { return simdVecConst(&ct.i_0000000000000000, Bcst::k32, similarTo); }
+  inline Vec simd_vec_zero(const Vec& similar_to) noexcept { return simd_vec_const(&ct.i_0000000000000000, Bcst::k32, similar_to); }
 #endif // BL_JIT_ARCH_A64
 
   //! \}
@@ -1930,7 +1930,7 @@ public:
   void add_ext(const Gp& dst, const Gp& src_, const Gp& idx_, uint32_t scale, int32_t disp = 0) noexcept;
 
 #if 1
-  inline void i_prefetch(const Mem& mem) noexcept { blUnused(mem); }
+  inline void i_prefetch(const Mem& mem) noexcept { bl_unused(mem); }
 #else
   inline void i_prefetch(const Mem& mem) noexcept { cc->prefetcht0(mem); }
 #endif
@@ -2734,20 +2734,20 @@ public:
 
   BL_NOINLINE void v_load_u8_u16_2x(const Vec& dst, const Mem& lo, const Mem& hi) noexcept {
 #if defined(BL_JIT_ARCH_X86)
-    Gp reg = newGp32("@tmp");
+    Gp reg = new_gp32("@tmp");
     Mem mLo(lo);
     Mem mHi(hi);
 
-    mLo.setSize(1);
-    mHi.setSize(1);
+    mLo.set_size(1);
+    mHi.set_size(1);
 
     load_u8(reg, mHi);
     shl(reg, reg, 16);
     cc->mov(reg.r8(), mLo);
     s_mov_u32(dst.xmm(), reg);
 #elif defined(BL_JIT_ARCH_A64)
-    Gp tmp_a = newGp32("@tmp_a");
-    Gp tmp_b = newGp32("@tmp_b");
+    Gp tmp_a = new_gp32("@tmp_a");
+    Gp tmp_b = new_gp32("@tmp_b");
 
     load_u8(tmp_a, lo);
     load_u8(tmp_b, hi);
@@ -2761,8 +2761,8 @@ public:
   //! \name Memory Loads & Stores with Parameterized Size
   //! \{
 
-  BL_NOINLINE void v_load_iany(const Vec& dst, const Mem& src, uint32_t nBytes, Alignment alignment) noexcept {
-    switch (nBytes) {
+  BL_NOINLINE void v_load_iany(const Vec& dst, const Mem& src, uint32_t n_bytes, Alignment alignment) noexcept {
+    switch (n_bytes) {
       case 1: v_load8(dst, src); break;
       case 2: v_loada16(dst, src, alignment); break;
       case 4: v_loada32(dst, src, alignment); break;
@@ -2776,8 +2776,8 @@ public:
     }
   }
 
-  BL_NOINLINE void v_store_iany(const Mem& dst, const Vec& src, uint32_t nBytes, Alignment alignment) noexcept {
-    switch (nBytes) {
+  BL_NOINLINE void v_store_iany(const Mem& dst, const Vec& src, uint32_t n_bytes, Alignment alignment) noexcept {
+    switch (n_bytes) {
       case 1: v_store8(dst, src); break;
       case 2: v_storea16(dst, src, alignment); break;
       case 4: v_storea32(dst, src, alignment); break;
@@ -2797,7 +2797,7 @@ public:
   //! \{
 
   template<typename Dst, typename Src>
-  BL_INLINE void shiftOrRotateLeft(const Dst& dst, const Src& src, uint32_t n) noexcept {
+  BL_INLINE void shift_or_rotate_left(const Dst& dst, const Src& src, uint32_t n) noexcept {
   #if defined(BL_JIT_ARCH_X86)
     if ((n & 3) == 0)
       v_alignr_u128(dst, src, src, (16u - n) & 15);
@@ -2810,7 +2810,7 @@ public:
   }
 
   template<typename Dst, typename Src>
-  BL_INLINE void shiftOrRotateRight(const Dst& dst, const Src& src, uint32_t n) noexcept {
+  BL_INLINE void shift_or_rotate_right(const Dst& dst, const Src& src, uint32_t n) noexcept {
   #if defined(BL_JIT_ARCH_X86)
     if ((n & 3) == 0)
       v_alignr_u128(dst, src, src, n);
@@ -2824,14 +2824,14 @@ public:
 
   template<typename DstT, typename SrcT>
   inline void v_inv255_u16(const DstT& dst, const SrcT& src) noexcept {
-    Operand u16_255 = simdConst(&ct.i_00FF00FF00FF00FF, Bcst::k32, dst);
+    Operand u16_255 = simd_const(&ct.i_00FF00FF00FF00FF, Bcst::k32, dst);
     v_xor_i32(dst, src, u16_255);
   }
 
   template<typename DstT, typename SrcT>
   BL_NOINLINE void v_mul257_hi_u16(const DstT& dst, const SrcT& src) {
 #if defined(BL_JIT_ARCH_X86)
-    v_mulh_u16(dst, src, simdConst(&commonTable.i_0101010101010101, Bcst::kNA, dst));
+    v_mulh_u16(dst, src, simd_const(&common_table.i_0101010101010101, Bcst::kNA, dst));
 #elif defined(BL_JIT_ARCH_A64)
     v_srli_acc_u16(dst, src, 8);
     v_srli_u16(dst, dst, 8);
@@ -2842,7 +2842,7 @@ public:
   template<typename DstSrcT>
   BL_NOINLINE void v_div255_u16(const DstSrcT& x) {
 #if defined(BL_JIT_ARCH_X86)
-    Operand i_0080008000800080 = simdConst(&commonTable.i_0080008000800080, Bcst::kNA, x);
+    Operand i_0080008000800080 = simd_const(&common_table.i_0080008000800080, Bcst::kNA, x);
 
     v_add_i16(x, x, i_0080008000800080);
     v_mul257_hi_u16(x, x);
@@ -2855,8 +2855,8 @@ public:
   template<typename DstSrcT>
   BL_NOINLINE void v_div255_u16_2x(const DstSrcT& v0, const DstSrcT& v1) noexcept {
 #if defined(BL_JIT_ARCH_X86)
-    Operand i_0080008000800080 = simdConst(&commonTable.i_0080008000800080, Bcst::kNA, v0);
-    Operand i_0101010101010101 = simdConst(&commonTable.i_0101010101010101, Bcst::kNA, v0);
+    Operand i_0080008000800080 = simd_const(&common_table.i_0080008000800080, Bcst::kNA, v0);
+    Operand i_0101010101010101 = simd_const(&common_table.i_0101010101010101, Bcst::kNA, v0);
 
     v_add_i16(v0, v0, i_0080008000800080);
     v_add_i16(v1, v1, i_0080008000800080);
@@ -2875,8 +2875,8 @@ public:
   template<typename VecOrMem>
   BL_NOINLINE void v_mod_pd(const Vec& d, const Vec& a, const VecOrMem& b) noexcept {
 #if defined(BL_JIT_ARCH_X86)
-    if (!hasSSE4_1()) {
-      Vec t = newV128("vModTmp");
+    if (!has_sse4_1()) {
+      Vec t = new_vec128("vModTmp");
 
       v_div_f64(d, a, b);
       v_cvt_trunc_f64_to_i32_lo(t, d);
@@ -2898,15 +2898,15 @@ public:
   //! \name Memory Loads & Stores with Predicate
   //! \{
 
-  KReg makeMaskPredicate(PixelPredicate& predicate, uint32_t lastN) noexcept;
-  KReg makeMaskPredicate(PixelPredicate& predicate, uint32_t lastN, const Gp& adjustedCount) noexcept;
+  KReg make_mask_predicate(PixelPredicate& predicate, uint32_t lastN) noexcept;
+  KReg make_mask_predicate(PixelPredicate& predicate, uint32_t lastN, const Gp& adjusted_count) noexcept;
 
   Vec makeVecPredicate32(PixelPredicate& predicate, uint32_t lastN) noexcept;
-  Vec makeVecPredicate32(PixelPredicate& predicate, uint32_t lastN, const Gp& adjustedCount) noexcept;
+  Vec makeVecPredicate32(PixelPredicate& predicate, uint32_t lastN, const Gp& adjusted_count) noexcept;
 
   BL_NOINLINE void v_load_predicated_u8(const Vec& dst, const Mem& src, uint32_t n, PixelPredicate& predicate) noexcept{
-    if (hasAVX512()) {
-      KReg kPred = makeMaskPredicate(predicate, n);
+    if (has_avx512()) {
+      KReg kPred = make_mask_predicate(predicate, n);
       cc->k(kPred).z().vmovdqu8(dst, src);
     }
     else {
@@ -2915,8 +2915,8 @@ public:
   }
 
   BL_NOINLINE void v_store_predicated_u8(const Mem& dst, const Vec& src, uint32_t n, PixelPredicate& predicate) noexcept{
-    if (hasAVX512()) {
-      KReg kPred = makeMaskPredicate(predicate, n);
+    if (has_avx512()) {
+      KReg kPred = make_mask_predicate(predicate, n);
       cc->k(kPred).vmovdqu8(dst, src);
     }
     else {
@@ -2925,14 +2925,14 @@ public:
   }
 
   BL_NOINLINE void v_load_predicated_u32(const Vec& dst, const Mem& src, uint32_t n, PixelPredicate& predicate) noexcept{
-    if (hasAVX512()) {
-      KReg kPred = makeMaskPredicate(predicate, n);
+    if (has_avx512()) {
+      KReg kPred = make_mask_predicate(predicate, n);
       cc->k(kPred).z().vmovdqu32(dst, src);
     }
-    else if (hasAVX()) {
-      Vec vPred = makeVecPredicate32(predicate, n);
-      InstId instId = hasAVX2() ? x86::Inst::kIdVpmaskmovd : x86::Inst::kIdVmaskmovps;
-      cc->emit(instId, dst, vPred, src);
+    else if (has_avx()) {
+      Vec v_pred = makeVecPredicate32(predicate, n);
+      InstId inst_id = has_avx2() ? x86::Inst::kIdVpmaskmovd : x86::Inst::kIdVmaskmovps;
+      cc->emit(inst_id, dst, v_pred, src);
     }
     else {
       BL_NOT_REACHED();
@@ -2940,14 +2940,14 @@ public:
   }
 
   BL_NOINLINE void v_store_predicated_u32(const Mem& dst, const Vec& src, uint32_t n, PixelPredicate& predicate) noexcept{
-    if (hasAVX512()) {
-      KReg kPred = makeMaskPredicate(predicate, n);
+    if (has_avx512()) {
+      KReg kPred = make_mask_predicate(predicate, n);
       cc->k(kPred).vmovdqu32(dst, src);
     }
-    else if (hasAVX()) {
-      Vec vPred = makeVecPredicate32(predicate, n);
-      InstId instId = hasAVX2() ? x86::Inst::kIdVpmaskmovd : x86::Inst::kIdVmaskmovps;
-      cc->emit(instId, dst, vPred, src);
+    else if (has_avx()) {
+      Vec v_pred = makeVecPredicate32(predicate, n);
+      InstId inst_id = has_avx2() ? x86::Inst::kIdVpmaskmovd : x86::Inst::kIdVmaskmovps;
+      cc->emit(inst_id, dst, v_pred, src);
     }
     else {
       BL_NOT_REACHED();
@@ -2963,20 +2963,20 @@ public:
 
   // Kind of a hack - if we don't have SSE4.1 we have to load the byte into GP register first and then we use 'PINSRW',
   // which is provided by baseline SSE2. If we have SSE4.1 then it's much easier as we can load the byte by 'PINSRB'.
-  void x_insert_word_or_byte(const Vec& dst, const Mem& src, uint32_t wordIndex) noexcept {
+  void x_insert_word_or_byte(const Vec& dst, const Mem& src, uint32_t word_index) noexcept {
 #if defined(BL_JIT_ARCH_X86)
-    if (hasSSE4_1()) {
+    if (has_sse4_1()) {
       Mem m = src;
-      m.setSize(1);
-      v_insert_u8(dst, m, wordIndex * 2u);
+      m.set_size(1);
+      v_insert_u8(dst, m, word_index * 2u);
     }
     else {
-      Gp tmp = newGp32("@tmp");
+      Gp tmp = new_gp32("@tmp");
       load_u8(tmp, src);
-      s_insert_u16(dst, tmp, wordIndex);
+      s_insert_u16(dst, tmp, word_index);
     }
 #else
-    v_insert_u8(dst, src, wordIndex * 2);
+    v_insert_u8(dst, src, word_index * 2);
 #endif
   }
 
@@ -2989,32 +2989,32 @@ public:
   template<typename Dst, typename Src1, typename Src2>
   BL_NOINLINE void x_packs_i16_u8(const Dst& d, const Src1& s1, const Src2& s2) noexcept {
 #if defined(BL_JIT_ARCH_X86)
-    if (s1.isVec128()) {
+    if (s1.is_vec128()) {
       v_packs_i16_u8(d, s1, s2);
     }
     else {
-      const Vec& vType = JitUtils::firstOp(s1).template as<Vec>();
+      const Vec& v_type = JitUtils::first_op(s1).template as<Vec>();
       v_packs_i16_u8(d, s1, s2);
-      v_swizzle_u64x4(d.cloneAs(vType), d.cloneAs(vType), swizzle(3, 1, 2, 0));
+      v_swizzle_u64x4(d.clone_as(v_type), d.clone_as(v_type), swizzle(3, 1, 2, 0));
     }
 #else
     v_packs_i16_u8(d, s1, s2);
 #endif
   }
 
-  BL_NOINLINE void xStorePixel(const Gp& dPtr, const Vec& vSrc, uint32_t count, uint32_t bpp, Alignment alignment) noexcept {
-    v_store_iany(mem_ptr(dPtr), vSrc, count * bpp, alignment);
+  BL_NOINLINE void xStorePixel(const Gp& d_ptr, const Vec& v_src, uint32_t count, uint32_t bpp, Alignment alignment) noexcept {
+    v_store_iany(mem_ptr(d_ptr), v_src, count * bpp, alignment);
   }
 
-  inline void xStore32_ARGB(const Mem& dst, const Vec& vSrc) noexcept {
-    v_storea32(dst, vSrc);
+  inline void xStore32_ARGB(const Mem& dst, const Vec& v_src) noexcept {
+    v_storea32(dst, v_src);
   }
 
   BL_NOINLINE void xMovzxBW_LoHi(const Vec& d0, const Vec& d1, const Vec& s) noexcept {
     BL_ASSERT(d0.id() != d1.id());
 
 #if defined(BL_JIT_ARCH_X86)
-    if (hasSSE4_1()) {
+    if (has_sse4_1()) {
       if (d0.id() == s.id()) {
         v_swizzle_u32x4(d1, d0, swizzle(1, 0, 3, 2));
         v_cvt_u8_lo_to_u16(d0, d0);
@@ -3027,7 +3027,7 @@ public:
       }
     }
     else {
-      Vec zero = simdVecConst(&commonTable.i_0000000000000000, Bcst::k32, s);
+      Vec zero = simd_vec_const(&common_table.i_0000000000000000, Bcst::k32, s);
       if (d1.id() != s.id()) {
         v_interleave_hi_u8(d1, s, zero);
         v_interleave_lo_u8(d0, s, zero);
@@ -3056,11 +3056,11 @@ public:
   inline void vExpandAlphaHi16(const Dst& d, const Src& s) noexcept { v_swizzle_hi_u16x4(d, s, swizzle(3, 3, 3, 3)); }
 
   template<typename Dst, typename Src>
-  inline void v_expand_alpha_16(const Dst& d, const Src& s, uint32_t useHiPart = 1) noexcept {
+  inline void v_expand_alpha_16(const Dst& d, const Src& s, uint32_t use_hi_part = 1) noexcept {
 #if defined(BL_JIT_ARCH_X86)
-    if (useHiPart) {
-      if (hasAVX() || (hasSSSE3() && d == s)) {
-        v_swizzlev_u8(d, s, simdConst(&commonTable.swizu8_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, d));
+    if (use_hi_part) {
+      if (has_avx() || (has_ssse3() && d == s)) {
+        v_swizzlev_u8(d, s, simd_const(&common_table.swizu8_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, d));
       }
       else {
         vExpandAlphaHi16(d, s);
@@ -3071,7 +3071,7 @@ public:
       vExpandAlphaLo16(d, s);
     }
 #elif defined(BL_JIT_ARCH_A64)
-    blUnused(useHiPart);
+    bl_unused(use_hi_part);
     v_swizzle_u16x4(d, s, swizzle(3, 3, 3, 3));
 #endif
   }
@@ -3080,31 +3080,31 @@ public:
   inline void vExpandAlphaPS(const Dst& d, const Src& s) noexcept { v_swizzle_u32x4(d, s, swizzle(3, 3, 3, 3)); }
 
   template<typename DstT, typename SrcT>
-  inline void vFillAlpha255B(const DstT& dst, const SrcT& src) noexcept { v_or_i32(dst, src, simdConst(&commonTable.i_FF000000FF000000, Bcst::k32, dst)); }
+  inline void vFillAlpha255B(const DstT& dst, const SrcT& src) noexcept { v_or_i32(dst, src, simd_const(&common_table.i_FF000000FF000000, Bcst::k32, dst)); }
   template<typename DstT, typename SrcT>
-  inline void vFillAlpha255W(const DstT& dst, const SrcT& src) noexcept { v_or_i64(dst, src, simdConst(&commonTable.i_00FF000000000000, Bcst::k64, dst)); }
+  inline void vFillAlpha255W(const DstT& dst, const SrcT& src) noexcept { v_or_i64(dst, src, simd_const(&common_table.i_00FF000000000000, Bcst::k64, dst)); }
 
   template<typename DstT, typename SrcT>
-  inline void vZeroAlphaB(const DstT& dst, const SrcT& src) noexcept { v_and_i32(dst, src, simdMemConst(&commonTable.i_00FFFFFF00FFFFFF, Bcst::k32, dst)); }
+  inline void vZeroAlphaB(const DstT& dst, const SrcT& src) noexcept { v_and_i32(dst, src, simd_mem_const(&common_table.i_00FFFFFF00FFFFFF, Bcst::k32, dst)); }
 
   template<typename DstT, typename SrcT>
-  inline void vZeroAlphaW(const DstT& dst, const SrcT& src) noexcept { v_and_i64(dst, src, simdMemConst(&commonTable.i_0000FFFFFFFFFFFF, Bcst::k64, dst)); }
+  inline void vZeroAlphaW(const DstT& dst, const SrcT& src) noexcept { v_and_i64(dst, src, simd_mem_const(&common_table.i_0000FFFFFFFFFFFF, Bcst::k64, dst)); }
 
   template<typename DstT, typename SrcT>
-  inline void vNegAlpha8B(const DstT& dst, const SrcT& src) noexcept { v_xor_i32(dst, src, simdConst(&commonTable.i_FF000000FF000000, Bcst::k32, dst)); }
+  inline void vNegAlpha8B(const DstT& dst, const SrcT& src) noexcept { v_xor_i32(dst, src, simd_const(&common_table.i_FF000000FF000000, Bcst::k32, dst)); }
   template<typename DstT, typename SrcT>
-  inline void vNegAlpha8W(const DstT& dst, const SrcT& src) noexcept { v_xor_i64(dst, src, simdConst(&commonTable.i_00FF000000000000, Bcst::k64, dst)); }
+  inline void vNegAlpha8W(const DstT& dst, const SrcT& src) noexcept { v_xor_i64(dst, src, simd_const(&common_table.i_00FF000000000000, Bcst::k64, dst)); }
 
   template<typename DstT, typename SrcT>
-  inline void vNegRgb8B(const DstT& dst, const SrcT& src) noexcept { v_xor_i32(dst, src, simdConst(&commonTable.i_00FFFFFF00FFFFFF, Bcst::k32, dst)); }
+  inline void vNegRgb8B(const DstT& dst, const SrcT& src) noexcept { v_xor_i32(dst, src, simd_const(&common_table.i_00FFFFFF00FFFFFF, Bcst::k32, dst)); }
   template<typename DstT, typename SrcT>
-  inline void vNegRgb8W(const DstT& dst, const SrcT& src) noexcept { v_xor_i64(dst, src, simdConst(&commonTable.i_000000FF00FF00FF, Bcst::k64, dst)); }
+  inline void vNegRgb8W(const DstT& dst, const SrcT& src) noexcept { v_xor_i64(dst, src, simd_const(&common_table.i_000000FF00FF00FF, Bcst::k64, dst)); }
 
   // Performs 32-bit unsigned modulo of 32-bit `a` (hi DWORD) with 32-bit `b` (lo DWORD).
   template<typename VecOrMem_A, typename VecOrMem_B>
   BL_NOINLINE void xModI64HIxU64LO(const Vec& d, const VecOrMem_A& a, const VecOrMem_B& b) noexcept {
-    Vec t0 = newV128("t0");
-    Vec t1 = newV128("t1");
+    Vec t0 = new_vec128("t0");
+    Vec t1 = new_vec128("t1");
 
     v_swizzle_u32x4(t1, b, swizzle(3, 3, 2, 0));
     v_swizzle_u32x4(d , a, swizzle(2, 0, 3, 1));
@@ -3121,7 +3121,7 @@ public:
   // Performs 32-bit unsigned modulo of 32-bit `a` (hi DWORD) with 64-bit `b` (DOUBLE).
   template<typename VecOrMem_A, typename VecOrMem_B>
   BL_NOINLINE void xModI64HIxDouble(const Vec& d, const VecOrMem_A& a, const VecOrMem_B& b) noexcept {
-    Vec t0 = newV128("t0");
+    Vec t0 = new_vec128("t0");
 
     v_swizzle_u32x4(d, a, swizzle(2, 0, 3, 1));
     v_cvt_i32_lo_to_f64(t0, d);
@@ -3139,7 +3139,7 @@ public:
 
   BL_NOINLINE void xExtractUnpackedAFromPackedARGB32_2(const Vec& d, const Vec& s) noexcept {
 #if defined(BL_JIT_ARCH_X86)
-    if (!hasSSSE3()) {
+    if (!has_ssse3()) {
       v_swizzle_lo_u16x4(d, s, swizzle(3, 3, 1, 1));
       v_swizzle_u32x4(d, d, swizzle(1, 1, 0, 0));
       v_srli_u16(d, d, 8);
@@ -3147,14 +3147,14 @@ public:
     }
 #endif
 
-    v_swizzlev_u8(d, s, simdConst(&commonTable.swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d));
+    v_swizzlev_u8(d, s, simd_const(&common_table.swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d));
   }
 
   BL_NOINLINE void xExtractUnpackedAFromPackedARGB32_4(const Vec& d0, const Vec& d1, const Vec& s) noexcept {
     BL_ASSERT(d0.id() != d1.id());
 
 #if defined(BL_JIT_ARCH_X86)
-    if (!hasSSSE3()) {
+    if (!has_ssse3()) {
       if (d1.id() != s.id()) {
         v_swizzle_hi_u16x4(d1, s, swizzle(3, 3, 1, 1));
         v_swizzle_lo_u16x4(d0, s, swizzle(3, 3, 1, 1));
@@ -3180,22 +3180,22 @@ public:
 #endif
 
     if (d0.id() == s.id()) {
-      v_swizzlev_u8(d1, s, simdConst(&ct.swizu8_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
-      v_swizzlev_u8(d0, s, simdConst(&ct.swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
+      v_swizzlev_u8(d1, s, simd_const(&ct.swizu8_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
+      v_swizzlev_u8(d0, s, simd_const(&ct.swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
     }
     else {
-      v_swizzlev_u8(d0, s, simdConst(&ct.swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
-      v_swizzlev_u8(d1, s, simdConst(&ct.swizu8_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
+      v_swizzlev_u8(d0, s, simd_const(&ct.swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
+      v_swizzlev_u8(d1, s, simd_const(&ct.swizu8_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
     }
   }
 
   BL_NOINLINE void xPackU32ToU16Lo(const Vec& d0, const Vec& s0) noexcept {
 #if defined(BL_JIT_ARCH_X86)
-    if (hasSSE4_1()) {
+    if (has_sse4_1()) {
       v_packs_i32_u16(d0, s0, s0);
     }
-    else if (hasSSSE3()) {
-      v_swizzlev_u8(d0, s0, simdConst(&commonTable.swizu8_xx76xx54xx32xx10_to_7654321076543210, Bcst::kNA, d0));
+    else if (has_ssse3()) {
+      v_swizzlev_u8(d0, s0, simd_const(&common_table.swizu8_xx76xx54xx32xx10_to_7654321076543210, Bcst::kNA, d0));
     }
     else {
       // Sign extend and then use `packssdw()`.
@@ -3219,7 +3219,7 @@ public:
   ScopedInjector _injector;
 
   BL_INLINE PipeInjectAtTheEnd(PipeCompiler* pc) noexcept
-    : _injector(pc->cc, &pc->_funcEnd) {}
+    : _injector(pc->cc, &pc->_func_end) {}
 };
 
 } // {bl::Pipeline::JIT}

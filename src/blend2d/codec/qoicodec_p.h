@@ -19,13 +19,13 @@
 
 namespace bl::Qoi {
 
-BL_HIDDEN void qoiCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
+BL_HIDDEN void qoi_codec_on_init(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
 } // {bl::Qoi}
 
 struct BLQoiDecoderImpl : public BLImageDecoderImpl {
   //! Decoder image information.
-  BLImageInfo imageInfo;
+  BLImageInfo image_info;
 };
 
 struct BLQoiEncoderImpl : public BLImageEncoderImpl {

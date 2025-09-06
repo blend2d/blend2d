@@ -28,23 +28,23 @@ struct EdgePoint {
   }
 };
 
-static BL_INLINE size_t packCountAndSignBit(size_t count, uint32_t signBit) noexcept {
+static BL_INLINE size_t pack_count_and_sign_bit(size_t count, uint32_t sign_bit) noexcept {
   BL_ASSERT(count <= (~size_t(0) >> 1));
-  BL_ASSERT(signBit <= 0x1u);
+  BL_ASSERT(sign_bit <= 0x1u);
 
-  return (count << 1u) | signBit;
+  return (count << 1u) | sign_bit;
 }
 
 template<typename CoordT>
 struct alignas(8) EdgeVector {
   EdgeVector<CoordT>* next;
-  size_t countAndSign;
+  size_t count_and_sign;
   EdgePoint<CoordT> pts[1];
 
-  BL_INLINE size_t count() const noexcept { return countAndSign >> 1u; }
-  BL_INLINE uint32_t signBit() const noexcept { return uint32_t(countAndSign & 0x1u); }
+  BL_INLINE size_t count() const noexcept { return count_and_sign >> 1u; }
+  BL_INLINE uint32_t sign_bit() const noexcept { return uint32_t(count_and_sign & 0x1u); }
 
-  static constexpr uint32_t minSizeOf() noexcept {
+  static constexpr uint32_t min_size_of() noexcept {
     return uint32_t(sizeof(EdgeVector<CoordT>) + sizeof(EdgePoint<CoordT>));
   }
 };
@@ -59,14 +59,14 @@ struct EdgeList {
     _last = nullptr;
   }
 
-  BL_INLINE bool empty() const noexcept { return _last == nullptr; }
+  BL_INLINE bool is_empty() const noexcept { return _last == nullptr; }
 
   BL_INLINE EdgeVector<CoordT>* first() const noexcept { return _first; }
   BL_INLINE EdgeVector<CoordT>* last() const noexcept { return _last; }
 
   BL_INLINE void append(EdgeVector<CoordT>* item) noexcept {
     item->next = nullptr;
-    if (empty()) {
+    if (is_empty()) {
       _first = item;
       _last = item;
     }
@@ -81,96 +81,96 @@ template<typename CoordT>
 class EdgeStorage {
 public:
   //! Start edge vectors of each band.
-  EdgeList<CoordT>* _bandEdges;
-  //! Length of `_bandEdges` array.
-  uint32_t _bandCount;
-  //! Capacity of `_bandEdges` array.
-  uint32_t _bandCapacity;
+  EdgeList<CoordT>* _band_edges;
+  //! Length of `_band_edges` array.
+  uint32_t _band_count;
+  //! Capacity of `_band_edges` array.
+  uint32_t _band_capacity;
   //! Height of a single band (in pixels).
-  uint32_t _bandHeight;
-  //! Shift to get a bandId from a fixed-point y coordinate.
-  uint32_t _fixedBandHeightShift;
+  uint32_t _band_height;
+  //! Shift to get a band_id from a fixed-point y coordinate.
+  uint32_t _fixed_band_height_shift;
   //! Bounding box in fixed-point.
-  BLBoxI _boundingBox;
+  BLBoxI _bounding_box;
 
   BL_INLINE EdgeStorage() noexcept { reset(); }
   BL_INLINE EdgeStorage(const EdgeStorage& other) noexcept = default;
 
   BL_INLINE void reset() noexcept {
-    _bandEdges = nullptr;
-    _bandCount = 0;
-    _bandCapacity = 0;
-    _bandHeight = 0;
-    _fixedBandHeightShift = 0;
-    resetBoundingBox();
+    _band_edges = nullptr;
+    _band_count = 0;
+    _band_capacity = 0;
+    _band_height = 0;
+    _fixed_band_height_shift = 0;
+    reset_bounding_box();
   }
 
   BL_INLINE void clear() noexcept {
-    if (!empty()) {
-      size_t bandStart = bandStartFromBBox();
-      size_t bandEnd = bandEndFromBBox();
+    if (!is_empty()) {
+      size_t band_start = bandStartFromBBox();
+      size_t band_end = bandEndFromBBox();
 
-      for (size_t i = bandStart; i < bandEnd; i++)
-        _bandEdges[i].reset();
+      for (size_t i = band_start; i < band_end; i++)
+        _band_edges[i].reset();
 
-      resetBoundingBox();
+      reset_bounding_box();
     }
   }
 
-  BL_INLINE bool empty() const noexcept { return _boundingBox.y0 == Traits::maxValue<int>(); }
+  BL_INLINE bool is_empty() const noexcept { return _bounding_box.y0 == Traits::max_value<int>(); }
 
-  BL_INLINE EdgeList<CoordT>* bandEdges() const noexcept { return _bandEdges; }
-  BL_INLINE uint32_t bandCount() const noexcept { return _bandCount; }
-  BL_INLINE uint32_t bandCapacity() const noexcept { return _bandCapacity; }
-  BL_INLINE uint32_t bandHeight() const noexcept { return _bandHeight; }
-  BL_INLINE uint32_t fixedBandHeightShift() const noexcept { return _fixedBandHeightShift; }
-  BL_INLINE const BLBoxI& boundingBox() const noexcept { return _boundingBox; }
+  BL_INLINE EdgeList<CoordT>* band_edges() const noexcept { return _band_edges; }
+  BL_INLINE uint32_t band_count() const noexcept { return _band_count; }
+  BL_INLINE uint32_t band_capacity() const noexcept { return _band_capacity; }
+  BL_INLINE uint32_t band_height() const noexcept { return _band_height; }
+  BL_INLINE uint32_t fixed_band_height_shift() const noexcept { return _fixed_band_height_shift; }
+  BL_INLINE const BLBoxI& bounding_box() const noexcept { return _bounding_box; }
 
-  BL_INLINE void initData(EdgeList<CoordT>* bandEdges, uint32_t bandCount, uint32_t bandCapacity, uint32_t bandHeight) noexcept {
-    _bandEdges = bandEdges;
-    _bandCount = bandCount;
-    _bandCapacity = bandCapacity;
-    _bandHeight = bandHeight;
-    _fixedBandHeightShift = IntOps::ctz(bandHeight) + Pipeline::A8Info::kShift;
+  BL_INLINE void init_data(EdgeList<CoordT>* band_edges, uint32_t band_count, uint32_t band_capacity, uint32_t band_height) noexcept {
+    _band_edges = band_edges;
+    _band_count = band_count;
+    _band_capacity = band_capacity;
+    _band_height = band_height;
+    _fixed_band_height_shift = IntOps::ctz(band_height) + Pipeline::A8Info::kShift;
   }
 
-  BL_INLINE void resetBoundingBox() noexcept {
-    _boundingBox.reset(Traits::maxValue<int>(), Traits::maxValue<int>(), Traits::minValue<int>(), Traits::minValue<int>());
+  BL_INLINE void reset_bounding_box() noexcept {
+    _bounding_box.reset(Traits::max_value<int>(), Traits::max_value<int>(), Traits::min_value<int>(), Traits::min_value<int>());
   }
 
   BL_INLINE uint32_t bandStartFromBBox() const noexcept {
-    return unsigned(boundingBox().y0) >> fixedBandHeightShift();
+    return unsigned(bounding_box().y0) >> fixed_band_height_shift();
   }
 
   BL_INLINE uint32_t bandEndFromBBox() const noexcept {
-    // NOTE: Calculating `bandEnd` is tricky, because in some rare cases
+    // NOTE: Calculating `band_end` is tricky, because in some rare cases
     // the bounding box can end exactly at some band's initial coordinate.
     // In such case we don't know whether the band has data there or not,
     // so we must consider it initially.
-    return blMin((unsigned(boundingBox().y1) >> fixedBandHeightShift()) + 1, bandCount());
+    return bl_min((unsigned(bounding_box().y1) >> fixed_band_height_shift()) + 1, band_count());
   }
 
-  BL_INLINE EdgeVector<CoordT>* flattenEdgeLinks() noexcept {
-    EdgeList<int>* bandEdges = this->bandEdges();
+  BL_INLINE EdgeVector<CoordT>* flatten_edge_links() noexcept {
+    EdgeList<int>* band_edges = this->band_edges();
 
-    size_t bandId = bandStartFromBBox();
-    size_t bandEnd = bandEndFromBBox();
+    size_t band_id = bandStartFromBBox();
+    size_t band_end = bandEndFromBBox();
 
-    EdgeVector<CoordT>* first = bandEdges[bandId].first();
-    EdgeVector<CoordT>* current = bandEdges[bandId].last();
+    EdgeVector<CoordT>* first = band_edges[band_id].first();
+    EdgeVector<CoordT>* current = band_edges[band_id].last();
 
     // The first band must always be non-null as it starts the edges.
     BL_ASSERT(first != nullptr);
     BL_ASSERT(current != nullptr);
 
-    bandEdges[bandId].reset();
-    while (++bandId < bandEnd) {
-      EdgeVector<int>* bandFirst = bandEdges[bandId].first();
-      if (!bandFirst)
+    band_edges[band_id].reset();
+    while (++band_id < band_end) {
+      EdgeVector<int>* band_first = band_edges[band_id].first();
+      if (!band_first)
         continue;
-      current->next = bandFirst;
-      current = bandEdges[bandId].last();
-      bandEdges[bandId].reset();
+      current->next = band_first;
+      current = band_edges[band_id].last();
+      band_edges[band_id].reset();
     }
 
     return first;

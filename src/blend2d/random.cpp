@@ -10,22 +10,22 @@
 // bl::Random - API - Reset
 // ========================
 
-BL_API_IMPL BLResult blRandomReset(BLRandom* self, uint64_t seed) noexcept {
-  bl::RandomInternal::resetSeed(self, seed);
+BL_API_IMPL BLResult bl_random_reset(BLRandom* self, uint64_t seed) noexcept {
+  bl::RandomInternal::reset_seed(self, seed);
   return BL_SUCCESS;
 }
 
 // bl::Random - API - Next
 // =======================
 
-BL_API_IMPL double blRandomNextDouble(BLRandom* self) noexcept {
-  return bl::RandomInternal::nextDouble(self);
+BL_API_IMPL double bl_random_next_double(BLRandom* self) noexcept {
+  return bl::RandomInternal::next_double(self);
 }
 
-BL_API_IMPL uint32_t blRandomNextUInt32(BLRandom* self) noexcept {
-  return bl::RandomInternal::nextUInt32(self);
+BL_API_IMPL uint32_t bl_random_next_uint32(BLRandom* self) noexcept {
+  return bl::RandomInternal::next_uint32(self);
 }
 
-BL_API_IMPL uint64_t blRandomNextUInt64(BLRandom* self) noexcept {
-  return bl::RandomInternal::nextUInt64(self);
+BL_API_IMPL uint64_t bl_random_next_uint64(BLRandom* self) noexcept {
+  return bl::RandomInternal::next_uint64(self);
 }

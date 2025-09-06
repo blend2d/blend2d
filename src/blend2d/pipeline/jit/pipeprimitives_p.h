@@ -153,12 +153,12 @@ struct PixelFetchInfo {
   //! A byte offset (memory) where the alpha can be accessed.
   //!
   //! This offset can be added to a memory operand on architectures that provide addressing modes with offsets.
-  uint8_t _alphaOffset {};
+  uint8_t _alpha_offset {};
 
   //! A byte offset already applied to a pointer
   //!
   //! This is used in cases in which the pipeline loads pixels in a scalar way (for example extend modes are applied).
-  uint8_t _appliedOffset {};
+  uint8_t _applied_offset {};
 
   //! \}
 
@@ -176,13 +176,13 @@ struct PixelFetchInfo {
 
   BL_INLINE void init(FormatExt format) noexcept {
     _format = format;
-    _components = uint8_t(blFormatInfo[size_t(format)].flags & 0xFFu);
-    _alphaOffset = uint8_t(blFormatInfo[size_t(format)].aShift / 8u);
-    _appliedOffset = 0;
+    _components = uint8_t(bl_format_info[size_t(format)].flags & 0xFFu);
+    _alpha_offset = uint8_t(bl_format_info[size_t(format)].a_shift / 8u);
+    _applied_offset = 0;
   }
 
-  //! Makes the current `byteOffset` applies, which means that ALL source pointers have `byteOffset` incremented.
-  BL_INLINE void applyAlphaOffset() noexcept { _appliedOffset = _alphaOffset; }
+  //! Makes the current `byte_offset` applies, which means that ALL source pointers have `byte_offset` incremented.
+  BL_INLINE void apply_alpha_offset() noexcept { _applied_offset = _alpha_offset; }
 
   //! \}
 
@@ -192,30 +192,30 @@ struct PixelFetchInfo {
   //! Returns pixel format.
   BL_INLINE_NODEBUG FormatExt format() const noexcept { return _format; }
   //! Returns source pixel format information.
-  BL_INLINE_NODEBUG BLFormatInfo formatInfo() const noexcept { return blFormatInfo[size_t(_format)]; }
+  BL_INLINE_NODEBUG BLFormatInfo format_info() const noexcept { return bl_format_info[size_t(_format)]; }
   //! Returns bytes per pixel.
-  BL_INLINE_NODEBUG uint32_t bpp() const noexcept { return blFormatInfo[size_t(_format)].depth / 8u; }
+  BL_INLINE_NODEBUG uint32_t bpp() const noexcept { return bl_format_info[size_t(_format)].depth / 8u; }
 
   //! Returns a byte offset of the alpha component that can be applied when loading alpha component from memory.
-  BL_INLINE_NODEBUG int alphaOffset() const noexcept { return _alphaOffset; }
+  BL_INLINE_NODEBUG int alpha_offset() const noexcept { return _alpha_offset; }
 
   //! Returns a byte offset that has been already applied to source pointer(s).
-  BL_INLINE_NODEBUG int appliedOffset() const noexcept { return _appliedOffset; }
+  BL_INLINE_NODEBUG int applied_offset() const noexcept { return _applied_offset; }
 
   //! Calculates the offset that must be used to fetch a full pixel and not just the alpha.
-  BL_INLINE_NODEBUG int fetchPixelOffset() const noexcept { return -int(_appliedOffset); }
+  BL_INLINE_NODEBUG int fetch_pixel_offset() const noexcept { return -int(_applied_offset); }
 
   //! Calculates the offset that must be used when fetching alpha component from a possibly adjusted source pointer.
   //!
   //! \note When the offset has been applied the return value should be 0 as that's the purpose of applying it,
-  //! however, when the offset hasn't been applied, the returned value would be the same as `byteOffset`.
-  BL_INLINE_NODEBUG int fetchAlphaOffset() const noexcept { return int(_alphaOffset) - int(_appliedOffset); }
+  //! however, when the offset hasn't been applied, the returned value would be the same as `byte_offset`.
+  BL_INLINE_NODEBUG int fetch_alpha_offset() const noexcept { return int(_alpha_offset) - int(_applied_offset); }
 
   // Returns whether the pixel format has RGB components.
-  BL_INLINE_NODEBUG bool hasRGB() const noexcept { return (_components & BL_FORMAT_FLAG_RGB) != 0; }
+  BL_INLINE_NODEBUG bool has_rgb() const noexcept { return (_components & BL_FORMAT_FLAG_RGB) != 0; }
 
   // Returns whether the pixel format has Alpha component.
-  BL_INLINE_NODEBUG bool hasAlpha() const noexcept { return (_components & BL_FORMAT_FLAG_ALPHA) != 0; }
+  BL_INLINE_NODEBUG bool has_alpha() const noexcept { return (_components & BL_FORMAT_FLAG_ALPHA) != 0; }
 
   //! \}
 };
@@ -256,7 +256,7 @@ struct PixelPredicate {
     uint8_t lastN {};
 
     //! Element size in case this is a vector predicate (always zero when it's a {k} predicate).
-    uint8_t elementSize {};
+    uint8_t element_size {};
 
     uint8_t reserved[2] {};
 
@@ -264,8 +264,8 @@ struct PixelPredicate {
     Reg mask {};
   };
 
-  uint32_t _materializedCount {};
-  MaterializedMask _materializedMasks[kMaterializedMaskCapacity];
+  uint32_t _materialized_count {};
+  MaterializedMask _materialized_masks[kMaterializedMaskCapacity];
 #endif // BL_JIT_ARCH_X86
 
   static inline constexpr uint32_t kMaterializedEndPtrCapacity = 2u;
@@ -280,8 +280,8 @@ struct PixelPredicate {
     Gp adjusted2;
   };
 
-  uint32_t _materializedEndPtrCount {};
-  MaterializedEndPtr _materializedEndPtrData[kMaterializedEndPtrCapacity];
+  uint32_t _materialized_end_ptr_count {};
+  MaterializedEndPtr _materialized_end_ptr_data[kMaterializedEndPtrCapacity];
 
   BL_INLINE_NODEBUG PixelPredicate() noexcept = default;
   BL_INLINE explicit PixelPredicate(uint32_t size, PredicateFlags flags, const Gp& count) noexcept { init(size, flags, count); }
@@ -292,34 +292,34 @@ struct PixelPredicate {
     _count = count;
   }
 
-  BL_INLINE_NODEBUG bool empty() const noexcept { return _size == 0; }
+  BL_INLINE_NODEBUG bool is_empty() const noexcept { return _size == 0; }
   BL_INLINE_NODEBUG uint32_t size() const noexcept { return _size; }
 
   BL_INLINE_NODEBUG PredicateFlags flags() const noexcept { return _flags; }
-  BL_INLINE_NODEBUG bool isNeverFull() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverFull); }
+  BL_INLINE_NODEBUG bool is_never_full() const noexcept { return bl_test_flag(_flags, PredicateFlags::kNeverFull); }
 
   BL_INLINE_NODEBUG const Gp& count() const noexcept { return _count; }
 
-  BL_INLINE_NODEBUG GatherMode gatherMode() const noexcept {
-    return isNeverFull() ? GatherMode::kNeverFull : GatherMode::kFetchAll;
+  BL_INLINE_NODEBUG GatherMode gather_mode() const noexcept {
+    return is_never_full() ? GatherMode::kNeverFull : GatherMode::kFetchAll;
   }
 
-  BL_INLINE const MaterializedEndPtr* findMaterializedEndPtr(const Gp& ref) const noexcept {
-    for (uint32_t i = 0; i < _materializedEndPtrCount; i++)
-      if (_materializedEndPtrData[i].ref.id() == ref.id())
-        return &_materializedEndPtrData[i];
+  BL_INLINE const MaterializedEndPtr* find_materialized_end_ptr(const Gp& ref) const noexcept {
+    for (uint32_t i = 0; i < _materialized_end_ptr_count; i++)
+      if (_materialized_end_ptr_data[i].ref.id() == ref.id())
+        return &_materialized_end_ptr_data[i];
     return nullptr;
   }
 
-  BL_INLINE void addMaterializedEndPtr(const Gp& ref, const Gp& adjusted1, const Gp& adjusted2) noexcept {
-    if (_materializedEndPtrCount >= kMaterializedEndPtrCapacity)
+  BL_INLINE void add_materialized_end_ptr(const Gp& ref, const Gp& adjusted1, const Gp& adjusted2) noexcept {
+    if (_materialized_end_ptr_count >= kMaterializedEndPtrCapacity)
       return;
 
-    uint32_t i = _materializedEndPtrCount;
-    _materializedEndPtrData[i].ref = ref;
-    _materializedEndPtrData[i].adjusted1 = adjusted1;
-    _materializedEndPtrData[i].adjusted2 = adjusted2;
-    _materializedEndPtrCount++;
+    uint32_t i = _materialized_end_ptr_count;
+    _materialized_end_ptr_data[i].ref = ref;
+    _materialized_end_ptr_data[i].adjusted1 = adjusted1;
+    _materialized_end_ptr_data[i].adjusted2 = adjusted2;
+    _materialized_end_ptr_count++;
   }
 };
 
@@ -370,15 +370,15 @@ public:
     : _type(type),
       _name {},
       _flags(PixelFlags::kNone),
-      _count(0) { setName(name); }
+      _count(0) { set_name(name); }
 
   BL_INLINE void reset(PixelType type = PixelType::kNone) noexcept {
     _type = type;
     memset(_name, 0, BL_ARRAY_SIZE(_name));
-    resetAllExceptTypeAndName();
+    reset_all_except_type_and_name();
   }
 
-  BL_NOINLINE void resetAllExceptTypeAndName() noexcept {
+  BL_NOINLINE void reset_all_except_type_and_name() noexcept {
     _flags = PixelFlags::kNone;
     _count = 0;
     sa.reset();
@@ -390,7 +390,7 @@ public:
   }
 
   BL_INLINE_NODEBUG PixelType type() const noexcept { return _type; }
-  BL_INLINE void setType(PixelType type) noexcept { _type = type; }
+  BL_INLINE void set_type(PixelType type) noexcept { _type = type; }
 
   BL_INLINE_NODEBUG bool isA8() const noexcept { return _type == PixelType::kA8; }
   BL_INLINE_NODEBUG bool isRGBA32() const noexcept { return _type == PixelType::kRGBA32; }
@@ -398,7 +398,7 @@ public:
 
   BL_INLINE_NODEBUG const char* name() const noexcept { return _name; }
 
-  BL_NOINLINE void setName(const char* name) noexcept {
+  BL_NOINLINE void set_name(const char* name) noexcept {
     size_t len = strnlen(name, BL_ARRAY_SIZE(_name) - 2);
     _name[0] = '\0';
 
@@ -411,18 +411,18 @@ public:
 
   BL_INLINE_NODEBUG PixelFlags flags() const noexcept { return _flags; }
   //! Tests whether all members are immutable (solid fills).
-  BL_INLINE_NODEBUG bool isImmutable() const noexcept { return blTestFlag(_flags, PixelFlags::kImmutable); }
+  BL_INLINE_NODEBUG bool is_immutable() const noexcept { return bl_test_flag(_flags, PixelFlags::kImmutable); }
   //! Tests whether this pixel was a partial fetch (the last pixel could be missing).
-  BL_INLINE_NODEBUG bool isLastPartial() const noexcept { return blTestFlag(_flags, PixelFlags::kLastPartial); }
+  BL_INLINE_NODEBUG bool is_last_partial() const noexcept { return bl_test_flag(_flags, PixelFlags::kLastPartial); }
 
-  BL_INLINE void makeImmutable() noexcept { _flags |= PixelFlags::kImmutable; }
+  BL_INLINE void make_immutable() noexcept { _flags |= PixelFlags::kImmutable; }
 
-  BL_INLINE void setImmutable(bool immutable) noexcept {
+  BL_INLINE void set_immutable(bool immutable) noexcept {
     _flags = (_flags & ~PixelFlags::kImmutable) | (immutable ? PixelFlags::kImmutable : PixelFlags::kNone);
   }
 
   BL_INLINE_NODEBUG PixelCount count() const noexcept { return _count; }
-  BL_INLINE void setCount(PixelCount count) noexcept { _count = count; }
+  BL_INLINE void set_count(PixelCount count) noexcept { _count = count; }
 };
 
 //! Optimized pixel representation used by solid fills.
@@ -482,7 +482,7 @@ struct PipeCMask {
   Vec vn;
 
   BL_INLINE void reset() noexcept {
-    JitUtils::resetVarStruct<PipeCMask>(this);
+    JitUtils::reset_var_struct<PipeCMask>(this);
   }
 };
 

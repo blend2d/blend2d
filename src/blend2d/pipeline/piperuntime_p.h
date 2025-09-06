@@ -38,11 +38,11 @@ BL_DEFINE_ENUM_FLAGS(PipeRuntimeFlags)
 //! create an interface that is used by the rendering context so it doesn't have to know which kind of pipelines it uses.
 struct PipeRuntime {
   //! Type of the runtime, see \ref PipeRuntimeType.
-  PipeRuntimeType _runtimeType;
+  PipeRuntimeType _runtime_type;
   //! Runtime flags.
-  PipeRuntimeFlags _runtimeFlags;
+  PipeRuntimeFlags _runtime_flags;
   //! Size of this runtime in bytes.
-  uint16_t _runtimeSize;
+  uint16_t _runtime_size;
 
   //! Runtime destructor.
   void (BL_CDECL* _destroy)(PipeRuntime* self) noexcept;
@@ -54,9 +54,9 @@ struct PipeRuntime {
     BLResult (BL_CDECL* get)(PipeRuntime* self, uint32_t signature, DispatchData* out, PipeLookupCache* cache) noexcept;
   } _funcs;
 
-  BL_INLINE_NODEBUG PipeRuntimeType runtimeType() const noexcept { return _runtimeType; }
-  BL_INLINE_NODEBUG PipeRuntimeFlags runtimeFlags() const noexcept { return _runtimeFlags; }
-  BL_INLINE_NODEBUG uint32_t runtimeSize() const noexcept { return _runtimeSize; }
+  BL_INLINE_NODEBUG PipeRuntimeType runtime_type() const noexcept { return _runtime_type; }
+  BL_INLINE_NODEBUG PipeRuntimeFlags runtime_flags() const noexcept { return _runtime_flags; }
+  BL_INLINE_NODEBUG uint32_t runtime_size() const noexcept { return _runtime_size; }
 
   BL_INLINE_NODEBUG void destroy() noexcept { _destroy(this); }
 };
@@ -70,7 +70,7 @@ struct PipeProvider {
     : _runtime(nullptr),
       _funcs {} {}
 
-  BL_INLINE_NODEBUG bool isInitialized() const noexcept {
+  BL_INLINE_NODEBUG bool is_initialized() const noexcept {
     return _runtime != nullptr;
   }
 
@@ -109,45 +109,45 @@ struct alignas(16) PipeLookupCache {
   struct IndexMatch {
     size_t _index;
 
-    BL_INLINE_NODEBUG bool isValid() const noexcept { return _index < N; }
+    BL_INLINE_NODEBUG bool is_valid() const noexcept { return _index < N; }
     BL_INLINE_NODEBUG size_t index() const noexcept { return _index; }
   };
 
   struct BitMatch {
     uint32_t _bits;
 
-    BL_INLINE_NODEBUG bool isValid() const noexcept { return _bits != 0; }
+    BL_INLINE_NODEBUG bool is_valid() const noexcept { return _bits != 0; }
     BL_INLINE_NODEBUG size_t index() const noexcept { return IntOps::ctz(_bits); }
   };
 
   //! Array of signatures for the lookup, uninitialized signatures are zero.
   uint32_t _signatures[N];
   //! Index where the next signature will be written (incremental, wraps to zero).
-  size_t _currentIndex;
+  size_t _current_index;
   //! Array of functions matching signatures stored in `_signatures` array.
-  DispatchData _dispatchData[N];
+  DispatchData _dispatch_data[N];
 
   BL_INLINE_NODEBUG void reset() {
     memset(_signatures, 0, sizeof(_signatures));
-    _currentIndex = 0;
+    _current_index = 0;
   }
 
-  BL_INLINE const DispatchData& dispatchData(size_t index) const noexcept {
-    return _dispatchData[index];
+  BL_INLINE const DispatchData& dispatch_data(size_t index) const noexcept {
+    return _dispatch_data[index];
   }
 
-  BL_INLINE void store(uint32_t signature, const DispatchData* dispatchData) noexcept {
+  BL_INLINE void store(uint32_t signature, const DispatchData* dispatch_data) noexcept {
     BL_ASSERT(signature != 0);
-    _signatures[_currentIndex] = signature;
-    _dispatchData[_currentIndex] = *dispatchData;
-    _currentIndex = (_currentIndex + 1) % N;
+    _signatures[_current_index] = signature;
+    _dispatch_data[_current_index] = *dispatch_data;
+    _current_index = (_current_index + 1) % N;
   }
 };
 
 namespace {
 
 #if defined(BL_SIMD_FEATURE_ARRAY_LOOKUP)
-static BL_INLINE SIMD::ArrayLookupResult<PipeLookupCache::N> cacheLookup(const PipeLookupCache& cache, uint32_t signature) noexcept {
+static BL_INLINE SIMD::ArrayLookupResult<PipeLookupCache::N> cache_lookup(const PipeLookupCache& cache, uint32_t signature) noexcept {
   return SIMD::array_lookup_u32_eq_aligned16<PipeLookupCache::N>(cache._signatures, signature);
 }
 #else
@@ -158,7 +158,7 @@ struct IndexMatch {
   BL_INLINE_NODEBUG size_t index() const noexcept { return _index; }
 };
 
-static BL_INLINE IndexMatch cacheLookup(const PipeLookupCache& cache, uint32_t signature) noexcept {
+static BL_INLINE IndexMatch cache_lookup(const PipeLookupCache& cache, uint32_t signature) noexcept {
   size_t i;
   for (i = 0; i < size_t(PipeLookupCache::N); i++)
     if (cache._signatures[i] == signature)

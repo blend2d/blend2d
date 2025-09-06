@@ -24,7 +24,7 @@ enum class LookupFlags : uint32_t {
   kIgnoreLigatures = 0x0004u,
   //! Skips over all combining marks.
   kIgnoreMarks = 0x0008u,
-  //! Indicates that the lookup table structure is followed by a `markFilteringSet` field.
+  //! Indicates that the lookup table structure is followed by a `mark_filtering_set` field.
   kUseMarkFilteringSet = 0x0010u,
   //! Must be zero.
   kReserved = 0x00E0u,
@@ -41,9 +41,9 @@ struct CoverageTable {
   struct Range {
     enum : uint32_t { kBaseSize = 6 };
 
-    UInt16 firstGlyph;
-    UInt16 lastGlyph;
-    UInt16 startCoverageIndex;
+    UInt16 first_glyph;
+    UInt16 last_glyph;
+    UInt16 start_coverage_index;
   };
 
   struct Format1 {
@@ -67,7 +67,7 @@ struct CoverageTable {
   BL_INLINE_NODEBUG const Format2* format2() const noexcept { return PtrOps::offset<const Format2>(this, 0); }
 
   // Format 1 has 2 byte entries, format 2 has 6 byte entries - other formats don't exist.
-  static BL_INLINE_NODEBUG uint32_t entrySizeByFormat(uint32_t format) noexcept { return format * 4u - 2u; }
+  static BL_INLINE_NODEBUG uint32_t entry_size_by_format(uint32_t format) noexcept { return format * 4u - 2u; }
 };
 
 class CoverageTableIterator {
@@ -80,13 +80,13 @@ public:
   BL_INLINE_IF_NOT_DEBUG uint32_t init(RawTable table) noexcept {
     BL_ASSERT_VALIDATED(table.fits(CoverageTable::kBaseSize));
 
-    uint32_t format = table.dataAs<CoverageTable>()->format();
+    uint32_t format = table.data_as<CoverageTable>()->format();
     BL_ASSERT_VALIDATED(format == 1 || format == 2);
 
-    uint32_t size = table.dataAs<CoverageTable>()->array.count();
-    BL_ASSERT_VALIDATED(table.fits(CoverageTable::kBaseSize + size * CoverageTable::entrySizeByFormat(format)));
+    uint32_t size = table.data_as<CoverageTable>()->array.count();
+    BL_ASSERT_VALIDATED(table.fits(CoverageTable::kBaseSize + size * CoverageTable::entry_size_by_format(format)));
 
-    _array = table.dataAs<CoverageTable>()->array.array();
+    _array = table.data_as<CoverageTable>()->array.array();
     _size = size;
     return format;
   }
@@ -97,36 +97,36 @@ public:
   }
 
   template<uint32_t Format>
-  BL_INLINE uint32_t minGlyphId() const noexcept {
+  BL_INLINE uint32_t min_glyph_id() const noexcept {
     if (Format == 1)
       return at<UInt16>(0).value();
     else
-      return at<Range>(0).firstGlyph();
+      return at<Range>(0).first_glyph();
   }
 
   template<uint32_t Format>
-  BL_INLINE uint32_t maxGlyphId() const noexcept {
+  BL_INLINE uint32_t max_glyph_id() const noexcept {
     if (Format == 1)
       return at<UInt16>(_size - 1).value();
     else
-      return at<Range>(_size - 1).lastGlyph();
+      return at<Range>(_size - 1).last_glyph();
   }
 
   template<uint32_t Format>
-  BL_INLINE_NODEBUG GlyphRange glyphRange() const noexcept {
-    return GlyphRange{minGlyphId<Format>(), maxGlyphId<Format>()};
+  BL_INLINE_NODEBUG GlyphRange glyph_range() const noexcept {
+    return GlyphRange{min_glyph_id<Format>(), max_glyph_id<Format>()};
   }
 
-  // Like `glyphRange()`, but used when the coverage table format cannot be templatized.
-  BL_INLINE GlyphRange glyphRangeWithFormat(uint32_t format) const noexcept {
+  // Like `glyph_range()`, but used when the coverage table format cannot be templatized.
+  BL_INLINE GlyphRange glyph_range_with_format(uint32_t format) const noexcept {
     if (format == 1)
-      return GlyphRange{minGlyphId<1>(), maxGlyphId<1>()};
+      return GlyphRange{min_glyph_id<1>(), max_glyph_id<1>()};
     else
-      return GlyphRange{minGlyphId<2>(), maxGlyphId<2>()};
+      return GlyphRange{min_glyph_id<2>(), max_glyph_id<2>()};
   }
 
   template<uint32_t Format>
-  BL_INLINE_IF_NOT_DEBUG bool find(BLGlyphId glyphId, uint32_t& coverageIndex) const noexcept {
+  BL_INLINE_IF_NOT_DEBUG bool find(BLGlyphId glyph_id, uint32_t& coverage_index) const noexcept {
     if (Format == 1) {
       const UInt16* base = static_cast<const UInt16*>(_array);
       size_t size = _size;
@@ -134,12 +134,12 @@ public:
       while (size_t half = size / 2u) {
         const UInt16* middle = base + half;
         size -= half;
-        if (glyphId >= middle->value())
+        if (glyph_id >= middle->value())
           base = middle;
       }
 
-      coverageIndex = uint32_t(size_t(base - static_cast<const UInt16*>(_array)));
-      return base->value() == glyphId;
+      coverage_index = uint32_t(size_t(base - static_cast<const UInt16*>(_array)));
+      return base->value() == glyph_id;
     }
     else {
       const Range* base = static_cast<const Range*>(_array);
@@ -148,23 +148,23 @@ public:
       while (size_t half = size / 2u) {
         const Range* middle = base + half;
         size -= half;
-        if (glyphId >= middle->firstGlyph())
+        if (glyph_id >= middle->first_glyph())
           base = middle;
       }
 
-      coverageIndex = uint32_t(base->startCoverageIndex()) + glyphId - base->firstGlyph();
-      uint32_t firstGlyph = base->firstGlyph();
-      uint32_t lastGlyph = base->lastGlyph();
-      return glyphId >= firstGlyph && glyphId <= lastGlyph;
+      coverage_index = uint32_t(base->start_coverage_index()) + glyph_id - base->first_glyph();
+      uint32_t first_glyph = base->first_glyph();
+      uint32_t last_glyph = base->last_glyph();
+      return glyph_id >= first_glyph && glyph_id <= last_glyph;
     }
   }
 
   // Like `find()`, but used when the coverage table format cannot be templatized.
-  BL_INLINE bool findWithFormat(uint32_t format, BLGlyphId glyphId, uint32_t& coverageIndex) const noexcept {
+  BL_INLINE bool find_with_format(uint32_t format, BLGlyphId glyph_id, uint32_t& coverage_index) const noexcept {
     if (format == 1)
-      return find<1>(glyphId, coverageIndex);
+      return find<1>(glyph_id, coverage_index);
     else
-      return find<2>(glyphId, coverageIndex);
+      return find<2>(glyph_id, coverage_index);
   }
 };
 
@@ -174,17 +174,17 @@ struct ClassDefTable {
   enum : uint32_t { kBaseSize = 6 };
 
   struct Range {
-    UInt16 firstGlyph;
-    UInt16 lastGlyph;
-    UInt16 classValue;
+    UInt16 first_glyph;
+    UInt16 last_glyph;
+    UInt16 class_value;
   };
 
   struct Format1 {
     enum : uint32_t { kBaseSize = 6 };
 
     UInt16 format;
-    UInt16 firstGlyph;
-    Array16<UInt16> classValues;
+    UInt16 first_glyph;
+    Array16<UInt16> class_values;
   };
 
   struct Format2 {
@@ -206,37 +206,37 @@ public:
 
   const void* _array;
   uint32_t _size;
-  uint32_t _firstGlyph;
+  uint32_t _first_glyph;
 
   BL_INLINE_IF_NOT_DEBUG uint32_t init(RawTable table) noexcept {
     const void* array = nullptr;
     uint32_t size = 0;
     uint32_t format = 0;
-    uint32_t firstGlyph = 0;
+    uint32_t first_glyph = 0;
 
     if (BL_LIKELY(table.size >= ClassDefTable::kBaseSize)) {
-      uint32_t requiredTableSize = 0;
-      format = table.dataAs<ClassDefTable>()->format();
+      uint32_t required_table_size = 0;
+      format = table.data_as<ClassDefTable>()->format();
 
       switch (format) {
         case 1: {
-          const ClassDefTable::Format1* fmt1 = table.dataAs<ClassDefTable::Format1>();
+          const ClassDefTable::Format1* fmt1 = table.data_as<ClassDefTable::Format1>();
 
-          size = fmt1->classValues.count();
-          array = fmt1->classValues.array();
-          firstGlyph = fmt1->firstGlyph();
-          requiredTableSize = uint32_t(sizeof(ClassDefTable::Format1)) + size * 2u;
+          size = fmt1->class_values.count();
+          array = fmt1->class_values.array();
+          first_glyph = fmt1->first_glyph();
+          required_table_size = uint32_t(sizeof(ClassDefTable::Format1)) + size * 2u;
           break;
         }
 
         case 2: {
-          const ClassDefTable::Format2* fmt2 = table.dataAs<ClassDefTable::Format2>();
+          const ClassDefTable::Format2* fmt2 = table.data_as<ClassDefTable::Format2>();
 
           size = fmt2->ranges.count();
           array = fmt2->ranges.array();
           // Minimum table size that we check is 6, so we are still fine here...
-          firstGlyph = fmt2->ranges.array()[0].firstGlyph();
-          requiredTableSize = uint32_t(sizeof(ClassDefTable::Format2)) + size * uint32_t(sizeof(ClassDefTable::Range));
+          first_glyph = fmt2->ranges.array()[0].first_glyph();
+          required_table_size = uint32_t(sizeof(ClassDefTable::Format2)) + size * uint32_t(sizeof(ClassDefTable::Range));
           break;
         }
 
@@ -245,13 +245,13 @@ public:
           break;
       }
 
-      if (!size || requiredTableSize > table.size)
+      if (!size || required_table_size > table.size)
         format = 0;
     }
 
     _array = array;
     _size = size;
-    _firstGlyph = firstGlyph;
+    _first_glyph = first_glyph;
 
     return format;
   }
@@ -260,28 +260,28 @@ public:
   BL_INLINE_NODEBUG const T& at(size_t index) const noexcept { return static_cast<const T*>(_array)[index]; }
 
   template<uint32_t Format>
-  BL_INLINE_NODEBUG uint32_t minGlyphId() const noexcept {
-    return _firstGlyph;
+  BL_INLINE_NODEBUG uint32_t min_glyph_id() const noexcept {
+    return _first_glyph;
   }
 
   template<uint32_t Format>
-  BL_INLINE uint32_t maxGlyphId() const noexcept {
+  BL_INLINE uint32_t max_glyph_id() const noexcept {
     if (Format == 1)
-      return _firstGlyph + uint32_t(_size) - 1;
+      return _first_glyph + uint32_t(_size) - 1;
     else
-      return at<Range>(_size - 1).lastGlyph();
+      return at<Range>(_size - 1).last_glyph();
   }
 
   template<uint32_t Format>
-  BL_INLINE_IF_NOT_DEBUG uint32_t classOfGlyph(BLGlyphId glyphId) const noexcept {
+  BL_INLINE_IF_NOT_DEBUG uint32_t class_of_glyph(BLGlyphId glyph_id) const noexcept {
     if (Format == 1) {
-      uint32_t index = glyphId - _firstGlyph;
-      uint32_t fixedIndex = blMin(index, _size - 1);
+      uint32_t index = glyph_id - _first_glyph;
+      uint32_t fixed_index = bl_min(index, _size - 1);
 
-      uint32_t classValue = at<UInt16>(fixedIndex).value();
+      uint32_t class_value = at<UInt16>(fixed_index).value();
       if (index >= _size)
-        classValue = 0;
-      return classValue;
+        class_value = 0;
+      return class_value;
     }
     else {
       const Range* base = static_cast<const Range*>(_array);
@@ -290,25 +290,25 @@ public:
       while (uint32_t half = size / 2u) {
         const Range* middle = base + half;
         size -= half;
-        if (glyphId >= middle->firstGlyph())
+        if (glyph_id >= middle->first_glyph())
           base = middle;
       }
 
-      uint32_t classValue = base->classValue();
-      if (glyphId < base->firstGlyph() || glyphId > base->lastGlyph())
-        classValue = 0;
-      return classValue;
+      uint32_t class_value = base->class_value();
+      if (glyph_id < base->first_glyph() || glyph_id > base->last_glyph())
+        class_value = 0;
+      return class_value;
     }
   }
 
   template<uint32_t Format>
-  BL_INLINE uint32_t matchGlyphClass(BLGlyphId glyphId, uint32_t classId) const noexcept {
+  BL_INLINE uint32_t match_glyph_class(BLGlyphId glyph_id, uint32_t class_id) const noexcept {
     if (Format == 1) {
-      uint32_t index = glyphId - _firstGlyph;
-      return index == classId && classId < _size;
+      uint32_t index = glyph_id - _first_glyph;
+      return index == class_id && class_id < _size;
     }
     else {
-      return classOfGlyph<2>(glyphId) == classId;
+      return class_of_glyph<2>(glyph_id) == class_id;
     }
   }
 };
@@ -321,9 +321,9 @@ struct ConditionTable {
     enum : uint32_t { kBaseSize = 8 };
 
     UInt16 format;
-    UInt16 axisIndex;
-    F2x14 filterRangeMinValue;
-    F2x14 filterRangeMaxValue;
+    UInt16 axis_index;
+    F2x14 filter_range_min_value;
+    F2x14 filter_range_max_value;
   };
 
   UInt16 format;
@@ -342,22 +342,22 @@ struct GDefTable {
     enum : uint32_t { kBaseSize = 12 };
 
     F16x16 version;
-    Offset16 glyphClassDefOffset;
-    Offset16 attachListOffset;
-    Offset16 ligCaretListOffset;
-    Offset16 markAttachClassDefOffset;
+    Offset16 glyph_class_def_offset;
+    Offset16 attach_list_offset;
+    Offset16 lig_caret_list_offset;
+    Offset16 mark_attach_class_def_offset;
   };
 
   struct HeaderV1_2 : public HeaderV1_0 {
     enum : uint32_t { kBaseSize = 14 };
 
-    UInt16 markGlyphSetsDefOffset;
+    UInt16 mark_glyph_sets_def_offset;
   };
 
   struct HeaderV1_3 : public HeaderV1_2 {
     enum : uint32_t { kBaseSize = 18 };
 
-    UInt32 itemVarStoreOffset;
+    UInt32 item_var_store_offset;
   };
 
   HeaderV1_0 header;
@@ -371,7 +371,7 @@ struct GDefTable {
 struct GSubGPosTable {
   enum : uint32_t { kBaseSize = 10 };
 
-  //! No feature required, possibly stored in `LangSysTable::requiredFeatureIndex`.
+  //! No feature required, possibly stored in `LangSysTable::required_feature_index`.
   static inline constexpr uint16_t kFeatureNotRequired = 0xFFFFu;
 
   //! \name GPOS & GSUB - Core Tables
@@ -381,31 +381,31 @@ struct GSubGPosTable {
     enum : uint32_t { kBaseSize = 10 };
 
     F16x16 version;
-    Offset16 scriptListOffset;
-    Offset16 featureListOffset;
-    Offset16 lookupListOffset;
+    Offset16 script_list_offset;
+    Offset16 feature_list_offset;
+    Offset16 lookup_list_offset;
   };
 
   struct HeaderV1_1 : public HeaderV1_0 {
     enum : uint32_t { kBaseSize = 14 };
 
-    Offset32 featureVariationsOffset;
+    Offset32 feature_variations_offset;
   };
 
   typedef TagRef16 LangSysRecord;
   struct LangSysTable {
     enum : uint32_t { kBaseSize = 6 };
 
-    Offset16 lookupOrderOffset;
-    UInt16 requiredFeatureIndex;
-    Array16<UInt16> featureIndexes;
+    Offset16 lookup_order_offset;
+    UInt16 required_feature_index;
+    Array16<UInt16> feature_indexes;
   };
 
   struct ScriptTable {
     enum : uint32_t { kBaseSize = 4 };
 
-    UInt16 langSysDefault;
-    Array16<TagRef16> langSysOffsets;
+    UInt16 lang_sys_default;
+    Array16<TagRef16> lang_sys_offsets;
   };
 
   struct FeatureTable {
@@ -414,18 +414,18 @@ struct GSubGPosTable {
     typedef TagRef16 Record;
     typedef Array16<Record> List;
 
-    Offset16 featureParamsOffset;
-    Array16<UInt16> lookupListIndexes;
+    Offset16 feature_params_offset;
+    Array16<UInt16> lookup_list_indexes;
   };
 
   struct LookupTable {
     enum : uint32_t { kBaseSize = 6 };
 
-    UInt16 lookupType;
-    UInt16 lookupFlags;
-    Array16<Offset16> subTableOffsets;
+    UInt16 lookup_type;
+    UInt16 lookup_flags;
+    Array16<Offset16> sub_table_offsets;
     /*
-    UInt16 markFilteringSet;
+    UInt16 mark_filtering_set;
     */
   };
 
@@ -443,13 +443,13 @@ struct GSubGPosTable {
   struct LookupHeaderWithCoverage : public LookupHeader {
     enum : uint32_t { kBaseSize = LookupHeader::kBaseSize + 2 };
 
-    Offset16 coverageOffset;
+    Offset16 coverage_offset;
   };
 
   struct ExtensionLookup : public LookupHeader {
     enum : uint32_t { kBaseSize = LookupHeader::kBaseSize + 6 };
 
-    UInt16 lookupType;
+    UInt16 lookup_type;
     Offset32 offset;
   };
 
@@ -461,8 +461,8 @@ struct GSubGPosTable {
   struct SequenceLookupRecord {
     enum : uint32_t { kBaseSize = 4 };
 
-    UInt16 sequenceIndex;
-    UInt16 lookupIndex;
+    UInt16 sequence_index;
+    UInt16 lookup_index;
   };
 
   typedef Array16<UInt16> SequenceRuleSet;
@@ -470,47 +470,47 @@ struct GSubGPosTable {
   struct SequenceRule {
     enum : uint32_t { kBaseSize = 4 };
 
-    UInt16 glyphCount;
-    UInt16 lookupRecordCount;
+    UInt16 glyph_count;
+    UInt16 lookup_record_count;
     /*
-    UInt16 inputSequence[glyphCount - 1];
-    SequenceLookupRecord lookupRecords[lookupCount];
+    UInt16 input_sequence[glyph_count - 1];
+    SequenceLookupRecord lookup_records[lookup_count];
     */
 
-    BL_INLINE_NODEBUG const UInt16* inputSequence() const noexcept {
+    BL_INLINE_NODEBUG const UInt16* input_sequence() const noexcept {
       return PtrOps::offset<const UInt16>(this, 4);
     }
 
-    BL_INLINE_NODEBUG const SequenceLookupRecord* lookupRecordArray(uint32_t glyphCount_) const noexcept {
-      return PtrOps::offset<const SequenceLookupRecord>(this, kBaseSize + glyphCount_ * 2u - 2u);
+    BL_INLINE_NODEBUG const SequenceLookupRecord* lookup_record_array(uint32_t glyph_count_) const noexcept {
+      return PtrOps::offset<const SequenceLookupRecord>(this, kBaseSize + glyph_count_ * 2u - 2u);
     }
   };
 
   struct SequenceContext1 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 2 };
 
-    Array16<Offset16> ruleSetOffsets;
+    Array16<Offset16> rule_set_offsets;
   };
 
   struct SequenceContext2 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 4 };
 
-    Offset16 classDefOffset;
-    Array16<Offset16> ruleSetOffsets;
+    Offset16 class_def_offset;
+    Array16<Offset16> rule_set_offsets;
   };
 
   struct SequenceContext3 : public LookupHeader {
     enum : uint32_t { kBaseSize = LookupHeader::kBaseSize + 4 };
 
-    UInt16 glyphCount;
-    UInt16 lookupRecordCount;
+    UInt16 glyph_count;
+    UInt16 lookup_record_count;
     /*
-    Offset16 coverageOffsetArray[glyphCount];
-    SequenceLookupRecord lookupRecords[lookupRecordCount];
+    Offset16 coverage_offset_array[glyph_count];
+    SequenceLookupRecord lookup_records[lookup_record_count];
     */
 
-    BL_INLINE_NODEBUG const UInt16* coverageOffsetArray() const noexcept { return PtrOps::offset<const UInt16>(this, kBaseSize); }
-    BL_INLINE_NODEBUG const SequenceLookupRecord* lookupRecordArray(size_t glyphCount_) const noexcept { return PtrOps::offset<const SequenceLookupRecord>(this, kBaseSize + glyphCount_ * 2u); }
+    BL_INLINE_NODEBUG const UInt16* coverage_offset_array() const noexcept { return PtrOps::offset<const UInt16>(this, kBaseSize); }
+    BL_INLINE_NODEBUG const SequenceLookupRecord* lookup_record_array(size_t glyph_count_) const noexcept { return PtrOps::offset<const SequenceLookupRecord>(this, kBaseSize + glyph_count_ * 2u); }
   };
 
   //! \}
@@ -521,18 +521,18 @@ struct GSubGPosTable {
   struct ChainedSequenceRule {
     enum : uint32_t { kBaseSize = 8 };
 
-    UInt16 backtrackGlyphCount;
+    UInt16 backtrack_glyph_count;
     /*
-    UInt16 backtrackSequence[backtrackGlyphCount];
-    UInt16 inputGlyphCount;
-    UInt16 inputSequence[inputGlyphCount - 1];
-    UInt16 lookaheadGlyphCount;
-    UInt16 lookaheadSequence[lookaheadGlyphCount];
-    UInt16 lookupRecordCount;
-    SequenceLookupRecord lookupRecords[lookupRecordCount];
+    UInt16 backtrack_sequence[backtrack_glyph_count];
+    UInt16 input_glyph_count;
+    UInt16 input_sequence[input_glyph_count - 1];
+    UInt16 lookahead_glyph_count;
+    UInt16 lookahead_sequence[lookahead_glyph_count];
+    UInt16 lookup_record_count;
+    SequenceLookupRecord lookup_records[lookup_record_count];
     */
 
-    BL_INLINE const UInt16* backtrackSequence() const noexcept { return PtrOps::offset<const UInt16>(this, 2); }
+    BL_INLINE const UInt16* backtrack_sequence() const noexcept { return PtrOps::offset<const UInt16>(this, 2); }
   };
 
   typedef Array16<UInt16> ChainedSequenceRuleSet;
@@ -540,33 +540,33 @@ struct GSubGPosTable {
   struct ChainedSequenceContext1 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 2 };
 
-    Array16<Offset16> ruleSetOffsets;
+    Array16<Offset16> rule_set_offsets;
   };
 
   struct ChainedSequenceContext2 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 8 };
 
-    Offset16 backtrackClassDefOffset;
-    Offset16 inputClassDefOffset;
-    Offset16 lookaheadClassDefOffset;
-    Array16<Offset16> ruleSetOffsets;
+    Offset16 backtrack_class_def_offset;
+    Offset16 input_class_def_offset;
+    Offset16 lookahead_class_def_offset;
+    Array16<Offset16> rule_set_offsets;
   };
 
   struct ChainedSequenceContext3 : public LookupHeader {
     enum : uint32_t { kBaseSize = LookupHeader::kBaseSize + 8 };
 
-    UInt16 backtrackGlyphCount;
+    UInt16 backtrack_glyph_count;
     /*
-    Offset16 backtrackCoverageOffsets[backtrackGlyphCount];
-    UInt16 inputGlyphCount;
-    Offset16 inputCoverageOffsets[inputGlyphCount];
-    UInt16 lookaheadGlyphCount;
-    Offset16 lookaheadCoverageOffsets[lookaheadGlyphCount];
-    UInt16 lookupRecordCount;
-    SequenceLookupRecord lookupRecords[substCount];
+    Offset16 backtrack_coverage_offsets[backtrack_glyph_count];
+    UInt16 input_glyph_count;
+    Offset16 input_coverage_offsets[input_glyph_count];
+    UInt16 lookahead_glyph_count;
+    Offset16 lookahead_coverage_offsets[lookahead_glyph_count];
+    UInt16 lookup_record_count;
+    SequenceLookupRecord lookup_records[subst_count];
     */
 
-    BL_INLINE_NODEBUG const UInt16* backtrackCoverageOffsets() const noexcept { return PtrOps::offset<const UInt16>(this, 4); }
+    BL_INLINE_NODEBUG const UInt16* backtrack_coverage_offsets() const noexcept { return PtrOps::offset<const UInt16>(this, 4); }
   };
 
   //! \}
@@ -613,7 +613,7 @@ struct GSubTable : public GSubGPosTable {
   struct SingleSubst1 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 2 };
 
-    Int16 deltaGlyphId;
+    Int16 delta_glyph_id;
   };
 
   struct SingleSubst2 : public LookupHeaderWithCoverage {
@@ -630,7 +630,7 @@ struct GSubTable : public GSubGPosTable {
   struct MultipleSubst1 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 2 };
 
-    Array16<Offset16> sequenceOffsets;
+    Array16<Offset16> sequence_offsets;
   };
 
   // Lookup Type 3 - AlternateSubst
@@ -641,14 +641,14 @@ struct GSubTable : public GSubGPosTable {
   struct AlternateSubst1 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 2 };
 
-    Array16<Offset16> alternateSetOffsets;
+    Array16<Offset16> alternate_set_offsets;
   };
 
   // Lookup Type 4 - LigatureSubst
   // -----------------------------
 
   struct Ligature {
-    UInt16 ligatureGlyphId;
+    UInt16 ligature_glyph_id;
     Array16<UInt16> glyphs;
   };
 
@@ -657,7 +657,7 @@ struct GSubTable : public GSubGPosTable {
   struct LigatureSubst1 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 2 };
 
-    Array16<Offset16> ligatureSetOffsets;
+    Array16<Offset16> ligature_set_offsets;
   };
 
   // Lookup Type 5 - ContextSubst
@@ -681,16 +681,16 @@ struct GSubTable : public GSubGPosTable {
   struct ReverseChainedSingleSubst1 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 2 };
 
-    UInt16 backtrackGlyphCount;
+    UInt16 backtrack_glyph_count;
     /*
-    Offset16 backtrackCoverageOffsets[backtrackGlyphCount];
-    UInt16 lookaheadGlyphCount;
-    Offset16 lookaheadCoverageOffsets[lookaheadGlyphCount];
-    UInt16 substGlyphCount;
-    UInt16 substGlyphArray[substGlyphCount];
+    Offset16 backtrack_coverage_offsets[backtrack_glyph_count];
+    UInt16 lookahead_glyph_count;
+    Offset16 lookahead_coverage_offsets[lookahead_glyph_count];
+    UInt16 subst_glyph_count;
+    UInt16 subst_glyph_array[subst_glyph_count];
     */
 
-    BL_INLINE_NODEBUG const UInt16* backtrackCoverageOffsets() const noexcept { return PtrOps::offset<const UInt16>(this, 6); }
+    BL_INLINE_NODEBUG const UInt16* backtrack_coverage_offsets() const noexcept { return PtrOps::offset<const UInt16>(this, 6); }
   };
 };
 
@@ -741,26 +741,26 @@ struct GPosTable : public GSubGPosTable {
   struct Anchor1 {
     enum : uint32_t { kBaseSize = 6 };
 
-    UInt16 anchorFormat;
-    Int16 xCoordinate;
-    Int16 yCoordinate;
+    UInt16 anchor_format;
+    Int16 x_coordinate;
+    Int16 y_coordinate;
   };
 
   struct Anchor2 {
     enum : uint32_t { kBaseSize = 8 };
 
-    UInt16 anchorFormat;
-    Int16 xCoordinate;
-    Int16 yCoordinate;
-    UInt16 anchorPoint;
+    UInt16 anchor_format;
+    Int16 x_coordinate;
+    Int16 y_coordinate;
+    UInt16 anchor_point;
   };
 
   struct Anchor3 {
     enum : uint32_t { kBaseSize = 10 };
 
-    UInt16 anchorFormat;
-    Int16 xCoordinate;
-    Int16 yCoordinate;
+    UInt16 anchor_format;
+    Int16 x_coordinate;
+    Int16 y_coordinate;
     UInt16 xDeviceOffset;
     UInt16 yDeviceOffset;
   };
@@ -769,8 +769,8 @@ struct GPosTable : public GSubGPosTable {
   // ----
 
   struct Mark {
-    UInt16 markClass;
-    UInt16 markAnchorOffset;
+    UInt16 mark_class;
+    UInt16 mark_anchor_offset;
   };
 
   // Lookup Type 1 - Single Adjustment
@@ -779,58 +779,58 @@ struct GPosTable : public GSubGPosTable {
   struct SingleAdjustment1 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 2 };
 
-    UInt16 valueFormat;
+    UInt16 value_format;
 
-    BL_INLINE_NODEBUG const UInt16* valueRecords() const noexcept { return PtrOps::offset<const UInt16>(this, 6u); }
+    BL_INLINE_NODEBUG const UInt16* value_records() const noexcept { return PtrOps::offset<const UInt16>(this, 6u); }
   };
 
   struct SingleAdjustment2 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 4 };
 
-    UInt16 valueFormat;
-    UInt16 valueCount;
+    UInt16 value_format;
+    UInt16 value_count;
 
-    BL_INLINE_NODEBUG const UInt16* valueRecords() const noexcept { return PtrOps::offset<const UInt16>(this, 8u); }
+    BL_INLINE_NODEBUG const UInt16* value_records() const noexcept { return PtrOps::offset<const UInt16>(this, 8u); }
   };
 
   // Lookup Type 2 - Pair Adjustment
   // -------------------------------
 
   struct PairSet {
-    UInt16 pairValueCount;
+    UInt16 pair_value_count;
 
-    BL_INLINE_NODEBUG const UInt16* pairValueRecords() const noexcept { return PtrOps::offset<const UInt16>(this, 2); }
+    BL_INLINE_NODEBUG const UInt16* pair_value_records() const noexcept { return PtrOps::offset<const UInt16>(this, 2); }
   };
 
   struct PairValueRecord {
-    UInt16 secondGlyph;
+    UInt16 second_glyph;
 
-    BL_INLINE_NODEBUG const UInt16* valueRecords() const noexcept { return PtrOps::offset<const UInt16>(this, 2); }
+    BL_INLINE_NODEBUG const UInt16* value_records() const noexcept { return PtrOps::offset<const UInt16>(this, 2); }
   };
 
   struct PairAdjustment1 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 6 };
 
-    UInt16 valueFormat1;
-    UInt16 valueFormat2;
-    Array16<UInt16> pairSetOffsets;
+    UInt16 value_format1;
+    UInt16 value_format2;
+    Array16<UInt16> pair_set_offsets;
   };
 
   struct PairAdjustment2 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 12 };
 
-    UInt16 value1Format;
-    UInt16 value2Format;
+    UInt16 value1_format;
+    UInt16 value2_format;
     Offset16 classDef1Offset;
     Offset16 classDef2Offset;
-    UInt16 class1Count;
-    UInt16 class2Count;
+    UInt16 class1_count;
+    UInt16 class2_count;
     /*
     struct ClassRecord {
       ValueRecord value1;
       ValueRecord value2;
     };
-    ClassRecord classRecords[class1Count * class2Count];
+    ClassRecord class_records[class1_count * class2_count];
     */
   };
 
@@ -840,14 +840,14 @@ struct GPosTable : public GSubGPosTable {
   struct EntryExit {
     enum : uint32_t { kBaseSize = 4 };
 
-    Offset16 entryAnchorOffset;
-    Offset16 exitAnchorOffset;
+    Offset16 entry_anchor_offset;
+    Offset16 exit_anchor_offset;
   };
 
   struct CursiveAttachment1 : public LookupHeaderWithCoverage {
     enum : uint32_t { kBaseSize = LookupHeaderWithCoverage::kBaseSize + 2 };
 
-    Array16<EntryExit> entryExits;
+    Array16<EntryExit> entry_exits;
   };
 
   // Lookup Type 4 - MarkToBase Attachment
@@ -856,11 +856,11 @@ struct GPosTable : public GSubGPosTable {
   struct MarkToBaseAttachment1 : public LookupHeader {
     enum : uint32_t { kBaseSize = LookupHeader::kBaseSize + 10 };
 
-    Offset16 markCoverageOffset;
-    Offset16 baseCoverageOffset;
-    UInt16 markClassCount;
-    Offset16 markArrayOffset;
-    Offset16 baseArrayOffset;
+    Offset16 mark_coverage_offset;
+    Offset16 base_coverage_offset;
+    UInt16 mark_class_count;
+    Offset16 mark_array_offset;
+    Offset16 base_array_offset;
   };
 
   // Lookup Type 5 - MarkToLigature Attachment
@@ -869,11 +869,11 @@ struct GPosTable : public GSubGPosTable {
   struct MarkToLigatureAttachment1 : public LookupHeader {
     enum : uint32_t { kBaseSize = LookupHeader::kBaseSize + 10 };
 
-    Offset16 markCoverageOffset;
-    Offset16 ligatureCoverageOffset;
-    UInt16 markClassCount;
-    Offset16 markArrayOffset;
-    Offset16 ligatureArrayOffset;
+    Offset16 mark_coverage_offset;
+    Offset16 ligature_coverage_offset;
+    UInt16 mark_class_count;
+    Offset16 mark_array_offset;
+    Offset16 ligature_array_offset;
   };
 
   // Lookup Type 6 - MarkToMark Attachment
@@ -882,11 +882,11 @@ struct GPosTable : public GSubGPosTable {
   struct MarkToMarkAttachment1 : public LookupHeader {
     enum : uint32_t { kBaseSize = LookupHeader::kBaseSize + 10 };
 
-    Offset16 mark1CoverageOffset;
-    Offset16 mark2CoverageOffset;
-    UInt16 markClassCount;
-    Offset16 mark1ArrayOffset;
-    Offset16 mark2ArrayOffset;
+    Offset16 mark1_coverage_offset;
+    Offset16 mark2_coverage_offset;
+    UInt16 mark_class_count;
+    Offset16 mark1_array_offset;
+    Offset16 mark2_array_offset;
   };
 
   // Lookup Type 7 - Context Positioning

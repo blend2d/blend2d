@@ -73,115 +73,115 @@ public:
   //! \{
 
   //! Context flags.
-  bl::RasterEngine::ContextFlags contextFlags;
+  bl::RasterEngine::ContextFlags context_flags;
   //! Rendering mode.
-  uint8_t renderingMode;
-  //! Whether workerMgr has been initialized.
-  uint8_t workerMgrInitialized;
+  uint8_t rendering_mode;
+  //! Whether worker_mgr has been initialized.
+  uint8_t worker_mgr_initialized;
   //! Precision information.
-  bl::RasterEngine::RenderTargetInfo renderTargetInfo;
+  bl::RasterEngine::RenderTargetInfo render_target_info;
 
   //! Work data used by synchronous rendering that also holds part of the current state. In async mode the work data
   //! can still be used by user thread in case it's allowed, otherwise it would only hold some states that are used
   //! by the rendering context directly.
-  bl::RasterEngine::WorkData syncWorkData;
+  bl::RasterEngine::WorkData sync_work_data;
 
-  //! Pipeline lookup cache (always used before attempting to use `pipeProvider`).
-  bl::Pipeline::PipeLookupCache pipeLookupCache;
+  //! Pipeline lookup cache (always used before attempting to use `pipe_provider`).
+  bl::Pipeline::PipeLookupCache pipe_lookup_cache;
 
-  //! Composition operator simplification that matches the destination format and current `compOp`.
-  const bl::CompOpSimplifyInfo* compOpSimplifyInfo;
+  //! Composition operator simplification that matches the destination format and current `comp_op`.
+  const bl::CompOpSimplifyInfo* comp_op_simplify_info;
   //! Solid format table used to select the best pixel format for solid fills.
-  uint8_t solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_COUNT];
+  uint8_t solid_format_table[BL_RASTER_CONTEXT_SOLID_FORMAT_COUNT];
   //! Table that can be used to override a fill/stroke color by one from SolidId (after a simplification).
-  bl::RasterEngine::RenderFetchDataSolid* solidOverrideFillTable;
+  bl::RasterEngine::RenderFetchDataSolid* solid_override_fill_table;
   //! Solid fill override table indexed by \ref bl::CompOpSolidId.
-  bl::RasterEngine::RenderFetchDataHeader* solidFetchDataOverrideTable[uint32_t(bl::CompOpSolidId::kAlwaysNop) + 1u];
+  bl::RasterEngine::RenderFetchDataHeader* solid_fetch_data_override_table[uint32_t(bl::CompOpSolidId::kAlwaysNop) + 1u];
 
   //! The current state of the rendering context, the `BLContextState` part is public.
-  bl::RasterEngine::RasterContextState internalState;
+  bl::RasterEngine::RasterContextState internal_state;
   //! Link to the previous saved state that will be restored by `BLContext::restore()`.
-  bl::RasterEngine::SavedState* savedState;
+  bl::RasterEngine::SavedState* saved_state;
   //! An actual shared fill-state (asynchronous rendering).
-  bl::RasterEngine::SharedFillState* sharedFillState;
+  bl::RasterEngine::SharedFillState* shared_fill_state;
   //! An actual shared stroke-state (asynchronous rendering).
-  bl::RasterEngine::SharedBaseStrokeState* sharedStrokeState;
+  bl::RasterEngine::SharedBaseStrokeState* shared_stroke_state;
 
-  //! Zone allocator used to allocate base data structures required by `BLRasterContextImpl`.
-  bl::ArenaAllocator baseZone;
+  //! Arena allocator used to allocate base data structures required by `BLRasterContextImpl`.
+  bl::ArenaAllocator base_zone;
   //! Object pool used to allocate `RenderFetchData`.
-  bl::ArenaPool<bl::RasterEngine::RenderFetchData> fetchDataPool;
+  bl::ArenaPool<bl::RasterEngine::RenderFetchData> fetch_data_pool;
   //! Object pool used to allocate `SavedState`.
-  bl::ArenaPool<bl::RasterEngine::SavedState> savedStatePool;
+  bl::ArenaPool<bl::RasterEngine::SavedState> saved_state_pool;
 
   //! Pipeline runtime (either global or isolated, depending on create-options).
-  bl::Pipeline::PipeProvider pipeProvider;
+  bl::Pipeline::PipeProvider pipe_provider;
   //! Worker manager (only used by asynchronous rendering context).
-  bl::Wrap<bl::RasterEngine::WorkerManager> workerMgr;
+  bl::Wrap<bl::RasterEngine::WorkerManager> worker_mgr;
 
   //! Context origin ID used in `data0` member of `BLContextCookie`.
-  uint64_t contextOriginId;
+  uint64_t context_origin_id;
   //! Used to generate unique IDs of this context.
-  uint64_t stateIdCounter;
+  uint64_t state_id_counter;
 
   //! The number of states that can be saved by `BLContext::save()` call.
-  uint32_t savedStateLimit;
+  uint32_t saved_state_limit;
 
   //! Destination image.
-  BLImageCore dstImage;
+  BLImageCore dst_image;
   //! Destination image data.
-  BLImageData dstData;
+  BLImageData dst_data;
 
   //! Minimum safe coordinate for integral transformation (scaled by 256.0 or 65536.0).
-  double fpMinSafeCoordD;
+  double fp_min_safe_coord_d;
   //! Maximum safe coordinate for integral transformation (scaled by 256.0 or 65536.0).
-  double fpMaxSafeCoordD;
+  double fp_max_safe_coord_d;
 
   //! Pointers to essential transformations that can be applied to styles.
-  const BLMatrix2D* transformPtrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_MAX_VALUE + 1u];
+  const BLMatrix2D* transform_ptrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_MAX_VALUE + 1u];
 
   //! \}
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLRasterContextImpl(BLContextVirt* virtIn, void* staticData, size_t staticSize) noexcept
-    : contextFlags(bl::RasterEngine::ContextFlags::kNoFlagsSet),
-      renderingMode(uint8_t(bl::RasterEngine::RenderingMode::kSync)),
-      workerMgrInitialized(false),
-      renderTargetInfo {},
-      syncWorkData(this, nullptr),
-      pipeLookupCache{},
-      compOpSimplifyInfo{},
-      solidFormatTable{},
-      solidOverrideFillTable{},
-      solidFetchDataOverrideTable{},
-      savedState{},
-      sharedFillState{},
-      sharedStrokeState{},
-      baseZone(8192, 16, staticData, staticSize),
-      fetchDataPool(),
-      savedStatePool(),
-      pipeProvider(),
-      contextOriginId(BLUniqueIdGenerator::generateId(BLUniqueIdGenerator::Domain::kContext)),
-      stateIdCounter(0),
-      savedStateLimit(0),
-      dstImage{},
-      dstData{},
-      fpMinSafeCoordD(0.0),
-      fpMaxSafeCoordD(0.0) {
+  BL_INLINE BLRasterContextImpl(BLContextVirt* virt_in, void* static_data, size_t static_size) noexcept
+    : context_flags(bl::RasterEngine::ContextFlags::kNoFlagsSet),
+      rendering_mode(uint8_t(bl::RasterEngine::RenderingMode::kSync)),
+      worker_mgr_initialized(false),
+      render_target_info {},
+      sync_work_data(this, nullptr),
+      pipe_lookup_cache{},
+      comp_op_simplify_info{},
+      solid_format_table{},
+      solid_override_fill_table{},
+      solid_fetch_data_override_table{},
+      saved_state{},
+      shared_fill_state{},
+      shared_stroke_state{},
+      base_zone(8192, 16, static_data, static_size),
+      fetch_data_pool(),
+      saved_state_pool(),
+      pipe_provider(),
+      context_origin_id(BLUniqueIdGenerator::generate_id(BLUniqueIdGenerator::Domain::kContext)),
+      state_id_counter(0),
+      saved_state_limit(0),
+      dst_image{},
+      dst_data{},
+      fp_min_safe_coord_d(0.0),
+      fp_max_safe_coord_d(0.0) {
 
     // Initializes BLRasterContext2DImpl.
-    virt = virtIn;
-    contextType = BL_CONTEXT_TYPE_RASTER;
-    state = &internalState;
-    transformPtrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_USER] = &internalState.finalTransform;
-    transformPtrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_META] = &internalState.metaTransform;
-    transformPtrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_NONE] = &bl::TransformInternal::identityTransform;
+    virt = virt_in;
+    context_type = BL_CONTEXT_TYPE_RASTER;
+    state = &internal_state;
+    transform_ptrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_USER] = &internal_state.final_transform;
+    transform_ptrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_META] = &internal_state.meta_transform;
+    transform_ptrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_NONE] = &bl::TransformInternal::identity_transform;
   }
 
   BL_INLINE ~BLRasterContextImpl() noexcept {
-    destroyWorkerMgr();
+    destroy_worker_mgr();
   }
 
   //! \}
@@ -189,26 +189,26 @@ public:
   //! \name Memory Management
   //! \{
 
-  BL_INLINE_NODEBUG bl::ArenaAllocator& fetchDataZone() noexcept { return baseZone; }
-  BL_INLINE_NODEBUG bl::ArenaAllocator& savedStateZone() noexcept { return baseZone; }
+  BL_INLINE_NODEBUG bl::ArenaAllocator& fetch_data_zone() noexcept { return base_zone; }
+  BL_INLINE_NODEBUG bl::ArenaAllocator& saved_state_zone() noexcept { return base_zone; }
 
-  BL_INLINE bl::RasterEngine::RenderFetchData* allocFetchData() noexcept { return fetchDataPool.alloc(fetchDataZone()); }
-  BL_INLINE void freeFetchData(bl::RasterEngine::RenderFetchData* fetchData) noexcept { fetchDataPool.free(fetchData); }
+  BL_INLINE bl::RasterEngine::RenderFetchData* alloc_fetch_data() noexcept { return fetch_data_pool.alloc(fetch_data_zone()); }
+  BL_INLINE void free_fetch_data(bl::RasterEngine::RenderFetchData* fetch_data) noexcept { fetch_data_pool.free(fetch_data); }
 
-  BL_INLINE bl::RasterEngine::SavedState* allocSavedState() noexcept { return savedStatePool.alloc(savedStateZone()); }
-  BL_INLINE void freeSavedState(bl::RasterEngine::SavedState* state) noexcept { savedStatePool.free(state); }
+  BL_INLINE bl::RasterEngine::SavedState* alloc_saved_state() noexcept { return saved_state_pool.alloc(saved_state_zone()); }
+  BL_INLINE void free_saved_state(bl::RasterEngine::SavedState* state) noexcept { saved_state_pool.free(state); }
 
-  BL_INLINE void ensureWorkerMgr() noexcept {
-    if (!workerMgrInitialized) {
-      workerMgr.init();
-      workerMgrInitialized = true;
+  BL_INLINE void ensure_worker_mgr() noexcept {
+    if (!worker_mgr_initialized) {
+      worker_mgr.init();
+      worker_mgr_initialized = true;
     }
   }
 
-  BL_INLINE void destroyWorkerMgr() noexcept {
-    if (workerMgrInitialized) {
-      workerMgr.destroy();
-      workerMgrInitialized = false;
+  BL_INLINE void destroy_worker_mgr() noexcept {
+    if (worker_mgr_initialized) {
+      worker_mgr.destroy();
+      worker_mgr_initialized = false;
     }
   }
 
@@ -217,73 +217,73 @@ public:
   //! \name Context Accessors
   //! \{
 
-  BL_INLINE_NODEBUG bool isSync() const noexcept { return renderingMode == uint8_t(bl::RasterEngine::RenderingMode::kSync); }
+  BL_INLINE_NODEBUG bool is_sync() const noexcept { return rendering_mode == uint8_t(bl::RasterEngine::RenderingMode::kSync); }
 
-  BL_INLINE_NODEBUG bl::FormatExt format() const noexcept { return bl::FormatExt(dstData.format); }
-  BL_INLINE_NODEBUG double fpScaleD() const noexcept { return renderTargetInfo.fpScaleD; }
-  BL_INLINE_NODEBUG double fullAlphaD() const noexcept { return renderTargetInfo.fullAlphaD; }
+  BL_INLINE_NODEBUG bl::FormatExt format() const noexcept { return bl::FormatExt(dst_data.format); }
+  BL_INLINE_NODEBUG double fp_scale_d() const noexcept { return render_target_info.fp_scale_d; }
+  BL_INLINE_NODEBUG double full_alpha_d() const noexcept { return render_target_info.full_alpha_d; }
 
-  BL_INLINE_NODEBUG uint32_t bandCount() const noexcept { return syncWorkData.bandCount(); }
-  BL_INLINE_NODEBUG uint32_t bandHeight() const noexcept { return syncWorkData.bandHeight(); }
-  BL_INLINE_NODEBUG uint32_t commandQuantizationShiftAA() const noexcept { return syncWorkData.commandQuantizationShiftAA(); }
-  BL_INLINE_NODEBUG uint32_t commandQuantizationShiftFp() const noexcept { return syncWorkData.commandQuantizationShiftFp(); }
+  BL_INLINE_NODEBUG uint32_t band_count() const noexcept { return sync_work_data.band_count(); }
+  BL_INLINE_NODEBUG uint32_t band_height() const noexcept { return sync_work_data.band_height(); }
+  BL_INLINE_NODEBUG uint32_t command_quantization_shift_aa() const noexcept { return sync_work_data.command_quantization_shift_aa(); }
+  BL_INLINE_NODEBUG uint32_t command_quantization_shift_fp() const noexcept { return sync_work_data.command_quantization_shift_fp(); }
 
   //! \}
 
   //! \name State Accessors
   //! \{
 
-  BL_INLINE_NODEBUG uint8_t clipMode() const noexcept { return syncWorkData.clipMode; }
+  BL_INLINE_NODEBUG uint8_t clip_mode() const noexcept { return sync_work_data.clip_mode; }
 
-  BL_INLINE_NODEBUG uint8_t compOp() const noexcept { return internalState.compOp; }
-  BL_INLINE_NODEBUG BLFillRule fillRule() const noexcept { return BLFillRule(internalState.fillRule); }
-  BL_INLINE_NODEBUG const BLContextHints& hints() const noexcept { return internalState.hints; }
+  BL_INLINE_NODEBUG uint8_t comp_op() const noexcept { return internal_state.comp_op; }
+  BL_INLINE_NODEBUG BLFillRule fill_rule() const noexcept { return BLFillRule(internal_state.fill_rule); }
+  BL_INLINE_NODEBUG const BLContextHints& hints() const noexcept { return internal_state.hints; }
 
-  BL_INLINE_NODEBUG const BLStrokeOptions& strokeOptions() const noexcept { return internalState.strokeOptions.dcast(); }
-  BL_INLINE_NODEBUG const BLApproximationOptions& approximationOptions() const noexcept { return internalState.approximationOptions; }
+  BL_INLINE_NODEBUG const BLStrokeOptions& stroke_options() const noexcept { return internal_state.stroke_options.dcast(); }
+  BL_INLINE_NODEBUG const BLApproximationOptions& approximation_options() const noexcept { return internal_state.approximation_options; }
 
-  BL_INLINE_NODEBUG uint32_t globalAlphaI() const noexcept { return internalState.globalAlphaI; }
-  BL_INLINE_NODEBUG double globalAlphaD() const noexcept { return internalState.globalAlpha; }
+  BL_INLINE_NODEBUG uint32_t global_alpha_i() const noexcept { return internal_state.global_alpha_i; }
+  BL_INLINE_NODEBUG double global_alpha_d() const noexcept { return internal_state.global_alpha; }
 
-  BL_INLINE_NODEBUG const bl::RasterEngine::StyleData* getStyle(size_t index) const noexcept { return &internalState.style[index]; }
+  BL_INLINE_NODEBUG const bl::RasterEngine::StyleData* get_style(size_t index) const noexcept { return &internal_state.style[index]; }
 
-  BL_INLINE_NODEBUG const BLMatrix2D& metaTransform() const noexcept { return internalState.metaTransform; }
-  BL_INLINE_NODEBUG BLTransformType metaTransformType() const noexcept { return BLTransformType(internalState.metaTransformType); }
+  BL_INLINE_NODEBUG const BLMatrix2D& meta_transform() const noexcept { return internal_state.meta_transform; }
+  BL_INLINE_NODEBUG BLTransformType meta_transform_type() const noexcept { return BLTransformType(internal_state.meta_transform_type); }
 
-  BL_INLINE_NODEBUG const BLMatrix2D& metaTransformFixed() const noexcept { return internalState.metaTransformFixed; }
-  BL_INLINE_NODEBUG BLTransformType metaTransformFixedType() const noexcept { return BLTransformType(internalState.metaTransformFixedType); }
+  BL_INLINE_NODEBUG const BLMatrix2D& meta_transform_fixed() const noexcept { return internal_state.meta_transform_fixed; }
+  BL_INLINE_NODEBUG BLTransformType meta_transform_fixed_type() const noexcept { return BLTransformType(internal_state.meta_transform_fixed_type); }
 
-  BL_INLINE_NODEBUG const BLMatrix2D& userTransform() const noexcept { return internalState.userTransform; }
+  BL_INLINE_NODEBUG const BLMatrix2D& user_transform() const noexcept { return internal_state.user_transform; }
 
-  BL_INLINE_NODEBUG const BLMatrix2D& finalTransform() const noexcept { return internalState.finalTransform; }
-  BL_INLINE_NODEBUG BLTransformType finalTransformType() const noexcept { return BLTransformType(internalState.finalTransformType); }
+  BL_INLINE_NODEBUG const BLMatrix2D& final_transform() const noexcept { return internal_state.final_transform; }
+  BL_INLINE_NODEBUG BLTransformType final_transform_type() const noexcept { return BLTransformType(internal_state.final_transform_type); }
 
-  BL_INLINE_NODEBUG const BLMatrix2D& finalTransformFixed() const noexcept { return internalState.finalTransformFixed; }
-  BL_INLINE_NODEBUG BLTransformType finalTransformFixedType() const noexcept { return BLTransformType(internalState.finalTransformFixedType); }
+  BL_INLINE_NODEBUG const BLMatrix2D& final_transform_fixed() const noexcept { return internal_state.final_transform_fixed; }
+  BL_INLINE_NODEBUG BLTransformType final_transform_fixed_type() const noexcept { return BLTransformType(internal_state.final_transform_fixed_type); }
 
-  BL_INLINE_NODEBUG const BLPointI& translationI() const noexcept { return internalState.translationI; }
-  BL_INLINE_NODEBUG void setTranslationI(const BLPointI& pt) noexcept { internalState.translationI = pt; }
+  BL_INLINE_NODEBUG const BLPointI& translation_i() const noexcept { return internal_state.translation_i; }
+  BL_INLINE_NODEBUG void set_translation_i(const BLPointI& pt) noexcept { internal_state.translation_i = pt; }
 
-  BL_INLINE_NODEBUG const BLBoxI& metaClipBoxI() const noexcept { return internalState.metaClipBoxI; }
-  BL_INLINE_NODEBUG const BLBoxI& finalClipBoxI() const noexcept { return internalState.finalClipBoxI; }
-  BL_INLINE_NODEBUG const BLBox& finalClipBoxD() const noexcept { return internalState.finalClipBoxD; }
+  BL_INLINE_NODEBUG const BLBoxI& meta_clip_box_i() const noexcept { return internal_state.meta_clip_box_i; }
+  BL_INLINE_NODEBUG const BLBoxI& final_clip_box_i() const noexcept { return internal_state.final_clip_box_i; }
+  BL_INLINE_NODEBUG const BLBox& final_clip_box_d() const noexcept { return internal_state.final_clip_box_d; }
 
-  BL_INLINE_NODEBUG const BLBoxI& finalClipBoxFixedI() const noexcept { return syncWorkData.edgeBuilder._clipBoxI; }
-  BL_INLINE_NODEBUG const BLBox& finalClipBoxFixedD() const noexcept { return syncWorkData.edgeBuilder._clipBoxD; }
-  BL_INLINE_NODEBUG void setFinalClipBoxFixedD(const BLBox& clipBox) { syncWorkData.edgeBuilder.setClipBox(clipBox); }
+  BL_INLINE_NODEBUG const BLBoxI& final_clip_box_fixed_i() const noexcept { return sync_work_data.edge_builder._clip_box_i; }
+  BL_INLINE_NODEBUG const BLBox& final_clip_box_fixed_d() const noexcept { return sync_work_data.edge_builder._clip_box_d; }
+  BL_INLINE_NODEBUG void set_final_clip_box_fixed_d(const BLBox& clip_box) { sync_work_data.edge_builder.set_clip_box(clip_box); }
 
   //! \}
 
   //! \name Error Accumulation
   //! \{
 
-  BL_INLINE_NODEBUG BLResult accumulateError(BLResult error) noexcept { return syncWorkData.accumulateError(error); }
+  BL_INLINE_NODEBUG BLResult accumulate_error(BLResult error) noexcept { return sync_work_data.accumulate_error(error); }
 
   //! \}
 };
 
-BL_HIDDEN BLResult blRasterContextInitImpl(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) noexcept;
-BL_HIDDEN void blRasterContextOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN BLResult bl_raster_context_init_impl(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) noexcept;
+BL_HIDDEN void bl_raster_context_on_init(BLRuntimeContext* rt) noexcept;
 
 //! \}
 //! \endcond

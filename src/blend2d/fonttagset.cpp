@@ -10,25 +10,27 @@
 namespace bl {
 namespace FontTagData {
 
-BLResult finalizeTagArray(BLArray<BLTag>& tags) noexcept {
+BLResult finalize_tag_array(BLArray<BLTag>& tags) noexcept {
   size_t size = tags.size();
+
   if (size > 1) {
     BLTag* data = nullptr;
-    BL_PROPAGATE(tags.makeMutable(&data));
+    BL_PROPAGATE(tags.make_mutable(&data));
 
     // Sort and deduplicate afterwards.
-    quickSort(data, size);
+    quick_sort(data, size);
 
     size_t j = 1;
-    BLTag prevTag = data[0];
+    BLTag prev_tag = data[0];
 
     for (size_t i = 1; i < size; i++) {
-      BLTag currentTag = data[i];
-      if (currentTag == prevTag)
+      BLTag current_tag = data[i];
+      if (current_tag == prev_tag) {
         continue;
+      }
 
-      data[j++] = currentTag;
-      prevTag = currentTag;
+      data[j++] = current_tag;
+      prev_tag = current_tag;
     }
 
     size = j;
@@ -38,32 +40,34 @@ BLResult finalizeTagArray(BLArray<BLTag>& tags) noexcept {
   return tags.shrink();
 }
 
-BLResult flattenTagSetTo(BLArray<BLTag>& dst,
-  const BLTag* knownIdToTagTable,
-  const BLBitWord* knownTagData, size_t knownTagDataSize, size_t knownTagCount,
-  const BLTag* unknownTagData, size_t unknownTagCount) noexcept {
+BLResult flatten_tag_set_to(BLArray<BLTag>& dst,
+  const BLTag* known_id_to_tag_table,
+  const BLBitWord* known_tag_data, size_t known_tag_data_size, size_t known_tag_count,
+  const BLTag* unknown_tag_data, size_t unknown_tag_count) noexcept {
 
-  size_t tagCount = knownTagCount + unknownTagCount;
+  size_t tag_count = known_tag_count + unknown_tag_count;
 
-  BLTag* dstData = nullptr;
-  BL_PROPAGATE(dst.modifyOp(BL_MODIFY_OP_ASSIGN_FIT, tagCount, &dstData));
+  BLTag* dst_data = nullptr;
+  BL_PROPAGATE(dst.modify_op(BL_MODIFY_OP_ASSIGN_FIT, tag_count, &dst_data));
 
-  size_t dstDataIndex = 0;
-  size_t unknownTagIndex = 0;
-  ParametrizedBitOps<BitOrder::kLSB, BLBitWord>::BitVectorIterator it(knownTagData, knownTagDataSize);
+  size_t dst_data_index = 0;
+  size_t unknown_tag_index = 0;
+  ParametrizedBitOps<BitOrder::kLSB, BLBitWord>::BitVectorIterator it(known_tag_data, known_tag_data_size);
 
-  while (it.hasNext()) {
-    uint32_t tagId = uint32_t(it.next());
-    BLTag knownTag = knownIdToTagTable[tagId];
+  while (it.has_next()) {
+    uint32_t tag_id = uint32_t(it.next());
+    BLTag known_tag = known_id_to_tag_table[tag_id];
 
-    while (unknownTagIndex < unknownTagCount && unknownTagData[unknownTagIndex] < knownTag)
-      dstData[dstDataIndex++] = unknownTagData[unknownTagIndex++];
+    while (unknown_tag_index < unknown_tag_count && unknown_tag_data[unknown_tag_index] < known_tag) {
+      dst_data[dst_data_index++] = unknown_tag_data[unknown_tag_index++];
+    }
 
-    dstData[dstDataIndex++] = knownTag;
+    dst_data[dst_data_index++] = known_tag;
   }
 
-  while (unknownTagIndex < unknownTagCount)
-    dstData[dstDataIndex++] = unknownTagData[unknownTagIndex++];
+  while (unknown_tag_index < unknown_tag_count) {
+    dst_data[dst_data_index++] = unknown_tag_data[unknown_tag_index++];
+  }
 
   return BL_SUCCESS;
 }

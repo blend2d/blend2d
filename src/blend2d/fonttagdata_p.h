@@ -28,7 +28,7 @@ static constexpr uint32_t kCharRangeInTag = 95;
 static constexpr uint32_t kUniqueTagCount = kCharRangeInTag * kCharRangeInTag * kCharRangeInTag * kCharRangeInTag;
 
 //! Test whether all 4 characters encoded in `tag` are within [32, 126] range.
-static BL_INLINE bool isValidTag(BLTag tag) noexcept {
+static BL_INLINE bool is_valid_tag(BLTag tag) noexcept {
   constexpr uint32_t kSubPattern = 32;        // Tests characters in range [0, 31].
   constexpr uint32_t kAddPattern = 127 - 126; // Tests characters in range [127, 255].
 
@@ -40,18 +40,18 @@ static BL_INLINE bool isValidTag(BLTag tag) noexcept {
   return ((x | y) & 0x80808080u) == 0u;
 }
 
-static BL_INLINE bool isOpenTypeCollectionTag(BLTag tag) noexcept {
+static BL_INLINE bool is_open_type_collection_tag(BLTag tag) noexcept {
   return tag == BL_MAKE_TAG('t', 't', 'c', 'f');
 }
 
-static BL_INLINE bool isOpenTypeVersionTag(BLTag tag) noexcept {
+static BL_INLINE bool is_open_type_version_tag(BLTag tag) noexcept {
   return tag == BL_MAKE_TAG('O', 'T', 'T', 'O') ||
          tag == BL_MAKE_TAG( 0 ,  1 ,  0 ,  0 ) ||
          tag == BL_MAKE_TAG('t', 'r', 'u', 'e') ;
 }
 
 //! Converts `tag` to a null-terminated ASCII string `str`. Characters that are not printable are replaced by '?'.
-static BL_INLINE void tagToAscii(char str[5], uint32_t tag) noexcept {
+static BL_INLINE void tag_to_ascii(char str[5], uint32_t tag) noexcept {
   for (size_t i = 0; i < 4; i++, tag <<= 8) {
     uint32_t c = tag >> 24;
     str[i] = (c < 32 || c > 126) ? char('?') : char(c);

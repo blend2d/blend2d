@@ -17,9 +17,9 @@
 namespace bl {
 namespace Tests {
 
-static void verifyString(const BLString& s) noexcept {
-  size_t size = StringInternal::getSize(&s);
-  const char* data = StringInternal::getData(&s);
+static void verify_string(const BLString& s) noexcept {
+  size_t size = StringInternal::get_size(&s);
+  const char* data = StringInternal::get_data(&s);
 
   EXPECT_EQ(data[size], 0)
     .message("BLString's data is not null terminated");
@@ -39,8 +39,8 @@ UNIT(string_allocation_strategy, BL_TEST_GROUP_CORE_CONTAINERS) {
     char c = char(size_t('a') + (i % size_t('z' - 'a')));
     s.append(c);
     if (capacity != s.capacity()) {
-      size_t implSize = StringInternal::implSizeFromCapacity(s.capacity()).value();
-      INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, s.capacity(), implSize);
+      size_t impl_size = StringInternal::impl_size_from_capacity(s.capacity()).value();
+      INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, s.capacity(), impl_size);
       capacity = s.capacity();
     }
   }
@@ -56,7 +56,7 @@ UNIT(string, BL_TEST_GROUP_CORE_CONTAINERS) {
       EXPECT_SUCCESS(s.append(c));
       EXPECT_TRUE(s._d.sso());
       EXPECT_EQ(s._d.char_data[i], c);
-      verifyString(s);
+      verify_string(s);
     }
   }
 
@@ -65,7 +65,7 @@ UNIT(string, BL_TEST_GROUP_CORE_CONTAINERS) {
     BLString s;
 
     EXPECT_SUCCESS(s.assign('b'));
-    verifyString(s);
+    verify_string(s);
     EXPECT_EQ(s.size(), 1u);
     EXPECT_EQ(s[0], 'b');
     EXPECT_TRUE(s.equals("b"   ));
@@ -84,7 +84,7 @@ UNIT(string, BL_TEST_GROUP_CORE_CONTAINERS) {
     EXPECT_LT(s.compare("c?", 2), 0);
 
     EXPECT_SUCCESS(s.assign('b', 4));
-    verifyString(s);
+    verify_string(s);
     EXPECT_EQ(s.size(), 4u);
     EXPECT_EQ(s[0], 'b');
     EXPECT_EQ(s[1], 'b');
@@ -100,7 +100,7 @@ UNIT(string, BL_TEST_GROUP_CORE_CONTAINERS) {
     EXPECT_LT(s.compare("bbbc", 4), 0);
 
     EXPECT_SUCCESS(s.assign("abc"));
-    verifyString(s);
+    verify_string(s);
     EXPECT_EQ(s.size(), 3u);
     EXPECT_EQ(s[0], 'a');
     EXPECT_EQ(s[1], 'b');
@@ -114,44 +114,44 @@ UNIT(string, BL_TEST_GROUP_CORE_CONTAINERS) {
     BLString s;
 
     EXPECT_SUCCESS(s.assign("abc"));
-    verifyString(s);
+    verify_string(s);
     EXPECT_SUCCESS(s.append("xyz"));
-    verifyString(s);
+    verify_string(s);
     EXPECT_TRUE(s.equals("abcxyz"));
 
     EXPECT_SUCCESS(s.insert(2, s.view()));
-    verifyString(s);
+    verify_string(s);
     EXPECT_TRUE(s.equals("ababcxyzcxyz"));
 
     EXPECT_SUCCESS(s.remove(BLRange{1, 11}));
-    verifyString(s);
+    verify_string(s);
     EXPECT_TRUE(s.equals("az"));
 
     EXPECT_SUCCESS(s.insert(1, s.view()));
-    verifyString(s);
+    verify_string(s);
     EXPECT_TRUE(s.equals("aazz"));
 
     EXPECT_SUCCESS(s.insert(1, "xxx"));
-    verifyString(s);
+    verify_string(s);
     EXPECT_TRUE(s.equals("axxxazz"));
 
     EXPECT_SUCCESS(s.remove(BLRange{4, 6}));
-    verifyString(s);
+    verify_string(s);
     EXPECT_TRUE(s.equals("axxxz"));
 
     BLString x(s);
     EXPECT_SUCCESS(s.insert(3, "INSERTED"));
-    verifyString(s);
+    verify_string(s);
     EXPECT_TRUE(s.equals("axxINSERTEDxz"));
 
     x = s;
-    verifyString(x);
+    verify_string(x);
     EXPECT_SUCCESS(s.remove(BLRange{1, 11}));
-    verifyString(s);
+    verify_string(s);
     EXPECT_TRUE(s.equals("axz"));
 
     EXPECT_SUCCESS(s.insert(3, "APPENDED"));
-    verifyString(s);
+    verify_string(s);
     EXPECT_TRUE(s.equals("axzAPPENDED"));
 
     EXPECT_SUCCESS(s.reserve(1024));
@@ -164,7 +164,7 @@ UNIT(string, BL_TEST_GROUP_CORE_CONTAINERS) {
   {
     BLString s;
 
-    EXPECT_SUCCESS(s.assignFormat("%d", 1000));
+    EXPECT_SUCCESS(s.assign_format("%d", 1000));
     EXPECT_TRUE(s.equals("1000"));
   }
 
@@ -173,18 +173,18 @@ UNIT(string, BL_TEST_GROUP_CORE_CONTAINERS) {
     BLString s;
 
     EXPECT_SUCCESS(s.assign("abcdefghijklmnop-ponmlkjihgfedcba"));
-    EXPECT_EQ(s.indexOf('a'), 0u);
-    EXPECT_EQ(s.indexOf('a', 1), 32u);
-    EXPECT_EQ(s.indexOf('b'), 1u);
-    EXPECT_EQ(s.indexOf('b', 1), 1u);
-    EXPECT_EQ(s.indexOf('b', 2), 31u);
-    EXPECT_EQ(s.lastIndexOf('b'), 31u);
-    EXPECT_EQ(s.lastIndexOf('b', 30), 1u);
-    EXPECT_EQ(s.indexOf('z'), SIZE_MAX);
-    EXPECT_EQ(s.indexOf('z', SIZE_MAX), SIZE_MAX);
-    EXPECT_EQ(s.lastIndexOf('z'), SIZE_MAX);
-    EXPECT_EQ(s.lastIndexOf('z', 0), SIZE_MAX);
-    EXPECT_EQ(s.lastIndexOf('z', SIZE_MAX), SIZE_MAX);
+    EXPECT_EQ(s.index_of('a'), 0u);
+    EXPECT_EQ(s.index_of('a', 1), 32u);
+    EXPECT_EQ(s.index_of('b'), 1u);
+    EXPECT_EQ(s.index_of('b', 1), 1u);
+    EXPECT_EQ(s.index_of('b', 2), 31u);
+    EXPECT_EQ(s.last_index_of('b'), 31u);
+    EXPECT_EQ(s.last_index_of('b', 30), 1u);
+    EXPECT_EQ(s.index_of('z'), SIZE_MAX);
+    EXPECT_EQ(s.index_of('z', SIZE_MAX), SIZE_MAX);
+    EXPECT_EQ(s.last_index_of('z'), SIZE_MAX);
+    EXPECT_EQ(s.last_index_of('z', 0), SIZE_MAX);
+    EXPECT_EQ(s.last_index_of('z', SIZE_MAX), SIZE_MAX);
   }
 }
 

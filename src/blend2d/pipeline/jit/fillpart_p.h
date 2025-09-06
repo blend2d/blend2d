@@ -24,37 +24,37 @@ public:
   };
 
   //! Fill type.
-  FillType _fillType;
+  FillType _fill_type;
 
-  FillPart(PipeCompiler* pc, FillType fillType, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept;
+  FillPart(PipeCompiler* pc, FillType fill_type, FetchPixelPtrPart* dst_part, CompOpPart* comp_op_part) noexcept;
 
-  BL_INLINE_NODEBUG FetchPixelPtrPart* dstPart() const noexcept {
+  BL_INLINE_NODEBUG FetchPixelPtrPart* dst_part() const noexcept {
     return reinterpret_cast<FetchPixelPtrPart*>(_children[kIndexDstPart]);
   }
 
-  BL_INLINE_NODEBUG void setDstPart(FetchPixelPtrPart* part) noexcept {
+  BL_INLINE_NODEBUG void set_dst_part(FetchPixelPtrPart* part) noexcept {
     _children[kIndexDstPart] = reinterpret_cast<PipePart*>(part);
   }
 
-  BL_INLINE_NODEBUG CompOpPart* compOpPart() const noexcept {
+  BL_INLINE_NODEBUG CompOpPart* comp_op_part() const noexcept {
     return reinterpret_cast<CompOpPart*>(_children[kIndexCompOpPart]);
   }
 
-  BL_INLINE_NODEBUG void setCompOpPart(FetchPixelPtrPart* part) noexcept {
+  BL_INLINE_NODEBUG void set_comp_op_part(FetchPixelPtrPart* part) noexcept {
     _children[kIndexCompOpPart] = reinterpret_cast<PipePart*>(part);
   }
 
   //! Returns fill type, see \ref FillType.
-  BL_INLINE_NODEBUG FillType fillType() const noexcept { return _fillType; }
-  //! Tests whether the fill type matches `fillType`.
-  BL_INLINE_NODEBUG bool isFillType(FillType fillType) const noexcept { return _fillType == fillType; }
+  BL_INLINE_NODEBUG FillType fill_type() const noexcept { return _fill_type; }
+  //! Tests whether the fill type matches `fill_type`.
+  BL_INLINE_NODEBUG bool is_fill_type(FillType fill_type) const noexcept { return _fill_type == fill_type; }
 
   //! Tests whether fill-type is a pure rectangular fill.
   //!
   //! Rectangle fills have some properties that can be exploited by other parts. For example if a fill is rectangular
   //! the pipeline may recalculate stride of source and destination pointers to address the width. There are currently
   //! many optimizations that individual parts do.
-  BL_INLINE_NODEBUG bool isAnalyticFill() const noexcept { return _fillType == FillType::kAnalytic; }
+  BL_INLINE_NODEBUG bool is_analytic_fill() const noexcept { return _fill_type == FillType::kAnalytic; }
 
   //! Compiles the fill part.
   virtual void compile(const PipeFunction& fn) noexcept;
@@ -62,53 +62,53 @@ public:
 
 class FillBoxAPart final : public FillPart {
 public:
-  FillBoxAPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept;
+  FillBoxAPart(PipeCompiler* pc, FetchPixelPtrPart* dst_part, CompOpPart* comp_op_part) noexcept;
 
   void compile(const PipeFunction& fn) noexcept override;
 };
 
 class FillMaskPart final : public FillPart {
 public:
-  FillMaskPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept;
+  FillMaskPart(PipeCompiler* pc, FetchPixelPtrPart* dst_part, CompOpPart* comp_op_part) noexcept;
 
   void compile(const PipeFunction& fn) noexcept override;
-  void deadvanceDstPtr(const Gp& dstPtr, const Gp& x, int dstBpp) noexcept;
+  void deadvance_dst_ptr(const Gp& dst_ptr, const Gp& x, int dst_bpp) noexcept;
 };
 
 class FillAnalyticPart final : public FillPart {
 public:
-  FillAnalyticPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept;
+  FillAnalyticPart(PipeCompiler* pc, FetchPixelPtrPart* dst_part, CompOpPart* comp_op_part) noexcept;
 
   void compile(const PipeFunction& fn) noexcept override;
 
-  BL_INLINE_NODEBUG VecWidth vecWidth() const noexcept { return blMin(pc->vecWidth(), VecWidth::k256); }
+  BL_INLINE_NODEBUG VecWidth vec_width() const noexcept { return bl_min(pc->vec_width(), VecWidth::k256); }
 
-  inline void countZeros(const Gp& dst, const Gp& src) noexcept {
+  inline void count_zeros(const Gp& dst, const Gp& src) noexcept {
     OpcodeRR op = BitOrder::kPrivate == BitOrder::kLSB ? OpcodeRR::kCTZ : OpcodeRR::kCLZ;
     pc->emit_2i(op, dst, src);
   }
 
-  inline void shiftMask(const Gp& dst, const Gp& src1, const Gp& src2) noexcept {
+  inline void shift_mask(const Gp& dst, const Gp& src1, const Gp& src2) noexcept {
     OpcodeRRR op = BitOrder::kPrivate == BitOrder::kLSB ? OpcodeRRR::kSll : OpcodeRRR::kSrl;
     pc->emit_3i(op, dst, src1, src2);
   }
 
-  void accumulateCoverages(const Vec& acc) noexcept;
-  void normalizeCoverages(const Vec& acc) noexcept;
+  void accumulate_coverages(const Vec& acc) noexcept;
+  void normalize_coverages(const Vec& acc) noexcept;
 
   //! Calculates masks for 4 pixels - this works for both NonZero and EvenOdd fill rules.
-  void calcMasksFromCells(const Vec& msk, const Vec& acc, const Vec& fillRuleMask, const Vec& globalAlpha) noexcept;
+  void calc_masks_from_cells(const Vec& msk, const Vec& acc, const Vec& fill_rule_mask, const Vec& global_alpha) noexcept;
 
   //! Expands the calculated mask in a way so it can be used by the compositor.
-  void expandMask(const VecArray& msk, PixelCount pixelCount) noexcept;
+  void expand_mask(const VecArray& msk, PixelCount pixel_count) noexcept;
 
   //! Emits the following:
   //!
   //! ```
-  //! dstPtr -= x * dstBpp;
-  //! cellPtr -= x * 4;
+  //! dst_ptr -= x * dst_bpp;
+  //! cell_ptr -= x * 4;
   //! ```
-  void deadvanceDstPtrAndCellPtr(const Gp& dstPtr, const Gp& cellPtr, const Gp& x, uint32_t dstBpp) noexcept;
+  void deadvance_dst_ptr_and_cell_ptr(const Gp& dst_ptr, const Gp& cell_ptr, const Gp& x, uint32_t dst_bpp) noexcept;
 };
 
 } // {bl::Pipeline::JIT}

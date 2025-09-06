@@ -9,12 +9,12 @@
 
 namespace bl::Png::Ops {
 
-FunctionTable funcTable;
+FunctionTable func_table;
 
 // bl::Png::Ops - Inverse Filter
 // ==============================
 
-static BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint32_t h) noexcept {
+static BLResult BL_CDECL inverse_filter_impl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint32_t h) noexcept {
   BL_ASSERT(bpp > 0u);
   BL_ASSERT(bpl > 1u);
   BL_ASSERT(h   > 0u);
@@ -27,20 +27,20 @@ static BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bp
 
   // First row uses a special filter that doesn't access the previous row,
   // which is assumed to contain all zeros.
-  uint32_t filterType = *p++;
+  uint32_t filter_type = *p++;
 
-  if (filterType >= kFilterTypeCount)
-    filterType = kFilterTypeNone;
+  if (filter_type >= kFilterTypeCount)
+    filter_type = kFilterTypeNone;
 
-  filterType = simplifyFilterOfFirstRow(filterType);
+  filter_type = simplify_filter_of_first_row(filter_type);
 
   for (;;) {
     uint32_t i;
 
-    switch (filterType) {
+    switch (filter_type) {
       case kFilterTypeSub: {
         for (i = bpl - bpp; i != 0; i--, p++)
-          p[bpp] = applySumFilter(p[bpp], p[0]);
+          p[bpp] = apply_sum_filter(p[bpp], p[0]);
 
         p += bpp;
         break;
@@ -49,18 +49,18 @@ static BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bp
       case kFilterTypeUp: {
         BL_ASSERT(u != nullptr);
         for (i = bpl; i != 0; i--, p++, u++)
-          p[0] = applySumFilter(p[0], u[0]);
+          p[0] = apply_sum_filter(p[0], u[0]);
         break;
       }
 
       case kFilterTypeAvg: {
         BL_ASSERT(u != nullptr);
         for (i = 0; i < bpp; i++)
-          p[i] = applySumFilter(p[i], u[i] >> 1);
+          p[i] = apply_sum_filter(p[i], u[i] >> 1);
 
         u += bpp;
         for (i = bpl - bpp; i != 0; i--, p++, u++)
-          p[bpp] = applySumFilter(p[bpp], applyAvgFilter(p[0], u[0]));
+          p[bpp] = apply_sum_filter(p[bpp], apply_avg_filter(p[0], u[0]));
 
         p += bpp;
         break;
@@ -69,10 +69,10 @@ static BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bp
       case kFilterTypePaeth: {
         BL_ASSERT(u != nullptr);
         for (i = 0; i < bpp; i++)
-          p[i] = applySumFilter(p[i], u[i]);
+          p[i] = apply_sum_filter(p[i], u[i]);
 
         for (i = bpl - bpp; i != 0; i--, p++, u++)
-          p[bpp] = applySumFilter(p[bpp], applyPaethFilter(p[0], u[bpp], u[0]));
+          p[bpp] = apply_sum_filter(p[bpp], apply_paeth_filter(p[0], u[bpp], u[0]));
 
         p += bpp;
         break;
@@ -80,7 +80,7 @@ static BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bp
 
       case kFilterTypeAvg0: {
         for (i = bpl - bpp; i != 0; i--, p++)
-          p[bpp] = applySumFilter(p[bpp], p[0] >> 1);
+          p[bpp] = apply_sum_filter(p[bpp], p[0] >> 1);
 
         p += bpp;
         break;
@@ -96,55 +96,55 @@ static BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bp
       break;
 
     u = p - bpl;
-    filterType = *p++;
+    filter_type = *p++;
 
-    if (filterType >= kFilterTypeCount)
-      filterType = kFilterTypeNone;
+    if (filter_type >= kFilterTypeCount)
+      filter_type = kFilterTypeNone;
   }
 
   return BL_SUCCESS;
 }
 
-void initFuncTable_Ref(FunctionTable& ft) noexcept {
-  ft.inverseFilter[1] = inverseFilterImpl;
-  ft.inverseFilter[2] = inverseFilterImpl;
-  ft.inverseFilter[3] = inverseFilterImpl;
-  ft.inverseFilter[4] = inverseFilterImpl;
-  ft.inverseFilter[6] = inverseFilterImpl;
-  ft.inverseFilter[8] = inverseFilterImpl;
+void init_func_table_ref(FunctionTable& ft) noexcept {
+  ft.inverse_filter[1] = inverse_filter_impl;
+  ft.inverse_filter[2] = inverse_filter_impl;
+  ft.inverse_filter[3] = inverse_filter_impl;
+  ft.inverse_filter[4] = inverse_filter_impl;
+  ft.inverse_filter[6] = inverse_filter_impl;
+  ft.inverse_filter[8] = inverse_filter_impl;
 }
 
-void initFuncTable(BLRuntimeContext* rt) noexcept {
-  blUnused(rt);
+void init_func_table(BLRuntimeContext* rt) noexcept {
+  bl_unused(rt);
 
   // Initialize optimized PNG functions.
-  FunctionTable& ft = funcTable;
+  FunctionTable& ft = func_table;
 
 #if !defined(BL_BUILD_OPT_SSE2) && !defined(BL_BUILD_OPT_ASIMD)
-  initFuncTable_Ref(ft);
+  init_func_table_ref(ft);
 #endif
 
 #if defined(BL_BUILD_OPT_SSE2)
-  if (blRuntimeHasSSE2(rt)) {
-    initFuncTable_SSE2(ft);
+  if (bl_runtime_has_sse2(rt)) {
+    init_func_table_sse2(ft);
   }
   else {
-    initFuncTable_Ref(ft);
+    init_func_table_ref(ft);
   }
 #endif // BL_BUILD_OPT_SSE2
 
 #if defined(BL_BUILD_OPT_AVX)
-  if (blRuntimeHasAVX(rt)) {
-    initFuncTable_AVX(ft);
+  if (bl_runtime_has_avx(rt)) {
+    init_func_table_avx(ft);
   }
 #endif // BL_BUILD_OPT_AVX
 
 #if defined(BL_BUILD_OPT_ASIMD)
-  if (blRuntimeHasASIMD(rt)) {
-    initFuncTable_ASIMD(ft);
+  if (bl_runtime_has_asimd(rt)) {
+    init_func_table_asimd(ft);
   }
   else {
-    initFuncTable_Ref(ft);
+    init_func_table_ref(ft);
   }
 #endif // BL_BUILD_OPT_ASIMD
 }

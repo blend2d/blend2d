@@ -19,14 +19,14 @@ UNIT(unicode, BL_TEST_GROUP_CORE_UTILITIES) {
   struct TestEntry {
     char dst[28];
     char src[28];
-    uint8_t dstSize;
-    uint8_t srcSize;
-    uint8_t dstEncoding;
-    uint8_t srcEncoding;
+    uint8_t dst_size;
+    uint8_t src_size;
+    uint8_t dst_encoding;
+    uint8_t src_encoding;
     BLResult result;
   };
 
-  static const TestEntry testEntries[] = {
+  static const TestEntry test_entries[] = {
     #define ENTRY(DST, DST_ENC, SRC, SRC_ENC, ERROR_CODE) { \
       DST,                                                  \
       SRC,                                                  \
@@ -123,38 +123,38 @@ UNIT(unicode, BL_TEST_GROUP_CORE_UTILITIES) {
     #undef ENTRY
   };
 
-  for (size_t i = 0; i < BL_ARRAY_SIZE(testEntries); i++) {
-    const TestEntry& entry = testEntries[i];
+  for (size_t i = 0; i < BL_ARRAY_SIZE(test_entries); i++) {
+    const TestEntry& entry = test_entries[i];
     char output[32];
 
     Unicode::ConversionState state;
-    BLResult result = Unicode::convertUnicode(output, 32, entry.dstEncoding, entry.src, entry.srcSize, entry.srcEncoding, state);
+    BLResult result = Unicode::convert_unicode(output, 32, entry.dst_encoding, entry.src, entry.src_size, entry.src_encoding, state);
 
     bool failed = (result != entry.result) ||
-                  (state.dstIndex != entry.dstSize) ||
-                  (memcmp(output, entry.dst, state.dstIndex) != 0);
+                  (state.dst_index != entry.dst_size) ||
+                  (memcmp(output, entry.dst, state.dst_index) != 0);
 
     if (failed) {
-      size_t inputSize = entry.srcSize;
-      size_t outputSize = state.dstIndex;
-      size_t expectedSize = entry.dstSize;
+      size_t input_size = entry.src_size;
+      size_t output_size = state.dst_index;
+      size_t expected_size = entry.dst_size;
 
       printf("  Failed Entry #%u\n", unsigned(i));
 
       printf("    Input   :");
-      for (size_t j = 0; j < inputSize; j++)
+      for (size_t j = 0; j < input_size; j++)
         printf(" %02X", uint8_t(entry.src[j]));
-      printf("%s\n", inputSize ? "" : " (Nothing)");
+      printf("%s\n", input_size ? "" : " (Nothing)");
 
       printf("    Output  :");
-      for (size_t j = 0; j < outputSize; j++)
+      for (size_t j = 0; j < output_size; j++)
         printf(" %02X", uint8_t(output[j]));
-      printf("%s\n", outputSize ? "" : " (Nothing)");
+      printf("%s\n", output_size ? "" : " (Nothing)");
 
       printf("    Expected:");
-      for (size_t j = 0; j < expectedSize; j++)
+      for (size_t j = 0; j < expected_size; j++)
         printf(" %02X", uint8_t(entry.dst[j]));
-      printf("%s\n", expectedSize ? "" : " (Nothing)");
+      printf("%s\n", expected_size ? "" : " (Nothing)");
       printf("    ErrorCode: Actual(%u) %s Expected(%u)\n", result, (result == entry.result) ? "==" : "!=", entry.result);
     }
 
@@ -173,34 +173,34 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
     Unicode::Utf8Reader it(data, BL_ARRAY_SIZE(data));
     uint32_t uc;
 
-    EXPECT_TRUE(it.hasNext());
+    EXPECT_TRUE(it.has_next());
     EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x0020ACu);
 
-    EXPECT_TRUE(it.hasNext());
+    EXPECT_TRUE(it.has_next());
     EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x010348u);
 
-    EXPECT_FALSE(it.hasNext());
+    EXPECT_FALSE(it.has_next());
 
     // Verify that sizes were calculated correctly.
-    EXPECT_EQ(it.byteIndex(data), 7u);
-    EXPECT_EQ(it.utf8Index(data), 7u);
-    EXPECT_EQ(it.utf16Index(data), 3u); // 3 code-points (1 BMP and 1 SMP).
-    EXPECT_EQ(it.utf32Index(data), 2u); // 2 code-points.
+    EXPECT_EQ(it.byte_index(data), 7u);
+    EXPECT_EQ(it.utf8_index(data), 7u);
+    EXPECT_EQ(it.utf16_index(data), 3u); // 3 code-points (1 BMP and 1 SMP).
+    EXPECT_EQ(it.utf32_index(data), 2u); // 2 code-points.
 
-    const uint8_t invalidData[] = { 0xE2, 0x82 };
-    it.reset(invalidData, BL_ARRAY_SIZE(invalidData));
+    const uint8_t invalid_data[] = { 0xE2, 0x82 };
+    it.reset(invalid_data, BL_ARRAY_SIZE(invalid_data));
 
-    EXPECT_TRUE(it.hasNext());
+    EXPECT_TRUE(it.has_next());
     EXPECT_EQ(it.next(uc), BL_ERROR_DATA_TRUNCATED);
 
     // After error the iterator should not move.
-    EXPECT_TRUE(it.hasNext());
-    EXPECT_EQ(it.byteIndex(invalidData), 0u);
-    EXPECT_EQ(it.utf8Index(invalidData), 0u);
-    EXPECT_EQ(it.utf16Index(invalidData), 0u);
-    EXPECT_EQ(it.utf32Index(invalidData), 0u);
+    EXPECT_TRUE(it.has_next());
+    EXPECT_EQ(it.byte_index(invalid_data), 0u);
+    EXPECT_EQ(it.utf8_index(invalid_data), 0u);
+    EXPECT_EQ(it.utf16_index(invalid_data), 0u);
+    EXPECT_EQ(it.utf32_index(invalid_data), 0u);
   }
 
   INFO("bl::Unicode::Utf16Reader");
@@ -213,38 +213,38 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
     Unicode::Utf16Reader it(data, BL_ARRAY_SIZE(data) * sizeof(uint16_t));
     uint32_t uc;
 
-    EXPECT_TRUE(it.hasNext());
+    EXPECT_TRUE(it.has_next());
     EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x0020ACu);
 
-    EXPECT_TRUE(it.hasNext());
+    EXPECT_TRUE(it.has_next());
     EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x010348u);
 
-    EXPECT_FALSE(it.hasNext());
+    EXPECT_FALSE(it.has_next());
 
     // Verify that sizes were calculated correctly.
-    EXPECT_EQ(it.byteIndex(data), 6u);
-    EXPECT_EQ(it.utf8Index(data), 7u);
-    EXPECT_EQ(it.utf16Index(data), 3u); // 3 code-points (1 BMP and 1 SMP).
-    EXPECT_EQ(it.utf32Index(data), 2u); // 2 code-points.
+    EXPECT_EQ(it.byte_index(data), 6u);
+    EXPECT_EQ(it.utf8_index(data), 7u);
+    EXPECT_EQ(it.utf16_index(data), 3u); // 3 code-points (1 BMP and 1 SMP).
+    EXPECT_EQ(it.utf32_index(data), 2u); // 2 code-points.
 
-    const uint16_t invalidData[] = { 0xD800 };
-    it.reset(invalidData, BL_ARRAY_SIZE(invalidData) * sizeof(uint16_t));
+    const uint16_t invalid_data[] = { 0xD800 };
+    it.reset(invalid_data, BL_ARRAY_SIZE(invalid_data) * sizeof(uint16_t));
 
-    EXPECT_TRUE(it.hasNext());
+    EXPECT_TRUE(it.has_next());
     EXPECT_EQ(it.next<Unicode::IOFlags::kCalcIndex | Unicode::IOFlags::kStrict>(uc), BL_ERROR_DATA_TRUNCATED);
 
     // After an error the iterator should not move.
-    EXPECT_TRUE(it.hasNext());
-    EXPECT_EQ(it.byteIndex(invalidData), 0u);
-    EXPECT_EQ(it.utf8Index(invalidData), 0u);
-    EXPECT_EQ(it.utf16Index(invalidData), 0u);
-    EXPECT_EQ(it.utf32Index(invalidData), 0u);
+    EXPECT_TRUE(it.has_next());
+    EXPECT_EQ(it.byte_index(invalid_data), 0u);
+    EXPECT_EQ(it.utf8_index(invalid_data), 0u);
+    EXPECT_EQ(it.utf16_index(invalid_data), 0u);
+    EXPECT_EQ(it.utf32_index(invalid_data), 0u);
 
     // However, this should pass in non-strict mode.
     EXPECT_SUCCESS(it.next(uc));
-    EXPECT_FALSE(it.hasNext());
+    EXPECT_FALSE(it.has_next());
   }
 
   INFO("bl::Unicode::Utf32Reader");
@@ -257,38 +257,38 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
     Unicode::Utf32Reader it(data, BL_ARRAY_SIZE(data) * sizeof(uint32_t));
     uint32_t uc;
 
-    EXPECT_TRUE(it.hasNext());
+    EXPECT_TRUE(it.has_next());
     EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x0020ACu);
 
-    EXPECT_TRUE(it.hasNext());
+    EXPECT_TRUE(it.has_next());
     EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x010348u);
 
-    EXPECT_FALSE(it.hasNext());
+    EXPECT_FALSE(it.has_next());
 
     // Verify that sizes were calculated correctly.
-    EXPECT_EQ(it.byteIndex(data), 8u);
-    EXPECT_EQ(it.utf8Index(data), 7u);
-    EXPECT_EQ(it.utf16Index(data), 3u); // 3 code-points (1 BMP and 1 SMP).
-    EXPECT_EQ(it.utf32Index(data), 2u); // 2 code-points.
+    EXPECT_EQ(it.byte_index(data), 8u);
+    EXPECT_EQ(it.utf8_index(data), 7u);
+    EXPECT_EQ(it.utf16_index(data), 3u); // 3 code-points (1 BMP and 1 SMP).
+    EXPECT_EQ(it.utf32_index(data), 2u); // 2 code-points.
 
-    const uint32_t invalidData[] = { 0xD800 };
-    it.reset(invalidData, BL_ARRAY_SIZE(invalidData) * sizeof(uint32_t));
+    const uint32_t invalid_data[] = { 0xD800 };
+    it.reset(invalid_data, BL_ARRAY_SIZE(invalid_data) * sizeof(uint32_t));
 
-    EXPECT_TRUE(it.hasNext());
+    EXPECT_TRUE(it.has_next());
     EXPECT_EQ(it.next<Unicode::IOFlags::kCalcIndex | Unicode::IOFlags::kStrict>(uc), BL_ERROR_INVALID_STRING);
 
     // After an error the iterator should not move.
-    EXPECT_TRUE(it.hasNext());
-    EXPECT_EQ(it.byteIndex(invalidData), 0u);
-    EXPECT_EQ(it.utf8Index(invalidData), 0u);
-    EXPECT_EQ(it.utf16Index(invalidData), 0u);
-    EXPECT_EQ(it.utf32Index(invalidData), 0u);
+    EXPECT_TRUE(it.has_next());
+    EXPECT_EQ(it.byte_index(invalid_data), 0u);
+    EXPECT_EQ(it.utf8_index(invalid_data), 0u);
+    EXPECT_EQ(it.utf16_index(invalid_data), 0u);
+    EXPECT_EQ(it.utf32_index(invalid_data), 0u);
 
     // However, this should pass in non-strict mode.
     EXPECT_SUCCESS(it.next(uc));
-    EXPECT_FALSE(it.hasNext());
+    EXPECT_FALSE(it.has_next());
   }
 
   INFO("bl::Unicode::Utf8Writer");
@@ -306,7 +306,7 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
     EXPECT_EQ(uint8_t(dst[4]), 0x90u);
     EXPECT_EQ(uint8_t(dst[5]), 0x8Du);
     EXPECT_EQ(uint8_t(dst[6]), 0x88u);
-    EXPECT_TRUE(writer.atEnd());
+    EXPECT_TRUE(writer.at_end());
 
     writer.reset(dst, 1);
     EXPECT_EQ(writer.write(0x20ACu), BL_ERROR_NO_SPACE_LEFT);
@@ -315,14 +315,14 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
 
     // We have only one byte left so this must pass...
     EXPECT_SUCCESS(writer.write('a'));
-    EXPECT_TRUE(writer.atEnd());
+    EXPECT_TRUE(writer.at_end());
 
     writer.reset(dst, 2);
     EXPECT_EQ(writer.write(0x20ACu), BL_ERROR_NO_SPACE_LEFT);
     EXPECT_SUCCESS(writer.write(0x00C1u));
     EXPECT_EQ(uint8_t(dst[0]), 0xC3u);
     EXPECT_EQ(uint8_t(dst[1]), 0x81u);
-    EXPECT_TRUE(writer.atEnd());
+    EXPECT_TRUE(writer.at_end());
     EXPECT_EQ(writer.write('a'), BL_ERROR_NO_SPACE_LEFT);
   }
 
@@ -338,7 +338,7 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
     EXPECT_EQ(writer.write(0x010348u), BL_ERROR_NO_SPACE_LEFT);
     EXPECT_SUCCESS(writer.write(0x20ACu));
     EXPECT_EQ(dst[2], 0x20ACu);
-    EXPECT_TRUE(writer.atEnd());
+    EXPECT_TRUE(writer.at_end());
   }
 }
 
