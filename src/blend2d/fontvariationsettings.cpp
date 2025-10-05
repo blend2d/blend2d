@@ -393,7 +393,7 @@ BL_API_IMPL BLResult bl_font_variation_settings_set_value(BLFontVariationSetting
   BL_ASSERT(self->_d.is_font_variation_settings());
 
   if (BL_UNLIKELY(value > 65535u))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   // SSO Mode
   // --------
@@ -429,7 +429,7 @@ BL_API_IMPL BLResult bl_font_variation_settings_set_value(BLFontVariationSetting
       }
       else {
         if (BL_UNLIKELY(!bl::FontTagData::is_valid_tag(variation_tag)))
-          return bl_trace_error(BL_ERROR_INVALID_VALUE);
+          return bl_make_error(BL_ERROR_INVALID_VALUE);
       }
     }
 
@@ -445,7 +445,7 @@ BL_API_IMPL BLResult bl_font_variation_settings_set_value(BLFontVariationSetting
   }
   else {
     if (BL_UNLIKELY(!bl::FontTagData::is_valid_tag(variation_tag)))
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     can_modify = is_impl_mutable(get_impl(self));
   }
@@ -477,7 +477,7 @@ BL_API_IMPL BLResult bl_font_variation_settings_set_value(BLFontVariationSetting
   }
 
   if (BL_UNLIKELY(!bl::FontTagData::is_valid_tag(variation_tag)))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   // Insert a new variation tag if it's not in the settings.
   size_t nTagsAfterIndex = size - index;

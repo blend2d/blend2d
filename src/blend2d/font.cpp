@@ -206,7 +206,7 @@ BL_API_IMPL BLResult bl_font_create_from_face(BLFontCore* self, const BLFontFace
   BL_ASSERT(face->_d.is_font_face());
 
   if (!face->dcast().is_valid())
-    return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+    return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 
   BLFontPrivateImpl* self_impl = get_impl(self);
   if (is_impl_mutable(self_impl)) {
@@ -244,7 +244,7 @@ BL_API_IMPL BLResult bl_font_create_from_face_with_settings(BLFontCore* self, co
   BL_ASSERT(variation_settings->_d.is_font_variation_settings());
 
   if (!face->dcast().is_valid())
-    return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+    return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 
   BLFontPrivateImpl* self_impl = get_impl(self);
   if (is_impl_mutable(self_impl)) {
@@ -296,7 +296,7 @@ BL_API_IMPL BLResult bl_font_set_size(BLFontCore* self, float size) noexcept {
   BL_ASSERT(self->_d.is_font());
 
   if (get_impl(self)->face.dcast().is_empty())
-    return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+    return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 
   BL_PROPAGATE(make_mutable(self));
   BLFontPrivateImpl* self_impl = get_impl(self);
@@ -351,7 +351,7 @@ BL_API_IMPL BLResult bl_font_set_feature_settings(BLFontCore* self, const BLFont
   BL_ASSERT(feature_settings->_d.is_font_feature_settings());
 
   if (get_impl(self)->face.dcast().is_empty())
-    return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+    return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 
   BL_PROPAGATE(make_mutable(self));
   BLFontPrivateImpl* self_impl = get_impl(self);
@@ -388,7 +388,7 @@ BL_API_IMPL BLResult bl_font_set_variation_settings(BLFontCore* self, const BLFo
   BL_ASSERT(variation_settings->_d.is_font_variation_settings());
 
   if (get_impl(self)->face.dcast().is_empty())
-    return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+    return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 
   BL_PROPAGATE(make_mutable(self));
   BLFontPrivateImpl* self_impl = get_impl(self);
@@ -439,7 +439,7 @@ BL_API_IMPL BLResult bl_font_map_text_to_glyphs(const BLFontCore* self, BLGlyphB
     return BL_SUCCESS;
 
   if (BL_UNLIKELY(!(gb_impl->flags & BL_GLYPH_RUN_FLAG_UCS4_CONTENT)))
-    return bl_trace_error(BL_ERROR_INVALID_STATE);
+    return bl_make_error(BL_ERROR_INVALID_STATE);
 
   BLGlyphMappingState state;
   if (!state_out)
@@ -466,7 +466,7 @@ BL_API_IMPL BLResult bl_font_position_glyphs(const BLFontCore* self, BLGlyphBuff
     return BL_SUCCESS;
 
   if (BL_UNLIKELY(gb_impl->flags & BL_GLYPH_RUN_FLAG_UCS4_CONTENT))
-    return bl_trace_error(BL_ERROR_INVALID_STATE);
+    return bl_make_error(BL_ERROR_INVALID_STATE);
 
   if (!(gb_impl->flags & BL_GLYPH_BUFFER_GLYPH_ADVANCES)) {
     BL_PROPAGATE(gb_impl->ensure_placement());
@@ -508,7 +508,7 @@ BL_API_IMPL BLResult bl_font_apply_kerning(const BLFontCore* self, BLGlyphBuffer
     return BL_SUCCESS;
 
   if (BL_UNLIKELY(!(gb_impl->placement_data)))
-    return bl_trace_error(BL_ERROR_INVALID_STATE);
+    return bl_make_error(BL_ERROR_INVALID_STATE);
 
   return face_impl->funcs.apply_kern(face_impl, gb_impl->content, gb_impl->placement_data, gb_impl->size);
 }
@@ -535,7 +535,7 @@ BL_API_IMPL BLResult bl_font_apply_gpos(const BLFontCore* self, BLGlyphBufferCor
     return BL_SUCCESS;
 
   if (BL_UNLIKELY(!(gb_impl->placement_data)))
-    return bl_trace_error(BL_ERROR_INVALID_STATE);
+    return bl_make_error(BL_ERROR_INVALID_STATE);
 
   return face_impl->funcs.apply_gpos(face_impl, static_cast<BLGlyphBuffer*>(gb), lookups->dcast().data(), lookups->dcast().word_count());
 }

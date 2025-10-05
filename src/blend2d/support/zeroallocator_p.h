@@ -61,7 +61,7 @@ public:
       return BL_SUCCESS;
 
     data = static_cast<uint8_t*>(bl_zero_allocator_resize(data, size, minimum_size, &size));
-    return data ? BL_SUCCESS : bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return data ? BL_SUCCESS : bl_make_error(BL_ERROR_OUT_OF_MEMORY);
   }
 
   BL_INLINE void release() noexcept {

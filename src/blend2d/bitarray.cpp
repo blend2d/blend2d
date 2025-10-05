@@ -76,7 +76,7 @@ static BL_NOINLINE BLResult make_mutable_for_modify_op(BLBitArrayCore* self, siz
   if (self->_d.sso()) {
     size_t size = get_sso_size(self);
     if (from >= size)
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     *out = BitData{self->_d.u32_data, get_sso_size(self)};
     return BL_SUCCESS;
@@ -86,7 +86,7 @@ static BL_NOINLINE BLResult make_mutable_for_modify_op(BLBitArrayCore* self, siz
     size_t size = self_impl->size;
 
     if (from >= size)
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     if (is_impl_mutable(self_impl)) {
       *out = BitData{self_impl->data(), size};
@@ -126,7 +126,7 @@ static BL_NOINLINE BLResult make_mutable_for_append_op(BLBitArrayCore* self, siz
     }
 
     if (BL_UNLIKELY(append_bit_count > size_t(UINT32_MAX) - d.size))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
   }
   else {
     BLBitArrayImpl* self_impl = get_impl(self);
@@ -154,7 +154,7 @@ static BL_NOINLINE BLResult make_mutable_for_append_op(BLBitArrayCore* self, siz
   size_t new_size = IntOps::add_overflow(d.size, append_bit_count, &of);
 
   if (BL_UNLIKELY(of))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   size_t old_word_count = word_count_from_bit_count(d.size);
   size_t new_word_count = word_count_from_bit_count(new_size);
@@ -770,7 +770,7 @@ BL_API_IMPL BLResult bl_bit_array_fill_range(BLBitArrayCore* self, uint32_t star
   BL_ASSERT(self->_d.is_bit_array());
 
   if (BL_UNLIKELY(start_bit >= end_bit))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BitData d;
   BL_PROPAGATE(make_mutable_for_modify_op(self, start_bit, &d));
@@ -811,7 +811,7 @@ BL_API_IMPL BLResult bl_bit_array_clear_range(BLBitArrayCore* self, uint32_t sta
   BL_ASSERT(self->_d.is_bit_array());
 
   if (BL_UNLIKELY(start_bit >= end_bit))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BitData d;
   BL_PROPAGATE(make_mutable_for_modify_op(self, start_bit, &d));

@@ -12,7 +12,11 @@
 #include "../support/memops_p.h"
 
 #if defined(BL_TARGET_OPT_BMI2)
-  #include <x86intrin.h>
+  #if defined(_MSC_VER)
+    #include <intrin.h>
+  #else
+    #include <x86intrin.h>
+  #endif
 #endif
 
 #if defined(BL_TARGET_OPT_SSSE3) || (BL_TARGET_ARCH_ARM == 64)

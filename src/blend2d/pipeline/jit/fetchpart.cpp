@@ -57,16 +57,16 @@ void FetchPart::_fini_part() noexcept {}
 // ======================================
 
 // By default these do nothing, only used by `SolidFetch()` this way.
-void FetchPart::advanceY() noexcept {
+void FetchPart::advance_y() noexcept {
   // Nothing by default.
 }
 
-void FetchPart::startAtX(const Gp& x) noexcept {
+void FetchPart::start_at_x(const Gp& x) noexcept {
   // Nothing by default.
   bl_unused(x);
 }
 
-void FetchPart::advanceX(const Gp& x, const Gp& diff) noexcept {
+void FetchPart::advance_x(const Gp& x, const Gp& diff) noexcept {
   // Nothing by default.
   bl_unused(x, diff);
 }
@@ -74,19 +74,19 @@ void FetchPart::advanceX(const Gp& x, const Gp& diff) noexcept {
 // bl::Pipeline::JIT::FetchPart - Fetch
 // ====================================
 
-void FetchPart::enterN() noexcept {
+void FetchPart::enter_n() noexcept {
   // Nothing by default.
 }
 
-void FetchPart::leaveN() noexcept {
+void FetchPart::leave_n() noexcept {
   // Nothing by default.
 }
 
-void FetchPart::prefetchN() noexcept {
+void FetchPart::prefetch_n() noexcept {
   // Nothing by default.
 }
 
-void FetchPart::postfetchN() noexcept {
+void FetchPart::postfetch_n() noexcept {
   // Nothing by default.
 }
 

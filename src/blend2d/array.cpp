@@ -371,7 +371,7 @@ static BL_INLINE BLResult replace_value_t(BLArrayCore* self, size_t index, T val
     size_t size = self_impl->size;
 
     if (BL_UNLIKELY(index >= size))
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     // Not mutable - don't inline as this is an expensive case anyway.
     if (!is_impl_mutable(self_impl))
@@ -385,7 +385,7 @@ static BL_INLINE BLResult replace_value_t(BLArrayCore* self, size_t index, T val
   else {
     size_t size = self->_d.a_field();
     if (BL_UNLIKELY(index >= size))
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     T* data = self->_d.data_as<T>();
     data[index] = value;
@@ -405,7 +405,7 @@ BL_API_IMPL BLResult bl_array_init(BLArrayCore* self, BLObjectType array_type) n
   BLResult result = BL_SUCCESS;
   if (BL_UNLIKELY(!is_array_type_valid(array_type))) {
     array_type = BL_OBJECT_TYPE_NULL;
-    result = bl_trace_error(BL_ERROR_INVALID_VALUE);
+    result = bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   init_static(self, array_type);
@@ -610,7 +610,7 @@ BL_API_IMPL BLResult bl_array_reserve(BLArrayCore* self, size_t n) noexcept {
 
   BLObjectType array_type = self->_d.raw_type();
   if (BL_UNLIKELY(n > maximum_capacity_table[array_type]))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   size_t sso_capacity = sso_capacity_table[array_type];
   size_t item_size = item_size_from_array_type(array_type);
@@ -694,7 +694,7 @@ BL_API_IMPL BLResult bl_array_modify_op(BLArrayCore* self, BLModifyOp op, size_t
       size_after = bl::IntOps::add_overflow(u.size, n, &of);
 
       if (BL_UNLIKELY(of))
-        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
       if (size_after <= u.capacity) {
         self->_d.info.set_a_field(uint32_t(size_after));
@@ -730,7 +730,7 @@ BL_API_IMPL BLResult bl_array_modify_op(BLArrayCore* self, BLModifyOp op, size_t
       size_after = bl::IntOps::add_overflow(u.size, n, &of);
 
       if (BL_UNLIKELY(of))
-        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
       if ((size_after | immutable_msk) <= u.capacity) {
         self_impl->size = size_after;
@@ -789,7 +789,7 @@ BL_API_IMPL BLResult bl_array_insert_op(BLArrayCore* self, size_t index, size_t 
 
   if ((size_after | immutable_msk) > u.capacity) {
     if (BL_UNLIKELY(size_after > maximum_capacity_table[array_type]))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     BLArrayCore tmp = *self;
 
@@ -881,7 +881,7 @@ BL_API_IMPL BLResult bl_array_assign_data(BLArrayCore* self, const void* items, 
 
   if ((n | immutable_msk) > u.capacity) {
     if (BL_UNLIKELY(n > maximum_capacity_table[array_type]))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     BLObjectImplSize impl_size = impl_size_from_capacity(u.size, item_size);
     BLArrayCore newO;
@@ -924,7 +924,7 @@ BL_API_IMPL BLResult bl_array_assign_external_data(BLArrayCore* self, void* exte
   bl::IntOps::mul_overflow(capacity, item_size, &of);
 
   if (BL_UNLIKELY(!capacity || capacity < size || !bl_data_access_flags_is_valid(access_flags) || of))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLArrayCore newO;
   BL_PROPAGATE(init_external(&newO, array_type, external_data, size, capacity, access_flags, destroy_func, user_data));
@@ -953,7 +953,7 @@ BL_API_IMPL BLResult bl_array_append_item(BLArrayCore* self, const void* item) n
 
   if (BL_UNLIKELY((u.size | immutable_msk) >= u.capacity)) {
     if (BL_UNLIKELY(u.size >= maximum_capacity_table[array_type]))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     BLArrayCore newO;
     BLObjectImplSize impl_size = expand_impl_size(impl_size_from_capacity(u.size + 1u, item_size));
@@ -993,7 +993,7 @@ BL_API_IMPL BLResult bl_array_append_data(BLArrayCore* self, const void* items, 
 
   if (BL_UNLIKELY((size_after | immutable_msk) > u.capacity)) {
     if (BL_UNLIKELY(size_after > maximum_capacity_table[array_type]))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     BLArrayCore newO;
     BLObjectImplSize impl_size = expand_impl_size(impl_size_from_capacity(size_after, item_size));
@@ -1045,7 +1045,7 @@ BL_API_IMPL BLResult bl_array_insert_data(BLArrayCore* self, size_t index, const
 
   if ((size_after | immutable_msk) > u.capacity) {
     if (BL_UNLIKELY(size_after > maximum_capacity_table[array_type]))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     BLObjectImplSize impl_size = expand_impl_size(impl_size_from_capacity(size_after, item_size));
     BLArrayCore newO;
@@ -1139,7 +1139,7 @@ BL_API_IMPL BLResult bl_array_replace_item(BLArrayCore* self, size_t index, cons
 
   UnpackedData u = unpack(self);
   if (BL_UNLIKELY(index >= u.size))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLObjectType array_type = self->_d.raw_type();
   size_t item_size = item_size_from_array_type(array_type);

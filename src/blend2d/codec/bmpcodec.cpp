@@ -123,7 +123,7 @@ static BLResult decodeRLE4(uint8_t* dst_line, intptr_t dst_stride, const uint8_t
 
   for (;;) {
     if (PtrOps::bytes_until(p, end) < 2u) {
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);
     }
 
     uint32_t b0 = p[0];
@@ -151,7 +151,7 @@ static BLResult decodeRLE4(uint8_t* dst_line, intptr_t dst_stride, const uint8_t
       uint32_t req_bytes = ((b1 + 3u) >> 1) & ~uint32_t(0x1);
 
       if (PtrOps::bytes_until(p, end) < req_bytes) {
-        return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+        return bl_make_error(BL_ERROR_DATA_TRUNCATED);
       }
 
       for (x += i; i >= 4; i -= 4, dst_data += 16) {
@@ -184,31 +184,31 @@ static BLResult decodeRLE4(uint8_t* dst_line, intptr_t dst_stride, const uint8_t
     }
     else {
       // RLE_SKIP (fill by a background pixel).
-      uint32_t toX = x;
-      uint32_t toY = y;
+      uint32_t to_x = x;
+      uint32_t to_y = y;
 
       if (b1 == kRleLine) {
-        toX = 0;
-        toY++;
+        to_x = 0;
+        to_y++;
       }
       else if (b1 == kRleMove) {
         if (PtrOps::bytes_until(p, end) < 2u) {
-          return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+          return bl_make_error(BL_ERROR_DATA_TRUNCATED);
         }
 
-        toX += p[0];
-        toY += p[1]; p += 2;
+        to_x += p[0];
+        to_y += p[1]; p += 2;
 
-        if (toX > w || toY > h) {
-          return bl_trace_error(BL_ERROR_DECOMPRESSION_FAILED);
+        if (to_x > w || to_y > h) {
+          return bl_make_error(BL_ERROR_DECOMPRESSION_FAILED);
         }
       }
       else {
-        toX = 0;
-        toY = h;
+        to_x = 0;
+        to_y = h;
       }
 
-      for (; y < toY; y++) {
+      for (; y < to_y; y++) {
         for (x = w - x; x; x--, dst_data += 4) {
           MemOps::writeU32a(dst_data, kRleBackground);
         }
@@ -217,7 +217,7 @@ static BLResult decodeRLE4(uint8_t* dst_line, intptr_t dst_stride, const uint8_t
         dst_data = dst_line;
       }
 
-      for (; x < toX; x++, dst_data += 4) {
+      for (; x < to_x; x++, dst_data += 4) {
         MemOps::writeU32a(dst_data, kRleBackground);
       }
 
@@ -240,7 +240,7 @@ static BLResult decodeRLE8(uint8_t* dst_line, intptr_t dst_stride, const uint8_t
 
   for (;;) {
     if (PtrOps::bytes_until(p, end) < 2u) {
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);
     }
 
     uint32_t b0 = p[0];
@@ -261,7 +261,7 @@ static BLResult decodeRLE8(uint8_t* dst_line, intptr_t dst_stride, const uint8_t
       uint32_t req_bytes = ((b1 + 1) >> 1) << 1;
 
       if (PtrOps::bytes_until(p, end) < req_bytes) {
-        return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+        return bl_make_error(BL_ERROR_DATA_TRUNCATED);
       }
 
       for (x += i; i >= 2; i -= 2, dst_data += 8) {
@@ -281,31 +281,31 @@ static BLResult decodeRLE8(uint8_t* dst_line, intptr_t dst_stride, const uint8_t
     }
     else {
       // RLE_SKIP (fill by a background pixel).
-      uint32_t toX = x;
-      uint32_t toY = y;
+      uint32_t to_x = x;
+      uint32_t to_y = y;
 
       if (b1 == kRleLine) {
-        toX = 0;
-        toY++;
+        to_x = 0;
+        to_y++;
       }
       else if (b1 == kRleMove) {
         if (PtrOps::bytes_until(p, end) < 2u) {
-          return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+          return bl_make_error(BL_ERROR_DATA_TRUNCATED);
         }
 
-        toX += p[0];
-        toY += p[1]; p += 2;
+        to_x += p[0];
+        to_y += p[1]; p += 2;
 
-        if (toX > w || toY > h) {
-          return bl_trace_error(BL_ERROR_DECOMPRESSION_FAILED);
+        if (to_x > w || to_y > h) {
+          return bl_make_error(BL_ERROR_DECOMPRESSION_FAILED);
         }
       }
       else {
-        toX = 0;
-        toY = h;
+        to_x = 0;
+        to_y = h;
       }
 
-      for (; y < toY; y++) {
+      for (; y < to_y; y++) {
         for (x = w - x; x; x--, dst_data += 4) {
           MemOps::writeU32a(dst_data, kRleBackground);
         }
@@ -314,7 +314,7 @@ static BLResult decodeRLE8(uint8_t* dst_line, intptr_t dst_stride, const uint8_t
         dst_data = dst_line;
       }
 
-      for (; x < toX; x++, dst_data += 4) {
+      for (; x < to_x; x++, dst_data += 4) {
         MemOps::writeU32a(dst_data, kRleBackground);
       }
 
@@ -333,12 +333,12 @@ static BLResult decoder_read_info_internal(BLBmpDecoderImpl* decoder_impl, const
   const size_t kBmpMinSize = 2 + 12 + 4;
 
   if (size < kBmpMinSize) {
-    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    return bl_make_error(BL_ERROR_DATA_TRUNCATED);
   }
 
   // Read BMP file signature.
   if (data[0] != 'B' || data[1] != 'M') {
-    return bl_trace_error(BL_ERROR_INVALID_SIGNATURE);
+    return bl_make_error(BL_ERROR_INVALID_SIGNATURE);
   }
 
   const uint8_t* start = data;
@@ -354,12 +354,12 @@ static BLResult decoder_read_info_internal(BLBmpDecoderImpl* decoder_impl, const
   uint32_t file_and_info_header_size = 14 + header_size;
 
   if (!check_header_size(header_size)) {
-    return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
   }
 
   // Read BMP info header.
   if (PtrOps::bytes_until(data, end) < header_size) {
-    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    return bl_make_error(BL_ERROR_DATA_TRUNCATED);
   }
 
   memcpy(&decoder_impl->info, data, header_size);
@@ -404,11 +404,11 @@ static BLResult decoder_read_info_internal(BLBmpDecoderImpl* decoder_impl, const
 
   // Verify whether input data is ok.
   if (h == Traits::min_value<int32_t>() || w <= 0) {
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
   }
 
   if (plane_count != 1) {
-    return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
   }
 
   if (h < 0) {
@@ -432,21 +432,21 @@ static BLResult decoder_read_info_internal(BLBmpDecoderImpl* decoder_impl, const
                 (depth == 8 && compression == kCompressionRLE8) ;
 
       if (!rle_used) {
-        return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+        return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
       }
     }
   }
 
   if (decoder_impl->file.image_offset < file_and_info_header_size)
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
 
   // Check if the size is valid.
   if (!check_image_size(decoder_impl->image_info.size))
-    return bl_trace_error(BL_ERROR_IMAGE_TOO_LARGE);
+    return bl_make_error(BL_ERROR_IMAGE_TOO_LARGE);
 
   // Check if the depth is valid.
   if (!check_depth(decoder_impl->image_info.depth))
-    return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
 
   // Calculate a stride aligned to 32 bits.
   OverflowFlag of{};
@@ -454,7 +454,7 @@ static BLResult decoder_read_info_internal(BLBmpDecoderImpl* decoder_impl, const
   uint32_t image_size = IntOps::mul_overflow(uint32_t(stride & 0xFFFFFFFFu), uint32_t(h), &of);
 
   if (stride >= Traits::max_value<uint32_t>() || of) {
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
   }
 
   decoder_impl->stride = uint32_t(stride);
@@ -467,7 +467,7 @@ static BLResult decoder_read_info_internal(BLBmpDecoderImpl* decoder_impl, const
 
   // Check if the `image_size` matches the calculated one. It's malformed if it doesn't.
   if (!rle_used && decoder_impl->info.win.image_size < image_size) {
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
   }
 
   decoder_impl->fmt.depth = depth;
@@ -500,11 +500,11 @@ static BLResult decoder_read_info_internal(BLBmpDecoderImpl* decoder_impl, const
     if (compression == kCompressionBitFields || compression == kCompressionAlphaBitFields) {
       uint32_t channels = 3 + (compression == kCompressionAlphaBitFields);
       if (depth != 16 && depth != 32) {
-        return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+        return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
       }
 
       if (PtrOps::bytes_until(data, end) < channels * 4) {
-        return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+        return bl_make_error(BL_ERROR_DATA_TRUNCATED);
       }
 
       for (uint32_t i = 0; i < channels; i++) {
@@ -519,7 +519,7 @@ static BLResult decoder_read_info_internal(BLBmpDecoderImpl* decoder_impl, const
   if (has_bit_fields) {
     // BitFields provided by info header must be continuous and non-overlapping.
     if (!check_bit_masks(decoder_impl->info.win.masks, 4))
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
 
     FormatInternal::assign_absolute_masks(decoder_impl->fmt, decoder_impl->info.win.masks);
     if (decoder_impl->info.win.a_mask) {
@@ -544,7 +544,7 @@ static BLResult decoder_read_frame_internal(BLBmpDecoderImpl* decoder_impl, BLIm
   uint32_t file_and_info_header_size = 14 + decoder_impl->info.header_size;
 
   if (size < file_and_info_header_size) {
-    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    return bl_make_error(BL_ERROR_DATA_TRUNCATED);
   }
 
   // Palette.
@@ -562,7 +562,7 @@ static BLResult decoder_read_frame_internal(BLBmpDecoderImpl* decoder_impl, BLIm
     pal_bytes_total = pal_size * pal_entity_size;
 
     if (PtrOps::bytes_until(pPal, end) < pal_bytes_total) {
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);
     }
 
     // Stored as BGR|BGR (OS/2) or BGRX|BGRX (Windows).
@@ -583,7 +583,7 @@ static BLResult decoder_read_frame_internal(BLBmpDecoderImpl* decoder_impl, BLIm
   if (decoder_impl->file.image_offset >= size ||
       size - decoder_impl->file.image_offset < decoder_impl->info.win.image_size
   ) {
-    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    return bl_make_error(BL_ERROR_DATA_TRUNCATED);
   }
 
   data += decoder_impl->file.image_offset;
@@ -672,7 +672,7 @@ static BLResult BL_CDECL decoder_read_frame_impl(BLImageDecoderImpl* impl, BLIma
   BL_PROPAGATE(decoder_read_info_impl(decoder_impl, nullptr, data, size));
 
   if (decoder_impl->frame_index)
-    return bl_trace_error(BL_ERROR_NO_MORE_DATA);
+    return bl_make_error(BL_ERROR_NO_MORE_DATA);
 
   BLResult result = decoder_read_frame_internal(decoder_impl, static_cast<BLImage*>(image_out), data, size);
   if (result != BL_SUCCESS)
@@ -715,7 +715,7 @@ static BLResult BL_CDECL encoder_write_frame_impl(BLImageEncoderImpl* impl, BLAr
   const BLImage& img = *static_cast<const BLImage*>(image);
 
   if (img.is_empty())
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLImageData image_data;
   BL_PROPAGATE(img.get_data(&image_data));

@@ -380,7 +380,7 @@ BL_API_IMPL BLResult bl_font_manager_add_face(BLFontManagerCore* self, const BLF
   BL_ASSERT(self->_d.is_font_face());
 
   if (!face->dcast().is_valid())
-    return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+    return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 
   BL_PROPAGATE(bl_font_manager_make_mutable(self));
 
@@ -398,7 +398,7 @@ BL_API_IMPL BLResult bl_font_manager_add_face(BLFontManagerCore* self, const BLF
   if (!families_node) {
     families_node = self_impl->allocator.new_t<BLFontManagerPrivateImpl::FamiliesMapNode>(name_hash, face_impl->family_name.dcast());
     if (!families_node)
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     // Reserve for only one item at the beginning. This helps to decrease memory footprint when loading a lot of font
     // faces that don't share family names.
@@ -431,7 +431,7 @@ BL_API_IMPL BLResult bl_font_manager_query_faces_by_family_name(const BLFontMana
   BL_ASSERT(self->_d.is_font_manager());
 
   if (BL_UNLIKELY(out->_d.raw_type() != BL_OBJECT_TYPE_ARRAY_OBJECT))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   {
     BLFontManagerPrivateImpl* self_impl = get_impl(self);
@@ -457,7 +457,7 @@ BL_API_IMPL BLResult bl_font_manager_query_faces_by_family_name(const BLFontMana
       return out->dcast<BLArray<BLFontFace>>().assign(candidate->faces);
   }
 
-  // This is not considered to be an error, thus don't use bl_trace_error().
+  // This is not considered to be an error, thus don't use bl_make_error().
   out->dcast<BLArray<BLFontFace>>().clear();
   return BL_ERROR_FONT_NO_MATCH;
 }
@@ -476,7 +476,7 @@ BL_API_IMPL BLResult bl_font_manager_query_face(
 
   BLFontQueryProperties sanitized_properties;
   if (!sanitize_query_properties(sanitized_properties, *properties))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   {
     BLFontManagerPrivateImpl* self_impl = get_impl(self);
@@ -501,7 +501,7 @@ BL_API_IMPL BLResult bl_font_manager_query_face(
       return out->dcast().assign(*best_match.face);
   }
 
-  // This is not considered to be an error, thus don't use bl_trace_error().
+  // This is not considered to be an error, thus don't use bl_make_error().
   out->dcast().reset();
   return BL_ERROR_FONT_NO_MATCH;
 }

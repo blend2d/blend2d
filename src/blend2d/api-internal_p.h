@@ -376,19 +376,19 @@
 
 #define BL_PROPAGATE_(exp, cleanup)                                           \
   do {                                                                        \
-    BLResult _result_to_propagate = (exp);                                      \
-    if (BL_UNLIKELY(_result_to_propagate != BL_SUCCESS)) {                      \
+    BLResult _result_to_propagate = (exp);                                    \
+    if (BL_UNLIKELY(_result_to_propagate != BL_SUCCESS)) {                    \
       cleanup                                                                 \
-      return _result_to_propagate;                                              \
+      return _result_to_propagate;                                            \
     }                                                                         \
   } while (0)
 
 //! Like BL_PROPAGATE, but propagates everything except `BL_RESULT_NOTHING`.
 #define BL_PROPAGATE_IF_NOT_NOTHING(...)                                      \
   do {                                                                        \
-    BLResult result_to_propagate = (__VA_ARGS__);                               \
-    if (result_to_propagate != BL_RESULT_NOTHING) {                             \
-      return result_to_propagate;                                               \
+    BLResult result_to_propagate = (__VA_ARGS__);                             \
+    if (result_to_propagate != BL_RESULT_NOTHING) {                           \
+      return result_to_propagate;                                             \
     }                                                                         \
   } while (0)
 
@@ -448,8 +448,8 @@ struct C {                                                                      
                                                                                         \
   BL_INLINE_CONSTEXPR T value() const noexcept { return _v; }                           \
                                                                                         \
-  BL_INLINE_CONSTEXPR T* value_ptr() noexcept { return &_v; }                            \
-  BL_INLINE_CONSTEXPR const T* value_ptr() const noexcept { return &_v; }                \
+  BL_INLINE_CONSTEXPR T* value_ptr() noexcept { return &_v; }                           \
+  BL_INLINE_CONSTEXPR const T* value_ptr() const noexcept { return &_v; }               \
                                                                                         \
   BL_INLINE_CONSTEXPR C& operator=(T x) noexcept { _v = x; return *this; };             \
   BL_INLINE_CONSTEXPR C& operator=(const C& x) noexcept { _v = x._v; return *this; }    \
@@ -495,14 +495,14 @@ struct C {                                                                      
 #define BL_RETURN_ERROR_IF_NULL(ptr)               \
   do {                                             \
     if (!(ptr))                                    \
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY); \
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY); \
   } while (0)
 
 #define BL_RETURN_ERROR_IF_NULL_(ptr, ...)         \
   do {                                             \
     if (!(ptr)) {                                  \
       __VA_ARGS__                                  \
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY); \
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY); \
     }                                              \
   } while (0)
 
@@ -526,44 +526,41 @@ static BL_INLINE_CONSTEXPR bool bl_modify_op_is_assign(BLModifyOp modify_op) noe
 static BL_INLINE_CONSTEXPR bool bl_modify_op_is_append(BLModifyOp modify_op) noexcept { return modify_op >= BL_MODIFY_OP_APPEND_START; }
 static BL_INLINE_CONSTEXPR bool bl_modify_op_does_grow(BLModifyOp modify_op) noexcept { return (modify_op & BL_MODIFY_OP_GROW_MASK) != 0; }
 
-//! Internal constants and limits used across the library.
-enum : uint32_t {
-  // Target CPU Properties Known at Compile Time
-  // -------------------------------------------
+// Target CPU Properties Known at Compile Time
+// -------------------------------------------
 
-  //! Size of a CPU cache-line or a minimum size if multiple CPUs are used.
-  //!
-  //! Mostly depends on architecture, we use 64 bytes by default.
-  BL_CACHE_LINE_SIZE = 64,
+//! Size of a CPU cache-line or a minimum size if multiple CPUs are used.
+//!
+//! Mostly depends on architecture, we use 64 bytes by default.
+static constexpr uint32_t BL_CACHE_LINE_SIZE = 64;
 
-  // Blend2D Limits and System Allocator Properties
-  // ----------------------------------------------
+// Blend2D Limits and System Allocator Properties
+// ----------------------------------------------
 
-  //! Host memory allocator overhead (estimated).
-  BL_ALLOC_OVERHEAD = uint32_t(sizeof(void*)) * 4,
-  //! Host memory allocator alignment (can be lower than reality, but cannot be higher).
-  BL_ALLOC_ALIGNMENT = 8,
+//! Host memory allocator overhead (estimated).
+static constexpr uint32_t BL_ALLOC_OVERHEAD = uint32_t(sizeof(void*)) * 4u;
+//! Host memory allocator alignment (can be lower than reality, but cannot be higher).
+static constexpr uint32_t BL_ALLOC_ALIGNMENT = 8u;
 
-  //! Limits doubling of a container size after the limit size [in bytes] has reached 8MB. The container will
-  //! use a more conservative approach after the threshold has been reached.
-  BL_ALLOC_GROW_LIMIT = 1 << 23,
+//! Limits doubling of a container size after the limit size [in bytes] has reached 8MB. The container will
+//! use a more conservative approach after the threshold has been reached.
+static constexpr uint32_t BL_ALLOC_GROW_LIMIT = 1u << 23;
 
-  // Alloc Hints Used by Blend2D Containers
-  // --------------------------------------
+// Alloc Hints Used by Blend2D Containers
+// --------------------------------------
 
-  //! Minimum vertices to amortize the check of a matrix type.
-  BL_MATRIX_TYPE_MINIMUM_SIZE = 16,
+//! Minimum vertices to amortize the check of a matrix type.
+static constexpr uint32_t BL_MATRIX_TYPE_MINIMUM_SIZE = 16u;
 
-  //! Maximum number of faces per a single font collection.
-  BL_FONT_DATA_MAX_FACE_COUNT = 256,
+//! Maximum number of faces per a single font collection.
+static constexpr uint32_t BL_FONT_DATA_MAX_FACE_COUNT = 256u;
 
-  //! BLResult value that is used internally to signalize that the function didn't succeed, but also didn't fail.
-  //! This is not an error state. At the moment this is only used by \ref BLPixelConverter when setting up optimized
-  //! conversion functions.
-  //!
-  //! \note This result code can be never propagated to the user code!
-  BL_RESULT_NOTHING = 0xFFFFFFFFu
-};
+//! BLResult value that is used internally to signalize that the function didn't succeed, but also didn't fail.
+//! This is not an error state. At the moment this is only used by \ref BLPixelConverter when setting up optimized
+//! conversion functions.
+//!
+//! \note This result code can be never propagated to the user code!
+static constexpr uint32_t BL_RESULT_NOTHING = 0xFFFFFFFFu;
 
 //! Analysis result that describes whether an unknown input is conforming.
 enum BLDataAnalysis : uint32_t {

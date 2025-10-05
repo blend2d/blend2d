@@ -351,11 +351,11 @@ struct BLRgba {
 
   //! Tests whether the color is fully-opaque (alpha equals 1.0).
   [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool is_opaque() const noexcept { return a >= 1.0; }
+  BL_INLINE_CONSTEXPR bool is_opaque() const noexcept { return a >= 1.0f; }
 
   //! Tests whether the color is fully-transparent (alpha equals 0.0).
   [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool is_transparent() const noexcept { return a <= 0.0; }
+  BL_INLINE_CONSTEXPR bool is_transparent() const noexcept { return a <= 0.0f; }
 
   //! \}
 #endif

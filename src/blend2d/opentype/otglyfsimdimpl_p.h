@@ -208,7 +208,7 @@ static BL_INLINE BLResult get_glyph_outlines_simd_impl(
   typedef GlyfTable::Compound Compound;
 
   if (BL_UNLIKELY(glyph_id >= ot_face_impl->face_info.glyph_count))
-    return bl_trace_error(BL_ERROR_INVALID_GLYPH);
+    return bl_make_error(BL_ERROR_INVALID_GLYPH);
 
   RawTable glyf_table = ot_face_impl->glyf.glyf_table;
   RawTable loca_table = ot_face_impl->glyf.loca_table;
@@ -326,7 +326,7 @@ static BL_INLINE BLResult get_glyph_outlines_simd_impl(
 
           uint8_t* fDataPtr = static_cast<uint8_t*>(tmp_buffer->alloc(tt_vertex_count * 3 + kDataAlignment * 6));
           if (BL_UNLIKELY(!fDataPtr))
-            return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+            return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
           fDataPtr = IntOps::align_up(fDataPtr, kDataAlignment);
           uint8_t* xPredPtr = fDataPtr + IntOps::align_up(tt_vertex_count, kDataAlignment) + kDataAlignment;
@@ -340,9 +340,9 @@ static BL_INLINE BLResult get_glyph_outlines_simd_impl(
           size_t off_curve_spline_count;
 
           {
-            Vec16xU8 v0x3030 = common_table.i_3030303030303030.as<Vec16xU8>();
-            Vec16xU8 v0x0F0F = common_table.i_0F0F0F0F0F0F0F0F.as<Vec16xU8>();
-            Vec16xU8 v0x8080 = common_table.i_8080808080808080.as<Vec16xU8>();
+            Vec16xU8 v0x3030 = common_table.p_3030303030303030.as<Vec16xU8>();
+            Vec16xU8 v0x0F0F = common_table.p_0F0F0F0F0F0F0F0F.as<Vec16xU8>();
+            Vec16xU8 v0x8080 = common_table.p_8080808080808080.as<Vec16xU8>();
             Vec16xU8 vSizesPerXYPredicate = loada<Vec16xU8>(sizesPerXYPredicate);
             Vec16xU8 vConvertFlagsPredicate = loada<Vec16xU8>(convert_flags_predicate);
 
@@ -999,7 +999,7 @@ EmitSpline3Continue:
         //   [Scale/Affine]
         //     a) <None>
         //     b) int16_t scale;
-        //     c) int16_t scaleX, scaleY;
+        //     c) int16_t scale_x, scale_y;
         //     d) int16_t m00, m01, m10, m11;
 
 ContinueCompound:
@@ -1115,7 +1115,7 @@ ContinueCompound:
 
 InvalidData:
   *contour_count_out = 0;
-  return bl_trace_error(BL_ERROR_INVALID_DATA);
+  return bl_make_error(BL_ERROR_INVALID_DATA);
 }
 
 } // {anonymous}

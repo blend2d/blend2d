@@ -50,8 +50,8 @@ static constexpr uint32_t kMarkerSOF15        = 0xCFu; //!< Start of Frame 15 - 
 
 static constexpr uint32_t kMarkerRST          = 0xD0u; //!< Restart Marker (first) (0xD0..0xD7)
 static constexpr uint32_t kMarkerRST_LAST     = 0xD7u; //!< Restart Marker (last)
-static constexpr uint32_t kMarkerSOI          = 0xD8u; //!< Start of BLImage (0xD8).
-static constexpr uint32_t kMarkerEOI          = 0xD9u; //!< End of BLImage (0xD9).
+static constexpr uint32_t kMarkerSOI          = 0xD8u; //!< Start of Image (0xD8).
+static constexpr uint32_t kMarkerEOI          = 0xD9u; //!< End of Image (0xD9).
 static constexpr uint32_t kMarkerSOS          = 0xDAu; //!< Start of Scan (0xDA).
 static constexpr uint32_t kMarkerDQT          = 0xDBu; //!< Define Quantization Table (0xDB).
 static constexpr uint32_t kMarkerDNL          = 0xDCu; //!< Define Number of Lines (0xDC).
@@ -120,10 +120,11 @@ static constexpr uint32_t kTableCount         = 2; //!< Number of tables.
 enum class DecoderStatusFlags : uint32_t {
   kNoFlags  = 0u,
   kDoneSOI  = 0x00000001u,
-  kDoneEOI  = 0x00000002u,
-  kDoneJFIF = 0x00000004u,
-  kDoneJFXX = 0x00000008u,
-  kDoneEXIF = 0x00000010u,
+  kDoneSOS  = 0x00000002u,
+  kDoneEOI  = 0x00000004u,
+  kDoneJFIF = 0x00000008u,
+  kDoneJFXX = 0x00000010u,
+  kDoneEXIF = 0x00000020u,
   kHasThumb = 0x80000000u
 };
 

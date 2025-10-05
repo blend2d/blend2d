@@ -232,7 +232,7 @@ public:
 
     LookupStatusBits* lookup_status_bits = static_cast<LookupStatusBits*>(calloc(total_lookup_status_data_size, sizeof(LookupStatusBits)));
     if (BL_UNLIKELY(!lookup_status_bits))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     _lookup_status_bits = lookup_status_bits;
     gsub().lookup_status_data_size = uint16_t(gsub_lookup_status_data_size);

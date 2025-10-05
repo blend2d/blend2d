@@ -142,7 +142,7 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
 
   auto rnd_f32 = [&]() -> float {
     float sign = rnd.next_double() < 0.5 ? 1.0f : -1.0f;
-    return float(rnd.next_double() * float(1e25)) * sign;
+    return float(rnd.next_double()) * float(1e25) * sign;
   };
 
   auto rnd_f64 = [&]() -> double {
@@ -156,7 +156,7 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
       float x = i < BL_ARRAY_SIZE(round_ints_f32) ? round_ints_f32[i] : rnd_f32();
       float a = Math::trunc(x);
       float b = ::truncf(x);
-      EXPECT_EQ(a, b).message("Failed to trunc float32(%0.20f) %0.20f (Math::trunc) != %0.20f (std::trunc)", x, a, b);
+      EXPECT_EQ(a, b).message("Failed to trunc float32(%0.20f) %0.20f (Math::trunc) != %0.20f (std::trunc)", double(x), double(a), double(b));
     }
   }
 
@@ -166,7 +166,7 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
       double x = i < BL_ARRAY_SIZE(round_ints_f64) ? round_ints_f64[i] : rnd_f64();
       double a = Math::trunc(x);
       double b = ::trunc(x);
-      EXPECT_EQ(a, b).message("Failed to trunc float64(%0.20f) %0.20f (Math::trunc) != %0.20f (std::trunc)", x, a, b);
+      EXPECT_EQ(a, b).message("Failed to trunc float64(%0.20f) %0.20f (Math::trunc) != %0.20f (std::trunc)", double(x), double(a), double(b));
     }
   }
 
@@ -176,7 +176,7 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
       float x = i < BL_ARRAY_SIZE(round_ints_f32) ? round_ints_f32[i] : rnd_f32();
       float a = Math::floor(x);
       float b = ::floorf(x);
-      EXPECT_EQ(a, b).message("Failed to floor float32(%0.20f) %0.20f (Math::floor) != %0.20f (std::floor)", x, a, b);
+      EXPECT_EQ(a, b).message("Failed to floor float32(%0.20f) %0.20f (Math::floor) != %0.20f (std::floor)", double(x), double(a), double(b));
     }
   }
 
@@ -186,7 +186,7 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
       double x = i < BL_ARRAY_SIZE(round_ints_f64) ? round_ints_f64[i] : rnd_f64();
       double a = Math::floor(x);
       double b = ::floor(x);
-      EXPECT_EQ(a, b).message("Failed to floor float64(%0.20f) %0.20f (Math::floor) != %0.20f (std::floor)", x, a, b);
+      EXPECT_EQ(a, b).message("Failed to floor float64(%0.20f) %0.20f (Math::floor) != %0.20f (std::floor)", double(x), double(a), double(b));
     }
   }
 
@@ -196,7 +196,7 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
       float x = i < BL_ARRAY_SIZE(round_ints_f32) ? round_ints_f32[i] : rnd_f32();
       float a = Math::ceil(x);
       float b = ::ceilf(x);
-      EXPECT_EQ(a, b).message("Failed to ceil float32(%0.20f) %0.20f (Math::ceil) != %0.20f (std::ceil)", x, a, b);
+      EXPECT_EQ(a, b).message("Failed to ceil float32(%0.20f) %0.20f (Math::ceil) != %0.20f (std::ceil)", double(x), double(a), double(b));
     }
   }
 
@@ -206,7 +206,7 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
       double x = i < BL_ARRAY_SIZE(round_ints_f64) ? round_ints_f64[i] : rnd_f64();
       double a = Math::ceil(x);
       double b = ::ceil(x);
-      EXPECT_EQ(a, b).message("Failed to ceil float64(%0.20f) %0.20f (Math::ceil) != %0.20f (std::ceil)", x, a, b);
+      EXPECT_EQ(a, b).message("Failed to ceil float64(%0.20f) %0.20f (Math::ceil) != %0.20f (std::ceil)", double(x), double(a), double(b));
     }
   }
 
@@ -216,7 +216,7 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
       float x = i < BL_ARRAY_SIZE(round_ints_f32) ? round_ints_f32[i] : rnd_f32();
       float a = Math::nearby(x);
       float b = ::nearbyintf(x);
-      EXPECT_EQ(a, b).message("Failed to nearby float32(%0.20f) %0.20f (Math::nearby) != %0.20f (std::nearbyint)", x, a, b);
+      EXPECT_EQ(a, b).message("Failed to nearby float32(%0.20f) %0.20f (Math::nearby) != %0.20f (std::nearbyint)", double(x), double(a), double(b));
     }
   }
 
@@ -226,7 +226,7 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
       double x = i < BL_ARRAY_SIZE(round_ints_f64) ? round_ints_f64[i] : rnd_f64();
       double a = Math::nearby(x);
       double b = ::nearbyint(x);
-      EXPECT_EQ(a, b).message("Failed to nearby float64(%0.20f) %0.20f (Math::nearby) != %0.20f (std::nearbyint)", x, a, b);
+      EXPECT_EQ(a, b).message("Failed to nearby float64(%0.20f) %0.20f (Math::nearby) != %0.20f (std::nearbyint)", double(x), double(a), double(b));
     }
   }
 
@@ -336,20 +336,20 @@ UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
     EXPECT_EQ(Math::frac(-1.75 ), 0.25 );
   }
 
-  INFO("bl::Math::isBetween0And1()");
+  INFO("bl::Math::is_between_0_and_1()");
   {
-    EXPECT_TRUE(Math::isBetween0And1( 0.0f  ));
-    EXPECT_TRUE(Math::isBetween0And1( 0.0   ));
-    EXPECT_TRUE(Math::isBetween0And1( 0.5f  ));
-    EXPECT_TRUE(Math::isBetween0And1( 0.5   ));
-    EXPECT_TRUE(Math::isBetween0And1( 1.0f  ));
-    EXPECT_TRUE(Math::isBetween0And1( 1.0   ));
-    EXPECT_TRUE(Math::isBetween0And1(-0.0f  ));
-    EXPECT_TRUE(Math::isBetween0And1(-0.0   ));
-    EXPECT_FALSE(Math::isBetween0And1(-1.0f  ));
-    EXPECT_FALSE(Math::isBetween0And1(-1.0   ));
-    EXPECT_FALSE(Math::isBetween0And1( 1.001f));
-    EXPECT_FALSE(Math::isBetween0And1( 1.001 ));
+    EXPECT_TRUE(Math::is_between_0_and_1( 0.0f  ));
+    EXPECT_TRUE(Math::is_between_0_and_1( 0.0   ));
+    EXPECT_TRUE(Math::is_between_0_and_1( 0.5f  ));
+    EXPECT_TRUE(Math::is_between_0_and_1( 0.5   ));
+    EXPECT_TRUE(Math::is_between_0_and_1( 1.0f  ));
+    EXPECT_TRUE(Math::is_between_0_and_1( 1.0   ));
+    EXPECT_TRUE(Math::is_between_0_and_1(-0.0f  ));
+    EXPECT_TRUE(Math::is_between_0_and_1(-0.0   ));
+    EXPECT_FALSE(Math::is_between_0_and_1(-1.0f  ));
+    EXPECT_FALSE(Math::is_between_0_and_1(-1.0   ));
+    EXPECT_FALSE(Math::is_between_0_and_1( 1.001f));
+    EXPECT_FALSE(Math::is_between_0_and_1( 1.001 ));
   }
 
   INFO("bl::Math::quad_roots");

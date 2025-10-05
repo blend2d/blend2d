@@ -1096,7 +1096,7 @@ LineTo:
 
     EdgeVector<CoordT>* edge = static_cast<EdgeVector<CoordT>*>(_arena->alloc(kMinEdgeSize));
     if (BL_UNLIKELY(!edge))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     edge->pts[0].reset(x0, y0);
     edge->pts[1].reset(x1, y1);
@@ -1493,7 +1493,7 @@ RestartClipLoop:
 
           default:
             // Possibly caused by NaNs.
-            return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+            return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
         }
 
         if (a_flags) {
@@ -1583,7 +1583,7 @@ RestartClipLoop:
 
           default:
             // Possibly caused by NaNs.
-            return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+            return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
         }
 
         BL_PROPAGATE(add_line_segment(p.x, p.y, q.x, q.y));

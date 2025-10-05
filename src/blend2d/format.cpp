@@ -57,7 +57,7 @@ static constexpr const auto bl_pixel_converter_component_indexes_table =
 BLResult bl_format_info_query(BLFormatInfo* self, BLFormat format) noexcept {
   if (BL_UNLIKELY(format == BL_FORMAT_NONE || format > BL_FORMAT_MAX_VALUE)) {
     self->reset();
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   *self = bl_format_info[format];
@@ -98,7 +98,7 @@ BL_API_IMPL BLResult bl_format_info_sanitize(BLFormatInfo* self) noexcept {
 
   // Check depth.
   if (!bl_format_info_is_depth_valid(f.depth))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if (bl_test_flag(flags, FormatFlagsExt::kIndexed)) {
     // In 32-bit mode shifts are not overlapping with `palette` so zero them.
@@ -107,7 +107,7 @@ BL_API_IMPL BLResult bl_format_info_sanitize(BLFormatInfo* self) noexcept {
 
     // Indexed formats are up to 8 bits-per-pixel and must have palette.
     if (f.depth > 8 || !f.palette)
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
   else {
     // Check whether RGB|A components are correct.
@@ -116,7 +116,7 @@ BL_API_IMPL BLResult bl_format_info_sanitize(BLFormatInfo* self) noexcept {
     // Check whether pixel components are specified correctly.
     uint32_t component_indexes = bl_pixel_converter_component_indexes_table[uint32_t(flags) & 0xF];
     if (!component_indexes)
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     for (uint32_t i = 0; i < 4; i++) {
       uint32_t size = f.sizes[i];
@@ -125,25 +125,25 @@ BL_API_IMPL BLResult bl_format_info_sanitize(BLFormatInfo* self) noexcept {
       if (size == 0) {
         // Fail if this component must be provided.
         if (component_indexes & (1u << i))
-          return bl_trace_error(BL_ERROR_INVALID_VALUE);
+          return bl_make_error(BL_ERROR_INVALID_VALUE);
 
         // Undefined size (0) must have zero shift as well. As it's not used it doesn't make sense to assign
         // it a value.
         if (shift != 0)
-          return bl_trace_error(BL_ERROR_INVALID_VALUE);
+          return bl_make_error(BL_ERROR_INVALID_VALUE);
       }
       else {
         // Fail if this component must not be provided.
         if (!(component_indexes & (1u << i)))
-          return bl_trace_error(BL_ERROR_INVALID_VALUE);
+          return bl_make_error(BL_ERROR_INVALID_VALUE);
 
         // Fail if the size is too large.
         if (size > 16)
-          return bl_trace_error(BL_ERROR_INVALID_VALUE);
+          return bl_make_error(BL_ERROR_INVALID_VALUE);
 
         // Shifted mask overflows the pixel depth?
         if (shift + size > f.depth)
-          return bl_trace_error(BL_ERROR_INVALID_VALUE);
+          return bl_make_error(BL_ERROR_INVALID_VALUE);
 
         // Byte aligned means that shifts are [0, 8, 16, 24] and mask is 0xFF.
         if (size != 8 || (shift & 0x7u) != 0)
@@ -159,7 +159,7 @@ BL_API_IMPL BLResult bl_format_info_sanitize(BLFormatInfo* self) noexcept {
           masks_overlap = true;
           // Alpha channels cannot overlap.
           if (i == 3)
-            return bl_trace_error(BL_ERROR_INVALID_VALUE);
+            return bl_make_error(BL_ERROR_INVALID_VALUE);
         }
 
         masks_combined |= maskAsU64;
@@ -176,12 +176,12 @@ BL_API_IMPL BLResult bl_format_info_sanitize(BLFormatInfo* self) noexcept {
     // It's allowed that masks overlap only when the pixel format describes a grayscale (LUM).
     bool isLUM = bl_test_flag(flags, FormatFlagsExt::kLUM);
     if (isLUM != masks_overlap)
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     // RGB components must match in grayscale (LUM) mode.
     if (isLUM && (f.r_size != f.g_size || f.r_shift != f.g_shift ||
                   f.g_size != f.b_size || f.g_shift != f.b_shift))
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   // Switch to a native byte-order if possible.

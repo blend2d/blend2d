@@ -33,11 +33,11 @@ FunctionCache::~FunctionCache() noexcept {}
 BLResult FunctionCache::put(uint32_t signature, void* func) noexcept {
   FuncNode* node = _func_map.get(FuncMatcher(signature));
   if (node)
-    return bl_trace_error(BL_ERROR_ALREADY_EXISTS);
+    return bl_make_error(BL_ERROR_ALREADY_EXISTS);
 
   node = _allocator.new_t<FuncNode>(signature, func);
   if (BL_UNLIKELY(!node))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   _func_map.insert(node);
   return BL_SUCCESS;
@@ -75,7 +75,7 @@ static BLResult BL_CDECL bl_pipe_gen_runtime_test(PipeRuntime* self_, uint32_t s
   PipeDynamicRuntime* self = static_cast<PipeDynamicRuntime*>(self_);
   FillFunc fill_func = self->_mutex.protect_shared([&] { return (FillFunc)self->_function_cache.get(signature); });
 
-  // NOTE: This is not traced by bl_trace_error() as this case is expected.
+  // NOTE: This is not traced by bl_make_error() as this case is expected.
   if (!fill_func)
     return BL_ERROR_NO_ENTRY;
 
@@ -92,7 +92,7 @@ static BLResult BL_CDECL bl_pipe_gen_runtime_get(PipeRuntime* self_, uint32_t si
   if (!fill_func) {
     fill_func = self->_compile_fill_func(signature);
     if (BL_UNLIKELY(!fill_func))
-      return bl_trace_error(BL_ERROR_INVALID_STATE);
+      return bl_make_error(BL_ERROR_INVALID_STATE);
 
     BLResult result = self->_mutex.protect([&] { return self->_function_cache.put(signature, (void*)fill_func); });
     if (result == BL_SUCCESS) {
@@ -111,7 +111,7 @@ static BLResult BL_CDECL bl_pipe_gen_runtime_get(PipeRuntime* self_, uint32_t si
 
         // It must be there...
         if (!fill_func)
-          return bl_trace_error(BL_ERROR_INVALID_STATE);
+          return bl_make_error(BL_ERROR_INVALID_STATE);
       }
     }
   }
@@ -142,112 +142,9 @@ PipeDynamicRuntime::PipeDynamicRuntime(PipeRuntimeFlags runtime_flags) noexcept
   // PipeDynamicRuntime interface - used by the rendering context and `PipeProvider`.
   _funcs.test = bl_pipe_gen_runtime_test;
   _funcs.get = bl_pipe_gen_runtime_get;
-
-  _init_cpu_info(asmjit::CpuInfo::host());
 }
 
 PipeDynamicRuntime::~PipeDynamicRuntime() noexcept {}
-
-void PipeDynamicRuntime::_init_cpu_info(const asmjit::CpuInfo& cpu_info) noexcept {
-  _cpu_features = cpu_info.features();
-  _opt_flags = PipeOptFlags::kNone;
-
-#if defined(BL_JIT_ARCH_X86)
-  const CpuFeatures::X86& f = _cpu_features.x86();
-
-  // Vendor Independent CPU Features
-  // -------------------------------
-
-  if (f.has_avx2()) {
-    _opt_flags |= PipeOptFlags::kMaskOps32Bit |
-                 PipeOptFlags::kMaskOps64Bit ;
-  }
-
-  if (f.has_avx512_bw()) {
-    _opt_flags |= PipeOptFlags::kMaskOps8Bit  |
-                 PipeOptFlags::kMaskOps16Bit |
-                 PipeOptFlags::kMaskOps32Bit |
-                 PipeOptFlags::kMaskOps64Bit ;
-  }
-
-  // Select optimization flags based on CPU vendor and micro-architecture.
-
-  // AMD Specific CPU Features
-  // -------------------------
-
-  if (strcmp(cpu_info.vendor(), "AMD") == 0) {
-    // Zen 3+ has fast gathers, scalar loads and shuffles are faster on Zen 2 and older CPUs.
-    if (cpu_info.family_id() >= 0x19u) {
-      _opt_flags |= PipeOptFlags::kFastGather;
-    }
-
-    // Zen 1+ provides a low-latency VPMULLD instruction.
-    if (_cpu_features.x86().has_avx2()) {
-      _opt_flags |= PipeOptFlags::kFastVpmulld;
-    }
-
-    // Zen 4+ provides a low-latency VPMULLQ instruction.
-    if (_cpu_features.x86().has_avx512_dq()) {
-      _opt_flags |= PipeOptFlags::kFastVpmullq;
-    }
-
-    // Zen 4+ has fast mask operations (starts with AVX-512).
-    if (_cpu_features.x86().has_avx512_f()) {
-      _opt_flags |= PipeOptFlags::kFastStoreWithMask;
-    }
-  }
-
-  // Intel Specific CPU Features
-  // ---------------------------
-
-  if (strcmp(cpu_info.vendor(), "INTEL") == 0) {
-    if (_cpu_features.x86().has_avx2()) {
-      uint32_t family_id = cpu_info.family_id();
-      uint32_t model_id = cpu_info.model_id();
-
-      // NOTE: We only want to hint fast gathers in cases the CPU is immune to DOWNFALL. The reason is that the
-      // DOWNFALL mitigation delivered via a micro-code update makes gathers almost useless in a way that scalar
-      // loads can beat it significantly (in Blend2D case scalar loads can offer up to 50% more performance).
-      // This table basically picks CPUs that are known to not be affected by DOWNFALL.
-      if (family_id == 0x06u) {
-        switch (model_id) {
-          case 0x8Fu: // Sapphire Rapids.
-          case 0x96u: // Elkhart Lake.
-          case 0x97u: // Alder Lake / Catlow.
-          case 0x9Au: // Alder Lake / Arizona Beach.
-          case 0x9Cu: // Jasper Lake.
-          case 0xAAu: // Meteor Lake.
-          case 0xACu: // Meteor Lake.
-          case 0xADu: // Granite Rapids.
-          case 0xAEu: // Granite Rapids.
-          case 0xAFu: // Sierra Forest.
-          case 0xBAu: // Raptor Lake.
-          case 0xB5u: // Arrow Lake.
-          case 0xB6u: // Grand Ridge.
-          case 0xB7u: // Raptor Lake / Catlow.
-          case 0xBDu: // Lunar Lake.
-          case 0xBEu: // Alder Lake (N).
-          case 0xBFu: // Raptor Lake.
-          case 0xC5u: // Arrow Lake.
-          case 0xC6u: // Arrow Lake.
-          case 0xCFu: // Emerald Rapids.
-          case 0xDDu: // Clearwater Forest.
-            _opt_flags |= PipeOptFlags::kFastGather;
-            break;
-
-          default:
-            break;
-        }
-      }
-    }
-
-    // TODO: [JIT] It seems that masked stores are very expensive on consumer CPUs supporting AVX2 and AVX-512.
-    // _opt_flags |= PipeOptFlags::kFastStoreWithMask;
-  }
-#endif // BL_JIT_ARCH_X86
-
-  // Other vendors should follow here, if any...
-}
 
 void PipeDynamicRuntime::_restrict_features(uint32_t mask) noexcept {
 #if defined(BL_JIT_ARCH_X86)
@@ -281,12 +178,12 @@ void PipeDynamicRuntime::_restrict_features(uint32_t mask) noexcept {
       }
     }
 
-    _opt_flags &= ~(PipeOptFlags::kMaskOps8Bit       |
-                    PipeOptFlags::kMaskOps16Bit      |
-                    PipeOptFlags::kMaskOps32Bit      |
-                    PipeOptFlags::kMaskOps64Bit      |
-                    PipeOptFlags::kFastStoreWithMask |
-                    PipeOptFlags::kFastGather        );
+    _cpu_hints &= ~(asmjit::CpuHints::kVecMaskedOps8  |
+                    asmjit::CpuHints::kVecMaskedOps16 |
+                    asmjit::CpuHints::kVecMaskedOps32 |
+                    asmjit::CpuHints::kVecMaskedOps64 |
+                    asmjit::CpuHints::kVecMaskedStore |
+                    asmjit::CpuHints::kVecFastGather);
   }
 #else
   bl_unused(mask);
@@ -432,7 +329,7 @@ FillFunc PipeDynamicRuntime::_compile_fill_func(uint32_t signature) noexcept {
   }
 #endif
 
-  AsmCompiler cc(&code);
+  BackendCompiler cc(&code);
   cc.add_encoding_options(
     asmjit::EncodingOptions::kOptimizeForSize |
     asmjit::EncodingOptions::kOptimizedAlign);
@@ -458,7 +355,7 @@ FillFunc PipeDynamicRuntime::_compile_fill_func(uint32_t signature) noexcept {
   // Construct the pipeline and compile it.
   {
     // TODO: [JIT] Limit MaxPixels.
-    PipeCompiler pc(&cc, _cpu_features, _opt_flags);
+    PipeCompiler pc(&cc, _cpu_features, _cpu_hints);
 
     PipeComposer pipe_composer(pc);
     FetchPart* dst_part = pipe_composer.new_fetch_part(FetchType::kPixelPtr, sig.dst_format());

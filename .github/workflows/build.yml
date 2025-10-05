@@ -25,10 +25,9 @@ jobs:
           - { title: "linux/ubsan"        , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1"                   , diagnostics: "ubsan" }
           - { title: "linux/hardened"     , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1"                   , diagnostics: "hardened" }
           - { title: "linux/valgrind"     , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1"                   , diagnostics: "valgrind" }
-          - { title: "linux/no-futex"     , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_FUTEX=1" }
-          - { title: "linux/no-intrin"    , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_INTRINSICS=1" }
           - { title: "linux/no-jit"       , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_JIT=1" }
           - { title: "linux/no-tls"       , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_TLS=1" }
+          - { title: "linux/no-futex"     , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_FUTEX=1" }
           - { title: "linux/use-c++20"    , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Debug"  , defs: "BLEND2D_TEST=1,CMAKE_CXX_FLAGS=-std=c++20" }
           - { title: "linux/use-c++23"    , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Debug"  , defs: "BLEND2D_TEST=1,CMAKE_CXX_FLAGS=-std=c++23" }
           - { title: "linux/use-sse4.2"   , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,CMAKE_CXX_FLAGS=-msse4.2" }

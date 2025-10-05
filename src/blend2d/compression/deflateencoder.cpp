@@ -2040,7 +2040,7 @@ BLResult Encoder::init(FormatType format, uint32_t compression_level) noexcept {
 
   void* allocated_ptr = malloc(impl_size + kImplAlignment);
   if (BL_UNLIKELY(!allocated_ptr)) {
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
   }
 
   EncoderImpl* new_impl = static_cast<EncoderImpl*>(IntOps::align_up(allocated_ptr, kImplAlignment));
@@ -2174,7 +2174,7 @@ BLResult Encoder::compress(BLArray<uint8_t>& dst, BLModifyOp modify_op, BLDataVi
   size_t input_size = input.size;
 
   if (input_size == 0) {
-    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    return bl_make_error(BL_ERROR_DATA_TRUNCATED);
   }
 
   size_t min_output_size = minimum_output_buffer_size(input_size);

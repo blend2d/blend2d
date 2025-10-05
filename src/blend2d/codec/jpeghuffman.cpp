@@ -17,13 +17,13 @@ static BLResult build_huffman_table(DecoderHuffmanTable* table, const uint8_t* d
   uint32_t n = 0;
 
   if (BL_UNLIKELY(data_size < 16))
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
 
   for (i = 0; i < 16; i++)
     n += uint32_t(data[i]);
 
   if (BL_UNLIKELY(n > 256 || n + 16 > data_size))
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
 
   table->max_code[0] = 0;            // Not used.
   table->max_code[17] = 0xFFFFFFFFu; // Sentinel.
@@ -51,7 +51,7 @@ static BLResult build_huffman_table(DecoderHuffmanTable* table, const uint8_t* d
           table->code[k++] = uint16_t(code++);
 
         if (code - 1 >= (1u << i))
-          return bl_trace_error(BL_ERROR_INVALID_DATA);
+          return bl_make_error(BL_ERROR_INVALID_DATA);
       }
 
       // Compute largest code + 1 for this size, pre-shifted as needed later.
@@ -83,11 +83,11 @@ static BLResult build_huffman_table(DecoderHuffmanTable* table, const uint8_t* d
   return BL_SUCCESS;
 }
 
-BLResult buildHuffmanDC(DecoderHuffmanDCTable* table, const uint8_t* data, size_t data_size, size_t* bytes_consumed) noexcept {
+BLResult build_huffman_dc(DecoderHuffmanDCTable* table, const uint8_t* data, size_t data_size, size_t* bytes_consumed) noexcept {
   return build_huffman_table(table, data, data_size, bytes_consumed);
 }
 
-BLResult buildHuffmanAC(DecoderHuffmanACTable* table, const uint8_t* data, size_t data_size, size_t* bytes_consumed) noexcept {
+BLResult build_huffman_ac(DecoderHuffmanACTable* table, const uint8_t* data, size_t data_size, size_t* bytes_consumed) noexcept {
   BL_PROPAGATE(build_huffman_table(table, data, data_size, bytes_consumed));
 
   // Build an AC specific acceleration table.

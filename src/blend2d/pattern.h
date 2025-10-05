@@ -259,7 +259,7 @@ public:
 
   BL_INLINE BLResult set_extend_mode(BLExtendMode extend_mode) noexcept {
     if (BL_UNLIKELY(extend_mode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     _d.info.set_b_field(uint32_t(extend_mode));
     return BL_SUCCESS;

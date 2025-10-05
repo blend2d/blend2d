@@ -19,7 +19,7 @@ namespace Math {
 //
 // Roots3And4.c: Graphics Gems, original author Jochen Schwarze (schwarze@isa.de). See also the wiki article
 // at <http://en.wikipedia.org/wiki/Cubic_function> for other equations.
-size_t cubic_roots(double* dst, const double* poly, double tMin, double tMax) noexcept {
+size_t cubic_roots(double* dst, const double* poly, double t_min, double t_max) noexcept {
   constexpr double k1Div3 = 1.0 / 3.0;
   constexpr double k1Div6 = 1.0 / 6.0;
   constexpr double k1Div9 = 1.0 / 9.0;
@@ -32,7 +32,7 @@ size_t cubic_roots(double* dst, const double* poly, double tMin, double tMax) no
   double c = poly[3];
 
   if (norm == 0.0)
-    return quad_roots(dst, a, b, c, tMin, tMax);
+    return quad_roots(dst, a, b, c, t_min, t_max);
 
   // Convert to a normalized form `x^3 + Ax^2 + Bx + C == 0`.
   a /= norm;
@@ -55,7 +55,7 @@ size_t cubic_roots(double* dst, const double* poly, double tMin, double tMax) no
     // One triple solution.
     if (is_near_zero(q)) {
       dst[0] = sub;
-      return size_t(sub >= tMin && sub <= tMax);
+      return size_t(sub >= t_min && sub <= t_max);
     }
 
     // One single and one double solution.
@@ -96,7 +96,7 @@ size_t cubic_roots(double* dst, const double* poly, double tMin, double tMax) no
 
   size_t n = 0;
   for (size_t i = 0; i < n_roots; i++)
-    if (dst[i] >= tMin && dst[i] <= tMax)
+    if (dst[i] >= t_min && dst[i] <= t_max)
       dst[n++] = dst[i];
   return n;
 }

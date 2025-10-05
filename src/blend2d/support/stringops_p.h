@@ -51,9 +51,11 @@ static size_t length_with_encoding(const void* text, BLTextEncoding encoding) no
 
 static BL_INLINE bool memeq_ci(const char* a, const char* b, size_t size) noexcept {
   size_t i;
-  for (i = 0; i < size; i++)
-    if (bl::Unicode::ascii_to_lower(a[i]) != bl::Unicode::ascii_to_lower(b[i]))
+  for (i = 0; i < size; i++) {
+    if (bl::Unicode::ascii_to_lower(a[i]) != bl::Unicode::ascii_to_lower(b[i])) {
       return false;
+    }
+  }
   return true;
 }
 

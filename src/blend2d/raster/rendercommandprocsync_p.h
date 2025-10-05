@@ -195,7 +195,7 @@ SaveState:
       if (!pooled) {
         pooled = static_cast<AnalyticActiveEdge<int>*>(work_zone->alloc(sizeof(AnalyticActiveEdge<int>)));
         if (BL_UNLIKELY(!pooled))
-          return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+          return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
         pooled->next = nullptr;
       }
 

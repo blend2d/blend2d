@@ -104,12 +104,12 @@ BL_API_IMPL BLResult bl_pattern_init_as(BLPatternCore* self, const BLImageCore* 
   BLRectI image_area(0, 0, image_impl->size.w, image_impl->size.h);
 
   if (BL_UNLIKELY(extend_mode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if (!area)
     area = &image_area;
   else if (*area != image_area && !is_area_valid(*area, image_impl->size))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLTransformType transform_type = BL_TRANSFORM_TYPE_IDENTITY;
   if (!transform)
@@ -194,12 +194,12 @@ BL_API_IMPL BLResult bl_pattern_create(BLPatternCore* self, const BLImageCore* i
   BLRectI image_area(0, 0, image_impl->size.w, image_impl->size.h);
 
   if (BL_UNLIKELY(extend_mode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if (!area)
     area = &image_area;
   else if (*area != image_area && !is_area_valid(*area, image_impl->size))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLTransformType transform_type = BL_TRANSFORM_TYPE_IDENTITY;
   if (!transform)
@@ -249,7 +249,7 @@ BL_API_IMPL BLResult bl_pattern_set_image(BLPatternCore* self, const BLImageCore
   if (!area)
     area = &image_area;
   else if (*area != image_area && !is_area_valid(*area, image->dcast().size()))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BL_PROPAGATE(make_mutable(self));
   BLPatternPrivateImpl* self_impl = get_impl(self);
@@ -282,7 +282,7 @@ BL_API_IMPL BLResult bl_pattern_set_area(BLPatternCore* self, const BLRectI* are
   BLImageImpl* image_impl = bl::ImageInternal::get_impl(&self_impl->image);
 
   if (BL_UNLIKELY(!is_area_valid(*area, image_impl->size)))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BL_PROPAGATE(make_mutable(self));
   self_impl = get_impl(self);
@@ -321,7 +321,7 @@ BL_API_IMPL BLResult bl_pattern_set_extend_mode(BLPatternCore* self, BLExtendMod
   BL_ASSERT(self->_d.is_pattern());
 
   if (BL_UNLIKELY(extend_mode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   set_extend_mode(self, extend_mode);
   return BL_SUCCESS;
@@ -357,7 +357,7 @@ BL_API_IMPL BLResult bl_pattern_apply_transform_op(BLPatternCore* self, BLTransf
   BL_ASSERT(self->_d.is_pattern());
 
   if (BL_UNLIKELY(uint32_t(op_type) > BL_TRANSFORM_OP_MAX_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if (op_type == BL_TRANSFORM_OP_RESET && get_transform_type(self) == BL_TRANSFORM_TYPE_IDENTITY)
     return BL_SUCCESS;

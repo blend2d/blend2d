@@ -1220,8 +1220,10 @@ public:
   //! it means that the rendering context uses the user thread and one more worker.
   [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t thread_count() const noexcept {
+    static const char property_name[] = "thread_count";
+
     uint32_t value;
-    bl_object_get_property_uint32(this, "thread_count", 11, &value);
+    bl_object_get_property_uint32(this, property_name, sizeof(property_name) - 1u, &value);
     return value;
   }
 
@@ -1230,8 +1232,10 @@ public:
   //! Errors may accumulate during the lifetime of the rendering context.
   [[nodiscard]]
   BL_INLINE_NODEBUG BLContextErrorFlags accumulated_error_flags() const noexcept {
+    static const char property_name[] = "accumulated_error_flags";
+
     uint32_t value;
-    bl_object_get_property_uint32(this, "accumulated_error_flags", 21, &value);
+    bl_object_get_property_uint32(this, property_name, sizeof(property_name) - 1u, &value);
     return BLContextErrorFlags(value);
   }
 

@@ -166,14 +166,14 @@ static BLResult bl_runtime_scope_end_x86(BLRuntimeScopeCore* self) noexcept {
   uint32_t fcw = state >> 16;
 
   if (BL_UNLIKELY(tag != 0xC0000000u)) {
-    return bl_trace_error(BL_ERROR_INVALID_STATE);
+    return bl_make_error(BL_ERROR_INVALID_STATE);
   }
 
   write_csr(csr);
   write_fpu_cw(uint16_t(fcw));
 #else
   if (BL_UNLIKELY(tag != 0x40000000u)) {
-    return bl_trace_error(BL_ERROR_INVALID_STATE);
+    return bl_make_error(BL_ERROR_INVALID_STATE);
   }
 
   write_csr(csr);

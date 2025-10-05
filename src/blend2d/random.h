@@ -55,6 +55,8 @@ struct BLRandom {
   //! \name Overloaded Operators
   //! \{
 
+  BL_INLINE_NODEBUG BLRandom& operator=(const BLRandom& other) noexcept = default;
+
   [[nodiscard]]
   BL_INLINE_NODEBUG bool operator==(const BLRandom& other) const noexcept { return  equals(other); }
 

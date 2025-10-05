@@ -78,7 +78,7 @@ public:
   //! CPU features to use (either detected or restricted by the user).
   asmjit::CpuFeatures _cpu_features;
   //! Optimization flags.
-  PipeOptFlags _opt_flags;
+  asmjit::CpuHints _cpu_hints;
   //! Maximum pixels at a time, 0 if no limit (debug).
   uint32_t _max_pixels;
 

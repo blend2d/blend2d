@@ -11,8 +11,8 @@
 
 namespace bl::Pipeline::JIT::FetchUtils {
 
-static void satisfyPixelsA8(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept;
-static void satisfyPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept;
+static void satisfy_pixels_a8(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept;
+static void satisfy_pixels_rgba32(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept;
 
 // bl::Pipeline::Jit::FetchUtils - Fetch & Store
 // =============================================
@@ -24,8 +24,8 @@ static uint32_t calculate_vec_count(uint32_t vec_size, uint32_t n) noexcept {
 
 #if defined(BL_JIT_ARCH_A64)
 // Provides a specialized AArch64 implementation of a byte granularity vector fetch/store.
-static void fetchVec8AArch64(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, uint32_t n, AdvanceMode advance_mode) noexcept {
-  AsmCompiler* cc = pc->cc;
+static void fetch_vec8_aarrch64(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, uint32_t n, AdvanceMode advance_mode) noexcept {
+  BackendCompiler* cc = pc->cc;
   uint32_t i = 0;
 
   if (advance_mode == AdvanceMode::kNoAdvance) {
@@ -39,7 +39,7 @@ static void fetchVec8AArch64(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr,
       }
       else {
         uint32_t count = bl_min<uint32_t>(n - i, 16u);
-        pc->v_load_iany(d_vec[idx], a64::ptr(s_ptr, int32_t(i)), count, Alignment{1});
+        pc->v_load_iany(d_vec[idx], a64::ptr(s_ptr, int32_t(i)), count, Alignment(1));
         i += count;
       }
     }
@@ -55,7 +55,7 @@ static void fetchVec8AArch64(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr,
       }
       else {
         uint32_t count = bl_min<uint32_t>(n - i, 16u);
-        pc->v_load_iany(d_vec[idx], mem_ptr(s_ptr), count, Alignment{1});
+        pc->v_load_iany(d_vec[idx], mem_ptr(s_ptr), count, Alignment(1));
         pc->add(s_ptr, s_ptr, count);
 
         i += count;
@@ -64,8 +64,8 @@ static void fetchVec8AArch64(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr,
   }
 }
 
-static void storeVec8AArch64(PipeCompiler* pc, const Gp& d_ptr, const VecArray& s_vec, uint32_t n, AdvanceMode advance_mode) noexcept {
-  AsmCompiler* cc = pc->cc;
+static void store_vec8_aarrch64(PipeCompiler* pc, const Gp& d_ptr, const VecArray& s_vec, uint32_t n, AdvanceMode advance_mode) noexcept {
+  BackendCompiler* cc = pc->cc;
   uint32_t i = 0;
 
   if (advance_mode == AdvanceMode::kNoAdvance) {
@@ -79,7 +79,7 @@ static void storeVec8AArch64(PipeCompiler* pc, const Gp& d_ptr, const VecArray& 
       }
       else {
         uint32_t count = bl_min<uint32_t>(n - i, 16u);
-        pc->v_load_iany(s_vec[idx], a64::ptr(d_ptr, int32_t(i)), count, Alignment{1});
+        pc->v_load_iany(s_vec[idx], a64::ptr(d_ptr, int32_t(i)), count, Alignment(1));
         i += count;
       }
     }
@@ -95,7 +95,7 @@ static void storeVec8AArch64(PipeCompiler* pc, const Gp& d_ptr, const VecArray& 
       }
       else {
         uint32_t count = bl_min<uint32_t>(n - i, 16u);
-        pc->v_load_iany(s_vec[idx], mem_ptr(d_ptr), count, Alignment{1});
+        pc->v_load_iany(s_vec[idx], mem_ptr(d_ptr), count, Alignment(1));
         pc->add(d_ptr, d_ptr, count);
 
         i += count;
@@ -105,22 +105,22 @@ static void storeVec8AArch64(PipeCompiler* pc, const Gp& d_ptr, const VecArray& 
 }
 #endif // BL_JIT_ARCH_A64
 
-void fetchVec8(PipeCompiler* pc, const VecArray& d_vec_, Gp s_ptr, uint32_t n, AdvanceMode advance_mode) noexcept {
+void fetch_vec8(PipeCompiler* pc, const VecArray& d_vec_, Gp s_ptr, uint32_t n, AdvanceMode advance_mode) noexcept {
   VecArray d_vec(d_vec_);
   d_vec.truncate(calculate_vec_count(d_vec[0].size(), n));
 
   BL_ASSERT(!d_vec.is_empty());
 
 #if defined(BL_JIT_ARCH_A64)
-  fetchVec8AArch64(pc, d_vec, s_ptr, n, advance_mode);
+  fetch_vec8_aarrch64(pc, d_vec, s_ptr, n, advance_mode);
 #else
   uint32_t offset = 0;
 
-  for (uint32_t idx = 0; idx < d_vec.size(); idx++) {
+  for (size_t idx = 0; idx < d_vec.size(); idx++) {
     uint32_t remaining = n - offset;
     uint32_t fetch_size = bl_min<uint32_t>(d_vec[idx].size(), remaining);
 
-    pc->v_load_iany(d_vec[idx], mem_ptr(s_ptr, int32_t(offset)), fetch_size, Alignment{1});
+    pc->v_load_iany(d_vec[idx], mem_ptr(s_ptr, int32_t(offset)), fetch_size, Alignment(1));
     offset += fetch_size;
 
     if (offset >= n)
@@ -133,22 +133,22 @@ void fetchVec8(PipeCompiler* pc, const VecArray& d_vec_, Gp s_ptr, uint32_t n, A
 #endif
 }
 
-void storeVec8(PipeCompiler* pc, const Gp& d_ptr, const VecArray& s_vec_, uint32_t n, AdvanceMode advance_mode) noexcept {
+void store_vec8(PipeCompiler* pc, const Gp& d_ptr, const VecArray& s_vec_, uint32_t n, AdvanceMode advance_mode) noexcept {
   VecArray s_vec(s_vec_);
   s_vec.truncate(calculate_vec_count(s_vec[0].size(), n));
 
   BL_ASSERT(!s_vec.is_empty());
 
 #if defined(BL_JIT_ARCH_A64)
-  storeVec8AArch64(pc, d_ptr, s_vec, n, advance_mode);
+  store_vec8_aarrch64(pc, d_ptr, s_vec, n, advance_mode);
 #else
   uint32_t offset = 0;
 
-  for (uint32_t idx = 0; idx < s_vec.size(); idx++) {
+  for (size_t idx = 0; idx < s_vec.size(); idx++) {
     uint32_t remaining = n - offset;
     uint32_t store_size = bl_min<uint32_t>(s_vec[idx].size(), remaining);
 
-    pc->v_store_iany(mem_ptr(d_ptr, int32_t(offset)), s_vec[idx], store_size, Alignment{1});
+    pc->v_store_iany(mem_ptr(d_ptr, int32_t(offset)), s_vec[idx], store_size, Alignment(1));
     offset += store_size;
 
     if (offset >= n)
@@ -161,46 +161,46 @@ void storeVec8(PipeCompiler* pc, const Gp& d_ptr, const VecArray& s_vec_, uint32
 #endif
 }
 
-void fetchVec32(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode) noexcept {
-  fetchVec8(pc, d_vec, s_ptr, n * 4u, advance_mode);
+void fetch_vec32(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode) noexcept {
+  fetch_vec8(pc, d_vec, s_ptr, n * 4u, advance_mode);
 }
 
-void storeVec32(PipeCompiler* pc, const Gp& d_ptr, const VecArray& s_vec, uint32_t n, AdvanceMode advance_mode) noexcept {
-  storeVec8(pc, d_ptr, s_vec, n * 4u, advance_mode);
+void store_vec32(PipeCompiler* pc, const Gp& d_ptr, const VecArray& s_vec, uint32_t n, AdvanceMode advance_mode) noexcept {
+  store_vec8(pc, d_ptr, s_vec, n * 4u, advance_mode);
 }
 
-void fetchVec8(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+void fetch_vec8(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
   if (predicate.is_empty())
-    fetchVec8(pc, d_vec, s_ptr, n, advance_mode);
+    fetch_vec8(pc, d_vec, s_ptr, n, advance_mode);
   else
-    fetchPredicatedVec8(pc, d_vec, s_ptr, n, advance_mode, predicate);
+    fetch_predicated_vec8(pc, d_vec, s_ptr, n, advance_mode, predicate);
 }
 
-void fetchVec32(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+void fetch_vec32(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
   if (predicate.is_empty())
-    fetchVec32(pc, d_vec, s_ptr, n, advance_mode);
+    fetch_vec32(pc, d_vec, s_ptr, n, advance_mode);
   else
-    fetchPredicatedVec32(pc, d_vec, s_ptr, n, advance_mode, predicate);
+    fetch_predicated_vec32(pc, d_vec, s_ptr, n, advance_mode, predicate);
 }
 
-void storeVec8(PipeCompiler* pc, const Gp& d_ptr, const VecArray& s_vec, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+void store_vec8(PipeCompiler* pc, const Gp& d_ptr, const VecArray& s_vec, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
   if (predicate.is_empty())
-    storeVec8(pc, d_ptr, s_vec, n, advance_mode);
+    store_vec8(pc, d_ptr, s_vec, n, advance_mode);
   else
-    storePredicatedVec8(pc, d_ptr, s_vec, n, advance_mode, predicate);
+    store_predicated_vec8(pc, d_ptr, s_vec, n, advance_mode, predicate);
 }
 
-void storeVec32(PipeCompiler* pc, const Gp& d_ptr, const VecArray& s_vec, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+void store_vec32(PipeCompiler* pc, const Gp& d_ptr, const VecArray& s_vec, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
   if (predicate.is_empty())
-    storeVec32(pc, d_ptr, s_vec, n, advance_mode);
+    store_vec32(pc, d_ptr, s_vec, n, advance_mode);
   else
-    storePredicatedVec32(pc, d_ptr, s_vec, n, advance_mode, predicate);
+    store_predicated_vec32(pc, d_ptr, s_vec, n, advance_mode, predicate);
 }
 
 // bl::Pipeline::Jit::FetchUtils - Fetch Miscellaneous
 // ===================================================
 
-void fetchSecond32BitElement(PipeCompiler* pc, const Vec& vec, const Mem& src) noexcept {
+void fetch_second_32bit_element(PipeCompiler* pc, const Vec& vec, const Mem& src) noexcept {
 #if defined(BL_JIT_ARCH_X86)
   if (!pc->has_sse4_1()) {
     Vec tmp = pc->new_vec128("@tmp");
@@ -214,7 +214,7 @@ void fetchSecond32BitElement(PipeCompiler* pc, const Vec& vec, const Mem& src) n
   }
 }
 
-void fetchThird32BitElement(PipeCompiler* pc, const Vec& vec, const Mem& src) noexcept {
+void fetch_third_32bit_element(PipeCompiler* pc, const Vec& vec, const Mem& src) noexcept {
 #if defined(BL_JIT_ARCH_X86)
   if (!pc->has_sse4_1()) {
     Vec tmp = pc->new_vec128("@tmp");
@@ -240,7 +240,7 @@ static void add_shifted(PipeCompiler* pc, const Gp& dst, const Gp& src, uint32_t
 #endif
 };
 
-static void fetchPredicatedVec8_1To3(PipeCompiler* pc, const Vec& d_vec, Gp s_ptr, AdvanceMode advance_mode, const Gp& count) noexcept {
+static void fetch_predicated_vec8_1to3(PipeCompiler* pc, const Vec& d_vec, Gp s_ptr, AdvanceMode advance_mode, const Gp& count) noexcept {
 #if defined(BL_JIT_ARCH_A64)
   // Predicated load of 1-3 elements can be simplified to the following on AArch64:
   //   - load the first element at [0]    (always valid).
@@ -248,8 +248,8 @@ static void fetchPredicatedVec8_1To3(PipeCompiler* pc, const Vec& d_vec, Gp s_pt
   //   - load the mid element by using CINC instruction (incrementing when count >= 2).
   a64::Compiler* cc = pc->cc;
 
-  Gp mid = pc->new_gp("@mid");
-  Gp last = pc->new_gp("@last");
+  Gp mid = pc->new_gpz("@mid");
+  Gp last = pc->new_gpz("@last");
 
   cc->cmp(count, 2);
   cc->cinc(mid, s_ptr, CondCode::kUnsignedGE);
@@ -268,7 +268,7 @@ static void fetchPredicatedVec8_1To3(PipeCompiler* pc, const Vec& d_vec, Gp s_pt
 #else
   Gp acc = pc->new_gp32("@acc");
   Gp tmp = pc->new_gp32("@tmp");
-  Gp mid = pc->new_gp("@mid");
+  Gp mid = pc->new_gpz("@mid");
 
   if (advance_mode == AdvanceMode::kAdvance) {
     pc->load_u8(acc, mem_ptr(s_ptr));
@@ -281,7 +281,7 @@ static void fetchPredicatedVec8_1To3(PipeCompiler* pc, const Vec& d_vec, Gp s_pt
     add_shifted(pc, acc, tmp, 8);
   }
   else {
-    Gp end = pc->new_gp("@end");
+    Gp end = pc->new_gpz("@end");
 
     pc->add(end, s_ptr, count.clone_as(s_ptr));
     pc->load_u8(tmp, mem_ptr(end, -1));
@@ -299,7 +299,7 @@ static void fetchPredicatedVec8_1To3(PipeCompiler* pc, const Vec& d_vec, Gp s_pt
 }
 
 // Predicated load of 1-7 bytes.
-static void fetchPredicatedVec8_1To7(PipeCompiler* pc, const Vec& d_vec, Gp s_ptr, AdvanceMode advance_mode, const Gp& count) noexcept {
+static void fetch_predicated_vec8_1to7(PipeCompiler* pc, const Vec& d_vec, Gp s_ptr, AdvanceMode advance_mode, const Gp& count) noexcept {
 #if defined(BL_JIT_ARCH_X86)
   if (pc->is_32bit()) {
     // Not optimized, probably not worth spending time on trying to optimize this version as we don't expect 32-bit
@@ -342,9 +342,9 @@ static void fetchPredicatedVec8_1To7(PipeCompiler* pc, const Vec& d_vec, Gp s_pt
   // branch predictor happier as we expect that `count == 2..7` case should be much more likely than `count == 1`.
   Label L_Done = pc->new_label();
 
-  Gp acc = pc->new_gp("@fetch_acc");
-  Gp index0 = pc->new_gp("@fetch_index0");
-  Gp index1 = pc->new_gp("@fetch_index1");
+  Gp acc = pc->new_gpz("@fetch_acc");
+  Gp index0 = pc->new_gpz("@fetch_index0");
+  Gp index1 = pc->new_gpz("@fetch_index1");
 
   pc->load_u8(acc, ptr(s_ptr));
   pc->j(L_Done, cmp_eq(count.r32(), 1));
@@ -379,12 +379,12 @@ static void fetchPredicatedVec8_1To7(PipeCompiler* pc, const Vec& d_vec, Gp s_pt
   }
 }
 
-static void fetchPredicatedVec8_4To15(PipeCompiler* pc, const Vec& d_vec, Gp s_ptr, AdvanceMode advance_mode, const Gp& count) noexcept {
-  Gp end = pc->new_gp("@end");
+static void fetch_predicated_vec8_4to15(PipeCompiler* pc, const Vec& d_vec, Gp s_ptr, AdvanceMode advance_mode, const Gp& count) noexcept {
+  Gp end = pc->new_gpz("@end");
 
 #if defined(BL_JIT_ARCH_X86)
   if (!pc->has_sse3()) {
-    AsmCompiler* cc = pc->cc;
+    BackendCompiler* cc = pc->cc;
 
     Vec acc = pc->new_vec128("@acc");
     Vec tmp = pc->new_vec128("@tmp");
@@ -436,8 +436,8 @@ static void fetchPredicatedVec8_4To15(PipeCompiler* pc, const Vec& d_vec, Gp s_p
 
   // Common implementation that targets both X86 and AArch64.
   Vec v_pred = pc->new_vec128("@pred");
-  Mem mPred = pc->simd_mem_const(pc->ct.swizu8_load_tail_0_to_16, Bcst::kNA_Unique, v_pred);
-  mPred.set_index(count.clone_as(s_ptr));
+  Mem m_pred = pc->simd_mem_const(pc->ct<CommonTable>().swizu8_load_tail_0_to_16, Bcst::kNA_Unique, v_pred);
+  m_pred.set_index(count.clone_as(s_ptr));
 
 #if defined(BL_JIT_ARCH_X86)
   // Temporaries needed to compose a single 128-bit vector from 4 32-bit elements.
@@ -476,7 +476,7 @@ static void fetchPredicatedVec8_4To15(PipeCompiler* pc, const Vec& d_vec, Gp s_p
 
   pc->v_loadu32(d_vec, mem_ptr(s_ptr));
   pc->add_ext(end, s_ptr, count.clone_as(s_ptr), 1, -4);
-  pc->v_loada128(v_pred, mPred);
+  pc->v_loada128(v_pred, m_pred);
 
   if (advance_mode == AdvanceMode::kAdvance) {
     pc->add(s_ptr, s_ptr, 4);
@@ -494,7 +494,7 @@ static void fetchPredicatedVec8_4To15(PipeCompiler* pc, const Vec& d_vec, Gp s_p
     pc->add(s_ptr, s_ptr, 4);
   }
   else {
-    Gp mid = pc->new_gp("@mid");
+    Gp mid = pc->new_gpz("@mid");
 
     pc->add(mid, s_ptr, 4);
     pc->umin(mid, mid, end);
@@ -512,21 +512,21 @@ static void fetchPredicatedVec8_4To15(PipeCompiler* pc, const Vec& d_vec, Gp s_p
   pc->v_swizzlev_u8(d_vec, d_vec, v_pred);
 }
 
-static void fetchPredicatedVec8_1To15(PipeCompiler* pc, const Vec& d_vec, Gp s_ptr, AdvanceMode advance_mode, const Gp& count) noexcept {
+static void fetch_predicated_vec8_1to15(PipeCompiler* pc, const Vec& d_vec, Gp s_ptr, AdvanceMode advance_mode, const Gp& count) noexcept {
   Label L_LessThan4 = pc->new_label();
   Label L_Done = pc->new_label();
 
   pc->j(L_LessThan4, ucmp_lt(count, 4));
-  fetchPredicatedVec8_4To15(pc, d_vec, s_ptr, advance_mode, count);
+  fetch_predicated_vec8_4to15(pc, d_vec, s_ptr, advance_mode, count);
   pc->j(L_Done);
 
   pc->bind(L_LessThan4);
-  fetchPredicatedVec8_1To3(pc, d_vec, s_ptr, advance_mode, count);
+  fetch_predicated_vec8_1to3(pc, d_vec, s_ptr, advance_mode, count);
   pc->bind(L_Done);
 }
 
-static void fetchPredicatedVec8_V128(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
-  uint32_t vec_count = d_vec.size();
+static void fetch_predicated_vec8_v128(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+  size_t vec_count = d_vec.size();
   Gp count = predicate.count();
 
   // Handle small cases first.
@@ -539,13 +539,13 @@ static void fetchPredicatedVec8_V128(PipeCompiler* pc, const VecArray& d_vec, Gp
     }
   }
   else if (n <= 4) {
-    fetchPredicatedVec8_1To3(pc, d_vec[0], s_ptr, advance_mode, count);
+    fetch_predicated_vec8_1to3(pc, d_vec[0], s_ptr, advance_mode, count);
   }
   else if (n <= 8) {
-    fetchPredicatedVec8_1To7(pc, d_vec[0], s_ptr, advance_mode, count);
+    fetch_predicated_vec8_1to7(pc, d_vec[0], s_ptr, advance_mode, count);
   }
   else if (n <= 16) {
-    fetchPredicatedVec8_1To15(pc, d_vec[0], s_ptr, advance_mode, count);
+    fetch_predicated_vec8_1to15(pc, d_vec[0], s_ptr, advance_mode, count);
   }
   else {
     BL_ASSERT(vec_count > 1);
@@ -558,21 +558,21 @@ static void fetchPredicatedVec8_V128(PipeCompiler* pc, const VecArray& d_vec, Gp
 
 #if defined(BL_JIT_ARCH_X86)
 static void fetch_predicated_vec8_avx(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
-  uint32_t vec_count = d_vec.size();
+  size_t vec_count = d_vec.size();
 
   if (n <= 4) {
-    fetchPredicatedVec8_1To3(pc, d_vec[0], s_ptr, advance_mode, predicate.count());
+    fetch_predicated_vec8_1to3(pc, d_vec[0], s_ptr, advance_mode, predicate.count());
     return;
   }
 
   if (n <= 8) {
-    fetchPredicatedVec8_1To7(pc, d_vec[0], s_ptr, advance_mode, predicate.count());
+    fetch_predicated_vec8_1to7(pc, d_vec[0], s_ptr, advance_mode, predicate.count());
     return;
   }
 
-  AsmCompiler* cc = pc->cc;
+  BackendCompiler* cc = pc->cc;
   InstId load_inst_id = pc->has_avx2() ? x86::Inst::kIdVpmaskmovd : x86::Inst::kIdVmaskmovps;
-  uint32_t vec_element_count = d_vec[0].size() / 4u;
+  size_t vec_element_count = d_vec[0].size() / 4u;
 
   Label L_LessThan4 = pc->new_label();
   Label L_Done = pc->new_label();
@@ -584,8 +584,8 @@ static void fetch_predicated_vec8_avx(PipeCompiler* pc, const VecArray& d_vec, G
 
   Vec v_tail = pc->new_similar_reg(d_vec[0], "v_tail");
   Vec v_pred = pc->new_similar_reg(d_vec[0], "v_pred");
-  Mem mPred = pc->simd_mem_const(pc->ct.loadstore16_lo8_msk8(), Bcst::kNA_Unique, v_pred);
-  mPred.set_index(countDiv4.clone_as(s_ptr));
+  Mem m_pred = pc->simd_mem_const(pc->ct<CommonTable>().loadstore16_lo8_msk8(), Bcst::kNA_Unique, v_pred);
+  m_pred.set_index(countDiv4.clone_as(s_ptr));
 
   pc->j(L_LessThan4, ucmp_lt(count, 4));
   pc->neg(tail_shift, count.r32());
@@ -596,20 +596,20 @@ static void fetch_predicated_vec8_avx(PipeCompiler* pc, const VecArray& d_vec, G
   pc->v_broadcast_u32(v_tail, tail_pixels);
 
   Mem s_mem = mem_ptr(s_ptr);
-  for (uint32_t i = 0; i < vec_count; i++) {
-    cc->vpmovsxbd(v_pred, mPred);
+  for (size_t i = 0; i < vec_count; i++) {
+    cc->vpmovsxbd(v_pred, m_pred);
     cc->emit(load_inst_id, d_vec[i], v_pred, s_mem);
     cc->vpblendvb(d_vec[i], v_tail, d_vec[i], v_pred);
 
     s_mem.add_offset(int32_t(d_vec[i].size()));
-    mPred.add_offset(-int32_t(vec_element_count * 8));
+    m_pred.add_offset(-int32_t(vec_element_count * 8));
   }
 
   pc->j(L_Done);
 
   pc->bind(L_LessThan4);
-  fetchPredicatedVec8_1To3(pc, d_vec[0], s_ptr, AdvanceMode::kNoAdvance, count);
-  for (uint32_t i = 1; i < vec_count; i++) {
+  fetch_predicated_vec8_1to3(pc, d_vec[0], s_ptr, AdvanceMode::kNoAdvance, count);
+  for (size_t i = 1; i < vec_count; i++) {
     pc->v_zero_i(d_vec[i]);
   }
 
@@ -621,8 +621,8 @@ static void fetch_predicated_vec8_avx(PipeCompiler* pc, const VecArray& d_vec, G
 }
 
 static void fetch_predicated_vec8_avx512(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
-  uint32_t vec_count = d_vec.size();
-  uint32_t vec_element_count = d_vec[0].size();
+  size_t vec_count = d_vec.size();
+  size_t vec_element_count = d_vec[0].size();
 
   Gp count = predicate.count();
 
@@ -637,10 +637,10 @@ static void fetch_predicated_vec8_avx512(PipeCompiler* pc, const VecArray& d_vec
     BL_ASSERT(n >= 64);
     BL_ASSERT(d_vec[0].is_vec512());
 
-    AsmCompiler* cc = pc->cc;
+    BackendCompiler* cc = pc->cc;
 
-    Gp n_mov = pc->new_gp("n_mov");
-    Gp n_pred = pc->new_gp("n_pred");
+    Gp n_mov = pc->new_gpz("n_mov");
+    Gp n_pred = pc->new_gpz("n_pred");
     KReg kPred = cc->new_kq("kPred");
 
     if (vec_element_count <= 32 || pc->is_64bit()) {
@@ -651,11 +651,11 @@ static void fetch_predicated_vec8_avx512(PipeCompiler* pc, const VecArray& d_vec
       //
       // Additionally, we use POPCNT to count bits in the mask, which are then used to decrement n_pred and possibly
       // increment the source pointer.
-      Gp gp_pred = pc->new_gp("gp_pred");
+      Gp gp_pred = pc->new_gpz("gp_pred");
       pc->mov(gp_pred, -1);
       pc->mov(n_pred.clone_as(count), count);
 
-      for (uint32_t i = 0; i < vec_count; i++) {
+      for (size_t i = 0; i < vec_count; i++) {
         Gp n_dec = n_pred;
         if (i != vec_count - 1) {
           n_dec = n_mov;
@@ -698,12 +698,12 @@ static void fetch_predicated_vec8_avx512(PipeCompiler* pc, const VecArray& d_vec
       }
     }
     else {
-      x86::Mem mem = pc->_get_mem_const(pc->ct.k_msk64_data);
+      x86::Mem mem = pc->_get_mem_const(pc->ct<CommonTable>().k_msk64_data);
       mem.set_index(n_mov);
       mem.set_shift(3);
       pc->mov(n_pred.clone_as(count), count);
 
-      for (uint32_t i = 0; i < vec_count; i++) {
+      for (size_t i = 0; i < vec_count; i++) {
         pc->umin(n_mov, n_pred, vec_element_count);
 
         if (vec_element_count == 64u)
@@ -730,8 +730,8 @@ static void fetch_predicated_vec8_avx512(PipeCompiler* pc, const VecArray& d_vec
 }
 
 static void fetch_predicated_vec32_avx(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
-  uint32_t vec_count = d_vec.size();
-  uint32_t vec_element_count = d_vec[0].size() / 4u;
+  size_t vec_count = d_vec.size();
+  size_t vec_element_count = d_vec[0].size() / 4u;
 
   Gp count = predicate.count();
   Mem s_mem = mem_ptr(s_ptr);
@@ -740,19 +740,19 @@ static void fetch_predicated_vec32_avx(PipeCompiler* pc, const VecArray& d_vec, 
     pc->v_load_predicated_u32(d_vec[0], s_mem, n, predicate);
   }
   else {
-    AsmCompiler* cc = pc->cc;
+    BackendCompiler* cc = pc->cc;
     InstId load_inst_id = pc->has_avx2() ? x86::Inst::kIdVpmaskmovd : x86::Inst::kIdVmaskmovps;
 
     Vec v_pred = pc->new_similar_reg(d_vec[0], "v_pred");
-    Mem mPred = pc->simd_mem_const(pc->ct.loadstore16_lo8_msk8(), Bcst::kNA_Unique, v_pred);
-    mPred.set_index(count.clone_as(s_ptr), 3);
+    Mem m_pred = pc->simd_mem_const(pc->ct<CommonTable>().loadstore16_lo8_msk8(), Bcst::kNA_Unique, v_pred);
+    m_pred.set_index(count.clone_as(s_ptr), 3);
 
-    for (uint32_t i = 0; i < vec_count; i++) {
-      cc->vpmovsxbd(v_pred, mPred);
+    for (size_t i = 0; i < vec_count; i++) {
+      cc->vpmovsxbd(v_pred, m_pred);
       cc->emit(load_inst_id, d_vec[i], v_pred, s_mem);
 
       s_mem.add_offset(int32_t(d_vec[i].size()));
-      mPred.add_offset(-int32_t(vec_element_count * 8));
+      m_pred.add_offset(-int32_t(vec_element_count * 8));
     }
   }
 
@@ -762,8 +762,8 @@ static void fetch_predicated_vec32_avx(PipeCompiler* pc, const VecArray& d_vec, 
 }
 
 static void fetch_predicated_vec32_avx512(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
-  uint32_t vec_count = d_vec.size();
-  uint32_t vec_element_count = d_vec[0].size() / 4u;
+  size_t vec_count = d_vec.size();
+  size_t vec_element_count = d_vec[0].size() / 4u;
 
   Gp count = predicate.count();
   Mem s_mem = mem_ptr(s_ptr);
@@ -772,7 +772,7 @@ static void fetch_predicated_vec32_avx512(PipeCompiler* pc, const VecArray& d_ve
     pc->v_load_predicated_u32(d_vec[0], s_mem, n, predicate);
   }
   else {
-    AsmCompiler* cc = pc->cc;
+    BackendCompiler* cc = pc->cc;
     Gp gp_pred;
     KReg kPred;
 
@@ -793,7 +793,7 @@ static void fetch_predicated_vec32_avx512(PipeCompiler* pc, const VecArray& d_ve
     else
       cc->kmovq(kPred, gp_pred);
 
-    for (uint32_t i = 0; i < vec_count; i++) {
+    for (size_t i = 0; i < vec_count; i++) {
       cc->k(kPred).z().vmovdqu32(d_vec[i], s_mem);
       s_mem.add_offset(int32_t(d_vec[i].size()));
 
@@ -816,10 +816,10 @@ static void fetch_predicated_vec32_avx512(PipeCompiler* pc, const VecArray& d_ve
 // strategies. If the number of vectors to fetch is greater than 1 we branch to the implementation depending
 // on whether we can fetch at least one FULL vector - and then we fetch the rest without branches. If we cannot
 // fetch a FULL vector, we would use branches to fetch individual lanes.
-static void fetchPredicatedVec32_V128(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+static void fetch_predicated_vec32_v128(PipeCompiler* pc, const VecArray& d_vec, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
   bl_unused(n);
 
-  uint32_t vec_count = d_vec.size();
+  size_t vec_count = d_vec.size();
 
   Gp count = predicate.count();
 
@@ -828,14 +828,14 @@ static void fetchPredicatedVec32_V128(PipeCompiler* pc, const VecArray& d_vec, G
   // NOTE: We have to zero the registers as otherwise they would contain garbage, which would then be processed.
   // The garbage is actually only the part of the problem - much bigger problem would be AsmJit not being to
   // compute exact liveness, which could possible make the life of d_vec[1..N] to span across most of the function.
-  for (uint32_t i = 1u; i < vec_count; i++) {
+  for (size_t i = 1u; i < vec_count; i++) {
     pc->v_zero_i(d_vec[i]);
   }
 
   Label L_Done;
 
-  Gp adjusted1 = pc->new_gp("@adjusted1");
-  Gp adjusted2 = pc->new_gp("@adjusted2");
+  Gp adjusted1 = pc->new_gpz("@adjusted1");
+  Gp adjusted2 = pc->new_gpz("@adjusted2");
 
   pc->add_ext(adjusted2, s_ptr, count.clone_as(s_ptr), 4, -4);
 
@@ -856,8 +856,8 @@ static void fetchPredicatedVec32_V128(PipeCompiler* pc, const VecArray& d_vec, G
 
     pc->add(adjusted1, s_ptr, 20);
     pc->umin(adjusted1, adjusted1, adjusted2);
-    fetchSecond32BitElement(pc, d_vec[1], mem_ptr(adjusted1));
-    fetchThird32BitElement(pc, d_vec[1], mem_ptr(adjusted2));
+    fetch_second_32bit_element(pc, d_vec[1], mem_ptr(adjusted1));
+    fetch_third_32bit_element(pc, d_vec[1], mem_ptr(adjusted2));
 
     pc->j(L_Done);
     pc->bind(L_TailOnly);
@@ -867,8 +867,8 @@ static void fetchPredicatedVec32_V128(PipeCompiler* pc, const VecArray& d_vec, G
     pc->v_loadu32(d_vec[0], mem_ptr(s_ptr));
     pc->add(adjusted1, s_ptr, 4);
     pc->umin(adjusted1, adjusted1, adjusted2);
-    fetchSecond32BitElement(pc, d_vec[0], mem_ptr(adjusted1));
-    fetchThird32BitElement(pc, d_vec[0], mem_ptr(adjusted2));
+    fetch_second_32bit_element(pc, d_vec[0], mem_ptr(adjusted1));
+    fetch_third_32bit_element(pc, d_vec[0], mem_ptr(adjusted2));
   }
 
   if (L_Done.is_valid()) {
@@ -882,7 +882,7 @@ static void fetchPredicatedVec32_V128(PipeCompiler* pc, const VecArray& d_vec, G
   predicate.add_materialized_end_ptr(s_ptr, adjusted1, adjusted2);
 }
 
-void fetchPredicatedVec8(PipeCompiler* pc, const VecArray& d_vec_, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+void fetch_predicated_vec8(PipeCompiler* pc, const VecArray& d_vec_, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
   // Restrict the number of vectors to match `n` exactly.
   VecArray d_vec(d_vec_);
   d_vec.truncate(calculate_vec_count(d_vec[0].size(), n));
@@ -915,10 +915,10 @@ void fetchPredicatedVec8(PipeCompiler* pc, const VecArray& d_vec_, Gp s_ptr, uin
   BL_ASSERT(d_vec[0].is_vec128());
 #endif // BL_JIT_ARCH_X86
 
-  fetchPredicatedVec8_V128(pc, d_vec, s_ptr, n, advance_mode, predicate);
+  fetch_predicated_vec8_v128(pc, d_vec, s_ptr, n, advance_mode, predicate);
 }
 
-void fetchPredicatedVec32(PipeCompiler* pc, const VecArray& d_vec_, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+void fetch_predicated_vec32(PipeCompiler* pc, const VecArray& d_vec_, Gp s_ptr, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
   // Restrict the number of vectors to match `n` exactly.
   VecArray d_vec(d_vec_);
   d_vec.truncate(calculate_vec_count(d_vec[0].size(), n * 4u));
@@ -951,7 +951,7 @@ void fetchPredicatedVec32(PipeCompiler* pc, const VecArray& d_vec_, Gp s_ptr, ui
   BL_ASSERT(d_vec[0].is_vec128());
 #endif // BL_JIT_ARCH_X86
 
-  fetchPredicatedVec32_V128(pc, d_vec, s_ptr, n, advance_mode, predicate);
+  fetch_predicated_vec32_v128(pc, d_vec, s_ptr, n, advance_mode, predicate);
 }
 
 // bl::Pipeline::Jit::FetchUtils - Predicated Store
@@ -959,10 +959,10 @@ void fetchPredicatedVec32(PipeCompiler* pc, const VecArray& d_vec_, Gp s_ptr, ui
 
 #if defined(BL_JIT_ARCH_X86)
 static void store_predicated_vec8_avx512(PipeCompiler* pc, Gp d_ptr, VecArray s_vec, uint32_t n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
-  AsmCompiler* cc = pc->cc;
+  BackendCompiler* cc = pc->cc;
 
-  uint32_t vec_count = s_vec.size();
-  uint32_t vec_element_count = s_vec[0].size();
+  size_t vec_count = s_vec.size();
+  size_t vec_element_count = s_vec[0].size();
 
   Gp count = predicate.count();
 
@@ -996,7 +996,7 @@ static void store_predicated_vec8_avx512(PipeCompiler* pc, Gp d_ptr, VecArray s_
     }
     else if (s_vec[0].is_vec256()) {
       VecArray new_vec;
-      uint32_t new_count = (vec_count + 1u) / 2u;
+      size_t new_count = (vec_count + 1u) / 2u;
 
       pc->new_vec_array(new_vec, new_count, VecWidth::k512, "@store_vec");
       pc->v_insert_v256(new_vec, s_vec.even(), s_vec.odd(), 1);
@@ -1020,7 +1020,7 @@ static void store_predicated_vec8_avx512(PipeCompiler* pc, Gp d_ptr, VecArray s_
   // the number of write operations that involve predication so we try to store as many vectors as possible by using
   // regular stores. This complicates the code a bit, but improved the performance on all the hardware tested.
   Vec v_tail = pc->new_similar_reg(s_vec[0], "@v_tail");
-  Gp remaining = pc->new_gp("@remaining");
+  Gp remaining = pc->new_gpz("@remaining");
 
   if (advance_mode == AdvanceMode::kNoAdvance) {
     Gp dPtrCopy = pc->new_similar_reg(d_ptr, "@dPtrCopy");
@@ -1032,7 +1032,7 @@ static void store_predicated_vec8_avx512(PipeCompiler* pc, Gp d_ptr, VecArray s_
   Label L_Done = pc->new_label();
 
   pc->mov(remaining.r32(), count.r32());
-  for (uint32_t i = 0; i < vec_count - 1; i++) {
+  for (size_t i = 0; i < vec_count - 1; i++) {
     pc->v_mov(v_tail, s_vec[i]);
     pc->j(L_Tail, sub_c(remaining.r32(), vec_element_count));
     pc->v_store_iany(mem_ptr(d_ptr), s_vec[i], vec_element_count, Alignment(1));
@@ -1049,7 +1049,7 @@ static void store_predicated_vec8_avx512(PipeCompiler* pc, Gp d_ptr, VecArray s_
 }
 #endif // BL_JIT_ARCH_X86
 
-void storePredicatedVec8(PipeCompiler* pc, const Gp& d_ptr_, const VecArray& s_vec_, uint32_t n, AdvanceMode advance_mode_, PixelPredicate& predicate) noexcept {
+void store_predicated_vec8(PipeCompiler* pc, const Gp& d_ptr_, const VecArray& s_vec_, uint32_t n, AdvanceMode advance_mode_, PixelPredicate& predicate) noexcept {
   // Restrict the number of vectors to match `n` exactly.
   VecArray s_vec(s_vec_);
   s_vec.truncate(calculate_vec_count(s_vec[0].size(), n));
@@ -1077,13 +1077,13 @@ void storePredicatedVec8(PipeCompiler* pc, const Gp& d_ptr_, const VecArray& s_v
   Gp count = predicate.count();
 
   Mem d_mem = mem_ptr(d_ptr);
-  uint32_t size_minus_one = s_vec.size() - 1u;
+  size_t size_minus_one = s_vec.size() - 1u;
 
   Vec v_last = s_vec[size_minus_one];
   bool tail_can_be_empty = false;
 
-  uint32_t remaining = n;
-  uint32_t element_count = v_last.size();
+  size_t remaining = n;
+  size_t element_count = v_last.size();
 
   auto makeDPtrCopy = [&]() noexcept {
     BL_ASSERT(advance_mode == AdvanceMode::kNoAdvance);
@@ -1109,9 +1109,9 @@ void storePredicatedVec8(PipeCompiler* pc, const Gp& d_ptr_, const VecArray& s_v
   // Process whole vectors in case that there is more than one vector in `s_vec`.
   if (size_minus_one) {
     Label L_Tail = pc->new_label();
-    uint32_t required_count = element_count;
+    size_t required_count = element_count;
 
-    for (uint32_t i = 0; i < size_minus_one; i++) {
+    for (size_t i = 0; i < size_minus_one; i++) {
       pc->j(L_Tail, ucmp_lt(count, required_count));
       pc->v_storeuvec_u32(d_mem, s_vec[i]);
       pc->add(d_ptr, d_ptr, v_last.size());
@@ -1204,7 +1204,7 @@ void storePredicatedVec8(PipeCompiler* pc, const Gp& d_ptr_, const VecArray& s_v
   bl_unused(tail_can_be_empty);
 }
 
-void storePredicatedVec32(PipeCompiler* pc, const Gp& d_ptr_, const VecArray& s_vec_, uint32_t n, AdvanceMode advance_mode_, PixelPredicate& predicate) noexcept {
+void store_predicated_vec32(PipeCompiler* pc, const Gp& d_ptr_, const VecArray& s_vec_, uint32_t n, AdvanceMode advance_mode_, PixelPredicate& predicate) noexcept {
   // Restrict the number of vectors to match `n` exactly.
   VecArray s_vec(s_vec_);
   s_vec.truncate(calculate_vec_count(s_vec[0].size(), n * 4u));
@@ -1225,13 +1225,13 @@ void storePredicatedVec32(PipeCompiler* pc, const Gp& d_ptr_, const VecArray& s_
   Gp count = predicate.count();
 
   Mem d_mem = mem_ptr(d_ptr);
-  uint32_t size_minus_one = s_vec.size() - 1u;
+  size_t size_minus_one = s_vec.size() - 1u;
 
   Vec v_last = s_vec[size_minus_one];
   bool tail_can_be_empty = false;
 
-  uint32_t remaining = n;
-  uint32_t element_count = v_last.size() / 4u;
+  size_t remaining = n;
+  size_t element_count = v_last.size() / 4u;
 
   auto makeDPtrCopy = [&]() noexcept {
     BL_ASSERT(advance_mode == AdvanceMode::kNoAdvance);
@@ -1259,9 +1259,9 @@ void storePredicatedVec32(PipeCompiler* pc, const Gp& d_ptr_, const VecArray& s_
   // considering the high cost of predicated stores of tested micro-architectures.
   if (size_minus_one) {
     Label L_Tail = pc->new_label();
-    uint32_t required_count = element_count;
+    size_t required_count = element_count;
 
-    for (uint32_t i = 0; i < size_minus_one; i++) {
+    for (size_t i = 0; i < size_minus_one; i++) {
       pc->j(L_Tail, ucmp_lt(count, required_count));
       pc->v_storeuvec_u32(d_mem, s_vec[i]);
       pc->add(d_ptr, d_ptr, v_last.size());
@@ -1277,7 +1277,7 @@ void storePredicatedVec32(PipeCompiler* pc, const Gp& d_ptr_, const VecArray& s_
 
 #if defined(BL_JIT_ARCH_X86)
   // Let's use AVX/AVX2/AVX-512 masking stores if fast store with mask is enabled.
-  if (pc->has_opt_flag(PipeOptFlags::kFastStoreWithMask)) {
+  if (pc->has_cpu_hint(CpuHints::kVecMaskedStore)) {
     pc->v_store_predicated_u32(d_mem, v_last, remaining, predicate);
 
     // Local advancing can be true, however, if we stored with predicate it means that the initial pointer
@@ -1342,8 +1342,8 @@ void storePredicatedVec32(PipeCompiler* pc, const Gp& d_ptr_, const VecArray& s_
     adjusted2 = materialized->adjusted2;
   }
   else {
-    adjusted1 = pc->new_gp("@adjusted1");
-    adjusted2 = pc->new_gp("@adjusted2");
+    adjusted1 = pc->new_gpz("@adjusted1");
+    adjusted2 = pc->new_gpz("@adjusted2");
 
     pc->add_ext(adjusted2, d_ptr, count.clone_as(d_ptr), 4, -4);
     pc->add(adjusted1, d_ptr, 4);
@@ -1372,7 +1372,7 @@ static void multiply_packed_mask_with_global_alpha(PipeCompiler* pc, VecArray vm
   BL_ASSERT(vm.size() > 0u);
   BL_ASSERT(ga != nullptr);
 
-  uint32_t vc = calculate_vec_count(vm[0].size(), n);
+  size_t vc = calculate_vec_count(vm[0].size(), n);
   vm.truncate(vc);
 
 #if defined(BL_JIT_ARCH_A64)
@@ -1406,7 +1406,7 @@ static void multiply_packed_mask_with_global_alpha(PipeCompiler* pc, VecArray vm
     pc->v_packs_i16_u8(vm, vm, vm);
   }
   else {
-    Operand zero = pc->simd_const(&pc->ct.i_0000000000000000, Bcst::kNA, vm[0]);
+    Operand zero = pc->simd_const(&pc->ct<CommonTable>().p_0000000000000000, Bcst::kNA, vm[0]);
 
     VecArray vt;
     pc->new_vec_array(vt, vc, vm.vec_width(), "@vt0");
@@ -1422,24 +1422,24 @@ static void multiply_packed_mask_with_global_alpha(PipeCompiler* pc, VecArray vm
 #endif
 }
 
-void fetchMaskA8IntoPA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate, GlobalAlpha* ga) noexcept {
+void fetch_mask_a8_into_pa(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate, GlobalAlpha* ga) noexcept {
   BL_ASSERT(d_vec.size() >= pc->vec_count_of(DataWidth::k8, n) && d_vec.vec_width() == pc->vec_width_of(DataWidth::k8, n));
 
-  fetchVec8(pc, d_vec, s_ptr, n.value(), advance_mode, predicate);
+  fetch_vec8(pc, d_vec, s_ptr, uint32_t(n), advance_mode, predicate);
 
   if (ga) {
-    multiply_packed_mask_with_global_alpha(pc, d_vec, n.value(), ga);
+    multiply_packed_mask_with_global_alpha(pc, d_vec, uint32_t(n), ga);
   }
 }
 
-void fetchMaskA8IntoUA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate, GlobalAlpha* ga) noexcept {
+void fetch_mask_a8_into_ua(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate, GlobalAlpha* ga) noexcept {
   BL_ASSERT(d_vec.size() >= pc->vec_count_of(DataWidth::k16, n) && d_vec.vec_width() == pc->vec_width_of(DataWidth::k16, n));
 
-  uint32_t vc = pc->vec_count_of(DataWidth::k16, n);
+  size_t vc = pc->vec_count_of(DataWidth::k16, n);
   Mem m = ptr(s_ptr);
 
   if (predicate.is_empty()) {
-    switch (n.value()) {
+    switch (uint32_t(n)) {
       case 2:
 #if defined(BL_JIT_ARCH_X86)
         if (pc->has_avx2()) {
@@ -1463,7 +1463,7 @@ void fetchMaskA8IntoUA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
         break;
 
       default: {
-        for (uint32_t i = 0; i < vc; i++) {
+        for (size_t i = 0; i < vc; i++) {
           pc->v_cvt_u8_lo_to_u16(d_vec[i], m);
           m.add_offset_lo32(int32_t(d_vec[i].size() / 2u));
         }
@@ -1472,18 +1472,18 @@ void fetchMaskA8IntoUA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
     }
 
     if (advance_mode == AdvanceMode::kAdvance) {
-      pc->add(s_ptr, s_ptr, n.value());
+      pc->add(s_ptr, s_ptr, uint32_t(n));
     }
   }
   else {
-    if (n.value() <= 8) {
-      fetchPredicatedVec8(pc, d_vec, s_ptr, n.value(), advance_mode, predicate);
+    if (n <= PixelCount(8)) {
+      fetch_predicated_vec8(pc, d_vec, s_ptr, uint32_t(n), advance_mode, predicate);
       pc->v_cvt_u8_lo_to_u16(d_vec[0], d_vec[0]);
     }
 #if defined(BL_JIT_ARCH_X86)
     else if (d_vec[0].size() > 16u) {
       VecArray lo = d_vec.clone_as(VecWidth(uint32_t(d_vec.vec_width()) - 1u));
-      fetchPredicatedVec8(pc, lo, s_ptr, n.value(), advance_mode, predicate);
+      fetch_predicated_vec8(pc, lo, s_ptr, uint32_t(n), advance_mode, predicate);
       pc->v_cvt_u8_lo_to_u16(d_vec, d_vec);
     }
 #endif // BL_JIT_ARCH_X86
@@ -1491,7 +1491,7 @@ void fetchMaskA8IntoUA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
       VecArray even = d_vec.even();
       VecArray odd = d_vec.odd();
 
-      fetchPredicatedVec8(pc, even, s_ptr, n.value(), advance_mode, predicate);
+      fetch_predicated_vec8(pc, even, s_ptr, uint32_t(n), advance_mode, predicate);
 
       pc->v_cvt_u8_hi_to_u16(odd, even);
       pc->v_cvt_u8_lo_to_u16(even, even);
@@ -1506,11 +1506,11 @@ void fetchMaskA8IntoUA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
 
 #if defined(BL_JIT_ARCH_X86)
 // Works for SSE4.1, AVX/AVX2, and AVX-512 cases.
-static void fetchMaskA8IntoPCByExpandingTo32Bits(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, GlobalAlpha* ga) noexcept {
+static void fetch_mask_a8_into_pc_by_expanding_to_32bits(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, GlobalAlpha* ga) noexcept {
   pc->v_loaduvec_u8_to_u32(d_vec, ptr(s_ptr));
 
   if (advance_mode == AdvanceMode::kAdvance) {
-    pc->add(s_ptr, s_ptr, n.value());
+    pc->add(s_ptr, s_ptr, uint32_t(n));
   }
 
   // TODO: [JIT] We can save some multiplications if we only extend to 16 bits, then multiply, and then shuffle.
@@ -1519,29 +1519,29 @@ static void fetchMaskA8IntoPCByExpandingTo32Bits(PipeCompiler* pc, VecArray& d_v
     pc->v_div255_u16(d_vec);
   }
 
-  pc->v_swizzlev_u8(d_vec, d_vec, pc->simd_const(&pc->ct.swizu8_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, d_vec));
+  pc->v_swizzlev_u8(d_vec, d_vec, pc->simd_const(&pc->ct<CommonTable>().swizu8_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, d_vec));
 }
 
 // AVX2 and AVX-512 code using YMM/ZMM registers require a different approach compared to 128-bit registers as we
 // are going to cross 128-bit boundaries, which usually require either zero-extension or using one of AVX2/AVX-512
 // permute instructions.
-static void expandA8MaskToPC_YmmZmm(PipeCompiler* pc, VecArray& d_vec, VecArray& a_vec) noexcept {
+static void expand_a8_mask_to_pc_ymm_zmm(PipeCompiler* pc, VecArray& d_vec, VecArray& a_vec) noexcept {
   // Number of 4-vec chunks for swizzling - each 4-vec chunk is swizzled/unpacked independently.
-  uint32_t qCount = (d_vec.size() + 3) / 4;
+  size_t q_count = (d_vec.size() + 3) / 4;
 
   // AVX512_VBMI provides VPERMB, which we want to use - on modern micro-architectures such as Zen4+ it's as fast as
   // VPSHUFB.
   if (d_vec.is_vec512() && pc->has_avx512_vbmi()) {
-    Vec predicate0 = pc->simd_vec_const(&pc->ct.permu8_a8_to_rgba32_pc, Bcst::kNA_Unique, d_vec);
+    Vec predicate0 = pc->simd_vec_const(&pc->ct<CommonTable>().permu8_a8_to_rgba32_pc, Bcst::kNA_Unique, d_vec);
     Vec predicate1;
 
     if (d_vec.size() >= 2u) {
-      predicate1 = pc->simd_vec_const(&pc->ct.permu8_a8_to_rgba32_pc_second, Bcst::kNA_Unique, d_vec);
+      predicate1 = pc->simd_vec_const(&pc->ct<CommonTable>().permu8_a8_to_rgba32_pc_second, Bcst::kNA_Unique, d_vec);
     }
 
-    for (uint32_t q = 0; q < qCount; q++) {
-      uint32_t d = q * 4;
-      uint32_t remain = bl_min<uint32_t>(d_vec.size() - d, 4);
+    for (size_t q = 0; q < q_count; q++) {
+      size_t d = q * 4;
+      size_t remain = bl_min(d_vec.size() - d, size_t(4));
 
       if (remain >= 3) {
         pc->v_extract_v256(d_vec[d + 2], a_vec[q], 1);
@@ -1563,18 +1563,18 @@ static void expandA8MaskToPC_YmmZmm(PipeCompiler* pc, VecArray& d_vec, VecArray&
     }
   }
   else if (d_vec.is_vec512()) {
-    Vec predicate = pc->simd_vec_const(&pc->ct.swizu8_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, d_vec);
+    Vec predicate = pc->simd_vec_const(&pc->ct<CommonTable>().swizu8_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, d_vec);
 
-    for (uint32_t q = 0; q < qCount; q++) {
-      uint32_t d = q * 4;
-      uint32_t remain = bl_min<uint32_t>(d_vec.size() - d, 4);
+    for (size_t q = 0; q < q_count; q++) {
+      size_t d = q * 4;
+      size_t remain = bl_min(d_vec.size() - d, size_t(4));
 
-      for (uint32_t i = 1; i < remain; i++) {
+      for (size_t i = 1; i < remain; i++) {
         Vec& dv = d_vec[d + i];
-        pc->v_extract_v128(dv, a_vec[q], i);
+        pc->v_extract_v128(dv, a_vec[q], uint32_t(i));
       }
 
-      for (uint32_t i = 0; i < remain; i++) {
+      for (size_t i = 0; i < remain; i++) {
         Vec& dv = d_vec[d + i];
         pc->v_cvt_u8_to_u32(dv, i == 0 ? a_vec[q] : dv);
         pc->v_swizzlev_u8(dv, dv, predicate);
@@ -1584,11 +1584,11 @@ static void expandA8MaskToPC_YmmZmm(PipeCompiler* pc, VecArray& d_vec, VecArray&
   else {
     BL_ASSERT(d_vec.is_vec256());
 
-    Vec predicate = pc->simd_vec_const(&pc->ct.swizu8_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, d_vec);
+    Vec predicate = pc->simd_vec_const(&pc->ct<CommonTable>().swizu8_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, d_vec);
 
-    for (uint32_t q = 0; q < qCount; q++) {
-      uint32_t d = q * 4;
-      uint32_t remain = bl_min<uint32_t>(d_vec.size() - d, 4);
+    for (size_t q = 0; q < q_count; q++) {
+      size_t d = q * 4;
+      size_t remain = bl_min(d_vec.size() - d, size_t(4));
 
       if (remain >= 3) {
         pc->v_swizzle_u64x4(d_vec[d + 2], a_vec[q], swizzle(1, 0, 3, 2));
@@ -1602,7 +1602,7 @@ static void expandA8MaskToPC_YmmZmm(PipeCompiler* pc, VecArray& d_vec, VecArray&
         pc->v_swizzle_u32x4(d_vec[d + 3], d_vec[d + 2], swizzle(1, 0, 3, 2));
       }
 
-      for (uint32_t i = 0; i < remain; i++) {
+      for (size_t i = 0; i < remain; i++) {
         Vec& dv = d_vec[d + i];
         pc->v_cvt_u8_to_u32(dv, i == 0 ? a_vec[q] : dv);
         pc->v_swizzlev_u8(dv, dv, predicate);
@@ -1612,9 +1612,9 @@ static void expandA8MaskToPC_YmmZmm(PipeCompiler* pc, VecArray& d_vec, VecArray&
 }
 #endif // BL_JIT_ARCH_X86
 
-void fetchMaskA8IntoPC(PipeCompiler* pc, VecArray d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate, GlobalAlpha* ga) noexcept {
+void fetch_mask_a8_into_pc(PipeCompiler* pc, VecArray d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate, GlobalAlpha* ga) noexcept {
   VecWidth vw = d_vec.vec_width();
-  uint32_t vc = VecWidthUtils::vec_count_of(vw, DataWidth::k32, n);
+  size_t vc = VecWidthUtils::vec_count_of(vw, DataWidth::k32, uint32_t(n));
 
   BL_ASSERT(d_vec.size() >= vc);
   d_vec.truncate(vc);
@@ -1625,36 +1625,36 @@ void fetchMaskA8IntoPC(PipeCompiler* pc, VecArray d_vec, const Gp& s_ptr, PixelC
   //
   // NOTE: This approach is only suitable for X86 as we can zero extend BYTE to DWORD during the load itself, which
   // makes it the best approach as we can use a single predicate to duplicate the alpha to all required lanes.
-  if (predicate.is_empty() && pc->has_sse4_1() && n >= 4u) {
-    fetchMaskA8IntoPCByExpandingTo32Bits(pc, d_vec, s_ptr, n, advance_mode, ga);
+  if (predicate.is_empty() && pc->has_sse4_1() && n >= PixelCount(4)) {
+    fetch_mask_a8_into_pc_by_expanding_to_32bits(pc, d_vec, s_ptr, n, advance_mode, ga);
     return;
   }
 #endif // BL_JIT_ARCH_X86
 
   VecArray a_vec = d_vec.every_nth(4);
-  fetchVec8(pc, a_vec, s_ptr, n.value(), advance_mode, predicate);
+  fetch_vec8(pc, a_vec, s_ptr, uint32_t(n), advance_mode, predicate);
 
   // TODO: [JIT] This is not optimal in X86 case - we should zero extend to U16, multiply, and then expand to U32.
   if (ga) {
-    multiply_packed_mask_with_global_alpha(pc, a_vec, n.value(), ga);
+    multiply_packed_mask_with_global_alpha(pc, a_vec, uint32_t(n), ga);
   }
 
 #if defined(BL_JIT_ARCH_X86)
   if (!d_vec.is_vec128()) {
     // At least 8 pixels should be fetched in order to use YMM registers and 16 pixels in order to use ZMM registers.
-    BL_ASSERT(n >= d_vec[0].size() / 4u);
+    BL_ASSERT(uint32_t(n) >= d_vec[0].size() / 4u);
 
-    expandA8MaskToPC_YmmZmm(pc, d_vec, a_vec);
+    expand_a8_mask_to_pc_ymm_zmm(pc, d_vec, a_vec);
     return;
   }
 #endif // BL_JIT_ARCH_X86
 
   // Number of 4-vec chunks for swizzling - each 4-vec chunk is swizzled/unpacked independently.
-  uint32_t qCount = (d_vec.size() + 3) / 4;
+  size_t q_count = (d_vec.size() + 3u) / 4u;
 
   // We have two choices - use interleave sequences (2 interleaves are required to expand one A8 to 4 channels)
   // or use VPSHUFB/TBL (table lookup) instructions to do only a single table lookup per register.
-  bool use_interleave_sequence = n <= 8;
+  bool use_interleave_sequence = (n <= PixelCount(8));
 
 #if defined(BL_JIT_ARCH_X86)
   if (!pc->has_ssse3()) {
@@ -1663,9 +1663,9 @@ void fetchMaskA8IntoPC(PipeCompiler* pc, VecArray d_vec, const Gp& s_ptr, PixelC
 #endif // BL_JIT_ARCH_X86
 
   if (use_interleave_sequence) {
-    for (uint32_t q = 0; q < qCount; q++) {
-      uint32_t d = q * 4;
-      uint32_t remain = vc - d;
+    for (size_t q = 0; q < q_count; q++) {
+      size_t d = q * 4;
+      size_t remain = vc - d;
 
       Vec a0 = a_vec[q];
 
@@ -1696,23 +1696,23 @@ void fetchMaskA8IntoPC(PipeCompiler* pc, VecArray d_vec, const Gp& s_ptr, PixelC
     bool limit_predicate_count = pc->vec_reg_count() < 32u;
 
     Operand swiz[4];
-    swiz[0] = pc->simd_const(&pc->ct.swizu8_xxxxxxxxxxxx3210_to_3333222211110000, Bcst::kNA, d_vec);
+    swiz[0] = pc->simd_const(&pc->ct<CommonTable>().swizu8_xxxxxxxxxxxx3210_to_3333222211110000, Bcst::kNA, d_vec);
 
     if (vc >= 2u) {
-      swiz[1] = pc->simd_const(&pc->ct.swizu8_xxxxxxxx3210xxxx_to_3333222211110000, Bcst::kNA, d_vec);
+      swiz[1] = pc->simd_const(&pc->ct<CommonTable>().swizu8_xxxxxxxx3210xxxx_to_3333222211110000, Bcst::kNA, d_vec);
     }
 
     if (vc >= 3u) {
-      swiz[2] = limit_predicate_count ? swiz[0] : pc->simd_const(&pc->ct.swizu8_xxxx3210xxxxxxxx_to_3333222211110000, Bcst::kNA, d_vec);
+      swiz[2] = limit_predicate_count ? swiz[0] : pc->simd_const(&pc->ct<CommonTable>().swizu8_xxxx3210xxxxxxxx_to_3333222211110000, Bcst::kNA, d_vec);
     }
 
     if (vc >= 4u) {
-      swiz[3] = limit_predicate_count ? swiz[1] : pc->simd_const(&pc->ct.swizu8_3210xxxxxxxxxxxx_to_3333222211110000, Bcst::kNA, d_vec);
+      swiz[3] = limit_predicate_count ? swiz[1] : pc->simd_const(&pc->ct<CommonTable>().swizu8_3210xxxxxxxxxxxx_to_3333222211110000, Bcst::kNA, d_vec);
     }
 
-    for (uint32_t q = 0; q < qCount; q++) {
-      uint32_t d = q * 4;
-      uint32_t remain = vc - d;
+    for (size_t q = 0; q < q_count; q++) {
+      size_t d = q * 4;
+      size_t remain = vc - d;
 
       Vec a0 = a_vec[q];
 
@@ -1723,7 +1723,7 @@ void fetchMaskA8IntoPC(PipeCompiler* pc, VecArray d_vec, const Gp& s_ptr, PixelC
           pc->v_swizzle_u32x4(a1, a0, swizzle(3, 2, 3, 2));
         }
 
-        if (remain >= 4) {
+        if (remain >= 4u) {
           pc->v_swizzlev_u8(d_vec[d + 3], a1, swiz[3]);
         }
 
@@ -1739,20 +1739,20 @@ void fetchMaskA8IntoPC(PipeCompiler* pc, VecArray d_vec, const Gp& s_ptr, PixelC
   }
 }
 
-void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate, GlobalAlpha* ga) noexcept {
+void fetch_mask_a8_into_uc(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate, GlobalAlpha* ga) noexcept {
   BL_ASSERT(d_vec.size() >= pc->vec_count_of(DataWidth::k64, n) && d_vec.vec_width() == pc->vec_width_of(DataWidth::k64, n));
 
 #if defined(BL_JIT_ARCH_X86)
   VecWidth vec_width = pc->vec_width_of(DataWidth::k64, n);
 #endif // BL_JIT_ARCH_X86
 
-  uint32_t vec_count = pc->vec_count_of(DataWidth::k64, n);
+  size_t vec_count = pc->vec_count_of(DataWidth::k64, n);
   Mem m = ptr(s_ptr);
 
   // Maybe unused on AArch64 in release mode.
   bl_unused(vec_count);
 
-  switch (n.value()) {
+  switch (uint32_t(n)) {
     case 1: {
       BL_ASSERT(predicate.is_empty());
       BL_ASSERT(vec_count == 1);
@@ -1761,7 +1761,7 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
       if (!pc->has_avx2()) {
         pc->v_load8(d_vec[0], m);
         if (advance_mode == AdvanceMode::kAdvance) {
-          pc->add(s_ptr, s_ptr, n.value());
+          pc->add(s_ptr, s_ptr, uint32_t(n));
         }
         pc->v_swizzle_lo_u16x4(d_vec[0], d_vec[0], swizzle(0, 0, 0, 0));
       }
@@ -1770,7 +1770,7 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
       {
         pc->v_broadcast_u8(d_vec[0], m);
         if (advance_mode == AdvanceMode::kAdvance) {
-          pc->add(s_ptr, s_ptr, n.value());
+          pc->add(s_ptr, s_ptr, uint32_t(n));
         }
         pc->v_cvt_u8_lo_to_u16(d_vec[0], d_vec[0]);
       }
@@ -1787,7 +1787,7 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
 
 #if defined(BL_JIT_ARCH_X86)
       if (!predicate.is_empty() || !pc->has_avx2()) {
-        fetchVec8(pc, d_vec, s_ptr, n.value(), advance_mode, predicate);
+        fetch_vec8(pc, d_vec, s_ptr, uint32_t(n), advance_mode, predicate);
         pc->v_interleave_lo_u8(d_vec[0], d_vec[0], d_vec[0]);
         pc->v_interleave_lo_u16(d_vec[0], d_vec[0], d_vec[0]);
         pc->v_cvt_u8_lo_to_u16(d_vec[0], d_vec[0]);
@@ -1795,13 +1795,13 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
       else {
         pc->v_loadu16_u8_to_u64(d_vec[0], m);
         if (advance_mode == AdvanceMode::kAdvance) {
-          pc->add(s_ptr, s_ptr, n.value());
+          pc->add(s_ptr, s_ptr, uint32_t(n));
         }
-        pc->v_swizzlev_u8(d_vec[0], d_vec[0], pc->simd_const(&pc->ct.swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d_vec[0]));
+        pc->v_swizzlev_u8(d_vec[0], d_vec[0], pc->simd_const(&pc->ct<CommonTable>().swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d_vec[0]));
       }
 #else
-      fetchVec8(pc, d_vec, s_ptr, n.value(), advance_mode, predicate);
-      pc->v_swizzlev_u8(d_vec[0], d_vec[0], pc->simd_const(&pc->ct.swizu8_xxxxxxxxxxxxxx10_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d_vec[0]));
+      fetch_vec8(pc, d_vec, s_ptr, uint32_t(n), advance_mode, predicate);
+      pc->v_swizzlev_u8(d_vec[0], d_vec[0], pc->simd_const(&pc->ct<CommonTable>().swizu8_xxxxxxxxxxxxxx10_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d_vec[0]));
 #endif // BL_JIT_ARCH_X86
 
       if (ga) {
@@ -1817,14 +1817,14 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
         if (predicate.is_empty()) {
           pc->v_loadu32_u8_to_u64(d_vec[0], m);
           if (advance_mode == AdvanceMode::kAdvance) {
-            pc->add(s_ptr, s_ptr, n.value());
+            pc->add(s_ptr, s_ptr, uint32_t(n));
           }
         }
         else {
-          fetchVec8(pc, d_vec, s_ptr, n.value(), advance_mode, predicate);
+          fetch_vec8(pc, d_vec, s_ptr, uint32_t(n), advance_mode, predicate);
           pc->cc->vpmovzxbq(d_vec[0], d_vec[0].xmm());
         }
-        pc->v_swizzlev_u8(d_vec[0], d_vec[0], pc->simd_const(&pc->ct.swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d_vec[0]));
+        pc->v_swizzlev_u8(d_vec[0], d_vec[0], pc->simd_const(&pc->ct<CommonTable>().swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d_vec[0]));
 
         if (ga) {
           pc->v_mul_i16(d_vec[0], d_vec[0], ga->ua().clone_as(d_vec[0]));
@@ -1834,7 +1834,7 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
       else
 #endif // BL_JIT_ARCH_X86
       {
-        fetchVec8(pc, d_vec, s_ptr, n.value(), advance_mode, predicate);
+        fetch_vec8(pc, d_vec, s_ptr, uint32_t(n), advance_mode, predicate);
         pc->v_cvt_u8_lo_to_u16(d_vec[0], d_vec[0]);
 
         if (ga) {
@@ -1842,7 +1842,7 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
           pc->v_div255_u16(d_vec[0]);
         }
 
-        pc->v_interleave_lo_u16(d_vec[0], d_vec[0], d_vec[0]);         // d_vec[0] = [M3 M3 M2 M2 M1 M1 M0 M0]
+        pc->v_interleave_lo_u16(d_vec[0], d_vec[0], d_vec[0]);        // d_vec[0] = [M3 M3 M2 M2 M1 M1 M0 M0]
         pc->v_swizzle_u32x4(d_vec[1], d_vec[0], swizzle(3, 3, 2, 2)); // d_vec[1] = [M3 M3 M3 M3 M2 M2 M2 M2]
         pc->v_swizzle_u32x4(d_vec[0], d_vec[0], swizzle(1, 1, 0, 0)); // d_vec[0] = [M1 M1 M1 M1 M0 M0 M0 M0]
       }
@@ -1853,18 +1853,18 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
 #if defined(BL_JIT_ARCH_X86)
       if (vec_width >= VecWidth::k256) {
         if (predicate.is_empty()) {
-          for (uint32_t i = 0; i < vec_count; i++) {
+          for (size_t i = 0; i < vec_count; i++) {
             pc->v_loaduvec_u8_to_u64(d_vec[i], m);
             m.add_offset_lo32(int32_t(d_vec[i].size() / 8u));
           }
 
           if (advance_mode == AdvanceMode::kAdvance) {
-            pc->add(s_ptr, s_ptr, n.value());
+            pc->add(s_ptr, s_ptr, uint32_t(n));
           }
 
           if (ga) {
             Vec ua = ga->ua().clone_as(d_vec[0]);
-            if (pc->has_opt_flag(PipeOptFlags::kFastVpmulld)) {
+            if (pc->has_cpu_hint(CpuHints::kVecFastIntMul32)) {
               pc->v_mul_i32(d_vec, d_vec, ua);
               pc->v_div255_u16(d_vec);
               pc->v_swizzle_u32x4(d_vec, d_vec, swizzle(2, 2, 0, 0));
@@ -1872,11 +1872,11 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
             else {
               pc->v_mul_i16(d_vec, d_vec, ua);
               pc->v_div255_u16(d_vec);
-              pc->v_swizzlev_u8(d_vec, d_vec, pc->simd_const(&pc->ct.swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d_vec[0]));
+              pc->v_swizzlev_u8(d_vec, d_vec, pc->simd_const(&pc->ct<CommonTable>().swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d_vec[0]));
             }
           }
           else {
-            pc->v_swizzlev_u8(d_vec, d_vec, pc->simd_const(&pc->ct.swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d_vec[0]));
+            pc->v_swizzlev_u8(d_vec, d_vec, pc->simd_const(&pc->ct<CommonTable>().swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d_vec[0]));
           }
         }
         else {
@@ -1886,7 +1886,7 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
           pc->new_vec_array(pm, pc->vec_count_of(DataWidth::k8, n), pc->vec_width_of(DataWidth::k8, n), "pm");
           pc->new_vec_array(um, pc->vec_count_of(DataWidth::k16, n), pc->vec_width_of(DataWidth::k16, n), "um");
 
-          fetchVec8(pc, pm, s_ptr, n.value(), advance_mode, predicate);
+          fetch_vec8(pc, pm, s_ptr, uint32_t(n), advance_mode, predicate);
 
           if (um.size() == 1) {
             pc->v_cvt_u8_lo_to_u16(um, pm);
@@ -1904,30 +1904,30 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
           if (d_vec[0].is_vec512()) {
             if (pc->has_avx512_vbmi()) {
               // Extract 128-bit vectors and then use VPERMB to permute 8 elements to 512-bit width.
-              Vec pred = pc->simd_vec_const(&pc->ct.permu8_4xu8_lo_to_rgba32_uc, Bcst::kNA_Unique, d_vec);
+              Vec pred = pc->simd_vec_const(&pc->ct<CommonTable>().permu8_4xu8_lo_to_rgba32_uc, Bcst::kNA_Unique, d_vec);
 
-              for (uint32_t i = 1; i < d_vec.size(); i++) {
-                pc->v_extract_v128(d_vec[i], um[0], i);
+              for (size_t i = 1; i < d_vec.size(); i++) {
+                pc->v_extract_v128(d_vec[i], um[0], uint32_t(i));
               }
 
-              for (uint32_t i = 0; i < d_vec.size(); i++) {
+              for (size_t i = 0; i < d_vec.size(); i++) {
                 pc->v_permute_u8(d_vec[i], pred, (i == 0 ? um[0] : d_vec[i]).clone_as(d_vec[i]));
               }
             }
             else {
-              Vec pred = pc->simd_vec_const(&pc->ct.swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA_Unique, d_vec);
-              for (uint32_t i = 1; i < d_vec.size(); i++) {
-                pc->v_extract_v128(d_vec[i], um[0], i);
+              Vec pred = pc->simd_vec_const(&pc->ct<CommonTable>().swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA_Unique, d_vec);
+              for (size_t i = 1; i < d_vec.size(); i++) {
+                pc->v_extract_v128(d_vec[i], um[0], uint32_t(i));
               }
 
-              for (uint32_t i = 0; i < d_vec.size(); i++) {
+              for (size_t i = 0; i < d_vec.size(); i++) {
                 pc->v_cvt_u8_to_u32(d_vec[i], i == 0 ? um[0] : d_vec[i]);
                 pc->v_swizzlev_u8(d_vec[i], d_vec[i], pred);
               }
             }
           }
           else if (d_vec[0].is_vec256()) {
-            Vec pred = pc->simd_vec_const(&pc->ct.swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA_Unique, d_vec);
+            Vec pred = pc->simd_vec_const(&pc->ct<CommonTable>().swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA_Unique, d_vec);
 
             if (d_vec.size() >= 2)
               pc->v_swizzle_u64x2(d_vec[1].xmm(), um[0].xmm(), swizzle(0, 1));
@@ -1938,7 +1938,7 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
             if (d_vec.size() >= 4)
               pc->v_swizzle_u64x4(d_vec[3], um[0], swizzle(3, 3, 3, 3));
 
-            for (uint32_t i = 0; i < d_vec.size(); i++) {
+            for (size_t i = 0; i < d_vec.size(); i++) {
               pc->v_cvt_u8_to_u32(d_vec[i], i == 0 ? um[0] : d_vec[i]);
               pc->v_swizzlev_u8(d_vec[i], d_vec[i], pred);
             }
@@ -1952,16 +1952,16 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
 #endif // BL_JIT_ARCH_X86
       {
         // Maximum pixels for 128-bit SIMD is 8 - there are no registers for more...
-        BL_ASSERT(n == 8);
+        BL_ASSERT(n == PixelCount(8));
 
         if (predicate.is_empty()) {
           pc->v_cvt_u8_lo_to_u16(d_vec[0], m);
           if (advance_mode == AdvanceMode::kAdvance) {
-            pc->add(s_ptr, s_ptr, n.value());
+            pc->add(s_ptr, s_ptr, uint32_t(n));
           }
         }
         else {
-          fetchVec8(pc, VecArray(d_vec[0]), s_ptr, n.value(), advance_mode, predicate);
+          fetch_vec8(pc, VecArray(d_vec[0]), s_ptr, uint32_t(n), advance_mode, predicate);
           pc->v_cvt_u8_lo_to_u16(d_vec[0], d_vec[0]);
         }
 
@@ -1970,8 +1970,8 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
           pc->v_div255_u16(d_vec[0]);
         }
 
-        pc->v_interleave_hi_u16(d_vec[2], d_vec[0], d_vec[0]);         // d_vec[2] = [M7 M7 M6 M6 M5 M5 M4 M4]
-        pc->v_interleave_lo_u16(d_vec[0], d_vec[0], d_vec[0]);         // d_vec[0] = [M3 M3 M2 M2 M1 M1 M0 M0]
+        pc->v_interleave_hi_u16(d_vec[2], d_vec[0], d_vec[0]);        // d_vec[2] = [M7 M7 M6 M6 M5 M5 M4 M4]
+        pc->v_interleave_lo_u16(d_vec[0], d_vec[0], d_vec[0]);        // d_vec[0] = [M3 M3 M2 M2 M1 M1 M0 M0]
         pc->v_swizzle_u32x4(d_vec[3], d_vec[2], swizzle(3, 3, 2, 2)); // d_vec[3] = [M7 M7 M7 M7 M6 M6 M6 M6]
         pc->v_swizzle_u32x4(d_vec[1], d_vec[0], swizzle(3, 3, 2, 2)); // d_vec[1] = [M3 M3 M3 M3 M2 M2 M2 M2]
         pc->v_swizzle_u32x4(d_vec[0], d_vec[0], swizzle(1, 1, 0, 0)); // d_vec[0] = [M1 M1 M1 M1 M0 M0 M0 M0]
@@ -1982,24 +1982,24 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
   }
 }
 
-void fetchMaskA8(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, PixelType pixel_type, PixelCoverageFormat coverage_format, AdvanceMode advance_mode, PixelPredicate& predicate, GlobalAlpha* ga) noexcept {
+void fetch_mask_a8(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, PixelType pixel_type, PixelCoverageFormat coverage_format, AdvanceMode advance_mode, PixelPredicate& predicate, GlobalAlpha* ga) noexcept {
   switch (pixel_type) {
     case PixelType::kA8: {
-      BL_ASSERT(n != 1u);
+      BL_ASSERT(n != PixelCount(1));
 
       if (coverage_format == PixelCoverageFormat::kPacked) {
         VecWidth vec_width = pc->vec_width_of(DataWidth::k8, n);
-        uint32_t vec_count = pc->vec_count_of(DataWidth::k8, n);
+        size_t vec_count = pc->vec_count_of(DataWidth::k8, n);
 
         pc->new_vec_array(d_vec, vec_count, vec_width, "vm");
-        fetchMaskA8IntoPA(pc, d_vec, s_ptr, n, advance_mode, predicate, ga);
+        fetch_mask_a8_into_pa(pc, d_vec, s_ptr, n, advance_mode, predicate, ga);
       }
       else {
         VecWidth vec_width = pc->vec_width_of(DataWidth::k16, n);
-        uint32_t vec_count = pc->vec_count_of(DataWidth::k16, n);
+        size_t vec_count = pc->vec_count_of(DataWidth::k16, n);
 
         pc->new_vec_array(d_vec, vec_count, vec_width, "vm");
-        fetchMaskA8IntoUA(pc, d_vec, s_ptr, n, advance_mode, predicate, ga);
+        fetch_mask_a8_into_ua(pc, d_vec, s_ptr, n, advance_mode, predicate, ga);
       }
       break;
     }
@@ -2007,17 +2007,17 @@ void fetchMaskA8(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount 
     case PixelType::kRGBA32: {
       if (coverage_format == PixelCoverageFormat::kPacked) {
         VecWidth vec_width = pc->vec_width_of(DataWidth::k32, n);
-        uint32_t vec_count = pc->vec_count_of(DataWidth::k32, n);
+        size_t vec_count = pc->vec_count_of(DataWidth::k32, n);
 
         pc->new_vec_array(d_vec, vec_count, vec_width, "vm");
-        fetchMaskA8IntoPC(pc, d_vec, s_ptr, n, advance_mode, predicate, ga);
+        fetch_mask_a8_into_pc(pc, d_vec, s_ptr, n, advance_mode, predicate, ga);
       }
       else {
         VecWidth vec_width = pc->vec_width_of(DataWidth::k64, n);
-        uint32_t vec_count = pc->vec_count_of(DataWidth::k64, n);
+        size_t vec_count = pc->vec_count_of(DataWidth::k64, n);
 
         pc->new_vec_array(d_vec, vec_count, vec_width, "vm");
-        fetchMaskA8IntoUC(pc, d_vec, s_ptr, n, advance_mode, predicate, ga);
+        fetch_mask_a8_into_uc(pc, d_vec, s_ptr, n, advance_mode, predicate, ga);
       }
 
       break;
@@ -2032,7 +2032,7 @@ void fetchMaskA8(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount 
 // ==============================================
 
 #if defined(BL_JIT_ARCH_X86)
-static void v_permute_op(PipeCompiler* pc, Vec dst, Vec predicate, Operand src, OpcodeVVV op, uint32_t byte_quantity) noexcept {
+static void v_permute_op(PipeCompiler* pc, Vec dst, Vec predicate, Operand src, UniOpVVV op, uint32_t byte_quantity) noexcept {
   OperandSignature sgn;
 
   if (byte_quantity == 64u) {
@@ -2056,27 +2056,27 @@ static void v_permute_op(PipeCompiler* pc, Vec dst, Vec predicate, Operand src, 
 };
 
 static void v_prgb32_to_pa_vpermb(PipeCompiler* pc, const Vec& dst, const Vec& predicate, const Operand& src, PixelCount n) noexcept {
-  return v_permute_op(pc, dst, predicate, src, OpcodeVVV::kPermuteU8, n.value() * 4u);
+  return v_permute_op(pc, dst, predicate, src, UniOpVVV::kPermuteU8, uint32_t(n) * 4u);
 };
 
 static void v_prgb32_to_ua_vpermw(PipeCompiler* pc, const Vec& dst, const Vec& predicate, const Operand& src, PixelCount n) noexcept {
-  return v_permute_op(pc, dst, predicate, src, OpcodeVVV::kPermuteU16, n.value() * 4u);
+  return v_permute_op(pc, dst, predicate, src, UniOpVVV::kPermuteU16, uint32_t(n) * 4u);
 };
 
 static void fetch_prgb32_into_pa_avx512(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
-  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k512, DataWidth::k32, n.value());
-  uint32_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, n.value());
+  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k512, DataWidth::k32, uint32_t(n));
+  size_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, uint32_t(n));
 
   uint32_t d_shift = uint32_t(d_vec.vec_width());
   uint32_t d_mask = (1u << d_shift) - 1u;
 
   uint32_t iter = 0;
-  uint32_t remaining = n.value();
+  uint32_t remaining = uint32_t(n);
 
   if (pc->has_avx512_vbmi()) {
     // In AVX512_VBMI case we can use VPERMT2B to shuffle two registers at once (and micro-architecturally the cost
     // is either the same as VPERMB [AMD] or 2xVPERMB [Intel]). This approach seems to be the most efficient.
-    Vec byte_perm = pc->simd_vec_const(&pc->ct.permu8_pc_to_pa, Bcst::kNA_Unique, pc_width);
+    Vec byte_perm = pc->simd_vec_const(&pc->ct<CommonTable>().permu8_pc_to_pa, Bcst::kNA_Unique, pc_width);
 
     if (predicate.is_empty()) {
       Mem m = ptr(s_ptr);
@@ -2087,7 +2087,7 @@ static void fetch_prgb32_into_pa_avx512(PipeCompiler* pc, VecArray& d_vec, const
           uint32_t quantity = bl_min<uint32_t>(remaining, 16u);
           const Vec& dv = d_vec[iter];
 
-          v_prgb32_to_pa_vpermb(pc, dv, byte_perm, m, PixelCount{quantity});
+          v_prgb32_to_pa_vpermb(pc, dv, byte_perm, m, PixelCount(quantity));
           m.add_offset_lo32(int32_t(quantity * 4u));
 
           iter++;
@@ -2101,7 +2101,7 @@ static void fetch_prgb32_into_pa_avx512(PipeCompiler* pc, VecArray& d_vec, const
 
           if (quantity >= 64u) {
             // Four ZMM registers to permute.
-            Vec tv = pc->new_vec(pc_width, "@tmp_vec");
+            Vec tv = pc->new_vec_with_width(pc_width, "@tmp_vec");
             pc->v_loadu512(dv.zmm(), m);
             pc->cc->vpermt2b(dv.zmm(), byte_perm.zmm(), m.clone_adjusted(64));
 
@@ -2116,7 +2116,7 @@ static void fetch_prgb32_into_pa_avx512(PipeCompiler* pc, VecArray& d_vec, const
             pc->cc->vpermt2b(dv.zmm(), byte_perm, m.clone_adjusted(64));
           }
           else {
-            v_prgb32_to_pa_vpermb(pc, dv, byte_perm, m, PixelCount{quantity});
+            v_prgb32_to_pa_vpermb(pc, dv, byte_perm, m, PixelCount(quantity));
           }
 
           m.add_offset_lo32(int32_t(quantity * 4u));
@@ -2127,7 +2127,7 @@ static void fetch_prgb32_into_pa_avx512(PipeCompiler* pc, VecArray& d_vec, const
       }
 
       if (advance_mode == AdvanceMode::kAdvance) {
-        pc->add(s_ptr, s_ptr, n.value() * 4u);
+        pc->add(s_ptr, s_ptr, uint32_t(n) * 4u);
       }
     }
     else {
@@ -2135,11 +2135,11 @@ static void fetch_prgb32_into_pa_avx512(PipeCompiler* pc, VecArray& d_vec, const
       pc->new_vec_array(pc_vec, pc_count, pc_width, "@tmp_pc_vec");
 
       // We really want each fourth register to point to the original d_vec (so we don't have to move afterwards).
-      for (uint32_t i = 0; i < pc_count; i += 4) {
+      for (size_t i = 0; i < pc_count; i += 4) {
         pc_vec.reassign(i, d_vec[i / 4u]);
       }
 
-      fetchVec32(pc, pc_vec, s_ptr, n.value(), advance_mode, predicate);
+      fetch_vec32(pc, pc_vec, s_ptr, uint32_t(n), advance_mode, predicate);
 
       if (pc_width == VecWidth::k128 || pc_count == 1u) {
         // If there is only a single register to load or all destination registers are XMMs it's actually very simple.
@@ -2190,7 +2190,7 @@ static void fetch_prgb32_into_pa_avx512(PipeCompiler* pc, VecArray& d_vec, const
     Vec secondary;
 
     if (pc_count > 1u) {
-      secondary = pc->new_vec(pc_width, "@tmp_vec");
+      secondary = pc->new_vec_with_width(pc_width, "@tmp_vec");
     }
 
     do {
@@ -2230,14 +2230,14 @@ static void fetch_prgb32_into_pa_avx512(PipeCompiler* pc, VecArray& d_vec, const
     } while (remaining > 0u);
 
     if (advance_mode == AdvanceMode::kAdvance) {
-      pc->add(s_ptr, s_ptr, n.value() * 4u);
+      pc->add(s_ptr, s_ptr, uint32_t(n) * 4u);
     }
   }
   else {
     VecArray tVec;
 
     pc->new_vec_array(tVec, pc_count, pc_width, "@tmp_vec");
-    fetchVec32(pc, tVec, s_ptr, n.value(), advance_mode, predicate);
+    fetch_vec32(pc, tVec, s_ptr, uint32_t(n), advance_mode, predicate);
 
     do {
       uint32_t quantity = bl_min<uint32_t>(remaining, 16u);
@@ -2276,16 +2276,16 @@ static void fetch_prgb32_into_pa_avx512(PipeCompiler* pc, VecArray& d_vec, const
 }
 
 static void fetch_prgb32_into_pa_avx2(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
-  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k256, DataWidth::k32, n.value());
-  uint32_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, n.value());
+  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k256, DataWidth::k32, uint32_t(n));
+  size_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, uint32_t(n));
 
   VecArray tVec;
   pc->new_vec_array(tVec, pc_count, pc_width, "@tmp_vec");
-  fetchVec32(pc, tVec, s_ptr, n.value(), advance_mode, predicate);
+  fetch_vec32(pc, tVec, s_ptr, uint32_t(n), advance_mode, predicate);
 
   uint32_t d_idx = 0;
-  uint32_t tIdx = 0;
-  uint32_t remaining = n.value();
+  uint32_t t_idx = 0;
+  uint32_t remaining = uint32_t(n);
 
   pc->v_srli_u32(tVec, tVec, 24);
 
@@ -2294,32 +2294,32 @@ static void fetch_prgb32_into_pa_avx2(PipeCompiler* pc, VecArray& d_vec, const G
     uint32_t quantity = bl_min<uint32_t>(remaining, 32u);
 
     if (quantity >= 16u) {
-      Vec vpermd_pred = pc->simd_vec_const(&pc->ct.permu32_fix_2x_pack_avx2, Bcst::kNA_Unique, pc_width);
+      Vec vpermd_pred = pc->simd_vec_const(&pc->ct<CommonTable>().permu32_fix_2x_pack_avx2, Bcst::kNA_Unique, pc_width);
 
-      const Vec& sv0 = tVec[tIdx + 0];
-      const Vec& sv1 = tVec[tIdx + 1];
+      const Vec& sv0 = tVec[t_idx + 0];
+      const Vec& sv1 = tVec[t_idx + 1];
 
       if (quantity == 32u) {
-        const Vec& sv2 = tVec[tIdx + 2];
-        const Vec& sv3 = tVec[tIdx + 3];
+        const Vec& sv2 = tVec[t_idx + 2];
+        const Vec& sv3 = tVec[t_idx + 3];
 
         pc->v_packs_i32_u16(sv0, sv0, sv1);
         pc->v_packs_i32_u16(sv2, sv2, sv3);
         pc->v_packs_i16_u8(sv0, sv0, sv2);
         pc->cc->vpermd(dv, vpermd_pred, sv0);
 
-        tIdx += 4;
+        t_idx += 4;
       }
       else if (quantity == 16) {
         pc->v_packs_i32_u16(sv0, sv0, sv1);
         pc->v_packs_i16_u8(sv0, sv0, sv0);
         pc->cc->vpermd(dv, vpermd_pred, sv0);
 
-        tIdx += 2;
+        t_idx += 2;
       }
     }
     else {
-      const Vec& sv = tVec[tIdx];
+      const Vec& sv = tVec[t_idx];
 
       if (quantity == 8u) {
         pc->v_packs_i32_u16(sv, sv, sv);
@@ -2331,7 +2331,7 @@ static void fetch_prgb32_into_pa_avx2(PipeCompiler* pc, VecArray& d_vec, const G
         pc->v_packs_i16_u8(dv.xmm(), dv.xmm(), dv.xmm());
       }
 
-      tIdx++;
+      t_idx++;
     }
 
     d_idx++;
@@ -2340,16 +2340,16 @@ static void fetch_prgb32_into_pa_avx2(PipeCompiler* pc, VecArray& d_vec, const G
 }
 
 static void fetch_prgb32_into_ua_avx512(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
-  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k512, DataWidth::k32, n.value());
-  uint32_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, n.value());
+  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k512, DataWidth::k32, uint32_t(n));
+  size_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, uint32_t(n));
 
   uint32_t iter = 0;
-  uint32_t remaining = n.value();
+  uint32_t remaining = uint32_t(n);
 
   // A baseline AVX512 ISA offers VPERMT2W to shuffle two registers at once at 16-bit quantities, which is sufficient
   // for our case (converting a 32-bit ARGB pixel into an unpacked 16-bit alpha). We always want to shift by 8 at the
   // end as that means shifting half registers in case we load multiple ones.
-  Vec permute_predicate = pc->simd_vec_const(&pc->ct.permu16_pc_to_ua, Bcst::kNA_Unique, pc_width);
+  Vec permute_predicate = pc->simd_vec_const(&pc->ct<CommonTable>().permu16_pc_to_ua, Bcst::kNA_Unique, pc_width);
 
   if (predicate.is_empty()) {
     Mem m = ptr(s_ptr);
@@ -2374,7 +2374,7 @@ static void fetch_prgb32_into_ua_avx512(PipeCompiler* pc, VecArray& d_vec, const
 
         if (quantity >= 64u) {
           // Four ZMM registers to permute.
-          Vec tv = pc->new_vec(pc_width, "@tmp_vec");
+          Vec tv = pc->new_vec_with_width(pc_width, "@tmp_vec");
           pc->v_loadu512(dv.zmm(), m);
           pc->cc->vpermt2w(dv.zmm(), permute_predicate.zmm(), m.clone_adjusted(64));
 
@@ -2400,7 +2400,7 @@ static void fetch_prgb32_into_ua_avx512(PipeCompiler* pc, VecArray& d_vec, const
     }
 
     if (advance_mode == AdvanceMode::kAdvance) {
-      pc->add(s_ptr, s_ptr, n.value() * 4u);
+      pc->add(s_ptr, s_ptr, uint32_t(n) * 4u);
     }
   }
   else {
@@ -2408,11 +2408,11 @@ static void fetch_prgb32_into_ua_avx512(PipeCompiler* pc, VecArray& d_vec, const
     pc->new_vec_array(pc_vec, pc_count, pc_width, "@tmp_pc_vec");
 
     // We really want each second register to point to the original d_vec (so we don't have to move afterwards).
-    for (uint32_t i = 0; i < pc_count; i += 2) {
+    for (size_t i = 0; i < pc_count; i += 2) {
       pc_vec.reassign(i, d_vec[i / 2u]);
     }
 
-    fetchVec32(pc, pc_vec, s_ptr, n.value(), advance_mode, predicate);
+    fetch_vec32(pc, pc_vec, s_ptr, uint32_t(n), advance_mode, predicate);
 
     if (pc_width == VecWidth::k128 || pc_count == 1u) {
       // If there is only a single register to load or all destination registers are XMMs it's actually very simple.
@@ -2455,16 +2455,16 @@ static void fetch_prgb32_into_ua_avx512(PipeCompiler* pc, VecArray& d_vec, const
 }
 
 static void fetch_prgb32_into_ua_avx2(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
-  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k256, DataWidth::k32, n.value());
-  uint32_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, n.value());
+  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k256, DataWidth::k32, uint32_t(n));
+  size_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, uint32_t(n));
 
   VecArray tVec;
   pc->new_vec_array(tVec, pc_count, pc_width, "@tmp_vec");
-  fetchVec32(pc, tVec, s_ptr, n.value(), advance_mode, predicate);
+  fetch_vec32(pc, tVec, s_ptr, uint32_t(n), advance_mode, predicate);
 
   uint32_t d_idx = 0;
-  uint32_t tIdx = 0;
-  uint32_t remaining = n.value();
+  uint32_t t_idx = 0;
+  uint32_t remaining = uint32_t(n);
 
   pc->v_srli_u32(tVec, tVec, 24);
 
@@ -2472,26 +2472,26 @@ static void fetch_prgb32_into_ua_avx2(PipeCompiler* pc, VecArray& d_vec, const G
     uint32_t quantity = bl_min<uint32_t>(remaining, 16u);
 
     const Vec& dv = d_vec[d_idx];
-    const Vec& sv0 = tVec[tIdx + 0];
+    const Vec& sv0 = tVec[t_idx + 0];
 
     if (quantity == 16u) {
-      const Vec& sv1 = tVec[tIdx + 1];
+      const Vec& sv1 = tVec[t_idx + 1];
 
       pc->v_packs_i32_u16(sv0, sv0, sv1);
       pc->v_swizzle_u64x4(dv.ymm(), sv0, swizzle(3, 1, 2, 0));
 
-      tIdx += 2;
+      t_idx += 2;
     }
     else if (quantity == 8u) {
       pc->v_packs_i32_u16(sv0, sv0, sv0);
       pc->v_swizzle_u64x4(dv.ymm(), sv0, swizzle(3, 1, 2, 0));
 
-      tIdx++;
+      t_idx++;
     }
     else {
       pc->v_packs_i32_u16(dv.xmm(), sv0.xmm(), sv0.xmm());
 
-      tIdx++;
+      t_idx++;
     }
 
     d_idx++;
@@ -2500,34 +2500,34 @@ static void fetch_prgb32_into_ua_avx2(PipeCompiler* pc, VecArray& d_vec, const G
 }
 #endif // BL_JIT_ARCH_X86
 
-void fetchPRGB32IntoPA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+void fetch_prgb32_into_pa(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
 #if defined(BL_JIT_ARCH_X86)
-  if (pc->has_avx512() && n >= 4u) {
+  if (pc->has_avx512() && n >= PixelCount(4)) {
     fetch_prgb32_into_pa_avx512(pc, d_vec, s_ptr, n, advance_mode, predicate);
     return;
   }
-  else if (pc->has_avx2() && d_vec.is_vec256() && n >= 8u) {
+  else if (pc->has_avx2() && d_vec.is_vec256() && n >= PixelCount(8)) {
     fetch_prgb32_into_pa_avx2(pc, d_vec, s_ptr, n, advance_mode, predicate);
     return;
   }
 #endif // BL_JIT_ARCH_X86
 
-  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k128, DataWidth::k32, n.value());
-  uint32_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, n.value());
+  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k128, DataWidth::k32, uint32_t(n));
+  size_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, uint32_t(n));
 
   VecArray tVec;
   pc->new_vec_array(tVec, pc_count, pc_width, "@tmp_vec");
 
   // We really want each fourth register to point to the original d_vec (so we don't have to move afterwards).
-  for (uint32_t i = 0; i < pc_count; i += 4) {
+  for (size_t i = 0; i < pc_count; i += 4) {
     tVec.reassign(i, d_vec[i / 4u]);
   }
 
-  fetchVec32(pc, tVec, s_ptr, n.value(), advance_mode, predicate);
+  fetch_vec32(pc, tVec, s_ptr, uint32_t(n), advance_mode, predicate);
 
-  uint32_t d_idx = 0;
-  uint32_t tIdx = 0;
-  uint32_t remaining = n.value();
+  size_t d_idx = 0;
+  size_t t_idx = 0;
+  uint32_t remaining = uint32_t(n);
 
   pc->v_srli_u32(tVec, tVec, 24);
 
@@ -2536,23 +2536,23 @@ void fetchPRGB32IntoPA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
     uint32_t quantity = bl_min<uint32_t>(remaining, 16u);
 
     if (quantity > 8u) {
-      pc->v_packs_i32_u16(tVec[tIdx + 0], tVec[tIdx + 0], tVec[tIdx + 1]);
-      pc->v_packs_i32_u16(tVec[tIdx + 2], tVec[tIdx + 2], tVec[tIdx + 3]);
-      pc->v_packs_i16_u8(dv, tVec[tIdx + 0], tVec[tIdx + 2]);
+      pc->v_packs_i32_u16(tVec[t_idx + 0], tVec[t_idx + 0], tVec[t_idx + 1]);
+      pc->v_packs_i32_u16(tVec[t_idx + 2], tVec[t_idx + 2], tVec[t_idx + 3]);
+      pc->v_packs_i16_u8(dv, tVec[t_idx + 0], tVec[t_idx + 2]);
 
-      tIdx += 4;
+      t_idx += 4;
     }
     else if (quantity > 4u) {
-      pc->v_packs_i32_u16(dv, tVec[tIdx + 0], tVec[tIdx + 1]);
+      pc->v_packs_i32_u16(dv, tVec[t_idx + 0], tVec[t_idx + 1]);
       pc->v_packs_i16_u8(dv, dv, dv);
 
-      tIdx += 2;
+      t_idx += 2;
     }
     else {
-      pc->v_packs_i32_u16(dv, tVec[tIdx + 0], tVec[tIdx + 0]);
+      pc->v_packs_i32_u16(dv, tVec[t_idx + 0], tVec[t_idx + 0]);
       pc->v_packs_i16_u8(dv, dv, dv);
 
-      tIdx++;
+      t_idx++;
     }
 
     d_idx++;
@@ -2560,34 +2560,34 @@ void fetchPRGB32IntoPA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
   } while (remaining > 0u);
 }
 
-void fetchPRGB32IntoUA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+void fetch_prgb32_into_ua(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, PixelCount n, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
 #if defined(BL_JIT_ARCH_X86)
-  if (pc->has_avx512() && n >= 8u) {
+  if (pc->has_avx512() && n >= PixelCount(8)) {
     fetch_prgb32_into_ua_avx512(pc, d_vec, s_ptr, n, advance_mode, predicate);
     return;
   }
-  else if (pc->has_avx2() && d_vec.is_vec256() && n >= 8u) {
+  else if (pc->has_avx2() && d_vec.is_vec256() && n >= PixelCount(8)) {
     fetch_prgb32_into_ua_avx2(pc, d_vec, s_ptr, n, advance_mode, predicate);
     return;
   }
 #endif // BL_JIT_ARCH_X86
 
-  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k128, DataWidth::k32, n.value());
-  uint32_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, n.value());
+  VecWidth pc_width = VecWidthUtils::vec_width_of(VecWidth::k128, DataWidth::k32, uint32_t(n));
+  size_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, uint32_t(n));
 
   VecArray tVec;
   pc->new_vec_array(tVec, pc_count, pc_width, "@tmp_vec");
 
   // We really want each second register to point to the original d_vec (so we don't have to move afterwards).
-  for (uint32_t i = 0; i < pc_count; i += 2) {
+  for (size_t i = 0; i < pc_count; i += 2) {
     tVec.reassign(i, d_vec[i / 2u]);
   }
 
-  fetchVec32(pc, tVec, s_ptr, n.value(), advance_mode, predicate);
+  fetch_vec32(pc, tVec, s_ptr, uint32_t(n), advance_mode, predicate);
 
-  uint32_t d_idx = 0;
-  uint32_t tIdx = 0;
-  uint32_t remaining = n.value();
+  size_t d_idx = 0;
+  size_t t_idx = 0;
+  uint32_t remaining = uint32_t(n);
 
   pc->v_srli_u32(tVec, tVec, 24);
 
@@ -2596,12 +2596,12 @@ void fetchPRGB32IntoUA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
     uint32_t quantity = bl_min<uint32_t>(remaining, 16u);
 
     if (quantity > 4u) {
-      pc->v_packs_i32_u16(dv, tVec[tIdx + 0], tVec[tIdx + 1]);
-      tIdx += 2;
+      pc->v_packs_i32_u16(dv, tVec[t_idx + 0], tVec[t_idx + 1]);
+      t_idx += 2;
     }
     else {
-      pc->v_packs_i32_u16(dv, tVec[tIdx + 0], tVec[tIdx + 0]);
-      tIdx++;
+      pc->v_packs_i32_u16(dv, tVec[t_idx + 0], tVec[t_idx + 0]);
+      t_idx++;
     }
 
     d_idx++;
@@ -2609,9 +2609,9 @@ void fetchPRGB32IntoUA(PipeCompiler* pc, VecArray& d_vec, const Gp& s_ptr, Pixel
   } while (remaining > 0u);
 }
 
-static void fetchPixelsA8(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, Gp s_ptr, Alignment alignment, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+static void fetch_pixels_a8(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo f_info, Gp s_ptr, Alignment alignment, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
   BL_ASSERT(p.isA8());
-  BL_ASSERT(n.value() > 1u);
+  BL_ASSERT(n > PixelCount(1));
 
   // TODO: Do we need it in general?
   bl_unused(alignment);
@@ -2619,27 +2619,27 @@ static void fetchPixelsA8(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags f
   p.set_count(n);
 
   // It's forbidden to use PA in single-pixel case (scalar mode) and SA in multiple-pixel case (vector mode).
-  BL_ASSERT(uint32_t(n.value() != 1) ^ uint32_t(bl_test_flag(flags, PixelFlags::kSA)));
+  BL_ASSERT(uint32_t(n != PixelCount(1)) ^ uint32_t(bl_test_flag(flags, PixelFlags::kSA)));
 
   // It's forbidden to request both - PA and UA.
   BL_ASSERT((flags & (PixelFlags::kPA | PixelFlags::kUA)) != (PixelFlags::kPA | PixelFlags::kUA));
 
   VecWidth pa_width = pc->vec_width_of(DataWidth::k8, n);
-  uint32_t pa_count = pc->vec_count_of(DataWidth::k8, n);
+  size_t pa_count = pc->vec_count_of(DataWidth::k8, n);
 
   VecWidth ua_width = pc->vec_width_of(DataWidth::k16, n);
-  uint32_t ua_count = pc->vec_count_of(DataWidth::k16, n);
+  size_t ua_count = pc->vec_count_of(DataWidth::k16, n);
 
-  switch (fInfo.format()) {
+  switch (f_info.format()) {
     // A8 <- PRGB32.
     case FormatExt::kPRGB32: {
       if (bl_test_flag(flags, PixelFlags::kPA)) {
         pc->new_vec_array(p.pa, pa_count, pa_width, p.name(), "pa");
-        fetchPRGB32IntoPA(pc, p.pa, s_ptr, n, advance_mode, predicate);
+        fetch_prgb32_into_pa(pc, p.pa, s_ptr, n, advance_mode, predicate);
       }
       else {
         pc->new_vec_array(p.ua, ua_count, ua_width, p.name(), "ua");
-        fetchPRGB32IntoUA(pc, p.ua, s_ptr, n, advance_mode, predicate);
+        fetch_prgb32_into_ua(pc, p.ua, s_ptr, n, advance_mode, predicate);
       }
       break;
     }
@@ -2648,11 +2648,11 @@ static void fetchPixelsA8(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags f
     case FormatExt::kA8: {
       if (bl_test_flag(flags, PixelFlags::kPA)) {
         pc->new_vec_array(p.pa, pa_count, pa_width, p.name(), "pa");
-        fetchMaskA8IntoPA(pc, p.pa, s_ptr, n, advance_mode, predicate);
+        fetch_mask_a8_into_pa(pc, p.pa, s_ptr, n, advance_mode, predicate);
       }
       else {
         pc->new_vec_array(p.ua, ua_count, ua_width, p.name(), "ua");
-        fetchMaskA8IntoUA(pc, p.ua, s_ptr, n, advance_mode, predicate);
+        fetch_mask_a8_into_ua(pc, p.ua, s_ptr, n, advance_mode, predicate);
       }
       break;
     }
@@ -2661,34 +2661,34 @@ static void fetchPixelsA8(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags f
       BL_NOT_REACHED();
   }
 
-  satisfyPixelsA8(pc, p, flags);
+  satisfy_pixels_a8(pc, p, flags);
 }
 
-static void fetchPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, Gp s_ptr, Alignment alignment, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+static void fetch_pixels_rgba32(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo f_info, Gp s_ptr, Alignment alignment, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
   BL_ASSERT(p.isRGBA32());
-  BL_ASSERT(n.value() > 1u);
+  BL_ASSERT(n > PixelCount(1));
 
   p.set_count(n);
 
   Mem s_mem = ptr(s_ptr);
-  uint32_t srcBPP = fInfo.bpp();
+  uint32_t src_bpp = f_info.bpp();
 
   VecWidth pc_width = pc->vec_width_of(DataWidth::k32, n);
-  uint32_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, n);
+  size_t pc_count = VecWidthUtils::vec_count_of(pc_width, DataWidth::k32, n);
 
   VecWidth uc_width = pc->vec_width_of(DataWidth::k64, n);
-  uint32_t uc_count = VecWidthUtils::vec_count_of(uc_width, DataWidth::k64, n);
+  size_t uc_count = VecWidthUtils::vec_count_of(uc_width, DataWidth::k64, n);
 
-  switch (fInfo.format()) {
+  switch (f_info.format()) {
     // RGBA32 <- PRGB32 | XRGB32.
     case FormatExt::kPRGB32:
     case FormatExt::kXRGB32: {
       if (!predicate.is_empty()) {
         pc->new_vec_array(p.pc, pc_count, pc_width, p.name(), "pc");
-        fetchPredicatedVec32(pc, p.pc, s_ptr, n.value(), advance_mode, predicate);
+        fetch_predicated_vec32(pc, p.pc, s_ptr, uint32_t(n), advance_mode, predicate);
       }
       else {
-        switch (n.value()) {
+        switch (uint32_t(n)) {
           case 1: {
             pc->new_vec128_array(p.pc, 1, p.name(), "pc");
             pc->v_loada32(p.pc[0], s_mem);
@@ -2776,11 +2776,11 @@ static void fetchPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFla
         }
 
         if (advance_mode == AdvanceMode::kAdvance) {
-          pc->add(s_ptr, s_ptr, n.value() * srcBPP);
+          pc->add(s_ptr, s_ptr, uint32_t(n) * src_bpp);
         }
       }
 
-      if (fInfo.format() == FormatExt::kXRGB32) {
+      if (f_info.format() == FormatExt::kXRGB32) {
         fill_alpha_channel(pc, p);
       }
 
@@ -2791,11 +2791,11 @@ static void fetchPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFla
     case FormatExt::kA8: {
       if (bl_test_flag(flags, PixelFlags::kPC)) {
         pc->new_vec_array(p.pc, pc_count, pc_width, p.name(), "pc");
-        fetchMaskA8IntoPC(pc, p.pc, s_ptr, n, advance_mode, predicate);
+        fetch_mask_a8_into_pc(pc, p.pc, s_ptr, n, advance_mode, predicate);
       }
       else {
         pc->new_vec_array(p.uc, uc_count, uc_width, p.name(), "uc");
-        fetchMaskA8IntoUC(pc, p.uc, s_ptr, n, advance_mode, predicate);
+        fetch_mask_a8_into_uc(pc, p.uc, s_ptr, n, advance_mode, predicate);
       }
 
       break;
@@ -2806,22 +2806,22 @@ static void fetchPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFla
       BL_NOT_REACHED();
   }
 
-  satisfyPixelsRGBA32(pc, p, flags);
+  satisfy_pixels_rgba32(pc, p, flags);
 }
 
-void fetch_pixel(PipeCompiler* pc, Pixel& p, PixelFlags flags, PixelFetchInfo fInfo, Mem s_mem) noexcept {
+void fetch_pixel(PipeCompiler* pc, Pixel& p, PixelFlags flags, PixelFetchInfo f_info, Mem s_mem) noexcept {
   p.set_count(PixelCount{1u});
 
   switch (p.type()) {
     case PixelType::kA8: {
-      switch (fInfo.format()) {
+      switch (f_info.format()) {
         case FormatExt::kPRGB32: {
           p.sa = pc->new_gp32("a");
 #if defined(BL_JIT_ARCH_X86)
-          s_mem.add_offset(fInfo.fetch_alpha_offset());
+          s_mem.add_offset(f_info.fetch_alpha_offset());
           pc->load_u8(p.sa, s_mem);
 #else
-          if (fInfo.fetch_alpha_offset() == 0) {
+          if (f_info.fetch_alpha_offset() == 0) {
             pc->load_u8(p.sa, s_mem);
           }
           else {
@@ -2848,12 +2848,12 @@ void fetch_pixel(PipeCompiler* pc, Pixel& p, PixelFlags flags, PixelFetchInfo fI
           BL_NOT_REACHED();
       }
 
-      satisfyPixelsA8(pc, p, flags);
+      satisfy_pixels_a8(pc, p, flags);
       return;
     }
 
     case PixelType::kRGBA32: {
-      switch (fInfo.format()) {
+      switch (f_info.format()) {
         case FormatExt::kA8: {
           if (bl_test_flag(flags, PixelFlags::kPC)) {
             pc->new_vec128_array(p.pc, 1, p.name(), "pc");
@@ -2906,7 +2906,7 @@ void fetch_pixel(PipeCompiler* pc, Pixel& p, PixelFlags flags, PixelFetchInfo fI
           BL_NOT_REACHED();
       }
 
-      satisfyPixelsRGBA32(pc, p, flags);
+      satisfy_pixels_rgba32(pc, p, flags);
       return;
     }
 
@@ -2915,28 +2915,28 @@ void fetch_pixel(PipeCompiler* pc, Pixel& p, PixelFlags flags, PixelFetchInfo fI
   }
 }
 
-void fetch_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Gp& s_ptr, Alignment alignment, AdvanceMode advance_mode) noexcept {
-  fetch_pixels(pc, p, n, flags, fInfo, s_ptr, alignment, advance_mode, pc->empty_predicate());
+void fetch_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo f_info, const Gp& s_ptr, Alignment alignment, AdvanceMode advance_mode) noexcept {
+  fetch_pixels(pc, p, n, flags, f_info, s_ptr, alignment, advance_mode, pc->empty_predicate());
 }
 
-void fetch_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Gp& s_ptr, Alignment alignment, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
-  if (n == 1u) {
+void fetch_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo f_info, const Gp& s_ptr, Alignment alignment, AdvanceMode advance_mode, PixelPredicate& predicate) noexcept {
+  if (n == PixelCount(1)) {
     BL_ASSERT(predicate.is_empty());
-    fetch_pixel(pc, p, flags, fInfo, mem_ptr(s_ptr));
+    fetch_pixel(pc, p, flags, f_info, mem_ptr(s_ptr));
 
     if (advance_mode == AdvanceMode::kAdvance) {
-      pc->add(s_ptr, s_ptr, fInfo.bpp());
+      pc->add(s_ptr, s_ptr, f_info.bpp());
     }
     return;
   }
 
   switch (p.type()) {
     case PixelType::kA8:
-      fetchPixelsA8(pc, p, n, flags, fInfo, s_ptr, alignment, advance_mode, predicate);
+      fetch_pixels_a8(pc, p, n, flags, f_info, s_ptr, alignment, advance_mode, predicate);
       break;
 
     case PixelType::kRGBA32:
-      fetchPixelsRGBA32(pc, p, n, flags, fInfo, s_ptr, alignment, advance_mode, predicate);
+      fetch_pixels_rgba32(pc, p, n, flags, f_info, s_ptr, alignment, advance_mode, predicate);
       break;
 
     default:
@@ -2947,12 +2947,12 @@ void fetch_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, Pi
 // bl::Pipeline::Jit::FetchUtils - Satisfy Pixels
 // ==============================================
 
-static void satisfyPixelsA8(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept {
+static void satisfy_pixels_a8(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept {
   BL_ASSERT(p.type() == PixelType::kA8);
-  BL_ASSERT(p.count() != 0);
+  BL_ASSERT(p.count() != PixelCount(0));
 
   // Scalar mode uses only SA.
-  if (p.count() == 1) {
+  if (p.count() == PixelCount(1)) {
     BL_ASSERT( bl_test_flag(flags, PixelFlags::kSA));
     BL_ASSERT(!bl_test_flag(flags, PixelFlags::kPA | PixelFlags::kUA));
 
@@ -2963,13 +2963,13 @@ static void satisfyPixelsA8(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexce
     // Either PA or UA, but never both.
     BL_ASSERT(!bl_test_flag(flags, PixelFlags::kUA));
 
-    _x_pack_pixel(pc, p.pa, p.ua, p.count().value(), p.name(), "pa");
+    _x_pack_pixel(pc, p.pa, p.ua, uint32_t(p.count()), p.name(), "pa");
   }
   else if (bl_test_flag(flags, PixelFlags::kUA) && p.ua.is_empty()) {
     // Either PA or UA, but never both.
     BL_ASSERT(!bl_test_flag(flags, PixelFlags::kPA));
 
-    _x_unpack_pixel(pc, p.ua, p.pa, p.count().value(), p.name(), "ua");
+    _x_unpack_pixel(pc, p.ua, p.pa, uint32_t(p.count()), p.name(), "ua");
   }
 
   if (bl_test_flag(flags, PixelFlags::kPI) && p.pi.is_empty()) {
@@ -2991,9 +2991,9 @@ static void satisfyPixelsA8(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexce
   }
 }
 
-static void satisfyPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept {
+static void satisfy_pixels_rgba32(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept {
   BL_ASSERT(p.type() == PixelType::kRGBA32);
-  BL_ASSERT(p.count() != 0);
+  BL_ASSERT(p.count() != PixelCount(0));
 
   if (bl_test_flag(flags, PixelFlags::kPA | PixelFlags::kPI))
     flags |= PixelFlags::kPC;
@@ -3022,7 +3022,7 @@ static void satisfyPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) no
     else
 #endif // BL_JIT_ARCH_X86
     {
-      pc->v_swizzlev_u8(p.ua, p.uc, pc->simd_const(&pc->ct.swizu8_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
+      pc->v_swizzlev_u8(p.ua, p.uc, pc->simd_const(&pc->ct<CommonTable>().swizu8_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
     }
   }
 
@@ -3037,16 +3037,16 @@ static void satisfyPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) no
   BL_ASSERT((flags & (PixelFlags::kPC | PixelFlags::kUC)) != (PixelFlags::kPC | PixelFlags::kUC));
 
   if (bl_test_flag(flags, PixelFlags::kPC) && p.pc.is_empty()) {
-    _x_pack_pixel(pc, p.pc, p.uc, p.count().value() * 4u, p.name(), "pc");
+    _x_pack_pixel(pc, p.pc, p.uc, uint32_t(p.count()) * 4u, p.name(), "pc");
   }
   else if (bl_test_flag(flags, PixelFlags::kUC) && p.uc.is_empty()) {
-    _x_unpack_pixel(pc, p.uc, p.pc, p.count().value() * 4, p.name(), "uc");
+    _x_unpack_pixel(pc, p.uc, p.pc, uint32_t(p.count()) * 4, p.name(), "uc");
   }
 
   if (bl_test_flag(flags, PixelFlags::kPA | PixelFlags::kPI)) {
     if (bl_test_flag(flags, PixelFlags::kPA) && p.pa.is_empty()) {
       pc->new_vec_array(p.pa, p.pc.size(), p.pc[0], p.name(), "pa");
-      pc->v_swizzlev_u8(p.pa, p.pc, pc->simd_const(&pc->ct.swizu8_3xxx2xxx1xxx0xxx_to_3333222211110000, Bcst::kNA, p.pc));
+      pc->v_swizzlev_u8(p.pa, p.pc, pc->simd_const(&pc->ct<CommonTable>().swizu8_3xxx2xxx1xxx0xxx_to_3333222211110000, Bcst::kNA, p.pc));
     }
 
     if (bl_test_flag(flags, PixelFlags::kPI) && p.pi.is_empty()) {
@@ -3055,7 +3055,7 @@ static void satisfyPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) no
         pc->v_not_u32(p.pi, p.pa);
       }
       else {
-        pc->v_swizzlev_u8(p.pi, p.pc, pc->simd_const(&pc->ct.swizu8_3xxx2xxx1xxx0xxx_to_3333222211110000, Bcst::kNA, p.pc));
+        pc->v_swizzlev_u8(p.pi, p.pc, pc->simd_const(&pc->ct<CommonTable>().swizu8_3xxx2xxx1xxx0xxx_to_3333222211110000, Bcst::kNA, p.pc));
         pc->v_not_u32(p.pi, p.pi);
       }
     }
@@ -3066,31 +3066,31 @@ static void satisfyPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) no
     // This time we have to really fetch A8/IA8, if we haven't before.
     BL_ASSERT(!p.pc.is_empty() || !p.uc.is_empty());
 
-    uint32_t ua_count = pc->vec_count_of(DataWidth::k64, p.count());
+    size_t ua_count = pc->vec_count_of(DataWidth::k64, p.count());
     BL_ASSERT(ua_count <= OpArray::kMaxSize);
 
     if (!p.uc.is_empty()) {
       pc->new_vec_array(p.ua, ua_count, p.uc[0], p.name(), "ua");
 #if defined(BL_JIT_ARCH_X86)
       if (!pc->has_avx()) {
-        pc->v_expand_alpha_16(p.ua, p.uc, p.count() > 1);
+        pc->v_expand_alpha_16(p.ua, p.uc, p.count() > PixelCount(1));
       }
       else
 #endif // BL_JIT_ARCH_X86
       {
-        pc->v_swizzlev_u8(p.ua, p.uc, pc->simd_const(&pc->ct.swizu8_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
+        pc->v_swizzlev_u8(p.ua, p.uc, pc->simd_const(&pc->ct<CommonTable>().swizu8_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
       }
     }
     else {
-      if (p.count() <= 2) {
+      if (p.count() <= PixelCount(2)) {
         pc->new_vec128_array(p.ua, ua_count, p.name(), "ua");
 #if defined(BL_JIT_ARCH_X86)
-        if (p.count() == 1) {
+        if (p.count() == PixelCount(1)) {
           pc->v_swizzle_lo_u16x4(p.ua[0], p.pc[0], swizzle(1, 1, 1, 1));
           pc->v_srli_u16(p.ua[0], p.ua[0], 8);
         }
         else if (pc->has_avx()) {
-          pc->v_swizzlev_u8(p.ua[0], p.pc[0], pc->simd_const(&pc->ct.swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, p.ua[0]));
+          pc->v_swizzlev_u8(p.ua[0], p.pc[0], pc->simd_const(&pc->ct<CommonTable>().swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, p.ua[0]));
         }
         else {
           pc->v_swizzle_lo_u16x4(p.ua[0], p.pc[0], swizzle(3, 3, 1, 1));
@@ -3098,7 +3098,7 @@ static void satisfyPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) no
           pc->v_srli_u16(p.ua[0], p.ua[0], 8);
         }
 #else
-        pc->v_swizzlev_u8(p.ua[0], p.pc[0], pc->simd_const(&pc->ct.swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, p.ua[0]));
+        pc->v_swizzlev_u8(p.ua[0], p.pc[0], pc->simd_const(&pc->ct<CommonTable>().swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, p.ua[0]));
 #endif
       }
       else {
@@ -3116,7 +3116,7 @@ static void satisfyPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) no
             pc->v_cvt_u8_lo_to_u16(p.ua.odd(), p.ua.odd().ymm());
           }
 
-          pc->v_swizzlev_u8(p.ua, p.ua, pc->simd_const(&pc->ct.swizu8_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
+          pc->v_swizzlev_u8(p.ua, p.ua, pc->simd_const(&pc->ct<CommonTable>().swizu8_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
         }
         else if (uc_width == VecWidth::k256) {
           if (ua_count == 1) {
@@ -3128,7 +3128,7 @@ static void satisfyPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) no
             pc->v_cvt_u8_lo_to_u16(p.ua.odd(), p.ua.odd().xmm());
           }
 
-          pc->v_swizzlev_u8(p.ua, p.ua, pc->simd_const(&pc->ct.swizu8_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
+          pc->v_swizzlev_u8(p.ua, p.ua, pc->simd_const(&pc->ct<CommonTable>().swizu8_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
         }
         else
 #endif // BL_JIT_ARCH_X86
@@ -3156,15 +3156,15 @@ static void satisfyPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) no
 }
 
 void satisfy_pixels(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept {
-  BL_ASSERT(p.count() != 0);
+  BL_ASSERT(p.count() != PixelCount(0));
 
   switch (p.type()) {
     case PixelType::kA8:
-      satisfyPixelsA8(pc, p, flags);
+      satisfy_pixels_a8(pc, p, flags);
       break;
 
     case PixelType::kRGBA32:
-      satisfyPixelsRGBA32(pc, p, flags);
+      satisfy_pixels_rgba32(pc, p, flags);
       break;
 
     default:
@@ -3175,9 +3175,9 @@ void satisfy_pixels(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept {
 // bl::Pipeline::Jit::FetchUtils - Satisfy Solid Pixels
 // ====================================================
 
-static void satisfySolidPixelsA8(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept {
+static void satisfy_solid_pixels_a8(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept {
   BL_ASSERT(p.type() == PixelType::kA8);
-  BL_ASSERT(p.count() != 0);
+  BL_ASSERT(p.count() != PixelCount(0));
 
   VecWidth vw = pc->vec_width();
 
@@ -3203,9 +3203,9 @@ static void satisfySolidPixelsA8(PipeCompiler* pc, Pixel& p, PixelFlags flags) n
   // TODO: [JIT] UNIMPLEMENTED: A8 pipeline - finalize solid-alpha.
 }
 
-static void satisfySolidPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept {
+static void satisfy_solid_pixels_rgba32(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept {
   BL_ASSERT(p.type() == PixelType::kRGBA32);
-  BL_ASSERT(p.count() != 0);
+  BL_ASSERT(p.count() != PixelCount(0));
 
   VecWidth vw = pc->vec_width();
 
@@ -3230,10 +3230,10 @@ static void satisfySolidPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flag
     // TODO: [JIT] PORTABILITY: Requires SSSE3 on X86.
     pc->new_vec_array(p.pa, 1, vw, p.name(), "pa");
     if (!p.pc.is_empty()) {
-      pc->v_swizzlev_u8(p.pa[0], p.pc[0], pc->simd_const(&pc->ct.swizu8_3xxx2xxx1xxx0xxx_to_3333222211110000, Bcst::kNA, p.pa[0]));
+      pc->v_swizzlev_u8(p.pa[0], p.pc[0], pc->simd_const(&pc->ct<CommonTable>().swizu8_3xxx2xxx1xxx0xxx_to_3333222211110000, Bcst::kNA, p.pa[0]));
     }
     else if (!p.uc.is_empty()) {
-      pc->v_swizzlev_u8(p.pa[0], p.uc[0], pc->simd_const(&pc->ct.swizu8_x1xxxxxxx0xxxxxx_to_1111000011110000, Bcst::kNA, p.pa[0]));
+      pc->v_swizzlev_u8(p.pa[0], p.uc[0], pc->simd_const(&pc->ct<CommonTable>().swizu8_x1xxxxxxx0xxxxxx_to_1111000011110000, Bcst::kNA, p.pa[0]));
     }
   }
 
@@ -3282,15 +3282,15 @@ static void satisfySolidPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flag
 }
 
 void satisfy_solid_pixels(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept {
-  BL_ASSERT(p.count() != 0);
+  BL_ASSERT(p.count() != PixelCount(0));
 
   switch (p.type()) {
     case PixelType::kA8:
-      satisfySolidPixelsA8(pc, p, flags);
+      satisfy_solid_pixels_a8(pc, p, flags);
       break;
 
     case PixelType::kRGBA32:
-      satisfySolidPixelsRGBA32(pc, p, flags);
+      satisfy_solid_pixels_rgba32(pc, p, flags);
       break;
 
     default:
@@ -3308,8 +3308,8 @@ void _x_pack_pixel(PipeCompiler* pc, VecArray& px, VecArray& ux, uint32_t n, con
 
 #if defined(BL_JIT_ARCH_X86)
   if (pc->has_avx512() && ux[0].reg_type() >= asmjit::RegType::kVec256) {
-    VecWidth px_width = pc->vec_width_of(DataWidth::k8, n);
-    uint32_t px_count = pc->vec_count_of(DataWidth::k8, n);
+    VecWidth px_width = pc->vec_width_of(DataWidth::k8, uint32_t(n));
+    size_t px_count = pc->vec_count_of(DataWidth::k8, uint32_t(n));
     BL_ASSERT(px_count <= OpArray::kMaxSize);
 
     pc->new_vec_array(px, px_count, px_width, prefix, px_name);
@@ -3326,10 +3326,10 @@ void _x_pack_pixel(PipeCompiler* pc, VecArray& px, VecArray& ux, uint32_t n, con
       VecArray px_tmp;
       pc->new_vec256_array(px_tmp, ux.size(), prefix, "px_tmp");
 
-      for (uint32_t i = 0; i < ux.size(); i++)
+      for (size_t i = 0; i < ux.size(); i++)
         pc->cc->vpmovwb(px_tmp[i].ymm(), ux[i]);
 
-      for (uint32_t i = 0; i < ux.size(); i += 2)
+      for (size_t i = 0; i < ux.size(); i += 2)
         pc->cc->vinserti32x8(px[i / 2u].zmm(), px_tmp[i].zmm(), px_tmp[i + 1u].ymm(), 1);
 
       ux.reset();
@@ -3338,7 +3338,7 @@ void _x_pack_pixel(PipeCompiler* pc, VecArray& px, VecArray& ux, uint32_t n, con
   }
 
   if (pc->has_avx()) {
-    uint32_t px_count = pc->vec_count_of(DataWidth::k8, n);
+    size_t px_count = pc->vec_count_of(DataWidth::k8, n);
     BL_ASSERT(px_count <= OpArray::kMaxSize);
 
     if (ux[0].reg_type() >= asmjit::RegType::kVec256) {
@@ -3375,7 +3375,7 @@ void _x_pack_pixel(PipeCompiler* pc, VecArray& px, VecArray& ux, uint32_t n, con
     ux.reset();
   }
 #else
-  uint32_t px_count = pc->vec_count_of(DataWidth::k8, n);
+  size_t px_count = pc->vec_count_of(DataWidth::k8, n);
   BL_ASSERT(px_count <= OpArray::kMaxSize);
 
   pc->new_vec128_array(px, px_count, prefix, px_name);
@@ -3392,7 +3392,7 @@ void _x_unpack_pixel(PipeCompiler* pc, VecArray& ux, VecArray& px, uint32_t n, c
 
 #if defined(BL_JIT_ARCH_X86)
   VecWidth ux_width = pc->vec_width_of(DataWidth::k16, n);
-  uint32_t ux_count = pc->vec_count_of(DataWidth::k16, n);
+  size_t ux_count = pc->vec_count_of(DataWidth::k16, n);
   BL_ASSERT(ux_count <= OpArray::kMaxSize);
 
   if (pc->has_avx()) {
@@ -3419,9 +3419,9 @@ void _x_unpack_pixel(PipeCompiler* pc, VecArray& ux, VecArray& px, uint32_t n, c
       }
     }
     else {
-      for (uint32_t i = 0; i < ux_count; i++) {
+      for (size_t i = 0; i < ux_count; i++) {
         if (i & 1)
-          pc->v_swizzlev_u8(ux[i], px[i / 2u], pc->simd_const(&pc->ct.swizu8_76543210xxxxxxxx_to_z7z6z5z4z3z2z1z0, Bcst::kNA, ux[i]));
+          pc->v_swizzlev_u8(ux[i], px[i / 2u], pc->simd_const(&pc->ct<CommonTable>().swizu8_76543210xxxxxxxx_to_z7z6z5z4z3z2z1z0, Bcst::kNA, ux[i]));
         else
           pc->v_cvt_u8_lo_to_u16(ux[i], px[i / 2u]);
       }
@@ -3434,7 +3434,7 @@ void _x_unpack_pixel(PipeCompiler* pc, VecArray& ux, VecArray& px, uint32_t n, c
     }
     else {
       ux._size = px.size() * 2;
-      for (uint32_t i = 0; i < px.size(); i++) {
+      for (size_t i = 0; i < px.size(); i++) {
         ux[i * 2 + 0] = px[i];
         ux[i * 2 + 1] = pc->new_vec128();
         pc->xMovzxBW_LoHi(ux[i * 2 + 0], ux[i * 2 + 1], ux[i * 2 + 0]);
@@ -3445,28 +3445,28 @@ void _x_unpack_pixel(PipeCompiler* pc, VecArray& ux, VecArray& px, uint32_t n, c
     pc->rename(ux, prefix, ux_name);
   }
 #else
-  uint32_t count = pc->vec_count_of(DataWidth::k16, n);
+  size_t count = pc->vec_count_of(DataWidth::k16, n);
   BL_ASSERT(count <= OpArray::kMaxSize);
 
   pc->new_vec_array(ux, count, VecWidth::k128, prefix, ux_name);
 
-  for (uint32_t i = 0; i < count; i++) {
+  for (size_t i = 0; i < count; i++) {
     if (i & 1)
-      pc->v_swizzlev_u8(ux[i], px[i / 2u], pc->simd_const(&pc->ct.swizu8_76543210xxxxxxxx_to_z7z6z5z4z3z2z1z0, Bcst::kNA, ux[i]));
+      pc->v_swizzlev_u8(ux[i], px[i / 2u], pc->simd_const(&pc->ct<CommonTable>().swizu8_76543210xxxxxxxx_to_z7z6z5z4z3z2z1z0, Bcst::kNA, ux[i]));
     else
       pc->v_cvt_u8_lo_to_u16(ux[i], px[i / 2u]);
   }
 #endif
 }
 
-void x_fetch_unpacked_a8_2x(PipeCompiler* pc, const Vec& dst, PixelFetchInfo fInfo, const Mem& src1, const Mem& src0) noexcept {
+void x_fetch_unpacked_a8_2x(PipeCompiler* pc, const Vec& dst, PixelFetchInfo f_info, const Mem& src1, const Mem& src0) noexcept {
 #if defined(BL_JIT_ARCH_X86)
   Mem m0 = src0;
   Mem m1 = src1;
 
-  if (fInfo.format() == FormatExt::kPRGB32) {
-    m0.add_offset(fInfo.fetch_alpha_offset());
-    m1.add_offset(fInfo.fetch_alpha_offset());
+  if (f_info.format() == FormatExt::kPRGB32) {
+    m0.add_offset(f_info.fetch_alpha_offset());
+    m1.add_offset(f_info.fetch_alpha_offset());
   }
 
   if (pc->has_sse4_1()) {
@@ -3483,7 +3483,7 @@ void x_fetch_unpacked_a8_2x(PipeCompiler* pc, const Vec& dst, PixelFetchInfo fIn
 #else
   Vec tmp = pc->new_similar_reg(dst, "@tmp");
 
-  if (fInfo.format() == FormatExt::kPRGB32 && fInfo.fetch_alpha_offset()) {
+  if (f_info.format() == FormatExt::kPRGB32 && f_info.fetch_alpha_offset()) {
     pc->v_loadu32(dst, src0);
     pc->v_loadu32(tmp, src1);
     pc->v_srli_u32(dst, dst, 24);
@@ -3501,12 +3501,12 @@ void x_assign_unpacked_alpha_values(PipeCompiler* pc, Pixel& p, PixelFlags flags
   bl_unused(flags);
 
   BL_ASSERT(p.type() != PixelType::kNone);
-  BL_ASSERT(p.count() != 0);
+  BL_ASSERT(p.count() != PixelCount(0));
 
   Vec v0 = vec;
 
   if (p.isRGBA32()) {
-    switch (p.count().value()) {
+    switch (uint32_t(p.count())) {
       case 1: {
         pc->v_swizzle_lo_u16x4(v0, v0, swizzle(0, 0, 0, 0));
 
@@ -3557,7 +3557,7 @@ void x_assign_unpacked_alpha_values(PipeCompiler* pc, Pixel& p, PixelFlags flags
     pc->rename(p.uc, "uc");
   }
   else {
-    switch (p.count().value()) {
+    switch (uint32_t(p.count())) {
       case 1: {
         BL_ASSERT(bl_test_flag(flags, PixelFlags::kSA));
 
@@ -3599,21 +3599,21 @@ void store_pixels_and_advance(PipeCompiler* pc, const Gp& d_ptr, Pixel& p, Pixel
     case 1: {
       if (!predicate.is_empty()) {
         // Predicated pixel count must be greater than 1!
-        BL_ASSERT(n != 1);
+        BL_ASSERT(n != PixelCount(1));
 
         satisfy_pixels(pc, p, PixelFlags::kPA | PixelFlags::kImmutable);
-        storePredicatedVec8(pc, d_ptr, p.pa, n.value(), AdvanceMode::kAdvance, predicate);
+        store_predicated_vec8(pc, d_ptr, p.pa, uint32_t(n), AdvanceMode::kAdvance, predicate);
       }
       else {
-        if (n == 1) {
+        if (n == PixelCount(1)) {
           satisfy_pixels(pc, p, PixelFlags::kSA | PixelFlags::kImmutable);
           pc->store_u8(d_mem, p.sa);
         }
         else {
           satisfy_pixels(pc, p, PixelFlags::kPA | PixelFlags::kImmutable);
 
-          if (n <= 16) {
-            pc->v_store_iany(d_mem, p.pa[0], n.value(), alignment);
+          if (n <= PixelCount(16)) {
+            pc->v_store_iany(d_mem, p.pa[0], uint32_t(n), alignment);
           }
           else {
             satisfy_pixels(pc, p, PixelFlags::kPA | PixelFlags::kImmutable);
@@ -3623,7 +3623,7 @@ void store_pixels_and_advance(PipeCompiler* pc, const Gp& d_ptr, Pixel& p, Pixel
             uint32_t vec_size = p.pa[0].size();
             uint32_t pixels_per_reg = vec_size;
 
-            for (uint32_t i = 0; i < n.value(); i += pixels_per_reg) {
+            for (uint32_t i = 0; i < uint32_t(n); i += pixels_per_reg) {
               pc->v_storeavec(d_mem, p.pa[pc_index], alignment);
               if (++pc_index >= p.pa.size())
                 pc_index = 0;
@@ -3632,7 +3632,7 @@ void store_pixels_and_advance(PipeCompiler* pc, const Gp& d_ptr, Pixel& p, Pixel
           }
         }
 
-        pc->add(d_ptr, d_ptr, n.value());
+        pc->add(d_ptr, d_ptr, uint32_t(n));
       }
 
       break;
@@ -3641,28 +3641,28 @@ void store_pixels_and_advance(PipeCompiler* pc, const Gp& d_ptr, Pixel& p, Pixel
     case 4: {
       if (!predicate.is_empty()) {
         satisfy_pixels(pc, p, PixelFlags::kPC | PixelFlags::kImmutable);
-        storePredicatedVec32(pc, d_ptr, p.pc, n.value(), AdvanceMode::kAdvance, predicate);
+        store_predicated_vec32(pc, d_ptr, p.pc, uint32_t(n), AdvanceMode::kAdvance, predicate);
       }
 #if defined(BL_JIT_ARCH_X86)
-      else if (pc->has_avx512() && n >= 2 && !p.uc.is_empty() && p.pc.is_empty()) {
+      else if (pc->has_avx512() && n >= PixelCount(2) && !p.uc.is_empty() && p.pc.is_empty()) {
         uint32_t uc_index = 0;
         uint32_t vec_size = p.uc[0].size();
         uint32_t pixels_per_reg = vec_size / 8u;
 
-        for (uint32_t i = 0; i < n.value(); i += pixels_per_reg) {
+        for (uint32_t i = 0; i < uint32_t(n); i += pixels_per_reg) {
           pc->cc->vpmovwb(d_mem, p.uc[uc_index]);
           if (++uc_index >= p.uc.size())
             uc_index = 0;
           d_mem.add_offset(vec_size / 2u);
         }
-        pc->add(d_ptr, d_ptr, n.value() * 4);
+        pc->add(d_ptr, d_ptr, uint32_t(n) * 4);
       }
 #endif
       else {
         satisfy_pixels(pc, p, PixelFlags::kPC | PixelFlags::kImmutable);
 
-        if (n <= 4) {
-          pc->v_store_iany(d_mem, p.pc[0], n.value() * 4u, alignment);
+        if (n <= PixelCount(4)) {
+          pc->v_store_iany(d_mem, p.pc[0], uint32_t(n) * 4u, alignment);
         }
         else {
           // TODO: [JIT] OPTIMIZATION: AArch64 - Use v_storeavec with multiple Vec registers to take advantage of STP where possible.
@@ -3670,14 +3670,14 @@ void store_pixels_and_advance(PipeCompiler* pc, const Gp& d_ptr, Pixel& p, Pixel
           uint32_t vec_size = p.pc[0].size();
           uint32_t pixels_per_reg = vec_size / 4u;
 
-          for (uint32_t i = 0; i < n.value(); i += pixels_per_reg) {
+          for (uint32_t i = 0; i < uint32_t(n); i += pixels_per_reg) {
             pc->v_storeavec(d_mem, p.pc[pc_index], alignment);
             if (++pc_index >= p.pc.size())
               pc_index = 0;
             d_mem.add_offset(vec_size);
           }
         }
-        pc->add(d_ptr, d_ptr, n.value() * 4);
+        pc->add(d_ptr, d_ptr, uint32_t(n) * 4u);
       }
 
       break;

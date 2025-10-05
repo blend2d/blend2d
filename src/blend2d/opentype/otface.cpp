@@ -58,7 +58,7 @@ static BLResult init_open_type_face(OTFaceImpl* ot_face_impl, const BLFontData* 
   }
   else {
     // The font has no outlines that we can use.
-    return bl_trace_error(BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
+    return bl_make_error(BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
   }
 
   BL_PROPAGATE(MetricsImpl::init(ot_face_impl, tables));

@@ -21,7 +21,7 @@ namespace CMapImpl {
 static BLResult BL_CDECL map_text_to_glyphs_none(const BLFontFaceImpl* face_impl, uint32_t* content, size_t count, BLGlyphMappingState* state) noexcept {
   bl_unused(face_impl, content, count);
   state->reset();
-  return bl_trace_error(BL_ERROR_FONT_NO_CHARACTER_MAPPING);
+  return bl_make_error(BL_ERROR_FONT_NO_CHARACTER_MAPPING);
 }
 
 // bl::OpenType::CMapImpl - Format0
@@ -329,7 +329,7 @@ Done:
 
 BLResult validate_sub_table(RawTable cmap_table, uint32_t sub_table_offset, uint32_t& format_out, CMapEncoding& encoding_out) noexcept {
   if (cmap_table.size < 4u || sub_table_offset > cmap_table.size - 4u)
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
 
   uint32_t format = PtrOps::offset<const UInt16>(cmap_table.data, sub_table_offset)->value();
   switch (format) {
@@ -339,11 +339,11 @@ BLResult validate_sub_table(RawTable cmap_table, uint32_t sub_table_offset, uint
     case 0: {
       Table<CMapTable::Format0> sub_table(cmap_table.sub_table_unchecked(sub_table_offset));
       if (!sub_table.fits())
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       uint32_t length = sub_table->length();
       if (length < CMapTable::Format0::kBaseSize || length > sub_table.size)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       format_out = format;
       encoding_out.offset = sub_table_offset;
@@ -355,7 +355,7 @@ BLResult validate_sub_table(RawTable cmap_table, uint32_t sub_table_offset, uint
     // ------------------------------------------
 
     case 2: {
-      return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
+      return bl_make_error(BL_ERROR_NOT_IMPLEMENTED);
     }
 
     // Format 4 - Segment Mapping to Delta Values
@@ -364,19 +364,19 @@ BLResult validate_sub_table(RawTable cmap_table, uint32_t sub_table_offset, uint
     case 4: {
       Table<CMapTable::Format4> sub_table(cmap_table.sub_table_unchecked(sub_table_offset));
       if (!sub_table.fits())
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       uint32_t length = sub_table->length();
       if (length < CMapTable::Format4::kBaseSize || length > sub_table.size)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       uint32_t numSegX2 = sub_table->numSegX2();
       if (!numSegX2 || (numSegX2 & 1) != 0)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       uint32_t num_seg = numSegX2 / 2;
       if (length < 16 + num_seg * 8)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       const UInt16* last_char_array = sub_table->last_char_array();
       const UInt16* first_char_array = sub_table->first_char_array(num_seg);
@@ -397,22 +397,22 @@ BLResult validate_sub_table(RawTable cmap_table, uint32_t sub_table_offset, uint
         }
         else {
           if (first < previous_end || first > last)
-            return bl_trace_error(BL_ERROR_INVALID_DATA);
+            return bl_make_error(BL_ERROR_INVALID_DATA);
 
           if (i != 0 && first == previous_end)
-            return bl_trace_error(BL_ERROR_INVALID_DATA);
+            return bl_make_error(BL_ERROR_INVALID_DATA);
 
           if (id_offset != 0) {
             // Offset to 16-bit data must be even.
             if (id_offset & 1)
-              return bl_trace_error(BL_ERROR_INVALID_DATA);
+              return bl_make_error(BL_ERROR_INVALID_DATA);
 
             // This just validates whether the table doesn't want us to jump
             // somewhere outside, it doesn't validate whether GlyphIds are not
             // outside the limit.
             uint32_t index_in_table = 16 + num_seg * 6u + id_offset + (last - first) * 2u;
             if (index_in_table >= length)
-              return bl_trace_error(BL_ERROR_INVALID_DATA);
+              return bl_make_error(BL_ERROR_INVALID_DATA);
           }
         }
 
@@ -420,7 +420,7 @@ BLResult validate_sub_table(RawTable cmap_table, uint32_t sub_table_offset, uint
       }
 
       if (!num_seg_after_check)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       format_out = format;
       encoding_out.offset = sub_table_offset;
@@ -434,20 +434,20 @@ BLResult validate_sub_table(RawTable cmap_table, uint32_t sub_table_offset, uint
     case 6: {
       Table<CMapTable::Format6> sub_table(cmap_table.sub_table_unchecked(sub_table_offset));
       if (!sub_table.fits())
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       uint32_t length = sub_table->length();
       if (length < CMapTable::Format6::kBaseSize || length > sub_table.size)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       uint32_t first = sub_table->first();
       uint32_t count = sub_table->count();
 
       if (!count || first + count > 0xFFFFu)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       if (length < sizeof(CMapTable::Format10) + count * 2u)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       format_out = format;
       encoding_out.offset = sub_table_offset;
@@ -459,7 +459,7 @@ BLResult validate_sub_table(RawTable cmap_table, uint32_t sub_table_offset, uint
     // -------------------------------------------
 
     case 8: {
-      return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
+      return bl_make_error(BL_ERROR_NOT_IMPLEMENTED);
     };
 
     // Format 10 - Trimmed Array
@@ -468,20 +468,20 @@ BLResult validate_sub_table(RawTable cmap_table, uint32_t sub_table_offset, uint
     case 10: {
       Table<CMapTable::Format10> sub_table(cmap_table.sub_table_unchecked(sub_table_offset));
       if (!sub_table.fits())
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       uint32_t length = sub_table->length();
       if (length < CMapTable::Format10::kBaseSize || length > sub_table.size)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       uint32_t first = sub_table->first();
       uint32_t count = sub_table->glyph_ids.count();
 
       if (first >= Unicode::kCharMax || !count || count > Unicode::kCharMax || first + count > Unicode::kCharMax)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       if (length < sizeof(CMapTable::Format10) + count * 2u)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       format_out = format;
       encoding_out.offset = sub_table_offset;
@@ -496,31 +496,31 @@ BLResult validate_sub_table(RawTable cmap_table, uint32_t sub_table_offset, uint
     case 13: {
       Table<CMapTable::Format12_13> sub_table(cmap_table.sub_table_unchecked(sub_table_offset));
       if (!sub_table.fits())
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       uint32_t length = sub_table->length();
       if (length < CMapTable::Format12_13::kBaseSize || length > sub_table.size)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       uint32_t count = sub_table->groups.count();
       if (count > Unicode::kCharMax || length < sizeof(CMapTable::Format12_13) + count * sizeof(CMapTable::Group))
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       const CMapTable::Group* group_array = sub_table->groups.array();
       uint32_t first = group_array[0].first();
       uint32_t last = group_array[0].last();
 
       if (first > last || last > Unicode::kCharMax)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       for (uint32_t i = 1; i < count; i++) {
         first = group_array[i].first();
         if (first <= last)
-          return bl_trace_error(BL_ERROR_INVALID_DATA);
+          return bl_make_error(BL_ERROR_INVALID_DATA);
 
         last = group_array[i].last();
         if (first > last || last > Unicode::kCharMax)
-          return bl_trace_error(BL_ERROR_INVALID_DATA);
+          return bl_make_error(BL_ERROR_INVALID_DATA);
       }
 
       format_out = format;
@@ -535,17 +535,17 @@ BLResult validate_sub_table(RawTable cmap_table, uint32_t sub_table_offset, uint
     case 14: {
       Table<CMapTable::Format14> sub_table(cmap_table.sub_table_unchecked(sub_table_offset));
       if (!sub_table.fits())
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       // TODO: [OpenType] CMAP Format14 not implemented.
-      return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
+      return bl_make_error(BL_ERROR_NOT_IMPLEMENTED);
     }
 
     // Invalid / Unknown
     // -----------------
 
     default: {
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
     }
   }
 }
@@ -702,7 +702,7 @@ BLResult populate_character_coverage(const OTFaceImpl* ot_face_impl, BLBitSet* o
     }
 
     default:
-      return bl_trace_error(BL_ERROR_FONT_NO_CHARACTER_MAPPING);
+      return bl_make_error(BL_ERROR_FONT_NO_CHARACTER_MAPPING);
   }
 }
 

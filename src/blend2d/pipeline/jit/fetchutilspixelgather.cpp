@@ -28,7 +28,7 @@ void IndexExtractor::begin(uint32_t type, const Vec& vec) noexcept {
 #if defined(BL_JIT_ARCH_X86)
   Mem mem = _pc->tmp_stack(PipeCompiler::StackId::kIndex, vec.size());
 
-  _pc->v_storeavec(mem, vec, Alignment{16});
+  _pc->v_storeavec(mem, vec, Alignment(16));
   begin(type, mem, vec.size());
 #else
   _type = type;
@@ -99,7 +99,7 @@ void IndexExtractor::extract(const Gp& dst, uint32_t index) noexcept {
 #if defined(BL_JIT_ARCH_X86)
     BL_NOT_REACHED();
 #elif defined(BL_JIT_ARCH_A64)
-    AsmCompiler* cc = _pc->cc;
+    BackendCompiler* cc = _pc->cc;
     switch (_type) {
       case kTypeInt16 : cc->smov(dst      , _vec.h(index)); return;
       case kTypeUInt16: cc->umov(dst.r32(), _vec.h(index)); return;
@@ -117,7 +117,7 @@ void IndexExtractor::extract(const Gp& dst, uint32_t index) noexcept {
 // ============================================
 
 void FetchContext::_init(PixelCount n) noexcept {
-  BL_ASSERT(n >= 4);
+  BL_ASSERT(n >= PixelCount(4));
 
   _pixel->set_count(n);
   _fetch_mode = FetchMode::kNone;
@@ -205,7 +205,7 @@ static BL_INLINE_NODEBUG uint32_t vec128_reg_count_from_bytes(uint32_t n) noexce
 }
 
 void FetchContext::_init_fetch_regs() noexcept {
-  uint32_t pixel_count = _pixel->count().value();
+  uint32_t pixel_count = uint32_t(_pixel->count());
   BL_ASSERT(pixel_count >= 2u);
 
 #if defined(BL_JIT_ARCH_X86)
@@ -319,10 +319,10 @@ void FetchContext::_init_fetch_regs() noexcept {
   BL_ASSERT(p128_vec_count != 0u);
   _p128_count = uint8_t(p128_vec_count);
 
-  _pTmp[0] = _pc->new_vec128("@pTmp[0]");
-  _pTmp[1] = _pc->new_vec128("@pTmp[1]");
+  _p_tmp[0] = _pc->new_vec128("@pTmp[0]");
+  _p_tmp[1] = _pc->new_vec128("@pTmp[1]");
 
-  for (uint32_t i = 0; i < p128_vec_count; i++) {
+  for (size_t i = 0; i < p128_vec_count; i++) {
     _p128[i] = _pc->new_vec128("@p128[%u]", i);
   }
 
@@ -330,19 +330,19 @@ void FetchContext::_init_fetch_regs() noexcept {
   // Let's only use GP accumulator on X86 platform as that's pretty easy to implement and
   // it's fast. Other platforms seem to be just okay with SIMD lane to lane insertion.
   if (alpha_acc_size > 4)
-    _aAcc = _pc->new_gp64("@a_acc");
+    _a_acc = _pc->new_gp64("@a_acc");
   else if (alpha_acc_size > 0)
-    _aAcc = _pc->new_gp32("@a_acc");
+    _a_acc = _pc->new_gp32("@a_acc");
 
   _widening256_op = WideningOp::kNone;
   _widening512_op = WideningOp::kNone;
 
   if (_pc->use_256bit_simd() && full_byte_count > 16u) {
-    uint32_t p256_vec_count = (full_byte_count + 31u) / 32u;
+    size_t p256_vec_count = (full_byte_count + 31u) / 32u;
     _pc->new_vec256_array(_p256, p256_vec_count, "@p256");
 
     if (_pc->use_512bit_simd() && full_byte_count > 32u) {
-      uint32_t p512_vec_count = (full_byte_count + 63u) / 64u;
+      size_t p512_vec_count = (full_byte_count + 63u) / 64u;
       _pc->new_vec512_array(_p512, p512_vec_count, "@p512");
 
       _widening256_op = default_widening_op;
@@ -358,7 +358,7 @@ void FetchContext::_init_fetch_regs() noexcept {
 
 void FetchContext::_init_target_pixel() noexcept {
   const Vec* v_array = _p128;
-  uint32_t v_count = _p128_count;
+  size_t v_count = _p128_count;
 
 #if defined(BL_JIT_ARCH_X86)
   if (_p512.size()) {
@@ -408,7 +408,7 @@ void FetchContext::_init_target_pixel() noexcept {
 }
 
 void FetchContext::fetch_pixel(const Mem& src) noexcept {
-  uint32_t pixel_count = _pixel->count().value();
+  uint32_t pixel_count = uint32_t(_pixel->count());
   BL_ASSERT(_pixel_index < pixel_count);
 
   Vec v = _p128[_vec_index];
@@ -446,74 +446,74 @@ void FetchContext::fetch_pixel(const Mem& src) noexcept {
       else {
         uint32_t src_lane = 0;
         if (a8FromRgba32 && _fetch_info.fetch_alpha_offset()) {
-          _pc->v_loadu32(_pTmp[0], m);
+          _pc->v_loadu32(_p_tmp[0], m);
           src_lane = 3;
         }
         else {
-          _pc->v_load8(_pTmp[0], m);
+          _pc->v_load8(_p_tmp[0], m);
         }
 
-        _pc->cc->ins(v.b(fetch_packed ? _lane_index : _lane_index * 2u), _pTmp[0].b(src_lane));
+        _pc->cc->ins(v.b(fetch_packed ? _lane_index : _lane_index * 2u), _p_tmp[0].b(src_lane));
       }
 #else
-      uint32_t acc_byte_size = _aAcc.size();
+      uint32_t acc_byte_size = _a_acc.size();
 
       if (a8FromRgba32) {
         m.add_offset(_fetch_info.fetch_alpha_offset());
       }
 
-      if (_aAccIndex == 0)
-        _pc->load_u8(_aAcc, m);
+      if (_a_acc_index == 0)
+        _pc->load_u8(_a_acc, m);
       else
-        _pc->load_merge_u8(_aAcc, m);
+        _pc->load_merge_u8(_a_acc, m);
 
-      _pc->ror(_aAcc, _aAcc, (fetch_packed ? 8u : 16u) * quantity);
+      _pc->ror(_a_acc, _a_acc, (fetch_packed ? 8u : 16u) * quantity);
 
       uint32_t acc_bytes_scale = fetch_packed ? 1 : 2;
-      uint32_t acc_bytes = (_aAccIndex + quantity) * acc_bytes_scale;
+      uint32_t acc_bytes = (_a_acc_index + quantity) * acc_bytes_scale;
 
-      _aAccIndex++;
+      _a_acc_index++;
 
       if (acc_bytes >= acc_byte_size || _pixel_index + quantity >= pixel_count) {
         if (acc_byte_size == 4) {
           uint32_t dst_lane_index = (fetch_packed ? _lane_index : _lane_index * 2u) / 4u;
 
           if (dst_lane_index == 0) {
-            _pc->s_mov(v, _aAcc);
+            _pc->s_mov(v, _a_acc);
           }
           else if (!_pc->has_sse4_1()) {
             if (dst_lane_index == 1) {
-              _pc->s_mov(_pTmp[0], _aAcc);
-              _pc->v_interleave_lo_u32(v, v, _pTmp[0]);
+              _pc->s_mov(_p_tmp[0], _a_acc);
+              _pc->v_interleave_lo_u32(v, v, _p_tmp[0]);
             }
             else if (dst_lane_index == 2) {
-              _pc->s_mov(_pTmp[0], _aAcc);
+              _pc->s_mov(_p_tmp[0], _a_acc);
             }
             else if (dst_lane_index == 3) {
-              _pc->s_mov(_pTmp[1], _aAcc);
-              _pc->v_interleave_lo_u32(_pTmp[0], _pTmp[0], _pTmp[1]);
-              _pc->v_interleave_lo_u64(v, v, _pTmp[0]);
+              _pc->s_mov(_p_tmp[1], _a_acc);
+              _pc->v_interleave_lo_u32(_p_tmp[0], _p_tmp[0], _p_tmp[1]);
+              _pc->v_interleave_lo_u64(v, v, _p_tmp[0]);
             }
           }
           else {
-            _pc->s_insert_u32(v, _aAcc, dst_lane_index);
+            _pc->s_insert_u32(v, _a_acc, dst_lane_index);
           }
         }
         else {
           uint32_t dst_lane_index = (fetch_packed ? _lane_index : _lane_index * 2u) / 8u;
           if (dst_lane_index == 0) {
-            _pc->s_mov(v, _aAcc);
+            _pc->s_mov(v, _a_acc);
           }
           else if (!_pc->has_sse4_1()) {
-            _pc->s_mov(_pTmp[0], _aAcc);
-            _pc->v_interleave_lo_u64(v, v, _pTmp[0]);
+            _pc->s_mov(_p_tmp[0], _a_acc);
+            _pc->v_interleave_lo_u64(v, v, _p_tmp[0]);
           }
           else {
-            _pc->s_insert_u64(v, _aAcc, dst_lane_index);
+            _pc->s_insert_u64(v, _a_acc, dst_lane_index);
           }
         }
 
-        _aAccIndex = 0;
+        _a_acc_index = 0;
       }
 #endif
       break;
@@ -528,20 +528,20 @@ void FetchContext::fetch_pixel(const Mem& src) noexcept {
 #if defined(BL_JIT_ARCH_X86)
         if (!_pc->has_sse4_1()) {
           if (_lane_index == 1) {
-            _pc->v_loadu32(_pTmp[0], m);
-            _pc->v_interleave_lo_u32(v, v, _pTmp[0]);
+            _pc->v_loadu32(_p_tmp[0], m);
+            _pc->v_interleave_lo_u32(v, v, _p_tmp[0]);
           }
           else if (_lane_index == 2) {
-            _pc->v_loadu32(_pTmp[0], m);
+            _pc->v_loadu32(_p_tmp[0], m);
 
             // If quantity == 2 it means we are avoiding the last pixel and the following branch would never get called.
             if (quantity == 2u)
-              _pc->v_interleave_lo_u64(v, v, _pTmp[0]);
+              _pc->v_interleave_lo_u64(v, v, _p_tmp[0]);
           }
           else {
-            _pc->v_loadu32(_pTmp[1], m);
-            _pc->v_interleave_lo_u32(_pTmp[0], _pTmp[0], _pTmp[1]);
-            _pc->v_interleave_lo_u64(v, v, _pTmp[0]);
+            _pc->v_loadu32(_p_tmp[1], m);
+            _pc->v_interleave_lo_u32(_p_tmp[0], _p_tmp[0], _p_tmp[1]);
+            _pc->v_interleave_lo_u64(v, v, _p_tmp[0]);
           }
         }
         else
@@ -584,10 +584,10 @@ void FetchContext::_fetch_all(const Mem& src, uint32_t src_shift, IndexExtractor
   // Fetching all pixels assumes no pixels were fetched previously.
   BL_ASSERT(_pixel_index == 0);
 
-  uint32_t pixel_count = _pixel->count().value();
+  uint32_t pixel_count = uint32_t(_pixel->count());
 
-  Gp idx0 = _pc->new_gp("@idx0");
-  Gp idx1 = _pc->new_gp("@idx1");
+  Gp idx0 = _pc->new_gpz("@idx0");
+  Gp idx1 = _pc->new_gpz("@idx1");
 
   Mem src0 = src;
   Mem src1 = src;
@@ -761,10 +761,10 @@ void FetchContext::_done_vec(uint32_t index) noexcept {
 #if defined(BL_JIT_ARCH_X86)
     if (_widening512_op != WideningOp::kNone) {
       // Keep it AS IS as we are widening 8 packed bytes to 64 unpacked bytes - a single byte to [0A 0A 0A 0A].
-      BL_ASSERT(_pixel->count() >= 8u);
+      BL_ASSERT(_pixel->count() >= PixelCount(8));
     }
     else if (_widening256_op != WideningOp::kNone) {
-      BL_ASSERT(_pixel->count() >= 4u);
+      BL_ASSERT(_pixel->count() >= PixelCount(4));
       BL_ASSERT(_widening256_op == WideningOp::kUnpack2x);
 
       _pc->v_interleave_lo_u8(_p128[index + 0], _p128[index + 0], _p128[index + 0]);     // [a7 a7 a6 a6 a5 a5 a4 a4 a3 a3 a2 a2 a1 a1 a0 a0]
@@ -817,6 +817,7 @@ void FetchContext::_done_vec(uint32_t index) noexcept {
   // Firstly, widen to 256-bit wide registers and then decide whether to widen to 512-bit registers. In general both
   // can execute if we want to for example interleave and then unpack. However, if both widening operations are to
   // interleave, then they would not execute both here (as interleave to 512-bit requires 4 128-bit registers).
+  const CommonTable& ct = _pc->ct<CommonTable>();
   bool widen512 = false;
 
   switch (_widening256_op) {
@@ -853,15 +854,15 @@ void FetchContext::_done_vec(uint32_t index) noexcept {
     case WideningOp::kRepeat: {
       if (_widening512_op == WideningOp::kUnpack) {
         _pc->v_cvt_u8_to_u32(_p512[index], _p128[index]);
-        _pc->v_swizzlev_u8(_p512[index], _p512[index], _pc->simd_const(&_pc->ct.swizu8_xxx3xxx2xxx1xxx0_to_z3z3z2z2z1z1z0z0, Bcst::kNA, _p512[index]));
+        _pc->v_swizzlev_u8(_p512[index], _p512[index], _pc->simd_const(&ct.swizu8_xxx3xxx2xxx1xxx0_to_z3z3z2z2z1z1z0z0, Bcst::kNA, _p512[index]));
       }
       else if (_widening512_op == WideningOp::kRepeat) {
         _pc->v_cvt_u8_to_u32(_p512[index], _p128[index]);
-        _pc->v_swizzlev_u8(_p512[index], _p512[index], _pc->simd_const(&_pc->ct.swizu8_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, _p512[index]));
+        _pc->v_swizzlev_u8(_p512[index], _p512[index], _pc->simd_const(&ct.swizu8_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, _p512[index]));
       }
       else {
         _pc->v_cvt_u8_lo_to_u16(_p256[index], _p128[index]);
-        _pc->v_mul_u16(_p256[index], _p256[index], _pc->simd_const(&_pc->ct.i_0101010101010101, Bcst::k32, _p256[index]));
+        _pc->v_mul_u16(_p256[index], _p256[index], _pc->simd_const(&ct.p_0101010101010101, Bcst::k32, _p256[index]));
         widen512 = true;
       }
       break;
@@ -870,7 +871,7 @@ void FetchContext::_done_vec(uint32_t index) noexcept {
     case WideningOp::kRepeat8xA8ToRGBA32_UC_AVX512: {
       // This case widens 128-bit vector directly to a 512-bit vector, so keep `widen512` as false.
       if (_pc->has_avx512_vbmi()) {
-        Vec pred = _pc->simd_vec_const(&_pc->ct.permu8_a8_to_rgba32_uc, Bcst::kNA_Unique, _p512[index]);
+        Vec pred = _pc->simd_vec_const(&ct.permu8_a8_to_rgba32_uc, Bcst::kNA_Unique, _p512[index]);
         _pc->v_permute_u8(_p512[index], pred, _p128[index].zmm());
       }
       else {
@@ -919,7 +920,7 @@ void FetchContext::_done_vec(uint32_t index) noexcept {
           uint32_t index256 = index;
 
           _pc->v_cvt_u8_lo_to_u16(_p512[index512], _p256[index256]);
-          _pc->v_mul_u16(_p512[index512], _p512[index512], _pc->simd_const(&_pc->ct.i_0101010101010101, Bcst::k32, _p512[index]));
+          _pc->v_mul_u16(_p512[index512], _p512[index512], _pc->simd_const(&ct.p_0101010101010101, Bcst::k32, _p512[index]));
         }
         break;
       }
@@ -942,7 +943,7 @@ static void convert_gathered_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, Pi
 
     if (bl_test_flag(flags, PixelFlags::kPA)) {
       VecWidth pa_vec_width = pc->vec_width_of(DataWidth::k8, n);
-      uint32_t pa_reg_count = pc->vec_count_of(DataWidth::k8, n);
+      size_t pa_reg_count = pc->vec_count_of(DataWidth::k8, n);
 
       pc->new_vec_array(p.pa, pa_reg_count, pa_vec_width, p.name(), "pa");
       BL_ASSERT(p.pa.size() == 1);
@@ -960,7 +961,7 @@ static void convert_gathered_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, Pi
     }
     else {
       VecWidth ua_vec_width = pc->vec_width_of(DataWidth::k16, n);
-      uint32_t ua_reg_count = pc->vec_count_of(DataWidth::k16, n);
+      size_t ua_reg_count = pc->vec_count_of(DataWidth::k16, n);
 
       pc->new_vec_array(p.ua, ua_reg_count, ua_vec_width, p.name(), "ua");
       BL_ASSERT(p.ua.size() == 1);
@@ -999,31 +1000,31 @@ static void convert_gathered_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, Pi
 // bl::Pipeline::JIT::FetchUtils - Gather Pixels
 // =============================================
 
-void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout index_layout, GatherMode mode, InterleaveCallback cb, void* cb_data) noexcept {
+void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo f_info, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout index_layout, GatherMode mode, InterleaveCallback cb, void* cb_data) noexcept {
   Mem mem(src);
 
 #if defined(BL_JIT_ARCH_X86)
-  uint32_t bpp = fInfo.bpp();
+  uint32_t bpp = f_info.bpp();
 
   // Disabled gather means that we would gather to a wider register than enabled by the pipeline.
-  bool disabled_gather = pc->vec_width() == VecWidth::k128 && n * bpp > 16u;
+  bool disabled_gather = pc->vec_width() == VecWidth::k128 && uint32_t(n) * bpp > 16u;
 
   // Forced gather means that we have to use gather because of the width of gathered data.
-  bool forced_gather = pc->has_avx512() && n > 8u;
+  bool forced_gather = pc->has_avx512() && n > PixelCount(8);
 
-  if (!disabled_gather && (pc->has_opt_flag(PipeOptFlags::kFastGather) || forced_gather)) {
+  if (!disabled_gather && (pc->has_cpu_hint(CpuHints::kVecFastGather) || forced_gather)) {
     // NOTE: Gathers are provided by AVX2 and later, thus if we are here it means at least AVX2 is available.
     BL_ASSERT(pc->has_avx2());
 
-    AsmCompiler* cc = pc->cc;
-    uint32_t count = p.count().value();
+    BackendCompiler* cc = pc->cc;
+    uint32_t count = uint32_t(p.count());
 
     if (bpp == 4) {
       VecArray pixels;
 
-      if (n <= 4u)
+      if (n <= PixelCount(4))
         pc->new_vec128_array(pixels, 1, p.name(), "pc");
-      else if (n <= 8u)
+      else if (n <= PixelCount(8))
         pc->new_vec256_array(pixels, 1, p.name(), "pc");
       else
         pc->new_vec512_array(pixels, 1, p.name(), "pc");
@@ -1076,11 +1077,11 @@ void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, P
     if (bpp == 8) {
       VecArray pixels;
 
-      if (n <= 4u) {
+      if (n <= PixelCount(4)) {
         pc->new_vec256_array(pixels, 1, p.name(), "pc");
       }
       else if (pc->use_512bit_simd()) {
-        pc->new_vec512_array(pixels, n.value() / 8, p.name(), "pc");
+        pc->new_vec512_array(pixels, uint32_t(n) / 8u, p.name(), "pc");
       }
       else {
         pc->new_vec256_array(pixels, 2, p.name(), "pc");
@@ -1108,7 +1109,7 @@ void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, P
           BL_NOT_REACHED();
       }
 
-      if (pc->use_512bit_simd() && n.value() >= 8)
+      if (pc->use_512bit_simd() && n >= PixelCount(8))
         mem.set_index(gather_index.ymm());
       else
         mem.set_index(gather_index.xmm());
@@ -1116,7 +1117,7 @@ void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, P
 
       for (uint32_t i = 0; i < pixels.size(); i++) {
         if (i == 1) {
-          if (pc->use_512bit_simd() && n.value() == 16) {
+          if (pc->use_512bit_simd() && n == PixelCount(16)) {
             Vec gi2 = pc->new_similar_reg(gather_index, "gatherIndex2");
             cc->vextracti32x8(gi2.ymm(), gather_index.zmm(), 1);
             mem.set_index(gi2.ymm());
@@ -1187,7 +1188,7 @@ void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, P
   IndexExtractor index_extractor(pc);
   index_extractor.begin(index_type, idx);
 
-  FetchContext fCtx(pc, &p, n, flags, fInfo, mode);
+  FetchContext fCtx(pc, &p, n, flags, f_info, mode);
   fCtx._fetch_all(src, shift, index_extractor, index_sequence, cb, cb_data);
   fCtx.end();
 }

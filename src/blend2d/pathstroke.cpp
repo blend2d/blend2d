@@ -51,12 +51,12 @@ static constexpr size_t kStrokeMaxJoinVertices = 9;
 
 struct CapVertexCountGen {
   static constexpr uint8_t value(size_t cap) noexcept {
-    return cap == BL_STROKE_CAP_SQUARE       ? 3 :
-           cap == BL_STROKE_CAP_ROUND        ? 6 :
-           cap == BL_STROKE_CAP_ROUND_REV    ? 8 :
-           cap == BL_STROKE_CAP_TRIANGLE     ? 2 :
-           cap == BL_STROKE_CAP_TRIANGLE_REV ? 4 :
-           cap == BL_STROKE_CAP_BUTT         ? 1 : 1; // Default if not known.
+    return BLStrokeCap(cap) == BL_STROKE_CAP_SQUARE       ? 3 :
+           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND        ? 6 :
+           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND_REV    ? 8 :
+           BLStrokeCap(cap) == BL_STROKE_CAP_TRIANGLE     ? 2 :
+           BLStrokeCap(cap) == BL_STROKE_CAP_TRIANGLE_REV ? 4 :
+           BLStrokeCap(cap) == BL_STROKE_CAP_BUTT         ? 1 : 0;
   }
 };
 
@@ -236,7 +236,7 @@ public:
       const uint8_t* figure_start_cmd = _iter.cmd;
       if (BL_UNLIKELY(_iter.cmd[0] != BL_PATH_CMD_MOVE)) {
         if (_iter.cmd[0] != BL_PATH_CMD_CLOSE)
-          return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+          return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
 
         _iter++;
         continue;

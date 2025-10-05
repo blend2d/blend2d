@@ -52,16 +52,14 @@ public:
 
   typedef uint8_t* StatePtr;
 
-  enum Limits : size_t {
-    kMinBlockSize = 1024, // Safe bet - it must be greater than `kMaxAlignment`.
-    kMaxBlockSize = size_t(1) << (sizeof(size_t) * 8 - 1),
+  static inline constexpr size_t kMinBlockSize = 1024; // Safe bet - it must be greater than `kMaxAlignment`.
+  static inline constexpr size_t kMaxBlockSize = size_t(1) << (sizeof(size_t) * 8 - 1);
 
-    kMinAlignment = 1,
-    kMaxAlignment = 64,
+  static inline constexpr size_t kMinAlignment = 1;
+  static inline constexpr size_t kMaxAlignment = 64;
 
-    kBlockSize = sizeof(Block),
-    kBlockOverhead = kBlockSize + kMaxAlignment + BL_ALLOC_OVERHEAD
-  };
+  static inline constexpr size_t kBlockSize = sizeof(Block);
+  static inline constexpr size_t kBlockOverhead = kBlockSize + kMaxAlignment + size_t(BL_ALLOC_OVERHEAD);
 
   //! Pointer in the current block.
   uint8_t* _ptr;
@@ -211,7 +209,7 @@ public:
     if (size <= remaining_size())
       return BL_SUCCESS;
     else
-      return _alloc(0, 1) ? BL_SUCCESS : bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return _alloc(0, 1) ? BL_SUCCESS : bl_make_error(BL_ERROR_OUT_OF_MEMORY);
   }
 
   //! \}

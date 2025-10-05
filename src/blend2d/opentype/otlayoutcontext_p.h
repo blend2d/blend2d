@@ -146,7 +146,7 @@ struct GSubContextNested : public GSubContext {
   static BLResult BL_CDECL prepare_output_buffer_impl(GSubContext* self_, size_t size) noexcept {
     GSubContextNested* self = static_cast<GSubContextNested*>(self_);
     if (size > kNestedStorageSize)
-      return bl_trace_error(BL_ERROR_GLYPH_SUBSTITUTION_TOO_LARGE);
+      return bl_make_error(BL_ERROR_GLYPH_SUBSTITUTION_TOO_LARGE);
 
     NestedBuffer& nested = self->_nested_buffers[self->_next_nested_buffer_id];
     self->_work_buffer.glyph_data = nested.glyph_data;

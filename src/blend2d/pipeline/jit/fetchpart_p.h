@@ -118,36 +118,36 @@ public:
   //! \{
 
   //! Advances the current y coordinate by one pixel.
-  virtual void advanceY() noexcept;
+  virtual void advance_y() noexcept;
 
   //! Initializes the current horizontal cursor of the current scanline to `x`.
   //!
   //! \note This initializer is generally called once per scanline to setup the current position by initializing it
-  //! to `x`. The position is then advanced automatically by pixel fetchers and by `advanceX()`, which is used when
+  //! to `x`. The position is then advanced automatically by pixel fetchers and by `advance_x()`, which is used when
   //! there is a gap in the scanline that has to be skipped.
-  virtual void startAtX(const Gp& x) noexcept;
+  virtual void start_at_x(const Gp& x) noexcept;
 
   //! Advances the current x coordinate by `diff` pixels. The final x position after advance will be `x`. The fetcher
   //! can decide whether to use `x`, `diff`, or both.
-  virtual void advanceX(const Gp& x, const Gp& diff) noexcept;
+  virtual void advance_x(const Gp& x, const Gp& diff) noexcept;
 
   //! Called as a prolog before fetching multiple pixels at once. This must be called before any loop that would call
   //! `fetch()` with `n` greater than 1 unless the fetcher is in a vector mode because of `pixel_granularity`.
-  virtual void enterN() noexcept;
+  virtual void enter_n() noexcept;
 
   //! Called as an epilog after fetching multiple pixels at once. This must be called after a loop that uses `fetch()`
   //! with `n` greater than 1 unless the fetcher is in a vector mode because of `pixel_granularity`.
-  virtual void leaveN() noexcept;
+  virtual void leave_n() noexcept;
 
   //! Called before a loop that calls `fetch()` with `n` greater than 1. In some cases there will be some instructions
   //! placed between `prefetch()` and `fetch()`, which means that if the fetcher requires an expensive operation that
   //! has greater latency then it would be better to place that code into the prefetch area.
-  virtual void prefetchN() noexcept;
+  virtual void prefetch_n() noexcept;
 
-  //! Cancels the effect of `prefetchN()` and also automatic prefetch that happens inside `fetch()` with `n` greater than
-  //! 1. Must be called after a loop that calls `fetch()` to fetch multiple pixels, or immediately after `prefetchN()` if
-  //! no loop would be entered, but prefetchN() was already used.
-  virtual void postfetchN() noexcept;
+  //! Cancels the effect of `prefetch_n()` and also automatic prefetch that happens inside `fetch()` with `n` greater than
+  //! 1. Must be called after a loop that calls `fetch()` to fetch multiple pixels, or immediately after `prefetch_n()` if
+  //! no loop would be entered, but prefetch_n() was already used.
+  virtual void postfetch_n() noexcept;
 
   //! Fetches N pixels to `p` and advances by N.
   virtual void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;

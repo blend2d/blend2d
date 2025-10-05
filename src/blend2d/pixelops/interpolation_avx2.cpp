@@ -7,6 +7,7 @@
 #ifdef BL_TARGET_OPT_AVX2
 
 #include "../gradient_p.h"
+#include "../pixelops/funcs_p.h"
 #include "../simd/simd_p.h"
 #include "../support/math_p.h"
 
@@ -68,7 +69,7 @@ void BL_CDECL interpolate_prgb32_avx2(uint32_t* d_ptr, uint32_t d_size, const BL
       uint32_t n = i + 1;
 
       // Scale `dx` by taking advantage of DP-FP division.
-      Vec2xF64 scale = div_1xf64(cast_from_f64<Vec2xF64>(1 << 23), cvt_f64_from_scalar_i32(int(i)));
+      Vec2xF64 scale = div_f64x1(cast_from_f64<Vec2xF64>(1 << 23), cvt_f64_from_scalar_i32(int(i)));
       Vec4xI32 c32 = vec_i32(interleave_lo_u8(c0, c0));
       Vec4xI32 d32 = vec_i32(interleave_lo_u8(c1, c1));
 

@@ -13,7 +13,7 @@
   ],
 
   "tests": [
-    { "optional": true, "cmd": ["bl_test_unit", "--quick"] },
+    { "optional": true, "cmd": ["bl_test_runner", "--quick"] },
 
     { "optional": true, "cmd": ["bl_test_context_simple", "--count=128", "--style=random", "--comp-op=all"] },
 

@@ -5,6 +5,7 @@
 
 #include "../api-build_p.h"
 #include "../gradient_p.h"
+#include "../pixelops/funcs_p.h"
 #include "../pixelops/scalar_p.h"
 #include "../support/math_p.h"
 

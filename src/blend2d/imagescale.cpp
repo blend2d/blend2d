@@ -94,7 +94,7 @@ static BLResult BL_CDECL image_scale_weights(ImageScaleContext::Data* d, uint32_
   double* wData = static_cast<double*>(wMem.alloc(unsigned(kernel_size) * sizeof(double)));
 
   if (BL_UNLIKELY(!wData))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   for (int i = 0; i < dst_size; i++) {
     double wPos = (double(i) + 0.5) / scale - 0.5;
@@ -811,7 +811,7 @@ BLResult ImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uint3
   // ----------------
 
   if (!Geometry::is_valid(to) || !Geometry::is_valid(from))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   switch (filter) {
     case BL_IMAGE_SCALE_FILTER_NEAREST : filter_func = image_scale_nearest_filter ; r = 1.0; break;
@@ -820,7 +820,7 @@ BLResult ImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uint3
     case BL_IMAGE_SCALE_FILTER_LANCZOS : filter_func = image_scale_lanczos_filter ; r = 2.0; break;
 
     default:
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   // Setup Weights
@@ -861,7 +861,7 @@ BLResult ImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uint3
 
   this->data = static_cast<Data*>(malloc(data_size));
   if (BL_UNLIKELY(!this->data))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   // Init data.
   Data* d = this->data;

@@ -54,7 +54,7 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctx_impl, const BLContextCreat
 
     if (!worker_threads || !work_data_storage) {
       zone.restore_state(zone_state);
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
     }
 
     // Get global thread-pool or create an isolated one.
@@ -62,7 +62,7 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctx_impl, const BLContextCreat
     if (init_flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_THREAD_POOL) {
       thread_pool = bl_thread_pool_create();
       if (!thread_pool)
-        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
     }
     else {
       thread_pool = bl_thread_pool_global()->add_ref();
@@ -83,7 +83,7 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctx_impl, const BLContextCreat
       work_data_storage[i] = work_data;
 
       if (!work_data) {
-        ctx_impl->sync_work_data.accumulate_error(bl_trace_error(BL_ERROR_OUT_OF_MEMORY));
+        ctx_impl->sync_work_data.accumulate_error(bl_make_error(BL_ERROR_OUT_OF_MEMORY));
         thread_pool->release_threads(worker_threads, n);
         n = 0;
         break;

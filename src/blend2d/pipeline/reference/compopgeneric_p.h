@@ -119,8 +119,8 @@ struct CompOp_Base {
     fetch_op.spanEndX(x_pos);
   }
 
-  BL_INLINE void advanceY() noexcept {
-    fetch_op.advanceY();
+  BL_INLINE void advance_y() noexcept {
+    fetch_op.advance_y();
   }
 
   BL_INLINE uint8_t* composite_pixel_opaque(uint8_t* dst_ptr) noexcept {

@@ -875,7 +875,7 @@ static BLResult BL_CDECL decoder_restart_impl(BLImageDecoderImpl* impl) noexcept
 
 static BLResult decoderReadFCTL(BLPngDecoderImpl* decoder_impl, size_t chunk_offset, BLArrayView<uint8_t> chunk) noexcept {
   if (BL_UNLIKELY(chunk.size < kPngChunkDataSize_fcTL)) {
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
   }
 
   uint32_t n = MemOps::readU32uBE(chunk.data + 0u);
@@ -894,7 +894,7 @@ static BLResult decoderReadFCTL(BLPngDecoderImpl* decoder_impl, size_t chunk_off
                   h > uint32_t(decoder_impl->image_info.size.h) - y ||
                   dispose_op > kAPNGDisposeOpMaxValue ||
                   blend_op > kAPNGBlendOpMaxValue)) {
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
   }
 
   if (decoder_impl->first_fctl_offset == 0) {
@@ -921,12 +921,12 @@ static BLResult decoder_read_info_internal(BLPngDecoderImpl* decoder_impl, const
   const size_t kMinSize_CgBI = kMinSize_PNG + kPngChunkBaseSize + kPngChunkDataSize_CgBI;
 
   if (BL_UNLIKELY(size < kMinSize_PNG)) {
-    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    return bl_make_error(BL_ERROR_DATA_TRUNCATED);
   }
 
   // Check PNG signature.
   if (BL_UNLIKELY(memcmp(p, kPngSignature, kPngSignatureSize) != 0)) {
-    return bl_trace_error(BL_ERROR_INVALID_SIGNATURE);
+    return bl_make_error(BL_ERROR_INVALID_SIGNATURE);
   }
 
   ChunkReader chunk_reader(p + kPngSignatureSize, p + size - kPngSignatureSize);
@@ -946,11 +946,11 @@ static BLResult decoder_read_info_internal(BLPngDecoderImpl* decoder_impl, const
   //   2. http://iphonedevwiki.net/index.php/CgBI_file_format
   if (chunk_tag == BL_MAKE_TAG('C', 'g', 'B', 'I')) {
     if (BL_UNLIKELY(chunk_size != kPngChunkDataSize_CgBI)) {
-      return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+      return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
     }
 
     if (BL_UNLIKELY(size < kMinSize_CgBI)) {
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);
     }
 
     decoder_impl->add_flag(DecoderStatusFlags::kRead_CgBI);
@@ -966,7 +966,7 @@ static BLResult decoder_read_info_internal(BLPngDecoderImpl* decoder_impl, const
   // ----------------------------
 
   if (chunk_tag != BL_MAKE_TAG('I', 'H', 'D', 'R') || chunk_size != kPngChunkDataSize_IHDR) {
-    return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
   }
 
   uint32_t w           = chunk_reader.readUInt32(kPngChunkHeaderSize + 0u);
@@ -981,20 +981,20 @@ static BLResult decoder_read_info_internal(BLPngDecoderImpl* decoder_impl, const
 
   // Width/Height can't be zero or greater than `2^31 - 1`.
   if (BL_UNLIKELY(w == 0 || h == 0)) {
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
   }
 
   if (BL_UNLIKELY(w >= 0x80000000u || h >= 0x80000000u)) {
-    return bl_trace_error(BL_ERROR_IMAGE_TOO_LARGE);
+    return bl_make_error(BL_ERROR_IMAGE_TOO_LARGE);
   }
 
   if (BL_UNLIKELY(!check_color_type_and_bit_depth(color_type, sample_depth))) {
-    return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
   }
 
   // Compression and filter has to be zero, progressive can be [0, 1].
   if (BL_UNLIKELY(compression != 0 || filter != 0 || progressive >= 2)) {
-    return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
   }
 
   // Setup the image information.
@@ -1065,20 +1065,20 @@ static BLResult decoder_read_info_internal(BLPngDecoderImpl* decoder_impl, const
 static BLResult decoder_read_important_chunks(BLPngDecoderImpl* decoder_impl, const uint8_t* p, size_t size) noexcept {
   // Don't read beyond the user provided buffer.
   if (BL_UNLIKELY(size < decoder_impl->buffer_index)) {
-    return bl_trace_error(BL_ERROR_INVALID_STATE);
+    return bl_make_error(BL_ERROR_INVALID_STATE);
   }
 
   ChunkReader chunk_reader(p + decoder_impl->buffer_index, p + size);
   for (;;) {
     if (BL_UNLIKELY(!chunk_reader.has_chunk())) {
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);
     }
 
     uint32_t chunk_tag = chunk_reader.read_chunk_tag();
     uint32_t chunk_size = chunk_reader.read_chunk_size();
 
     if (BL_UNLIKELY(!chunk_reader.has_chunk_with_size(chunk_size))) {
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);
     }
 
     if (chunk_tag == BL_MAKE_TAG('P', 'L', 'T', 'E')) {
@@ -1089,11 +1089,11 @@ static BLResult decoder_read_important_chunks(BLPngDecoderImpl* decoder_impl, co
       // 2. It must precede the first IDAT chunk (also tRNS chunk).
       // 3. Contains 1...256 RGB palette entries.
       if (decoder_impl->has_flag(DecoderStatusFlags::kRead_PLTE | DecoderStatusFlags::kRead_tRNS)) {
-        return bl_trace_error(BL_ERROR_PNG_INVALID_PLTE);
+        return bl_make_error(BL_ERROR_PNG_INVALID_PLTE);
       }
 
       if (chunk_size == 0 || chunk_size > 768 || (chunk_size % 3) != 0) {
-        return bl_trace_error(BL_ERROR_PNG_INVALID_PLTE);
+        return bl_make_error(BL_ERROR_PNG_INVALID_PLTE);
       }
 
       chunk_reader.advance_chunk_header();
@@ -1127,18 +1127,18 @@ static BLResult decoder_read_important_chunks(BLPngDecoderImpl* decoder_impl, co
       // 2. It must precede the first 'IDAT' chunk and follow a 'PLTE' chunk, if any.
       // 3. It is prohibited for color types 4 and 6.
       if (decoder_impl->has_flag(DecoderStatusFlags::kRead_tRNS)) {
-        return bl_trace_error(BL_ERROR_PNG_INVALID_TRNS);
+        return bl_make_error(BL_ERROR_PNG_INVALID_TRNS);
       }
 
       if (color_type == kColorType4_LUMA || color_type == kColorType6_RGBA) {
-        return bl_trace_error(BL_ERROR_PNG_INVALID_TRNS);
+        return bl_make_error(BL_ERROR_PNG_INVALID_TRNS);
       }
 
       if (color_type == kColorType0_LUM) {
         // For color type 0 (grayscale), the tRNS chunk contains a single gray level value, stored in the format:
         //   [0..1] Gray:  2 bytes, range 0 .. (2^depth)-1
         if (chunk_size != 2u) {
-          return bl_trace_error(BL_ERROR_PNG_INVALID_TRNS);
+          return bl_make_error(BL_ERROR_PNG_INVALID_TRNS);
         }
 
         uint32_t gray = chunk_reader.readUInt16(kPngChunkHeaderSize);
@@ -1153,7 +1153,7 @@ static BLResult decoder_read_important_chunks(BLPngDecoderImpl* decoder_impl, co
         //   [2..3] Green: 2 bytes, range 0 .. (2^depth)-1
         //   [4..5] Blue:  2 bytes, range 0 .. (2^depth)-1
         if (chunk_size != 6u) {
-          return bl_trace_error(BL_ERROR_PNG_INVALID_TRNS);
+          return bl_make_error(BL_ERROR_PNG_INVALID_TRNS);
         }
 
         uint32_t r = chunk_reader.readUInt16(kPngChunkHeaderSize + 0u);
@@ -1174,7 +1174,7 @@ static BLResult decoder_read_important_chunks(BLPngDecoderImpl* decoder_impl, co
         // 2. The tRNS chunk can contain 1...pal_size alpha values, but in general it can contain less than `pal_size`
         //    values, in that case the remaining alpha values are assumed to be 255.
         if (!decoder_impl->has_flag(DecoderStatusFlags::kRead_PLTE) || chunk_size == 0u || chunk_size > decoder_impl->palette_size) {
-          return bl_trace_error(BL_ERROR_PNG_INVALID_TRNS);
+          return bl_make_error(BL_ERROR_PNG_INVALID_TRNS);
         }
 
         chunk_reader.advance_chunk_header();
@@ -1198,7 +1198,7 @@ static BLResult decoder_read_important_chunks(BLPngDecoderImpl* decoder_impl, co
     else {
       if (chunk_tag == BL_MAKE_TAG('f', 'c', 'T', 'L') && decoder_impl->isAPNG()) {
         if (decoder_impl->has_fctl()) {
-          return bl_trace_error(BL_ERROR_INVALID_DATA);
+          return bl_make_error(BL_ERROR_INVALID_DATA);
         }
 
         BL_PROPAGATE(
@@ -1302,7 +1302,7 @@ static BLResult decoder_read_pixel_data(BLPngDecoderImpl* decoder_impl, BLImage*
 
   // Make sure we won't initialize our chunk reader out of range.
   if (BL_UNLIKELY(size < decoder_impl->buffer_index)) {
-    return bl_trace_error(BL_ERROR_INVALID_STATE);
+    return bl_make_error(BL_ERROR_INVALID_STATE);
   }
 
   ChunkReader chunk_reader(input + decoder_impl->buffer_index, input + size);
@@ -1323,14 +1323,14 @@ static BLResult decoder_read_pixel_data(BLPngDecoderImpl* decoder_impl, BLImage*
   // Process all preceding chunks, which are not 'IDAT' or 'fdAT'.
   for (;;) {
     if (BL_UNLIKELY(!chunk_reader.has_chunk())) {
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);
     }
 
     uint32_t chunk_tag = chunk_reader.read_chunk_tag();
     uint32_t chunk_size = chunk_reader.read_chunk_size();
 
     if (BL_UNLIKELY(!chunk_reader.has_chunk_with_size(chunk_size))) {
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);
     }
 
     if (chunk_tag == frame_tag) {
@@ -1339,16 +1339,16 @@ static BLResult decoder_read_pixel_data(BLPngDecoderImpl* decoder_impl, BLImage*
     }
 
     if (chunk_tag == BL_MAKE_TAG('I', 'H', 'D', 'R')) {
-      return bl_trace_error(BL_ERROR_PNG_MULTIPLE_IHDR);
+      return bl_make_error(BL_ERROR_PNG_MULTIPLE_IHDR);
     }
 
     if (chunk_tag == BL_MAKE_TAG('I', 'E', 'N', 'D')) {
-      return bl_trace_error(BL_ERROR_PNG_INVALID_IEND);
+      return bl_make_error(BL_ERROR_PNG_INVALID_IEND);
     }
 
     if (chunk_tag == BL_MAKE_TAG('f', 'c', 'T', 'L') && decoder_impl->isAPNG()) {
       if (decoder_impl->has_fctl()) {
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
       }
       BL_PROPAGATE(
         decoderReadFCTL(
@@ -1365,7 +1365,7 @@ static BLResult decoder_read_pixel_data(BLPngDecoderImpl* decoder_impl, BLImage*
 
   if (decoder_impl->frame_index != 0u) {
     if (!decoder_impl->has_fctl()) {
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
     }
 
     x = decoder_impl->frame_ctrl.x;
@@ -1387,7 +1387,7 @@ static BLResult decoder_read_pixel_data(BLPngDecoderImpl* decoder_impl, BLImage*
   uint32_t png_pixel_data_size = calculate_interlace_steps(steps, progressive ? interlaceTableAdam7 : interlace_table_none, step_count, sample_depth, sample_count, w, h);
 
   if (BL_UNLIKELY(png_pixel_data_size == 0)) {
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
   }
 
   BL_PROPAGATE(decoder_impl->deflate_decoder.init(decoder_impl->deflate_format(), Compression::Deflate::DecoderOptions::kNeverReallocOutputBuffer));
@@ -1409,7 +1409,7 @@ static BLResult decoder_read_pixel_data(BLPngDecoderImpl* decoder_impl, BLImage*
       if (frame_tag == BL_MAKE_TAG('f', 'd', 'A', 'T')) {
         // The 'fdAT' chunk starts with 4 bytes specifying the sequence.
         if (BL_UNLIKELY(chunk_size < 4u)) {
-          return bl_trace_error(BL_ERROR_INVALID_DATA);
+          return bl_make_error(BL_ERROR_INVALID_DATA);
         }
 
         chunk_data += 4u;
@@ -1421,7 +1421,7 @@ static BLResult decoder_read_pixel_data(BLPngDecoderImpl* decoder_impl, BLImage*
         BLResult result = decoder_impl->deflate_decoder.decode(decoder_impl->png_pixel_data, BLDataView{chunk_data, chunk_size});
         if (result == BL_SUCCESS) {
           if (decoder_impl->png_pixel_data.size() != png_pixel_data_size) {
-            return bl_trace_error(BL_ERROR_INVALID_DATA);
+            return bl_make_error(BL_ERROR_INVALID_DATA);
           }
           break;
         }
@@ -1435,17 +1435,17 @@ static BLResult decoder_read_pixel_data(BLPngDecoderImpl* decoder_impl, BLImage*
 
       // Consecutive chunks required.
       if (BL_UNLIKELY(!chunk_reader.has_chunk())) {
-        return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+        return bl_make_error(BL_ERROR_DATA_TRUNCATED);
       }
 
       chunk_size = chunk_reader.read_chunk_size();
       if (BL_UNLIKELY(!chunk_reader.has_chunk_with_size(chunk_size))) {
-        return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+        return bl_make_error(BL_ERROR_DATA_TRUNCATED);
       }
 
       uint32_t chunk_tag = chunk_reader.read_chunk_tag();
       if (BL_UNLIKELY(chunk_tag != frame_tag)) {
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
       }
     }
   }
@@ -1479,7 +1479,7 @@ static BLResult decoder_read_pixel_data(BLPngDecoderImpl* decoder_impl, BLImage*
     // The animation requires that the user passes an image that has the previous content, but we only want to verify
     // its size and pixel format.
     if (BL_UNLIKELY(image_out->size() != decoder_impl->image_info.size || image_out->format() != BLFormat(decoder_impl->output_format))) {
-      return bl_trace_error(BL_ERROR_INVALID_STATE);
+      return bl_make_error(BL_ERROR_INVALID_STATE);
     }
   }
 
@@ -1528,7 +1528,7 @@ static BLResult decoder_read_pixel_data(BLPngDecoderImpl* decoder_impl, BLImage*
       uint8_t* saved_pixels = static_cast<uint8_t*>(decoder_impl->previous_pixel_buffer.alloc(h * copy_area_width_in_bytes));
 
       if (BL_UNLIKELY(!saved_pixels)) {
-        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
       }
 
       copy_pixels(saved_pixels, intptr_t(copy_area_width_in_bytes), dst_pixels, dst_stride, copy_area_width_in_bytes, h);
@@ -1580,7 +1580,7 @@ static BLResult decoder_read_pixel_data(BLPngDecoderImpl* decoder_impl, BLImage*
     }
 
     if (!tmp_pixel_ptr) {
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
     }
 
     tmp_pixel_ptr = IntOps::align_up(tmp_pixel_ptr, 16);
@@ -1641,7 +1641,7 @@ static BLResult BL_CDECL decoder_read_frame_impl(BLImageDecoderImpl* impl, BLIma
     }
   }
   else if (!decoder_impl->isAPNG()) {
-    return bl_trace_error(BL_ERROR_NO_MORE_DATA);
+    return bl_make_error(BL_ERROR_NO_MORE_DATA);
   }
 
   {
@@ -1861,7 +1861,7 @@ static BLResult BL_CDECL encoder_write_frame_impl(BLImageEncoderImpl* impl, BLAr
   const BLImage& img = *static_cast<const BLImage*>(image);
 
   if (img.is_empty()) {
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   BLImageData image_data;
@@ -1916,7 +1916,7 @@ static BLResult BL_CDECL encoder_write_frame_impl(BLImageEncoderImpl* impl, BLAr
   uint8_t* uncompressed_data = static_cast<uint8_t*>(uncompressed_buffer.alloc(uncompressed_data_size));
 
   if (BL_UNLIKELY(!uncompressed_data)) {
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
   }
 
   BL_PROPAGATE(pc.convert_rect(uncompressed_data + 1, intptr_t(uncompressed_stride), image_data.pixel_data, image_data.stride, w, h));

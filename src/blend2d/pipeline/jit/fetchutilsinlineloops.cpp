@@ -34,11 +34,11 @@ static BL_NOINLINE void emit_mem_fill_sequence(PipeCompiler* pc, Mem d_ptr, Vec 
     pc->add(dPtrBase, dPtrBase, num_bytes);
   }
 #elif defined(BL_JIT_ARCH_A64)
-  AsmCompiler* cc = pc->cc;
+  BackendCompiler* cc = pc->cc;
 
   bool post_index = advance_mode == AdvanceMode::kAdvance && !d_ptr.has_offset();
   if (post_index) {
-    d_ptr.set_offset_mode(a64::OffsetMode::kPostIndex);
+    d_ptr.set_offset_mode(OffsetMode::kPostIndex);
   }
 
   while (n >= 32u) {
@@ -60,7 +60,7 @@ static BL_NOINLINE void emit_mem_fill_sequence(PipeCompiler* pc, Mem d_ptr, Vec 
         d_ptr.set_offset_lo32(int32_t(count));
       }
 
-      pc->v_store_iany(d_ptr, v, count, Alignment{1});
+      pc->v_store_iany(d_ptr, v, count, Alignment(1));
       if (!post_index)
         d_ptr.add_offset_lo32(int32_t(count));
 
@@ -159,7 +159,7 @@ void inline_fill_span_loop(
         pc->shr(i, i, 2u - size_shift);
 
 #if defined(BL_JIT_ARCH_X86)
-      if (pc->has_masked_access_of(4) && pc->has_opt_flag(PipeOptFlags::kFastStoreWithMask)) {
+      if (pc->has_masked_access_of(4) && pc->has_cpu_hint(CpuHints::kVecMaskedStore)) {
         Label L_MainIter = pc->new_label();
         Label L_MainSkip = pc->new_label();
         Label L_TailIter = pc->new_label();
@@ -490,8 +490,8 @@ void inline_fill_rect_loop(
   if (!L_End.is_valid())
     L_End = pc->new_label();
 
-  Gp endIndexA = pc->new_gp("endIndexA");
-  Gp endIndexB = pc->new_gp("endIndexB");
+  Gp end_index_a = pc->new_gpz("end_index_a");
+  Gp end_index_b = pc->new_gpz("end_index_b");
   Gp src32b = pc->new_gp32("src32");
 
   VecArray src256b;
@@ -523,7 +523,7 @@ void inline_fill_rect_loop(
   else
     src_align_size = src512b;
 
-  pc->mul(endIndexA.r32(), w, item_size);
+  pc->mul(end_index_a.r32(), w, item_size);
 
   pc->j(L_Width_LE_32, ucmp_le(w, 32 >> size_shift));
   pc->j(L_Width_LE_256, ucmp_le(w, 256 >> size_shift));
@@ -538,11 +538,11 @@ void inline_fill_rect_loop(
     Label L_MainLoop4x = pc->new_label();
     Label L_MainSkip4x = pc->new_label();
 
-    Gp dst_aligned = pc->new_gp("dst_aligned");
-    Gp i = pc->new_gp("i");
+    Gp dst_aligned = pc->new_gpz("dst_aligned");
+    Gp i = pc->new_gpz("i");
 
     pc->bind(L_ScanlineLoop);
-    pc->add(i, dst_ptr, endIndexA);
+    pc->add(i, dst_ptr, end_index_a);
     pc->add(dst_aligned, dst_ptr, store_alignment);
     pc->v_storeuvec(mem_ptr(dst_ptr), src_align_size);
     pc->and_(dst_aligned, dst_aligned, ~uint64_t(store_alignment_mask ^ size_mask));
@@ -597,19 +597,19 @@ void inline_fill_rect_loop(
 
   pc->bind(L_Width_LE_256);
 
-  pc->sub(endIndexB, endIndexA, 32);
-  pc->sub(endIndexA, endIndexA, 16);
+  pc->sub(end_index_b, end_index_a, 32);
+  pc->sub(end_index_a, end_index_a, 16);
 
   pc->j(L_Width_LE_128, ucmp_le(w, 128 >> size_shift));
   pc->j(L_Width_LE_192, ucmp_le(w, 192 >> size_shift));
 
   {
     Label L_ScanlineLoop = pc->new_label();
-    Gp dst_end = pc->new_gp("dst_end");
+    Gp dst_end = pc->new_gpz("dst_end");
 
     pc->bind(L_ScanlineLoop);
     pc->v_storeuvec(mem_ptr(dst_ptr), src512b);
-    pc->add(dst_end, dst_ptr, endIndexB);
+    pc->add(dst_end, dst_ptr, end_index_b);
     pc->v_storeuvec(mem_ptr(dst_ptr, 64), src512b);
     pc->v_storeuvec(mem_ptr(dst_ptr, 128), src512b);
     pc->add(dst_ptr, dst_ptr, stride);
@@ -629,11 +629,11 @@ void inline_fill_rect_loop(
 
   {
     Label L_ScanlineLoop = pc->new_label();
-    Gp dst_end = pc->new_gp("dst_end");
+    Gp dst_end = pc->new_gpz("dst_end");
 
     pc->bind(L_ScanlineLoop);
     pc->v_storeuvec(mem_ptr(dst_ptr), src512b);
-    pc->add(dst_end, dst_ptr, endIndexB);
+    pc->add(dst_end, dst_ptr, end_index_b);
     pc->v_storeuvec(mem_ptr(dst_ptr, 64), src512b);
     pc->add(dst_ptr, dst_ptr, stride);
     pc->v_storeuvec(mem_ptr(dst_end, -32), src512b);
@@ -651,11 +651,11 @@ void inline_fill_rect_loop(
 
   {
     Label L_ScanlineLoop = pc->new_label();
-    Gp dst_end = pc->new_gp("dst_end");
+    Gp dst_end = pc->new_gpz("dst_end");
 
     pc->bind(L_ScanlineLoop);
     pc->v_storeuvec(mem_ptr(dst_ptr), src512b);
-    pc->add(dst_end, dst_ptr, endIndexB);
+    pc->add(dst_end, dst_ptr, end_index_b);
     pc->v_storeuvec(mem_ptr(dst_ptr, 64), src512b);
     pc->add(dst_ptr, dst_ptr, stride);
     pc->v_storeuvec(mem_ptr(dst_end), src256b);
@@ -673,11 +673,11 @@ void inline_fill_rect_loop(
 
   {
     Label L_ScanlineLoop2x = pc->new_label();
-    Gp dst_alt = pc->new_gp("dst_alt");
-    Gp dst_end = pc->new_gp("dst_end");
+    Gp dst_alt = pc->new_gpz("dst_alt");
+    Gp dst_end = pc->new_gpz("dst_end");
 
     pc->j(L_ScanlineLoop2x, test_z(h, 0x1));
-    pc->add(dst_end, dst_ptr, endIndexB);
+    pc->add(dst_end, dst_ptr, end_index_b);
     pc->v_storeuvec(mem_ptr(dst_ptr,  0), src512b);
     pc->v_storeuvec(mem_ptr(dst_ptr, 64), src256b);
     pc->add(dst_ptr, dst_ptr, stride);
@@ -687,11 +687,11 @@ void inline_fill_rect_loop(
     pc->bind(L_ScanlineLoop2x);
     pc->add(dst_alt, dst_ptr, stride);
     pc->v_storeuvec(mem_ptr(dst_ptr,  0), src512b);
-    pc->add(dst_end, dst_ptr, endIndexB);
+    pc->add(dst_end, dst_ptr, end_index_b);
     pc->v_storeuvec(mem_ptr(dst_ptr, 64), src256b);
     pc->add_scaled(dst_ptr, stride, 2);
     pc->v_storeuvec(mem_ptr(dst_end    ), src256b);
-    pc->add(dst_end, dst_alt, endIndexB);
+    pc->add(dst_end, dst_alt, end_index_b);
     pc->v_storeuvec(mem_ptr(dst_alt,  0), src512b);
     pc->v_storeuvec(mem_ptr(dst_alt, 64), src256b);
     pc->v_storeuvec(mem_ptr(dst_end    ), src256b);
@@ -707,11 +707,11 @@ void inline_fill_rect_loop(
 
   {
     Label L_ScanlineLoop2x = pc->new_label();
-    Gp dst_alt = pc->new_gp("dst_alt");
-    Gp dst_end = pc->new_gp("dst_end");
+    Gp dst_alt = pc->new_gpz("dst_alt");
+    Gp dst_end = pc->new_gpz("dst_end");
 
     pc->j(L_ScanlineLoop2x, test_z(h, 0x1));
-    pc->add(dst_end, dst_ptr, endIndexB);
+    pc->add(dst_end, dst_ptr, end_index_b);
     pc->v_storeuvec(mem_ptr(dst_ptr), src512b);
     pc->add(dst_ptr, dst_ptr, stride);
     pc->v_storeuvec(mem_ptr(dst_end), src256b);
@@ -720,10 +720,10 @@ void inline_fill_rect_loop(
     pc->bind(L_ScanlineLoop2x);
     pc->add(dst_alt, dst_ptr, stride);
     pc->v_storeuvec(mem_ptr(dst_ptr), src512b);
-    pc->add(dst_end, dst_ptr, endIndexB);
+    pc->add(dst_end, dst_ptr, end_index_b);
     pc->add_scaled(dst_ptr, stride, 2);
     pc->v_storeuvec(mem_ptr(dst_alt), src512b);
-    pc->add(dst_alt, dst_alt, endIndexB);
+    pc->add(dst_alt, dst_alt, end_index_b);
     pc->v_storeuvec(mem_ptr(dst_end), src256b);
     pc->v_storeuvec(mem_ptr(dst_alt), src256b);
     pc->j(L_ScanlineLoop2x, sub_nz(h, 2));
@@ -738,23 +738,23 @@ void inline_fill_rect_loop(
 
   {
     Label L_ScanlineLoop2x = pc->new_label();
-    Gp dst_alt = pc->new_gp("dst_alt");
+    Gp dst_alt = pc->new_gpz("dst_alt");
 
     pc->j(L_ScanlineLoop2x, test_z(h, 0x1));
-    pc->v_storeu128(mem_ptr(dst_ptr, endIndexA), src);
-    pc->v_storeu128(mem_ptr(dst_ptr, endIndexB), src);
+    pc->v_storeu128(mem_ptr(dst_ptr, end_index_a), src);
+    pc->v_storeu128(mem_ptr(dst_ptr, end_index_b), src);
     pc->v_storeuvec(mem_ptr(dst_ptr), src256b);
     pc->add(dst_ptr, dst_ptr, stride);
     pc->j(L_End, sub_z(h, 1));
 
     pc->bind(L_ScanlineLoop2x);
     pc->add(dst_alt, dst_ptr, stride);
-    pc->v_storeu128(mem_ptr(dst_ptr, endIndexA), src);
-    pc->v_storeu128(mem_ptr(dst_ptr, endIndexB), src);
+    pc->v_storeu128(mem_ptr(dst_ptr, end_index_a), src);
+    pc->v_storeu128(mem_ptr(dst_ptr, end_index_b), src);
     pc->v_storeuvec(mem_ptr(dst_ptr), src256b);
     pc->add(dst_ptr, dst_alt, stride);
-    pc->v_storeu128(mem_ptr(dst_alt, endIndexA), src);
-    pc->v_storeu128(mem_ptr(dst_alt, endIndexB), src);
+    pc->v_storeu128(mem_ptr(dst_alt, end_index_a), src);
+    pc->v_storeu128(mem_ptr(dst_alt, end_index_b), src);
     pc->v_storeuvec(mem_ptr(dst_alt), src256b);
     pc->j(L_ScanlineLoop2x, sub_nz(h, 2));
 
@@ -769,12 +769,12 @@ void inline_fill_rect_loop(
 
   {
     Label L_ScanlineLoop2x = pc->new_label();
-    Gp dst_alt = pc->new_gp("dst_alt");
+    Gp dst_alt = pc->new_gpz("dst_alt");
 
-    pc->sub(endIndexA, endIndexA, 16);
+    pc->sub(end_index_a, end_index_a, 16);
 
     pc->j(L_ScanlineLoop2x, test_z(h, 0x1));
-    pc->v_storeu128(mem_ptr(dst_ptr, endIndexA), src);
+    pc->v_storeu128(mem_ptr(dst_ptr, end_index_a), src);
     pc->v_storeu128(mem_ptr(dst_ptr), src);
     pc->add(dst_ptr, dst_ptr, stride);
     pc->j(L_End, sub_z(h, 1));
@@ -782,10 +782,10 @@ void inline_fill_rect_loop(
     pc->bind(L_ScanlineLoop2x);
     pc->add(dst_alt, dst_ptr, stride);
     pc->v_storeu128(mem_ptr(dst_ptr), src);
-    pc->v_storeu128(mem_ptr(dst_ptr, endIndexA), src);
+    pc->v_storeu128(mem_ptr(dst_ptr, end_index_a), src);
     pc->add(dst_ptr, dst_alt, stride);
     pc->v_storeu128(mem_ptr(dst_alt), src);
-    pc->v_storeu128(mem_ptr(dst_alt, endIndexA), src);
+    pc->v_storeu128(mem_ptr(dst_alt, end_index_a), src);
     pc->j(L_ScanlineLoop2x, sub_nz(h, 2));
 
     pc->j(L_End);
@@ -799,22 +799,22 @@ void inline_fill_rect_loop(
 
   {
     Label L_ScanlineLoop2x = pc->new_label();
-    Gp dst_alt = pc->new_gp("dst_alt");
+    Gp dst_alt = pc->new_gpz("dst_alt");
 
-    pc->sub(endIndexA, endIndexA, 8);
+    pc->sub(end_index_a, end_index_a, 8);
 
     pc->j(L_ScanlineLoop2x, test_z(h, 0x1));
-    pc->v_storeu64(mem_ptr(dst_ptr, endIndexA), src);
+    pc->v_storeu64(mem_ptr(dst_ptr, end_index_a), src);
     pc->v_storeu64(mem_ptr(dst_ptr), src);
     pc->add(dst_ptr, dst_ptr, stride);
     pc->j(L_End, sub_z(h, 1));
 
     pc->bind(L_ScanlineLoop2x);
     pc->add(dst_alt, dst_ptr, stride);
-    pc->v_storeu64(mem_ptr(dst_ptr, endIndexA), src);
+    pc->v_storeu64(mem_ptr(dst_ptr, end_index_a), src);
     pc->v_storeu64(mem_ptr(dst_ptr), src);
     pc->add(dst_ptr, dst_alt, stride);
-    pc->v_storeu64(mem_ptr(dst_alt, endIndexA), src);
+    pc->v_storeu64(mem_ptr(dst_alt, end_index_a), src);
     pc->v_storeu64(mem_ptr(dst_alt), src);
     pc->j(L_ScanlineLoop2x, sub_nz(h, 2));
 
@@ -852,23 +852,23 @@ void inline_fill_rect_loop(
       Label L_ScanlineLoop2x = pc->new_label();
       L_Width_LT_4 = pc->new_label();
 
-      Gp dst_alt = pc->new_gp("dst_alt");
+      Gp dst_alt = pc->new_gpz("dst_alt");
 
       pc->j(L_Width_LT_4, ucmp_lt(w, 4 >> size_shift));
-      pc->sub(endIndexA, endIndexA, 4);
+      pc->sub(end_index_a, end_index_a, 4);
 
       pc->j(L_ScanlineLoop2x, test_z(h, 0x1));
       pc->store_u32(mem_ptr(dst_ptr), src32b);
-      pc->store_u32(mem_ptr(dst_ptr, endIndexA), src32b);
+      pc->store_u32(mem_ptr(dst_ptr, end_index_a), src32b);
       pc->add(dst_ptr, dst_ptr, stride);
       pc->j(L_End, sub_z(h, 1));
 
       pc->bind(L_ScanlineLoop2x);
       pc->add(dst_alt, dst_ptr, stride);
-      pc->store_u32(mem_ptr(dst_ptr, endIndexA), src32b);
+      pc->store_u32(mem_ptr(dst_ptr, end_index_a), src32b);
       pc->store_u32(mem_ptr(dst_ptr), src32b);
       pc->add(dst_ptr, dst_alt, stride);
-      pc->store_u32(mem_ptr(dst_alt, endIndexA), src32b);
+      pc->store_u32(mem_ptr(dst_alt, end_index_a), src32b);
       pc->store_u32(mem_ptr(dst_alt), src32b);
       pc->j(L_ScanlineLoop2x, sub_nz(h, 2));
 
@@ -906,23 +906,23 @@ void inline_fill_rect_loop(
       Label L_ScanlineLoop2x = pc->new_label();
       L_Width_LT_2 = pc->new_label();
 
-      Gp dst_alt = pc->new_gp("dst_alt");
+      Gp dst_alt = pc->new_gpz("dst_alt");
 
       pc->j(L_Width_LT_2, ucmp_lt(w, 2));
-      pc->sub(endIndexA, endIndexA, 2);
+      pc->sub(end_index_a, end_index_a, 2);
 
       pc->j(L_ScanlineLoop2x, test_z(h, 0x1));
       pc->store_u16(mem_ptr(dst_ptr), src32b);
-      pc->store_u16(mem_ptr(dst_ptr, endIndexA), src32b);
+      pc->store_u16(mem_ptr(dst_ptr, end_index_a), src32b);
       pc->add(dst_ptr, dst_ptr, stride);
       pc->j(L_End, sub_z(h, 1));
 
       pc->bind(L_ScanlineLoop2x);
       pc->add(dst_alt, dst_ptr, stride);
-      pc->store_u16(mem_ptr(dst_ptr, endIndexA), src32b);
+      pc->store_u16(mem_ptr(dst_ptr, end_index_a), src32b);
       pc->store_u16(mem_ptr(dst_ptr), src32b);
       pc->add(dst_ptr, dst_alt, stride);
-      pc->store_u16(mem_ptr(dst_alt, endIndexA), src32b);
+      pc->store_u16(mem_ptr(dst_alt, end_index_a), src32b);
       pc->store_u16(mem_ptr(dst_alt), src32b);
       pc->j(L_ScanlineLoop2x, sub_nz(h, 2));
 
@@ -971,7 +971,7 @@ static BL_NOINLINE void emit_mem_copy_sequence(
   Mem s_ptr, bool src_aligned, uint32_t num_bytes, const Vec& fill_mask, AdvanceMode advance_mode) noexcept {
 
 #if defined(BL_JIT_ARCH_X86)
-  AsmCompiler* cc = pc->cc;
+  BackendCompiler* cc = pc->cc;
 
   VecArray t;
 
@@ -1031,7 +1031,7 @@ static BL_NOINLINE void emit_mem_copy_sequence(
 #elif defined(BL_JIT_ARCH_A64)
   bl_unused(dst_aligned, src_aligned);
 
-  AsmCompiler* cc = pc->cc;
+  BackendCompiler* cc = pc->cc;
   uint32_t n = num_bytes;
 
   VecArray t;
@@ -1039,8 +1039,8 @@ static BL_NOINLINE void emit_mem_copy_sequence(
 
   bool post_index = (advance_mode == AdvanceMode::kAdvance) && !d_ptr.has_offset() && !s_ptr.has_offset();
   if (post_index) {
-    d_ptr.set_offset_mode(a64::OffsetMode::kPostIndex);
-    s_ptr.set_offset_mode(a64::OffsetMode::kPostIndex);
+    d_ptr.set_offset_mode(OffsetMode::kPostIndex);
+    s_ptr.set_offset_mode(OffsetMode::kPostIndex);
   }
 
   while (n >= 32u) {
@@ -1086,7 +1086,7 @@ static BL_NOINLINE void emit_mem_copy_sequence(
         s_ptr.set_offset_lo32(int32_t(count));
       }
 
-      pc->v_load_iany(v, s_ptr, count, Alignment{1});
+      pc->v_load_iany(v, s_ptr, count, Alignment(1));
       if (!post_index) {
         s_ptr.add_offset_lo32(int32_t(count));
       }
@@ -1095,7 +1095,7 @@ static BL_NOINLINE void emit_mem_copy_sequence(
         pc->v_or_i32(t[0], t[0], fill_mask);
       }
 
-      pc->v_store_iany(d_ptr, v, count, Alignment{1});
+      pc->v_store_iany(d_ptr, v, count, Alignment(1));
       if (!post_index) {
         d_ptr.add_offset_lo32(int32_t(count));
       }
@@ -1140,7 +1140,7 @@ void inline_copy_span_loop(
   Vec fill_mask;
 
   if (format == FormatExt::kXRGB32)
-    fill_mask = pc->simd_vec_const(&common_table.i_FF000000FF000000, Bcst::k64, t0);
+    fill_mask = pc->simd_vec_const(&common_table.p_FF000000FF000000, Bcst::k64, t0);
 
   // Granularity >= 16 Bytes
   // -----------------------

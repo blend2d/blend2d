@@ -37,7 +37,7 @@ public:
 
   BL_INLINE BLResult wait(BLMutex& mutex) noexcept {
     BOOL ret = SleepConditionVariableSRW(&handle, &mutex.handle, INFINITE, 0);
-    return ret ? BL_SUCCESS : bl_trace_error(BL_ERROR_INVALID_STATE);
+    return ret ? BL_SUCCESS : bl_make_error(BL_ERROR_INVALID_STATE);
   }
 
   BL_INLINE BLResult wait_for(BLMutex& mutex, uint64_t microseconds) noexcept {
@@ -70,7 +70,7 @@ public:
 
   BL_INLINE BLResult wait(BLMutex& mutex) noexcept {
     int ret = pthread_cond_wait(&handle, &mutex.handle);
-    return ret == 0 ? BL_SUCCESS : bl_trace_error(BL_ERROR_INVALID_STATE);
+    return ret == 0 ? BL_SUCCESS : bl_make_error(BL_ERROR_INVALID_STATE);
   }
 
   BL_INLINE BLResult wait_for(BLMutex& mutex, uint64_t microseconds) noexcept {

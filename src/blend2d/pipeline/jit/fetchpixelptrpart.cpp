@@ -19,7 +19,7 @@ FetchPixelPtrPart::FetchPixelPtrPart(PipeCompiler* pc, FetchType fetch_type, For
   : FetchPart(pc, fetch_type, format) {
 
   _part_flags |= PipePartFlags::kMaskedAccess | PipePartFlags::kAdvanceXIsSimple;
-  _max_vec_width_supported = VecWidth::kMaxPlatformWidth;
+  _max_vec_width_supported = kMaxPlatformWidth;
   _max_pixels = kUnlimitedMaxPixels;
 }
 

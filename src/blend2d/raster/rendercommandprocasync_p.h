@@ -95,7 +95,7 @@ public:
     _pending_command_bit_set_data = _work_data->work_zone.allocT<BLBitWord>(bit_word_count * sizeof(BLBitWord), sizeof(BLBitWord));
 
     if (!_state_slot_data || !_pending_command_bit_set_data)
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     _state_slot_count = state_slot_count;
     _pending_command_bit_set_size = bit_word_count;

@@ -522,7 +522,7 @@ static void arc_to_cubic_spline(PathAppender& dst, BLPoint c, BLPoint r, double 
     v2 = v1;
   }
   else {
-    if (Math::isNaN(sweep_angle))
+    if (Math::is_nan(sweep_angle))
       return;
 
     double sweep_sin = Math::sin(sweep_angle);
@@ -604,7 +604,7 @@ public:
 
         case BL_PATH_CMD_ON: {
           if (!has_prev_vertex)
-            return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+            return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
 
           Geometry::bound(bounding_box, vtx_data[0]);
 
@@ -618,7 +618,7 @@ public:
           vtx_data += 2;
 
           if (cmd_data > cmd_end || !has_prev_vertex)
-            return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+            return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
 
           flags |= BL_PATH_FLAG_QUADS;
           has_prev_vertex = true;
@@ -640,7 +640,7 @@ public:
           vtx_data += 3;
 
           if (cmd_data > cmd_end || !has_prev_vertex)
-            return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+            return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
 
           flags |= BL_PATH_FLAG_CONICS;
           has_prev_vertex = true;
@@ -664,7 +664,7 @@ public:
           vtx_data += 3;
 
           if (cmd_data > cmd_end || !has_prev_vertex)
-            return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+            return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
 
           flags |= BL_PATH_FLAG_CUBICS;
           has_prev_vertex = true;
@@ -693,7 +693,7 @@ public:
           break;
 
         default:
-          return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+          return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
       }
     }
 
@@ -706,7 +706,7 @@ public:
       flags |= BL_PATH_FLAG_MULTIPLE;
 
     if (!Math::is_finite(control_box, bounding_box))
-      return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+      return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
 
     return BL_SUCCESS;
   }
@@ -784,7 +784,7 @@ static BLResult copy_content_reversed(PathAppender& dst, PathIterator src, BLPat
 
       uint8_t cmd = p[0];
       if (cmd != BL_PATH_CMD_MOVE)
-        return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+        return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
 
       while (++p != src.end) {
         // Terminate on MOVE command, but don't consume it.
@@ -820,7 +820,7 @@ static BLResult copy_content_reversed(PathAppender& dst, PathIterator src, BLPat
       if (cmd != BL_PATH_CMD_ON) {
         // A figure cannot end with anything else than MOVE|ON|CLOSE.
         if (!has_close)
-          return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+          return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
 
         // Make sure the next command is ON, continue otherwise.
         if (src.at_end() || src.cmd[0] != BL_PATH_CMD_ON) {
@@ -892,7 +892,7 @@ BL_API_IMPL BLResult bl_path_set_vertex_at(BLPathCore* self, size_t index, uint3
   size_t size = self_impl->size;
 
   if (BL_UNLIKELY(index >= size))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BL_PROPAGATE(make_mutable(self));
   self_impl = get_impl(self);
@@ -1016,7 +1016,7 @@ BL_API_IMPL BLResult bl_path_smooth_quad_to(BLPathCore* self, double x2, double 
   size_t size = self_impl->size;
 
   if (BL_UNLIKELY(!size || self_impl->command_data[size - 1u] >= BL_PATH_CMD_CLOSE))
-    return bl_trace_error(BL_ERROR_NO_MATCHING_VERTEX);
+    return bl_make_error(BL_ERROR_NO_MATCHING_VERTEX);
 
   uint8_t* cmd_data;
   BLPoint* vtx_data;
@@ -1047,7 +1047,7 @@ BL_API_IMPL BLResult bl_path_smooth_cubic_to(BLPathCore* self, double x2, double
   size_t size = self_impl->size;
 
   if (BL_UNLIKELY(!size || self_impl->command_data[size - 1u] >= BL_PATH_CMD_CLOSE))
-    return bl_trace_error(BL_ERROR_NO_MATCHING_VERTEX);
+    return bl_make_error(BL_ERROR_NO_MATCHING_VERTEX);
 
   uint8_t* cmd_data;
   BLPoint* vtx_data;
@@ -1105,7 +1105,7 @@ BL_API_IMPL BLResult bl_path_arc_quadrant_to(BLPathCore* self, double x1, double
   size_t size = self_impl->size;
 
   if (BL_UNLIKELY(!size || self_impl->command_data[size - 1u] >= BL_PATH_CMD_CLOSE))
-    return bl_trace_error(BL_ERROR_NO_MATCHING_VERTEX);
+    return bl_make_error(BL_ERROR_NO_MATCHING_VERTEX);
 
   uint8_t* cmd_data;
   BLPoint* vtx_data;
@@ -1336,7 +1336,7 @@ BL_API_IMPL BLResult bl_path_add_geometry(BLPathCore* self, BLGeometryType geome
   BL_ASSERT(self->_d.is_path());
 
   if (BL_UNLIKELY(uint32_t(geometry_type) > BL_GEOMETRY_TYPE_MAX_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   size_t n = path_vertex_count_of_geometry_type_table[geometry_type];
   if (n == 255) {
@@ -1389,7 +1389,7 @@ BL_API_IMPL BLResult bl_path_add_geometry(BLPathCore* self, BLGeometryType geome
 
       // Should never be reached as we filtered all border cases already...
       default:
-        return bl_trace_error(BL_ERROR_INVALID_VALUE);
+        return bl_make_error(BL_ERROR_INVALID_VALUE);
     }
   }
 
@@ -1852,7 +1852,7 @@ BL_API_IMPL BLResult bl_path_add_reversed_path(BLPathCore* self, const BLPathCor
   BL_ASSERT(other->_d.is_path());
 
   if (BL_UNLIKELY(uint32_t(reverse_mode) > BL_PATH_REVERSE_MODE_MAX_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLPathPrivateImpl* other_impl = get_impl(other);
   size_t start, n;
@@ -2150,7 +2150,7 @@ BL_API_IMPL BLResult bl_path_fit_to(BLPathCore* self, const BLRange* range, cons
     return BL_SUCCESS;
 
   if (!bl::Math::is_finite(*rect) || rect->w <= 0.0 || rect->h <= 0.0)
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   PathInfoUpdater updater;
   BL_PROPAGATE(updater.update(BLPathView { self_impl->command_data + start, self_impl->vertex_data + start, n }, true));
@@ -2210,7 +2210,7 @@ static BL_NOINLINE BLResult update_info(BLPathPrivateImpl* self_impl) noexcept {
   // Special-case. The path info is valid, but the path is invalid. We handle it here to simplify `ensure_info()`
   // and to make it a bit shorter.
   if (self_impl->flags & BL_PATH_FLAG_INVALID)
-    return bl_trace_error(BL_ERROR_INVALID_GEOMETRY);
+    return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
 
   PathInfoUpdater updater;
   BLResult result = updater.update(self_impl->view);
@@ -2298,7 +2298,7 @@ BL_API_IMPL BLResult bl_path_get_figure_range(const BLPathCore* self, size_t ind
 
   if (index >= size) {
     range_out->reset(0, 0);
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   // Find end of the sub-path.
@@ -2343,7 +2343,7 @@ BL_API_IMPL BLResult bl_path_get_last_vertex(const BLPathCore* self, BLPoint* vt
 
   vtx_out->reset();
   if (BL_UNLIKELY(!index))
-    return bl_trace_error(BL_ERROR_NO_MATCHING_VERTEX);
+    return bl_make_error(BL_ERROR_NO_MATCHING_VERTEX);
 
   const uint8_t* cmd_data = self_impl->command_data;
   uint32_t cmd = cmd_data[--index];
@@ -2355,11 +2355,11 @@ BL_API_IMPL BLResult bl_path_get_last_vertex(const BLPathCore* self, BLPoint* vt
 
   for (;;) {
     if (index == 0)
-      return bl_trace_error(BL_ERROR_NO_MATCHING_VERTEX);
+      return bl_make_error(BL_ERROR_NO_MATCHING_VERTEX);
 
     cmd = cmd_data[--index];
     if (cmd == BL_PATH_CMD_CLOSE)
-      return bl_trace_error(BL_ERROR_NO_MATCHING_VERTEX);
+      return bl_make_error(BL_ERROR_NO_MATCHING_VERTEX);
 
     if (cmd == BL_PATH_CMD_MOVE)
       break;
@@ -2380,7 +2380,7 @@ BL_API_IMPL BLResult bl_path_get_closest_vertex(const BLPathCore* self, const BL
   *distance_out = bl::Math::nan<double>();
 
   if (BL_UNLIKELY(!size))
-    return bl_trace_error(BL_ERROR_NO_MATCHING_VERTEX);
+    return bl_make_error(BL_ERROR_NO_MATCHING_VERTEX);
 
   const uint8_t* cmd_data = self_impl->command_data;
   const BLPoint* vtx_data = self_impl->vertex_data;
@@ -2405,7 +2405,7 @@ BL_API_IMPL BLResult bl_path_get_closest_vertex(const BLPathCore* self, const BL
       const BLBox& b_box = self_impl->control_box;
       if (!(pt.x >= b_box.x0 - best_distance && pt.y >= b_box.y0 - best_distance &&
             pt.x <= b_box.x1 + best_distance && pt.y <= b_box.y1 + best_distance))
-        return bl_trace_error(BL_ERROR_NO_MATCHING_VERTEX);
+        return bl_make_error(BL_ERROR_NO_MATCHING_VERTEX);
     }
   }
 

@@ -284,14 +284,14 @@ public:
       uint32_t capacity_in_bits = IntOps::align_up<uint32_t>(capacity_hint, kTSizeInBits);
 
       if (BL_UNLIKELY(capacity_in_bits < new_size))
-        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
       // Normalize to bytes.
       uint32_t capacity_in_bytes = capacity_in_bits / 8;
 
       T* new_data = static_cast<T*>(allocator->alloc(capacity_in_bytes, alignof(T)));
       if (BL_UNLIKELY(!new_data))
-        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
       _copy_bits(new_data, data, _words_per_bits(old_size));
 

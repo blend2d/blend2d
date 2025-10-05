@@ -44,7 +44,7 @@ static BLResult BL_CDECL bl_convert_func_not_initialized(
   const uint8_t* src_line, intptr_t src_stride, uint32_t w, uint32_t h, const BLPixelConverterOptions* options) noexcept {
 
   bl_unused(self, dst_data, dst_stride, src_line, src_stride, w, h, options);
-  return bl_trace_error(BL_ERROR_NOT_INITIALIZED);
+  return bl_make_error(BL_ERROR_NOT_INITIALIZED);
 }
 
 // bl::PixelConverter - Utilities
@@ -541,7 +541,7 @@ BLResult bl_convert_a8_from_8888(
   src_stride -= uintptr_t(w) * 4;
 
   const BLPixelConverterData::X8FromRgb32Data& d = bl_pixel_converter_get_data(self)->x8FromRgb32Data;
-  const size_t srcBPP = d.bytes_per_pixel;
+  const size_t src_bpp = d.bytes_per_pixel;
 
 #if BL_BYTE_ORDER == 1234
   const size_t srcAI = d.alpha_shift / 8u;
@@ -555,7 +555,7 @@ BLResult bl_convert_a8_from_8888(
     for (uint32_t i = w; i != 0; i--) {
       dst_data[0] = src_data[0];
       dst_data += 1;
-      src_data += srcBPP;
+      src_data += src_bpp;
     }
 
     dst_data = bl_pixel_converter_fill_gap(dst_data, gap);
@@ -1499,11 +1499,11 @@ static BLResult bl_pixel_converter_init_indexed(BLPixelConverterCore* self, cons
 
   // Bail if the source depth doesn't match any supported one.
   if (BL_UNLIKELY(!bl_pixel_converter_is_indexed_depth(si.depth)))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLFormatInfo palette_format_info;
   if (BL_UNLIKELY(!bl_pixel_converter_palette_format_from_format_flags(palette_format_info, si.flags)))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   bool dont_copy_palette = (create_flags & BL_PIXEL_CONVERTER_CREATE_FLAG_DONT_COPY_PALETTE) != 0;
   bool alterable_palette = (create_flags & BL_PIXEL_CONVERTER_CREATE_FLAG_ALTERABLE_PALETTE) != 0;
@@ -1542,7 +1542,7 @@ static BLResult bl_pixel_converter_init_indexed(BLPixelConverterCore* self, cons
 
       if (!palette) {
         bl_pixel_converter_reset(&pal_cvt);
-        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
       }
     }
   }
@@ -1605,7 +1605,7 @@ static BLResult bl_pixel_converter_init_indexed(BLPixelConverterCore* self, cons
 
   if (!func) {
     bl_pixel_converter_reset(self);
-    return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
+    return bl_make_error(BL_ERROR_NOT_IMPLEMENTED);
   }
 
   return BL_SUCCESS;
@@ -2022,7 +2022,7 @@ static BLResult bl_pixel_converter_init_8888_from_foreign(BLPixelConverterCore* 
       break;
 
     default:
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   return bl_pixel_converter_init_func_generic(self, func);
@@ -2042,7 +2042,7 @@ static BLResult bl_pixel_converter_init_foreign_from_8888(BLPixelConverterCore* 
 
   if (di.flags & BL_FORMAT_FLAG_INDEXED) {
     // TODO:
-    return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
+    return bl_make_error(BL_ERROR_NOT_IMPLEMENTED);
   }
   else {
     BLPixelConverterData::ForeignFromNative& d = bl_pixel_converter_get_data(self)->foreign_from_native;
@@ -2104,7 +2104,7 @@ static BLResult bl_pixel_converter_init_foreign_from_8888(BLPixelConverterCore* 
         break;
 
       default:
-        return bl_trace_error(BL_ERROR_INVALID_VALUE);
+        return bl_make_error(BL_ERROR_INVALID_VALUE);
     }
 
     return bl_pixel_converter_init_func_generic(self, func);
@@ -2140,14 +2140,14 @@ static BLResult BL_CDECL bl_convert_multi_step(
     uint8_t* dst_line = dst_data;
     const uint8_t* src_line = src_data;
 
-    int baseOriginX = work_opt.origin.x;
+    int base_origin_x = work_opt.origin.x;
     uint32_t dst_bytes_per_pixel = d.dst_bytes_per_pixel;
     uint32_t src_bytes_per_pixel = d.src_bytes_per_pixel;
 
     for (uint32_t y = h; y; y--) {
       uint32_t i = w;
 
-      work_opt.origin.x = baseOriginX;
+      work_opt.origin.x = base_origin_x;
       dst_data = dst_line;
       src_data = src_line;
 
@@ -2197,7 +2197,7 @@ static BLResult bl_pixel_converter_init_multi_step_internal(BLPixelConverterCore
     static_cast<BLPixelConverterMultiStepContext*>(malloc(sizeof(BLPixelConverterMultiStepContext)));
 
   if (BL_UNLIKELY(!ctx))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   BLResult result;
   BLPixelConverterCreateFlags custom_flags = BL_PIXEL_CONVERTER_CREATE_FLAG_NO_MULTI_STEP;
@@ -2257,7 +2257,7 @@ BLResult bl_pixel_converter_init_internal(BLPixelConverterCore* self, const BLFo
   uint32_t common_flags = di.flags & si.flags;
   // Convert - Indexed destination is not supported.
   if (di.flags & BL_FORMAT_FLAG_INDEXED)
-    return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
+    return bl_make_error(BL_ERROR_NOT_IMPLEMENTED);
 
   // Convert - Any from Indexed.
   if (si.flags & BL_FORMAT_FLAG_INDEXED)
@@ -2298,5 +2298,5 @@ BLResult bl_pixel_converter_init_internal(BLPixelConverterCore* self, const BLFo
     BL_PROPAGATE_IF_NOT_NOTHING(bl_pixel_converter_init_multi_step(self, di, si, create_flags));
 
   // Probably extreme case that is not implemented.
-  return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
+  return bl_make_error(BL_ERROR_NOT_IMPLEMENTED);
 }

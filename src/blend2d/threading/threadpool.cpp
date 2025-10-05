@@ -159,7 +159,7 @@ static BLResult BL_CDECL bl_thread_pool_set_thread_attributes(BLThreadPool* self
   if (stack_size) {
     const BLRuntimeSystemInfo& si = bl_runtime_context.system_info;
     if (stack_size < si.thread_stack_size || !bl::IntOps::is_aligned(stack_size, si.allocation_granularity))
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   self->thread_attributes = *attributes;

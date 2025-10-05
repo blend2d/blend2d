@@ -253,7 +253,7 @@ struct PixelPredicate {
     //! Non-zero offsets are used in cases in which there is multiple registers that are written by using predicates.
     //! In that case the access to the first register can be branched, and only the access to the last register can
     //! actually use predicate, at least this is how it's been designed.
-    uint8_t lastN {};
+    uint8_t last_n {};
 
     //! Element size in case this is a vector predicate (always zero when it's a {k} predicate).
     uint8_t element_size {};
@@ -364,13 +364,13 @@ public:
     : _type(type),
       _name {},
       _flags(PixelFlags::kNone),
-      _count(0) {}
+      _count(PixelCount(0)) {}
 
   BL_NOINLINE Pixel(const char* name, PixelType type = PixelType::kNone) noexcept
     : _type(type),
       _name {},
       _flags(PixelFlags::kNone),
-      _count(0) { set_name(name); }
+      _count(PixelCount(0)) { set_name(name); }
 
   BL_INLINE void reset(PixelType type = PixelType::kNone) noexcept {
     _type = type;
@@ -380,7 +380,7 @@ public:
 
   BL_NOINLINE void reset_all_except_type_and_name() noexcept {
     _flags = PixelFlags::kNone;
-    _count = 0;
+    _count = PixelCount(0);
     sa.reset();
     pa.reset();
     ua.reset();
@@ -482,7 +482,7 @@ struct PipeCMask {
   Vec vn;
 
   BL_INLINE void reset() noexcept {
-    JitUtils::reset_var_struct<PipeCMask>(this);
+    OpUtils::reset_var_struct<PipeCMask>(this);
   }
 };
 

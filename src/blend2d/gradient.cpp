@@ -131,14 +131,12 @@ static BL_NOINLINE size_t copy_unsafe_stops(BLGradientStop* dst, const BLGradien
   BL_ASSERT(analysis == BL_DATA_ANALYSIS_CONFORMING ||
             analysis == BL_DATA_ANALYSIS_NON_CONFORMING);
 
-  if (analysis == BL_DATA_ANALYSIS_CONFORMING)
+  if (analysis == BL_DATA_ANALYSIS_CONFORMING || n == 0u)
     return copy_stops(dst, src, n);
-
-  size_t i;
 
   // First copy source stops into the destination and index them.
   GradientStopAlt* stops = reinterpret_cast<GradientStopAlt*>(dst);
-  for (i = 0; i < n; i++) {
+  for (size_t i = 0; i < n; i++) {
     stops[i].offset = src[i].offset;
     stops[i].index = intptr_t(i);
   }
@@ -158,7 +156,7 @@ static BL_NOINLINE size_t copy_unsafe_stops(BLGradientStop* dst, const BLGradien
   double prev1 = -1.0; // Dummy, cannot be within [0..1] range.
   double prev2 = -1.0;
 
-  for (i = 0; i < n - 1; i++) {
+  for (size_t i = 0; i < n - 1u; i++) {
     double offset = stops[i].offset;
     BLRgba64 rgba = src[size_t(stops[i].index)].rgba;
 
@@ -182,7 +180,7 @@ static BL_INLINE BLGradientLUT* copyMaybeNullLUT(BLGradientLUT* lut) noexcept {
 // Cache invalidation means to remove the cached lut tables from `impl`. Since modification always means to either
 // create a copy of it or to modify a unique instance (not shared) it also means that we don't have to worry about
 // atomic operations here.
-static BL_INLINE BLResult invalidateLUTCache(BLGradientPrivateImpl* impl) noexcept {
+static BL_INLINE BLResult invalidate_lut_cache(BLGradientPrivateImpl* impl) noexcept {
   BLGradientLUT* lut32 = impl->lut32;
   BLGradientLUT* lut64 = impl->lut64;
 
@@ -358,7 +356,7 @@ static BLResult alloc_impl(BLGradientCore* self, BLObjectImplSize impl_size, con
 }
 
 BLResult free_impl(BLGradientPrivateImpl* impl) noexcept {
-  invalidateLUTCache(impl);
+  invalidate_lut_cache(impl);
   return ObjectInternal::free_impl(impl);
 }
 
@@ -391,7 +389,7 @@ static BL_INLINE BLResult make_mutable(BLGradientCore* self, bool copy_cache) no
     return deep_copy(self, self, copy_cache);
 
   if (!copy_cache)
-    return invalidateLUTCache(get_impl(self));
+    return invalidate_lut_cache(get_impl(self));
 
   return BL_SUCCESS;
 }
@@ -484,7 +482,7 @@ BL_API_IMPL BLResult bl_gradient_create(BLGradientCore* self, BLGradientType typ
   BL_ASSERT(self->_d.is_gradient());
 
   if (BL_UNLIKELY((uint32_t(type) > BL_GRADIENT_TYPE_MAX_VALUE) | (uint32_t(extend_mode) > BL_EXTEND_MODE_SIMPLE_MAX_VALUE)))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if (!values)
     values = no_values;
@@ -498,11 +496,11 @@ BL_API_IMPL BLResult bl_gradient_create(BLGradientCore* self, BLGradientType typ
   uint32_t analysis = BL_DATA_ANALYSIS_CONFORMING;
   if (n) {
     if (BL_UNLIKELY(stops == nullptr))
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     analysis = analyze_stop_array(stops, n);
     if (BL_UNLIKELY(analysis >= BL_DATA_ANALYSIS_INVALID_VALUE))
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   BLGradientPrivateImpl* self_impl = get_impl(self);
@@ -525,7 +523,7 @@ BL_API_IMPL BLResult bl_gradient_create(BLGradientCore* self, BLGradientType typ
     self_impl->size = copy_unsafe_stops(self_impl->stops, stops, n, analysis);
     self_impl->transform.reset(*transform);
 
-    return invalidateLUTCache(self_impl);
+    return invalidate_lut_cache(self_impl);
   }
 }
 
@@ -594,7 +592,7 @@ BL_API_IMPL BLResult bl_gradient_set_type(BLGradientCore* self, BLGradientType t
   BL_ASSERT(self->_d.is_gradient());
 
   if (BL_UNLIKELY(uint32_t(type) > BL_GRADIENT_TYPE_MAX_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   set_gradient_type(self, type);
   return BL_SUCCESS;
@@ -612,7 +610,7 @@ BL_API_IMPL BLResult bl_gradient_set_extend_mode(BLGradientCore* self, BLExtendM
   BL_ASSERT(self->_d.is_gradient());
 
   if (BL_UNLIKELY(extend_mode > BL_EXTEND_MODE_SIMPLE_MAX_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   set_extend_mode(self, extend_mode);
   return BL_SUCCESS;
@@ -634,7 +632,7 @@ BL_API_IMPL BLResult bl_gradient_set_value(BLGradientCore* self, size_t index, d
   BL_ASSERT(self->_d.is_gradient());
 
   if (BL_UNLIKELY(index > BL_GRADIENT_VALUE_MAX_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BL_PROPAGATE(make_mutable(self, true));
 
@@ -649,7 +647,7 @@ BL_API_IMPL BLResult bl_gradient_set_values(BLGradientCore* self, size_t index, 
   BL_ASSERT(self->_d.is_gradient());
 
   if (BL_UNLIKELY(index > BL_GRADIENT_VALUE_MAX_VALUE || value_count > BL_GRADIENT_VALUE_MAX_VALUE + 1 - index))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if (BL_UNLIKELY(!value_count))
     return BL_SUCCESS;
@@ -708,7 +706,7 @@ BL_API_IMPL BLResult bl_gradient_reset_stops(BLGradientCore* self) noexcept {
   }
   else {
     self_impl->size = 0;
-    return invalidateLUTCache(self_impl);
+    return invalidate_lut_cache(self_impl);
   }
 }
 
@@ -724,7 +722,7 @@ BL_API_IMPL BLResult bl_gradient_assign_stops(BLGradientCore* self, const BLGrad
   uint32_t analysis = analyze_stop_array(stops, n);
 
   if (BL_UNLIKELY(analysis >= BL_DATA_ANALYSIS_INVALID_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if ((n | immutable_msk) > self_impl->capacity) {
     BLGradientCore newO;
@@ -739,7 +737,7 @@ BL_API_IMPL BLResult bl_gradient_assign_stops(BLGradientCore* self, const BLGrad
   }
   else {
     self_impl->size = copy_unsafe_stops(self_impl->stops, stops, n, analysis);
-    return invalidateLUTCache(self_impl);
+    return invalidate_lut_cache(self_impl);
   }
 }
 
@@ -755,7 +753,7 @@ BL_API_IMPL BLResult bl_gradient_add_stop_rgba64(BLGradientCore* self, double of
   BL_ASSERT(self->_d.is_gradient());
 
   if (BL_UNLIKELY(!(offset >= 0.0 && offset <= 1.0)))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLGradientPrivateImpl* self_impl = get_impl(self);
   BLGradientStop* stops = self_impl->stops;
@@ -802,7 +800,7 @@ BL_API_IMPL BLResult bl_gradient_add_stop_rgba64(BLGradientCore* self, double of
     stops[i].reset(offset, BLRgba64(rgba64));
 
     self_impl->size = n + 1;
-    return invalidateLUTCache(self_impl);
+    return invalidate_lut_cache(self_impl);
   }
 }
 
@@ -818,7 +816,7 @@ BL_API_IMPL BLResult bl_gradient_remove_stop_by_offset(BLGradientCore* self, dou
   BL_ASSERT(self->_d.is_gradient());
 
   if (BL_UNLIKELY(!(offset >= 0.0 && offset <= 1.0)))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   size_t size = get_size(self);
   const BLGradientStop* stops = get_stops(self);
@@ -854,7 +852,7 @@ BL_API_IMPL BLResult bl_gradient_remove_stops_by_index(BLGradientCore* self, siz
   size_t end = bl_min(r_end, size);
 
   if (BL_UNLIKELY(index > size || end < index))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if (BL_UNLIKELY(index == end))
     return BL_SUCCESS;
@@ -881,7 +879,7 @@ BL_API_IMPL BLResult bl_gradient_remove_stops_by_index(BLGradientCore* self, siz
   else {
     move_stops(stops + index, stops + end, shifted_count);
     self_impl->size = after_count;
-    return invalidateLUTCache(self_impl);
+    return invalidate_lut_cache(self_impl);
   }
 }
 
@@ -890,7 +888,7 @@ BL_API_IMPL BLResult bl_gradient_remove_stops_by_offset(BLGradientCore* self, do
   BL_ASSERT(self->_d.is_gradient());
 
   if (BL_UNLIKELY(offset_max < offset_min))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if (!get_size(self))
     return BL_SUCCESS;
@@ -922,7 +920,7 @@ BL_API_IMPL BLResult bl_gradient_replace_stop_rgba64(BLGradientCore* self, size_
   BL_ASSERT(self->_d.is_gradient());
 
   if (BL_UNLIKELY(index >= get_size(self)))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BL_PROPAGATE(make_mutable(self, false));
 
@@ -983,7 +981,7 @@ BL_API_IMPL BLResult bl_gradient_apply_transform_op(BLGradientCore* self, BLTran
   BL_ASSERT(self->_d.is_gradient());
 
   if (BL_UNLIKELY(uint32_t(op_type) > BL_TRANSFORM_OP_MAX_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if (op_type == BL_TRANSFORM_OP_RESET && get_transform_type(self) == BL_TRANSFORM_TYPE_IDENTITY)
     return BL_SUCCESS;

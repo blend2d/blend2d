@@ -92,7 +92,7 @@ public:
     if (BL_UNLIKELY(!new_data)) {
       _size = 0;
       null_terminate();
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
     }
 
     memcpy(new_data, _data, proc_utf16_size * sizeof(uint16_t));
@@ -233,7 +233,7 @@ BL_API_IMPL BLResult bl_file_open(BLFileCore* self, const char* file_name, BLFil
     case BL_FILE_OPEN_RW   : desired_access = GENERIC_READ | GENERIC_WRITE; break;
 
     default:
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   // Creation Disposition
@@ -257,7 +257,7 @@ BL_API_IMPL BLResult bl_file_open(BLFileCore* self, const char* file_name, BLFil
   uint32_t kExtFlags = BL_FILE_OPEN_CREATE | BL_FILE_OPEN_CREATE_EXCLUSIVE | BL_FILE_OPEN_TRUNCATE;
 
   if ((open_flags & kExtFlags) && (!(open_flags & BL_FILE_OPEN_WRITE))) {
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   DWORD creation_disposition = OPEN_EXISTING;
@@ -321,7 +321,7 @@ BL_API_IMPL BLResult bl_file_open(BLFileCore* self, const char* file_name, BLFil
 #endif
 
   if (handle == INVALID_HANDLE_VALUE) {
-    return bl_trace_error(bl_result_from_win_error(GetLastError()));
+    return bl_make_error(bl_result_from_win_error(GetLastError()));
   }
 
   bl_file_close(self);
@@ -339,7 +339,7 @@ BL_API_IMPL BLResult bl_file_close(BLFileCore* self) noexcept {
 
     self->handle = -1;
     if (!result) {
-      return bl_trace_error(bl_result_from_win_error(GetLastError()));
+      return bl_make_error(bl_result_from_win_error(GetLastError()));
     }
   }
 
@@ -356,11 +356,11 @@ BL_API_IMPL BLResult bl_file_seek(BLFileCore* self, int64_t offset, BLFileSeekTy
     case BL_FILE_SEEK_END: move_method = FILE_END    ; break;
 
     default:
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   if (!is_file_open(self)) {
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   LARGE_INTEGER to;
@@ -373,7 +373,7 @@ BL_API_IMPL BLResult bl_file_seek(BLFileCore* self, int64_t offset, BLFileSeekTy
   BOOL result = SetFilePointerEx(handle, to, &prev, move_method);
 
   if (!result) {
-    return bl_trace_error(bl_result_from_win_error(GetLastError()));
+    return bl_make_error(bl_result_from_win_error(GetLastError()));
   }
 
   *position_out = prev.QuadPart;
@@ -383,7 +383,7 @@ BL_API_IMPL BLResult bl_file_seek(BLFileCore* self, int64_t offset, BLFileSeekTy
 BL_API_IMPL BLResult bl_file_read(BLFileCore* self, void* buffer, size_t n, size_t* bytes_read_out) noexcept {
   *bytes_read_out = 0;
   if (!is_file_open(self)) {
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   BOOL result = true;
@@ -413,7 +413,7 @@ BL_API_IMPL BLResult bl_file_read(BLFileCore* self, void* buffer, size_t n, size
     if (e == ERROR_HANDLE_EOF) {
       return BL_SUCCESS;
     }
-    return bl_trace_error(bl_result_from_win_error(e));
+    return bl_make_error(bl_result_from_win_error(e));
   }
   else {
     return BL_SUCCESS;
@@ -423,7 +423,7 @@ BL_API_IMPL BLResult bl_file_read(BLFileCore* self, void* buffer, size_t n, size
 BL_API_IMPL BLResult bl_file_write(BLFileCore* self, const void* buffer, size_t n, size_t* bytes_written_out) noexcept {
   *bytes_written_out = 0;
   if (!is_file_open(self)) {
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   HANDLE handle = (HANDLE)self->handle;
@@ -449,7 +449,7 @@ BL_API_IMPL BLResult bl_file_write(BLFileCore* self, const void* buffer, size_t 
 
   *bytes_written_out = bytes_written_total;
   if (!result) {
-    return bl_trace_error(bl_result_from_win_error(GetLastError()));
+    return bl_make_error(bl_result_from_win_error(GetLastError()));
   }
 
   return BL_SUCCESS;
@@ -457,11 +457,11 @@ BL_API_IMPL BLResult bl_file_write(BLFileCore* self, const void* buffer, size_t 
 
 BL_API_IMPL BLResult bl_file_truncate(BLFileCore* self, int64_t max_size) noexcept {
   if (!is_file_open(self)) {
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   if (BL_UNLIKELY(max_size < 0)) {
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   int64_t prev;
@@ -475,7 +475,7 @@ BL_API_IMPL BLResult bl_file_truncate(BLFileCore* self, int64_t max_size) noexce
   }
 
   if (!result) {
-    return bl_trace_error(bl_result_from_win_error(GetLastError()));
+    return bl_make_error(bl_result_from_win_error(GetLastError()));
   }
   else {
     return BL_SUCCESS;
@@ -486,14 +486,14 @@ BL_API_IMPL BLResult bl_file_get_info(BLFileCore* self, BLFileInfo* info_out) no
   *info_out = BLFileInfo{};
 
   if (!is_file_open(self)) {
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   HANDLE handle = (HANDLE)self->handle;
   BY_HANDLE_FILE_INFORMATION fi;
 
   if (!GetFileInformationByHandle(handle, &fi)) {
-    return bl_trace_error(bl_result_from_win_error(GetLastError()));
+    return bl_make_error(bl_result_from_win_error(GetLastError()));
   }
 
   info_out->size = bl::FileSystem::combine_hi_lo(fi.nFileSizeHigh, fi.nFileSizeLow);
@@ -507,14 +507,14 @@ BL_API_IMPL BLResult bl_file_get_size(BLFileCore* self, uint64_t* file_size_out)
   *file_size_out = 0;
 
   if (!is_file_open(self)) {
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   HANDLE handle = (HANDLE)self->handle;
   LARGE_INTEGER size;
 
   if (!GetFileSizeEx(handle, &size)) {
-    return bl_trace_error(bl_result_from_win_error(GetLastError()));
+    return bl_make_error(bl_result_from_win_error(GetLastError()));
   }
 
   *file_size_out = uint64_t(size.QuadPart);
@@ -532,7 +532,7 @@ BL_API_IMPL BLResult BL_CDECL bl_file_system_get_info(const char* file_name, BLF
 
   WIN32_FILE_ATTRIBUTE_DATA fa;
   if (!GetFileAttributesExW(file_name_w.data_as_wchar(), GetFileExInfoStandard, &fa)) {
-    return bl_trace_error(bl_result_from_win_error(GetLastError()));
+    return bl_make_error(bl_result_from_win_error(GetLastError()));
   }
 
   return bl::FileSystem::file_info_from_win_file_attribute_data(*info_out, fa);
@@ -651,13 +651,13 @@ BL_API_IMPL BLResult bl_file_open(BLFileCore* self, const char* file_name, BLFil
     case BL_FILE_OPEN_RW   : of |= O_RDWR  ; break;
 
     default:
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   uint32_t kExtFlags = BL_FILE_OPEN_CREATE | BL_FILE_OPEN_CREATE_EXCLUSIVE | BL_FILE_OPEN_TRUNCATE;
 
   if ((open_flags & kExtFlags) && !(open_flags & BL_FILE_OPEN_WRITE)) {
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   if (open_flags & BL_FILE_OPEN_CREATE          ) of |= O_CREAT;
@@ -670,7 +670,7 @@ BL_API_IMPL BLResult bl_file_open(BLFileCore* self, const char* file_name, BLFil
   // close the existing file if `open()` fails...
   int fd = BL_FILE64_API(open)(file_name, of, om);
   if (fd < 0) {
-    return bl_trace_error(bl_result_from_posix_error(errno));
+    return bl_make_error(bl_result_from_posix_error(errno));
   }
 
   bl_file_close(self);
@@ -689,7 +689,7 @@ BL_API_IMPL BLResult bl_file_close(BLFileCore* self) noexcept {
     self->handle = -1;
 
     if (BL_UNLIKELY(result != 0)) {
-      return bl_trace_error(bl_result_from_posix_error(errno));
+      return bl_make_error(bl_result_from_posix_error(errno));
     }
   }
 
@@ -706,11 +706,11 @@ BL_API_IMPL BLResult bl_file_seek(BLFileCore* self, int64_t offset, BLFileSeekTy
     case BL_FILE_SEEK_END: whence = SEEK_END; break;
 
     default:
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   if (!is_file_open(self)) {
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   int fd = int(self->handle);
@@ -721,10 +721,10 @@ BL_API_IMPL BLResult bl_file_seek(BLFileCore* self, int64_t offset, BLFileSeekTy
 
     // Returned when the file was not open for reading or writing.
     if (e == EBADF) {
-      return bl_trace_error(BL_ERROR_NOT_PERMITTED);
+      return bl_make_error(BL_ERROR_NOT_PERMITTED);
     }
 
-    return bl_trace_error(bl_result_from_posix_error(errno));
+    return bl_make_error(bl_result_from_posix_error(errno));
   }
 
   *position_out = result;
@@ -736,7 +736,7 @@ BL_API_IMPL BLResult bl_file_read(BLFileCore* self, void* buffer, size_t n, size
 
   if (!is_file_open(self)) {
     *bytes_read_out = 0;
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   int fd = int(self->handle);
@@ -750,10 +750,10 @@ BL_API_IMPL BLResult bl_file_read(BLFileCore* self, void* buffer, size_t n, size
 
       // Returned when the file was not open for reading.
       if (e == EBADF) {
-        return bl_trace_error(BL_ERROR_NOT_PERMITTED);
+        return bl_make_error(BL_ERROR_NOT_PERMITTED);
       }
 
-      return bl_trace_error(bl_result_from_posix_error(e));
+      return bl_make_error(bl_result_from_posix_error(e));
     }
     else {
       bytes_read += size_t(result);
@@ -772,7 +772,7 @@ BL_API_IMPL BLResult bl_file_write(BLFileCore* self, const void* buffer, size_t 
 
   if (!is_file_open(self)) {
     *bytes_written_out = 0;
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   int fd = int(self->handle);
@@ -786,10 +786,10 @@ BL_API_IMPL BLResult bl_file_write(BLFileCore* self, const void* buffer, size_t 
 
       // These are the two errors that would be returned if the file was open for read-only.
       if (e == EBADF || e == EINVAL) {
-        return bl_trace_error(BL_ERROR_NOT_PERMITTED);
+        return bl_make_error(BL_ERROR_NOT_PERMITTED);
       }
 
-      return bl_trace_error(bl_result_from_posix_error(e));
+      return bl_make_error(bl_result_from_posix_error(e));
     }
     else {
       bytes_written += size_t(result);
@@ -805,11 +805,11 @@ BL_API_IMPL BLResult bl_file_write(BLFileCore* self, const void* buffer, size_t 
 
 BL_API_IMPL BLResult bl_file_truncate(BLFileCore* self, int64_t max_size) noexcept {
   if (!is_file_open(self)) {
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   if (max_size < 0) {
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   int fd = int(self->handle);
@@ -820,7 +820,7 @@ BL_API_IMPL BLResult bl_file_truncate(BLFileCore* self, int64_t max_size) noexce
 
     // These are the two errors that would be returned if the file was open for read-only.
     if (e == EBADF || e == EINVAL) {
-      return bl_trace_error(BL_ERROR_NOT_PERMITTED);
+      return bl_make_error(BL_ERROR_NOT_PERMITTED);
     }
 
     // File was smaller than `max_size` - we don't consider this to be an error.
@@ -828,7 +828,7 @@ BL_API_IMPL BLResult bl_file_truncate(BLFileCore* self, int64_t max_size) noexce
       return BL_SUCCESS;
     }
 
-    return bl_trace_error(bl_result_from_posix_error(e));
+    return bl_make_error(bl_result_from_posix_error(e));
   }
   else {
     return BL_SUCCESS;
@@ -838,7 +838,7 @@ BL_API_IMPL BLResult bl_file_truncate(BLFileCore* self, int64_t max_size) noexce
 BL_API_IMPL BLResult bl_file_get_info(BLFileCore* self, BLFileInfo* info_out) noexcept {
   if (!is_file_open(self)) {
     *info_out = BLFileInfo{};
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   int fd = int(self->handle);
@@ -846,7 +846,7 @@ BL_API_IMPL BLResult bl_file_get_info(BLFileCore* self, BLFileInfo* info_out) no
 
   if (BL_FILE64_API(fstat)(fd, &s) != 0) {
     *info_out = BLFileInfo{};
-    return bl_trace_error(bl_result_from_posix_error(errno));
+    return bl_make_error(bl_result_from_posix_error(errno));
   }
 
   return bl::FileSystem::file_info_from_stat(*info_out, s);
@@ -855,7 +855,7 @@ BL_API_IMPL BLResult bl_file_get_info(BLFileCore* self, BLFileInfo* info_out) no
 BL_API_IMPL BLResult bl_file_get_size(BLFileCore* self, uint64_t* file_size_out) noexcept {
   if (!is_file_open(self)) {
     *file_size_out = 0;
-    return bl_trace_error(BL_ERROR_INVALID_HANDLE);
+    return bl_make_error(BL_ERROR_INVALID_HANDLE);
   }
 
   int fd = int(self->handle);
@@ -863,7 +863,7 @@ BL_API_IMPL BLResult bl_file_get_size(BLFileCore* self, uint64_t* file_size_out)
 
   if (BL_FILE64_API(fstat)(fd, &s) != 0) {
     *file_size_out = 0;
-    return bl_trace_error(bl_result_from_posix_error(errno));
+    return bl_make_error(bl_result_from_posix_error(errno));
   }
 
   *file_size_out = uint64_t(s.st_size);
@@ -878,7 +878,7 @@ BL_API_IMPL BLResult bl_file_system_get_info(const char* file_name, BLFileInfo* 
 
   if (BL_FILE64_API(stat)(file_name, &s) != 0) {
     *info_out = BLFileInfo{};
-    return bl_trace_error(bl_result_from_posix_error(errno));
+    return bl_make_error(bl_result_from_posix_error(errno));
   }
 
   return bl::FileSystem::file_info_from_stat(*info_out, s);
@@ -894,7 +894,7 @@ BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept 
   bl_unused(flags);
 
   if (!file.is_open())
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   DWORD map_protect = PAGE_READONLY;
   DWORD desired_access = FILE_MAP_READ;
@@ -920,7 +920,7 @@ BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept 
 #endif
 
   if (file_mapping_handle == nullptr)
-    return bl_trace_error(bl_result_from_win_error(GetLastError()));
+    return bl_make_error(bl_result_from_win_error(GetLastError()));
 
 #if defined(BL_PLATFORM_UWP)
   void* data = MapViewOfFileFromApp(
@@ -942,7 +942,7 @@ BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept 
   if (!data) {
     BLResult result = bl_result_from_win_error(GetLastError());
     CloseHandle(file_mapping_handle);
-    return bl_trace_error(result);
+    return bl_make_error(result);
   }
 
   // Succeeded, now is the time to change the content of `FileMapping`.
@@ -971,7 +971,7 @@ BLResult BLFileMapping::unmap() noexcept {
   }
 
   if (err) {
-    result = bl_trace_error(bl_result_from_win_error(err));
+    result = bl_make_error(bl_result_from_win_error(err));
   }
 
   _file_mapping_handle = INVALID_HANDLE_VALUE;
@@ -990,7 +990,7 @@ BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept 
   bl_unused(flags);
 
   if (!file.is_open())
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   int mmap_prot = PROT_READ;
   int mmap_flags = MAP_SHARED;
@@ -998,7 +998,7 @@ BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept 
   // Create the mapping.
   void* data = mmap(nullptr, size, mmap_prot, mmap_flags, int(file.handle), 0);
   if (data == (void *)-1) {
-    return bl_trace_error(bl_result_from_posix_error(errno));
+    return bl_make_error(bl_result_from_posix_error(errno));
   }
 
   // Succeeded, now is the time to change the content of `BLFileMapping`.
@@ -1021,7 +1021,7 @@ BLResult BLFileMapping::unmap() noexcept {
   // If error happened we must read `errno` now as a call to `close()` may
   // trash it. We prefer the first error instead of the last one.
   if (unmap_status != 0) {
-    result = bl_trace_error(bl_result_from_posix_error(errno));
+    result = bl_make_error(bl_result_from_posix_error(errno));
   }
 
   _data = nullptr;
@@ -1077,7 +1077,7 @@ static constexpr uint32_t kSmallFileSizeThreshold = 16 * 1024;
 
 BL_API_IMPL BLResult bl_file_system_read_file(const char* file_name, BLArrayCore* dst_, size_t max_size, BLFileReadFlags read_flags) noexcept {
   if (BL_UNLIKELY(dst_->_d.raw_type() != BL_OBJECT_TYPE_ARRAY_UINT8))
-    return bl_trace_error(BL_ERROR_INVALID_STATE);
+    return bl_make_error(BL_ERROR_INVALID_STATE);
 
   BLArray<uint8_t>& dst = dst_->dcast<BLArray<uint8_t>>();
   dst.clear();
@@ -1098,7 +1098,7 @@ BL_API_IMPL BLResult bl_file_system_read_file(const char* file_name, BLArrayCore
   }
 
   if (bl_runtime_is_32bit() && BL_UNLIKELY(size64 >= uint64_t(SIZE_MAX))) {
-    return bl_trace_error(BL_ERROR_FILE_TOO_LARGE);
+    return bl_make_error(BL_ERROR_FILE_TOO_LARGE);
   }
 
   size_t size = size_t(size64);

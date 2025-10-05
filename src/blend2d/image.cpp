@@ -315,7 +315,7 @@ BL_API_IMPL BLResult bl_image_create(BLImageCore* self, int w, int h, BLFormat f
     if ((w | h) == 0 && format == BL_FORMAT_NONE)
       return bl_image_reset(self);
     else
-      return bl_trace_error(result.code);
+      return bl_make_error(result.code);
   }
 
   BLImagePrivateImpl* self_impl = get_impl(self);
@@ -341,7 +341,7 @@ BL_API_IMPL BLResult bl_image_create_from_data(
 
   BLResult result = check_create_from_data_params(w, h, format, stride);
   if (BL_UNLIKELY(result != BL_SUCCESS))
-    return bl_trace_error(result);
+    return bl_make_error(result);
 
   BLImagePrivateImpl* self_impl = get_impl(self);
   bool immutable = !(access_flags & BL_DATA_ACCESS_WRITE);
@@ -437,7 +437,7 @@ BL_API_IMPL BLResult bl_image_convert(BLImageCore* self, BLFormat format) noexce
     dst_format = bl::FormatExt::kFRGB32;
 
   if (src_format == bl::FormatExt::kNone)
-    return bl_trace_error(BL_ERROR_NOT_INITIALIZED);
+    return bl_make_error(BL_ERROR_NOT_INITIALIZED);
 
   BLResult result = BL_SUCCESS;
   BLPixelConverterCore pc {};
@@ -451,7 +451,7 @@ BL_API_IMPL BLResult bl_image_convert(BLImageCore* self, BLFormat format) noexce
   if (bl_pixel_converter_init_internal(&pc, di, si, BL_PIXEL_CONVERTER_CREATE_NO_FLAGS) != BL_SUCCESS) {
     // Built-in formats should always have a built-in converter, so report a different error if the initialization
     // failed. This is pretty critical.
-    return bl_trace_error(BL_ERROR_INVALID_STATE);
+    return bl_make_error(BL_ERROR_INVALID_STATE);
   }
 
   if (di.depth == si.depth && is_impl_mutable(self_impl)) {
@@ -584,13 +584,13 @@ BL_API_IMPL BLResult bl_image_read_from_file(BLImageCore* self, const char* file
   BL_PROPAGATE(BLFileSystem::read_file(file_name, buffer));
 
   if (buffer.is_empty())
-    return bl_trace_error(BL_ERROR_FILE_EMPTY);
+    return bl_make_error(BL_ERROR_FILE_EMPTY);
 
   BLImageCodec codec;
   BL_PROPAGATE(bl_image_codec_find_by_data(&codec, buffer.data(), buffer.size(), codecs));
 
   if (BL_UNLIKELY(!(codec.features() & BL_IMAGE_CODEC_FEATURE_READ)))
-    return bl_trace_error(BL_ERROR_IMAGE_DECODER_NOT_PROVIDED);
+    return bl_make_error(BL_ERROR_IMAGE_DECODER_NOT_PROVIDED);
 
   BLImageDecoder decoder;
   BL_PROPAGATE(codec.create_decoder(&decoder));
@@ -609,7 +609,7 @@ BL_API_IMPL BLResult bl_image_read_from_data(BLImageCore* self, const void* data
   BL_PROPAGATE(bl_image_codec_find_by_data(&codec, data, size, codecs));
 
   if (BL_UNLIKELY(!(codec.features() & BL_IMAGE_CODEC_FEATURE_READ)))
-    return bl_trace_error(BL_ERROR_IMAGE_DECODER_NOT_PROVIDED);
+    return bl_make_error(BL_ERROR_IMAGE_DECODER_NOT_PROVIDED);
 
   BLImageDecoder decoder;
   BL_PROPAGATE(codec.create_decoder(&decoder));
@@ -660,7 +660,7 @@ BL_API_IMPL BLResult bl_image_write_to_data(const BLImageCore* self, BLArrayCore
   BL_ASSERT(codec->_d.is_image_codec());
 
   if (BL_UNLIKELY(!(codec->dcast().features() & BL_IMAGE_CODEC_FEATURE_WRITE)))
-    return bl_trace_error(BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED);
+    return bl_make_error(BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED);
 
   BLImageEncoder encoder;
   BL_PROPAGATE(codec->dcast().create_encoder(&encoder));

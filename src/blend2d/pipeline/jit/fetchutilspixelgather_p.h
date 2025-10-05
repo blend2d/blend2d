@@ -164,7 +164,7 @@ public:
   bool _fetch_done = false;
 
   //! Temporary vector register that can be used as a load destination before inserting to any of _p128[].
-  Vec _pTmp[2];
+  Vec _p_tmp[2];
 
   //! Temporaries used by the fetcher.
   //!
@@ -177,10 +177,10 @@ public:
   //! Accumulator used by Alpha only fetches.
   //!
   //! On many targets this may be faster than using SIMD for 8-bit or 16-bit inserts.
-  Gp _aAcc;
+  Gp _a_acc;
 
-  //! Current index in `_aAcc` register.
-  uint32_t _aAccIndex {};
+  //! Current index in `_a_acc` register.
+  uint32_t _a_acc_index {};
 
   //! 256-bit wide vectors that can be used by pipelines taking advantage of AVX2 and AVX-512 extensions.
   VecArray _p256;
@@ -195,11 +195,11 @@ public:
 
   //! \}
 
-  inline FetchContext(PipeCompiler* pc, Pixel* pixel, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, GatherMode mode = GatherMode::kFetchAll) noexcept
+  inline FetchContext(PipeCompiler* pc, Pixel* pixel, PixelCount n, PixelFlags flags, PixelFetchInfo f_info, GatherMode mode = GatherMode::kFetchAll) noexcept
     : _pc(pc),
       _pixel(pixel),
       _fetch_flags(flags),
-      _fetch_info(fInfo),
+      _fetch_info(f_info),
       _gather_mode(mode),
       _fetch_done(false) { _init(n); }
 
@@ -227,11 +227,11 @@ public:
   void end() noexcept;
 };
 
-void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout index_layout, GatherMode mode, InterleaveCallback cb, void* cb_data) noexcept;
+void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo f_info, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout index_layout, GatherMode mode, InterleaveCallback cb, void* cb_data) noexcept;
 
 template<class InterleaveFunc>
-static void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout index_layout, GatherMode mode, InterleaveFunc&& interleave_func) noexcept {
-  gather_pixels(pc, p, n, flags, fInfo, src, idx, shift, index_layout, mode, [](uint32_t step, void* data) noexcept {
+static void gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo f_info, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout index_layout, GatherMode mode, InterleaveFunc&& interleave_func) noexcept {
+  gather_pixels(pc, p, n, flags, f_info, src, idx, shift, index_layout, mode, [](uint32_t step, void* data) noexcept {
     (*static_cast<const InterleaveFunc*>(data))(step);
   }, (void*)&interleave_func);
 }

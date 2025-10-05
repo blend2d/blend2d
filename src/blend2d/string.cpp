@@ -112,7 +112,7 @@ static BLResult modify_and_copy(BLStringCore* self, BLModifyOp op, const char* s
 
   if ((size_after | immutable_msk) > u.capacity) {
     if (BL_UNLIKELY(size_after > get_maximum_size()))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     // Use a temporary object to avoid possible overlaps with both 'self' and 'str'.
     BLStringCore newO;
@@ -158,7 +158,7 @@ static BLResult insert_and_copy(BLStringCore* self, size_t index, const char* st
 
   if ((size_after | immutable_msk) > u.capacity) {
     if (BL_UNLIKELY(size_after > get_maximum_size()))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     BLStringCore newO;
     BLObjectImplSize impl_size = expand_impl_size(impl_size_from_capacity(size_after));
@@ -487,7 +487,7 @@ BL_API_IMPL BLResult bl_string_modify_op(BLStringCore* self, BLModifyOp op, size
       *data_out = nullptr;
 
       if (BL_UNLIKELY(size_after > get_maximum_size()))
-        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
       BLObjectImplSize impl_size = expand_impl_size_with_modify_op(impl_size_from_capacity(size_after), op);
       BL_PROPAGATE(init_dynamic(self, impl_size, size_after));
@@ -529,7 +529,7 @@ BL_API_IMPL BLResult bl_string_insert_op(BLStringCore* self, size_t index, size_
     *data_out = nullptr;
 
     if (BL_UNLIKELY(size_after > get_maximum_size()))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     BLStringCore newO;
     BLObjectImplSize impl_size = expand_impl_size(impl_size_from_capacity(size_after));
@@ -648,7 +648,7 @@ BL_API_IMPL BLResult bl_string_apply_op_format_v(BLStringCore* self, BLModifyOp 
     fmt_result = vsnprintf(dst + index, remaining + 1, fmt, ap);
 
     if (BL_UNLIKELY(fmt_result < 0))
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     output_size = size_t(unsigned(fmt_result));
     if (BL_LIKELY(output_size <= remaining)) {
@@ -662,7 +662,7 @@ BL_API_IMPL BLResult bl_string_apply_op_format_v(BLStringCore* self, BLModifyOp 
   else {
     fmt_result = vsnprintf(buf, BL_ARRAY_SIZE(buf), fmt, ap);
     if (BL_UNLIKELY(fmt_result < 0))
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     // If the `output_size` is less than our buffer size then we are fine and the formatted text is already in the
     // buffer. Since `vsnprintf` doesn't include null-terminator in the returned size we cannot use '<=' as that
@@ -676,7 +676,7 @@ BL_API_IMPL BLResult bl_string_apply_op_format_v(BLStringCore* self, BLModifyOp 
   // mutable. In both cases we have to allocate a new buffer and call `vsnprintf` again.
   size_t size_after = bl::IntOps::uadd_saturate(index, output_size);
   if (BL_UNLIKELY(size_after > get_maximum_size()))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   BLStringCore newO;
   BLObjectImplSize impl_size = expand_impl_size_with_modify_op(impl_size_from_capacity(size_after), op);
@@ -691,7 +691,7 @@ BL_API_IMPL BLResult bl_string_apply_op_format_v(BLStringCore* self, BLModifyOp 
 
   if (BL_UNLIKELY(size_t(unsigned(fmt_result)) != output_size)) {
     release_instance(&newO);
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   memcpy(dst, u.data, index);

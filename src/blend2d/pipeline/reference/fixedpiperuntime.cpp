@@ -312,7 +312,7 @@ static BLResult BL_CDECL bl_pipe_gen_runtime_get(PipeRuntime* self_, uint32_t si
   }
 
   if (!fill_func)
-    return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
+    return bl_make_error(BL_ERROR_NOT_IMPLEMENTED);
 
   dispatch_data->init(fill_func, fetch_func);
 

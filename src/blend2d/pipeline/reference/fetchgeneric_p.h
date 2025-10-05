@@ -60,7 +60,7 @@ struct FetchSolid {
     bl_unused(x_pos);
   }
 
-  BL_INLINE void advanceY() noexcept {}
+  BL_INLINE void advance_y() noexcept {}
 
   BL_INLINE PixelType fetch() const noexcept {
     return _src;
@@ -424,7 +424,7 @@ struct FetchPatternAffineCtx {
     bl_unused(x_pos);
   }
 
-  BL_INLINE void advanceY() noexcept {
+  BL_INLINE void advance_y() noexcept {
     tx_ty += yx_yy;
   }
 
@@ -450,7 +450,7 @@ struct FetchPatternAffineCtx {
     return Vec::u32x2{uint32_t(x), uint32_t(y)};
   }
 
-  BL_INLINE void advanceX() noexcept {
+  BL_INLINE void advance_x() noexcept {
     px_py += xx_xy;
 
     int32_t x = int32_t(px_py.x >> 32);
@@ -525,7 +525,7 @@ struct FetchPatternAlignedBlit : public FetchNonSolid {
     pixel_ptr -= uintptr_t(x_pos) * kSrcBPP;
   }
 
-  BL_INLINE void advanceY() noexcept {
+  BL_INLINE void advance_y() noexcept {
     pixel_ptr += stride;
   }
 
@@ -575,7 +575,7 @@ struct FetchPatternAlignedAny : public FetchNonSolid {
     _ctxX.span_end(x_pos);
   }
 
-  BL_INLINE void advanceY() noexcept {
+  BL_INLINE void advance_y() noexcept {
     _ctxY.advance1();
   }
 
@@ -669,7 +669,7 @@ struct FetchPatternFxFyAny : public FetchNonSolid {
     _ctxX.span_end(x_pos);
   }
 
-  BL_INLINE void advanceY() noexcept {
+  BL_INLINE void advance_y() noexcept {
     _ctxY.advance1();
   }
 
@@ -734,8 +734,8 @@ struct FetchPatternAffineNNBase : public FetchNonSolid {
     _ctx.spanEndX(x_pos);
   }
 
-  BL_INLINE void advanceY() noexcept {
-    _ctx.advanceY();
+  BL_INLINE void advance_y() noexcept {
+    _ctx.advance_y();
   }
 };
 
@@ -751,7 +751,7 @@ struct FetchPatternAffineNNAny : public FetchPatternAffineNNBase<DstPixelT, kFor
 
   BL_INLINE PixelType fetch() noexcept {
     Vec::u32x2 index = _ctx.index();
-    _ctx.advanceX();
+    _ctx.advance_x();
 
     const uint8_t* p = _pixel_data + intptr_t(index.y) * _stride + size_t(index.x) * kSrcBPP;
     return PixelIO<PixelType, kFormat>::fetch(p);
@@ -775,7 +775,7 @@ struct FetchPatternAffineBIAny : public FetchPatternAffineNNBase<DstPixelT, kFor
     uint32_t wx = _ctx.fracX();
     uint32_t wy = _ctx.fracY();
 
-    _ctx.advanceX();
+    _ctx.advance_x();
 
     uint32_t ix = 256 - wx;
     uint32_t iy = 256 - wy;
@@ -921,7 +921,7 @@ struct FetchGradientBase<PixelType, BL_GRADIENT_QUALITY_DITHER> : public FetchNo
 
   BL_INLINE PixelType fetch_pixel(uint32_t idx) noexcept {
     BLRgba64 v{static_cast<const uint64_t*>(_table)[idx]};
-    uint32_t dd = common_table.bayerMatrix16x16[_dmOffsetY + _dmOffsetX];
+    uint32_t dd = common_table.bayer_matrix_16x16[_dmOffsetY + _dmOffsetX];
 
     uint32_t a = v.a() >> 8;
     uint32_t r = bl_min<uint32_t>((v.r() + dd) >> 8, a);
@@ -992,7 +992,7 @@ struct FetchLinearGradient : public FetchGradientBase<PixelType, kQuality> {
     bl_unused(x_pos);
   }
 
-  BL_INLINE void advanceY() noexcept {
+  BL_INLINE void advance_y() noexcept {
     _py += _dy;
     Base::_advanceGradientY();
   }
@@ -1108,7 +1108,7 @@ struct FetchRadialGradient : public FetchGradientBase<PixelType, kQuality> {
     bl_unused(x_pos);
   }
 
-  BL_INLINE void advanceY() noexcept {
+  BL_INLINE void advance_y() noexcept {
     _y += 1.0;
     Base::_advanceGradientY();
   }
@@ -1224,7 +1224,7 @@ struct FetchConicGradient : public FetchGradientBase<PixelType, kQuality> {
     bl_unused(x_pos);
   }
 
-  BL_INLINE void advanceY() noexcept {
+  BL_INLINE void advance_y() noexcept {
     _tp += _yy_yx;
     Base::_advanceGradientY();
   }

@@ -84,12 +84,12 @@ public:
   BL_INLINE_NODEBUG VecWidth vec_width() const noexcept { return bl_min(pc->vec_width(), VecWidth::k256); }
 
   inline void count_zeros(const Gp& dst, const Gp& src) noexcept {
-    OpcodeRR op = BitOrder::kPrivate == BitOrder::kLSB ? OpcodeRR::kCTZ : OpcodeRR::kCLZ;
+    UniOpRR op = BitOrder::kPrivate == BitOrder::kLSB ? UniOpRR::kCTZ : UniOpRR::kCLZ;
     pc->emit_2i(op, dst, src);
   }
 
   inline void shift_mask(const Gp& dst, const Gp& src1, const Gp& src2) noexcept {
-    OpcodeRRR op = BitOrder::kPrivate == BitOrder::kLSB ? OpcodeRRR::kSll : OpcodeRRR::kSrl;
+    UniOpRRR op = BitOrder::kPrivate == BitOrder::kLSB ? UniOpRRR::kSll : UniOpRRR::kSrl;
     pc->emit_3i(op, dst, src1, src2);
   }
 

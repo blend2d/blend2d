@@ -151,7 +151,7 @@ static BLResult find_codec_by_name(BLImageCodecCore* self, const char* name, siz
     }
   }
 
-  return bl_trace_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
+  return bl_make_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
 }
 
 static BLResult find_codec_by_extension(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
@@ -161,7 +161,7 @@ static BLResult find_codec_by_extension(BLImageCodecCore* self, const char* name
     }
   }
 
-  return bl_trace_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
+  return bl_make_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
 }
 
 static BLResult find_codec_by_data(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
@@ -180,7 +180,7 @@ static BLResult find_codec_by_data(BLImageCodecCore* self, const void* data, siz
     return bl_image_codec_assign_weak(self, candidate);
   }
 
-  return bl_trace_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
+  return bl_make_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
 }
 
 } // {ImageCodecInternal}
@@ -195,7 +195,7 @@ BL_API_IMPL BLResult bl_image_codec_find_by_name(BLImageCodecCore* self, const c
   }
 
   if (!size) {
-    return bl_trace_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
+    return bl_make_error(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
   }
 
   if (codecs) {
@@ -276,7 +276,7 @@ BL_API_IMPL BLResult bl_image_codec_add_to_built_in(const BLImageCodecCore* code
   return builtin_codecs_mutex->protect([&] {
     size_t i = builtin_codecs_array->index_of(codec->dcast());
     if (i != SIZE_MAX) {
-      return bl_trace_error(BL_ERROR_ALREADY_EXISTS);
+      return bl_make_error(BL_ERROR_ALREADY_EXISTS);
     }
     return builtin_codecs_array->append(codec->dcast());
   });
@@ -289,7 +289,7 @@ BL_API_IMPL BLResult bl_image_codec_remove_from_built_in(const BLImageCodecCore*
   return builtin_codecs_mutex->protect([&] {
     size_t i = builtin_codecs_array->index_of(codec->dcast());
     if (i == SIZE_MAX) {
-      return bl_trace_error(BL_ERROR_NO_ENTRY);
+      return bl_make_error(BL_ERROR_NO_ENTRY);
     }
     return builtin_codecs_array->remove(i);
   });

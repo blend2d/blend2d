@@ -24,7 +24,7 @@ public:
   PipeCompiler* pc {};
   bool _is_rect_fill {};
   Gp _dm_position;
-  Gp _dmOriginX;
+  Gp _dm_origin_x;
   Vec _dm_values;
 
   //! \}
@@ -35,12 +35,12 @@ public:
   //! Returns whether this dithering context is used in a rectangular fill.
   BL_INLINE_NODEBUG bool is_rect_fill() const noexcept { return _is_rect_fill; }
 
-  void initY(const PipeFunction& fn, const Gp& x, const Gp& y) noexcept;
-  void advanceY() noexcept;
+  void init_y(const PipeFunction& fn, const Gp& x, const Gp& y) noexcept;
+  void advance_y() noexcept;
 
-  void startAtX(const Gp& x) noexcept;
-  void advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
-  void advanceXAfterFetch(uint32_t n) noexcept;
+  void start_at_x(const Gp& x) noexcept;
+  void advance_x(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
+  void advance_x_after_fetch(uint32_t n) noexcept;
 
   void dither_unpacked_pixels(Pixel& p, AdvanceMode advance_mode) noexcept;
 };
@@ -62,7 +62,7 @@ public:
   //! Returns true if the gradient extend mode is Pad.
   BL_INLINE_NODEBUG bool is_pad() const noexcept { return _extend_mode == ExtendMode::kPad; }
   //! Returns true if the gradient extend mode is RoR.
-  BL_INLINE_NODEBUG bool isRoR() const noexcept { return _extend_mode == ExtendMode::kRoR; }
+  BL_INLINE_NODEBUG bool is_ror() const noexcept { return _extend_mode == ExtendMode::kRoR; }
 
   BL_INLINE_NODEBUG bool dithering_enabled() const noexcept { return _dithering_enabled; }
 
@@ -97,7 +97,7 @@ public:
     Gp dt_gp;
     Vec pt;
     Vec dt;
-    Vec dtN;
+    Vec dt_n;
     Vec py;
     Vec dy;
     Vec maxi;
@@ -116,16 +116,16 @@ public:
   void _init_part(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
   void _fini_part() noexcept override;
 
-  void advanceY() noexcept override;
-  void startAtX(const Gp& x) noexcept override;
-  void advanceX(const Gp& x, const Gp& diff) noexcept override;
-  void advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
-  void calcAdvanceX(const Vec& dst, const Gp& diff) const noexcept;
+  void advance_y() noexcept override;
+  void start_at_x(const Gp& x) noexcept override;
+  void advance_x(const Gp& x, const Gp& diff) noexcept override;
+  void advance_x(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
+  void calc_advance_x(const Vec& dst, const Gp& diff) const noexcept;
 
-  void enterN() noexcept override;
-  void leaveN() noexcept override;
-  void prefetchN() noexcept override;
-  void postfetchN() noexcept override;
+  void enter_n() noexcept override;
+  void leave_n() noexcept override;
+  void prefetch_n() noexcept override;
+  void postfetch_n() noexcept override;
 
   void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 };
@@ -172,13 +172,13 @@ public:
   void _init_part(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
   void _fini_part() noexcept override;
 
-  void advanceY() noexcept override;
-  void startAtX(const Gp& x) noexcept override;
-  void advanceX(const Gp& x, const Gp& diff) noexcept override;
-  void advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
+  void advance_y() noexcept override;
+  void start_at_x(const Gp& x) noexcept override;
+  void advance_x(const Gp& x, const Gp& diff) noexcept override;
+  void advance_x(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
 
-  void prefetchN() noexcept override;
-  void postfetchN() noexcept override;
+  void prefetch_n() noexcept override;
+  void postfetch_n() noexcept override;
 
   void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 
@@ -231,12 +231,12 @@ public:
   void _init_part(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
   void _fini_part() noexcept override;
 
-  void advanceY() noexcept override;
-  void startAtX(const Gp& x) noexcept override;
-  void advanceX(const Gp& x, const Gp& diff) noexcept override;
-  void advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
+  void advance_y() noexcept override;
+  void start_at_x(const Gp& x) noexcept override;
+  void advance_x(const Gp& x, const Gp& diff) noexcept override;
+  void advance_x(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept;
 
-  void prefetchN() noexcept override;
+  void prefetch_n() noexcept override;
 
   void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 

@@ -1,7 +1,7 @@
 # Editor configuration, see https://editorconfig.org for more details.
 root = true
 
-[*.{cpp,h,natvis}]
+[*.{c,cpp,h,natvis}]
 charset = utf-8
 end_of_line = lf
 indent_style = space

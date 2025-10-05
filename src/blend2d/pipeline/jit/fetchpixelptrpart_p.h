@@ -34,7 +34,7 @@ public:
   //! Sets the pixel-pointer alignment to `alignment`.
   BL_INLINE_NODEBUG void set_alignment(Alignment alignment) noexcept { _alignment = alignment; }
   //! Resets the pixel-pointer alignment to 1 (no alignment)
-  BL_INLINE_NODEBUG void reset_alignment() noexcept { _alignment = 1; }
+  BL_INLINE_NODEBUG void reset_alignment() noexcept { _alignment = Alignment(1); }
 
   void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 };

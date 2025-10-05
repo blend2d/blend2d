@@ -106,7 +106,7 @@ struct DecoderBitReader {
 
   BL_INLINE BLResult require_bits(size_t n) const noexcept {
     if (BL_UNLIKELY(!has_bits(n)))
-      return bl_trace_error(BL_ERROR_DECOMPRESSION_FAILED);
+      return bl_make_error(BL_ERROR_DECOMPRESSION_FAILED);
     return BL_SUCCESS;
   }
 
@@ -198,7 +198,7 @@ struct DecoderBitReader {
       // FAST: Look at the top bits and determine the symbol id.
       code_size = table->size[code];
       if (BL_UNLIKELY(code_size > bit_count))
-        return bl_trace_error(BL_ERROR_DECOMPRESSION_FAILED);
+        return bl_make_error(BL_ERROR_DECOMPRESSION_FAILED);
     }
     else {
       // SLOW: Naive test is to shift the `bit_data` down so `s` bits are valid, then test against `max_code`. To speed
@@ -213,7 +213,7 @@ struct DecoderBitReader {
 
       // Maximum code size is 16, check for 17/bit_count and fail if reached.
       if (BL_UNLIKELY(code_size == 17 || code_size > bit_count))
-        return bl_trace_error(BL_ERROR_DECOMPRESSION_FAILED);
+        return bl_make_error(BL_ERROR_DECOMPRESSION_FAILED);
 
       // Convert the huffman code to the symbol ID.
       code = peek<uint32_t>(code_size) + uint32_t(table->delta[code_size]);
@@ -226,8 +226,8 @@ struct DecoderBitReader {
   }
 };
 
-BL_HIDDEN BLResult buildHuffmanAC(DecoderHuffmanACTable* table, const uint8_t* data, size_t data_size, size_t* bytes_consumed) noexcept;
-BL_HIDDEN BLResult buildHuffmanDC(DecoderHuffmanDCTable* table, const uint8_t* data, size_t data_size, size_t* bytes_consumed) noexcept;
+BL_HIDDEN BLResult build_huffman_ac(DecoderHuffmanACTable* table, const uint8_t* data, size_t data_size, size_t* bytes_consumed) noexcept;
+BL_HIDDEN BLResult build_huffman_dc(DecoderHuffmanDCTable* table, const uint8_t* data, size_t data_size, size_t* bytes_consumed) noexcept;
 
 } // {bl::Jpeg}
 

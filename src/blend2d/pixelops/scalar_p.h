@@ -150,7 +150,7 @@ static BL_INLINE uint32_t cvt_prgb32_8888_from_argb32_8888(uint32_t val32) noexc
   Vec8xU16 p0 = unpack_lo64_u8_u16(cast_from_u32<Vec8xU16>(val32));
   Vec8xU16 a0 = swizzle_lo_u16<3, 3, 3, 3>(p0);
 
-  return cast_to_u32(packz_128_u16_u8(div255_u16((p0 | common_table.i_00FF000000000000.as<Vec8xU16>()) * a0)));
+  return cast_to_u32(packz_128_u16_u8(div255_u16((p0 | common_table.p_00FF000000000000.as<Vec8xU16>()) * a0)));
 #else
   return cvt_prgb32_8888_from_argb32_8888(val32, val32 >> 24);
 #endif
@@ -209,7 +209,7 @@ static BL_INLINE uint64_t cvt_prgb64_8888_from_argb64_8888(uint64_t val64) noexc
 
   Vec8xU16 v0 = cast_from_u64<Vec8xU16>(val64);
   Vec8xU16 a0 = swizzle_u16<3, 3, 3, 3>(v0);
-  v0 |= common_table.i_FFFF000000000000.as<Vec8xU16>();
+  v0 |= common_table.p_FFFF000000000000.as<Vec8xU16>();
 
   Vec8xU16 v_lo = mul_u16(v0, a0);
   Vec8xU16 v_hi = mulh_u16(v0, a0);

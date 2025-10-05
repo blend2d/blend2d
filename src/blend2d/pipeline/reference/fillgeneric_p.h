@@ -48,7 +48,7 @@ struct FillBoxA_Base {
         comp_op.rectStartX(x0);
         dst_ptr = comp_op.compositeCSpanOpaque(dst_ptr, w);
         dst_ptr += dst_stride;
-        comp_op.advanceY();
+        comp_op.advance_y();
         h--;
       }
     }
@@ -57,7 +57,7 @@ struct FillBoxA_Base {
         comp_op.rectStartX(x0);
         dst_ptr = comp_op.compositeCSpanMasked(dst_ptr, w, msk);
         dst_ptr += dst_stride;
-        comp_op.advanceY();
+        comp_op.advance_y();
         h--;
       }
     }
@@ -151,7 +151,7 @@ struct FillMask_Base {
       cmd_ptr++;
       dst_ptr += dst_stride;
 
-      comp_op.advanceY();
+      comp_op.advance_y();
       repeat_count--;
       cmd_ptr[-1].update_repeat_count(repeat_count);
 
@@ -361,7 +361,7 @@ L_Scanline_Done1:
     do {
       dst_ptr += dst_stride;
       cell_ptr = PtrOps::offset(cell_ptr, cell_stride);
-      comp_op.advanceY();
+      comp_op.advance_y();
 
 L_Scanline_Init:
       x_off = 0;

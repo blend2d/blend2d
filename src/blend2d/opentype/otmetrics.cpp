@@ -45,7 +45,7 @@ static BLResult BL_CDECL get_glyph_advances(const BLFontFaceImpl* face_impl, con
   uint32_t long_metric_max = long_metric_count - 1u;
 
   if (BL_UNLIKELY(!long_metric_count))
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
 
   for (size_t i = 0; i < count; i++) {
     BLGlyphId glyph_id = glyph_data[0];
@@ -74,7 +74,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept {
 
   if (hhea) {
     if (!hhea.fits())
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
 
     if (!(ot_face_impl->face_info.face_flags & BL_FONT_FACE_FLAG_TYPOGRAPHIC_METRICS)) {
       int ascent  = hhea->ascender();
@@ -95,7 +95,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept {
       size_t long_metric_data_size = size_t(long_metric_count) * sizeof(XMtxTable::LongMetric);
 
       if (!hmtx.fits(long_metric_data_size))
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       size_t lsb_count = bl_min<size_t>((hmtx.size - long_metric_data_size) / 2u, long_metric_count - ot_face_impl->face_info.glyph_count);
       ot_face_impl->metrics.xmtx_table[BL_ORIENTATION_HORIZONTAL] = hmtx;
@@ -108,7 +108,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept {
 
   if (vhea) {
     if (!vhea.fits())
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
 
     dm.v_ascent = vhea->ascender();
     dm.v_descent = vhea->descender();
@@ -121,7 +121,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept {
       size_t long_metric_data_size = size_t(long_metric_count) * sizeof(XMtxTable::LongMetric);
 
       if (!vmtx.fits(long_metric_data_size))
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       size_t lsb_count = bl_min<size_t>((vmtx.size - long_metric_data_size) / 2u, long_metric_count - ot_face_impl->face_info.glyph_count);
       ot_face_impl->metrics.xmtx_table[BL_ORIENTATION_VERTICAL] = vmtx;

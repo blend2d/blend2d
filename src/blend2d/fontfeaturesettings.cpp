@@ -498,7 +498,7 @@ BL_API_IMPL BLResult bl_font_feature_settings_set_value(BLFontFeatureSettingsCor
   BL_ASSERT(self->_d.is_font_feature_settings());
 
   if (BL_UNLIKELY(value > 65535u))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   uint32_t feature_id = bl::FontTagData::feature_tag_to_id(feature_tag);
   bool can_modify = true;
@@ -513,7 +513,7 @@ BL_API_IMPL BLResult bl_font_feature_settings_set_value(BLFontFeatureSettingsCor
       FeatureInfo feature_info = bl::FontTagData::feature_info_table[feature_id];
       if (feature_info.has_bit_id()) {
         if (value > 1u)
-          return bl_trace_error(BL_ERROR_INVALID_VALUE);
+          return bl_make_error(BL_ERROR_INVALID_VALUE);
 
         uint32_t feature_bit_id = feature_info.bit_id;
         if (has_sso_bit_tag(self, feature_bit_id)) {
@@ -539,7 +539,7 @@ BL_API_IMPL BLResult bl_font_feature_settings_set_value(BLFontFeatureSettingsCor
     }
     else {
       if (BL_UNLIKELY(!bl::FontTagData::is_valid_tag(feature_tag)))
-        return bl_trace_error(BL_ERROR_INVALID_VALUE);
+        return bl_make_error(BL_ERROR_INVALID_VALUE);
     }
 
     // Turn the SSO settings to dynamic settings, because some (or multiple) cases below are true:
@@ -555,7 +555,7 @@ BL_API_IMPL BLResult bl_font_feature_settings_set_value(BLFontFeatureSettingsCor
   }
   else {
     if (BL_UNLIKELY(!bl::FontTagData::is_valid_tag(feature_tag)))
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     can_modify = is_impl_mutable(get_impl(self));
   }
@@ -587,7 +587,7 @@ BL_API_IMPL BLResult bl_font_feature_settings_set_value(BLFontFeatureSettingsCor
   }
 
   if (BL_UNLIKELY(!bl::FontTagData::is_valid_tag(feature_tag)))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   // Insert a new tag/value pair if `feature_tag` is not in the settings.
   size_t nTagsAfterIndex = size - index;

@@ -55,7 +55,7 @@ BLResult WorkData::init_band_data(uint32_t band_height, uint32_t band_count, uin
 
     if (BL_UNLIKELY(!edges)) {
       edge_storage.reset();
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
     }
 
     uint32_t band_capacity = uint32_t(allocated_size / kEdgeListSize);

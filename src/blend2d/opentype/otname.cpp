@@ -82,7 +82,7 @@ static BLResult convert_name_string_to_utf8(BLString& dst, BLArrayView<uint8_t> 
 
   dst.truncate((size_t)(dst_ptr - dst_start));
   if (null_terminator_count != 0)
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
 
   return BL_SUCCESS;
 }
@@ -113,10 +113,10 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept {
 
   Table<NameTable> name(tables.name);
   if (!name)
-    return bl_trace_error(BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
+    return bl_make_error(BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
 
   if (!name.fits())
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
 
   Trace trace;
   trace.info("bl::OpenType::OTFaceImpl::InitName [Size=%u]\n", name.size);
@@ -124,7 +124,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept {
 
   if (BL_UNLIKELY(name.size < NameTable::kBaseSize)) {
     trace.warn("Table is truncated\n");
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
   }
 
   uint32_t format = name->format();
@@ -135,16 +135,16 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept {
 
   uint32_t string_region_offset = name->string_offset();
   if (BL_UNLIKELY(string_region_offset >= name.size))
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
 
   // Only formats 0 and 1 are defined.
   if (BL_UNLIKELY(format > 1))
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
 
   // There must be some names otherwise this table is invalid. Also make sure that the number of records doesn't
   // overflow the size of 'name' itself.
   if (BL_UNLIKELY(!record_count || !name.fits(6u + record_count * uint32_t(sizeof(NameRecord)))))
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
 
   // Mask of name IDs which we are interested in.
   //
@@ -319,7 +319,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcept {
 
     // This should have already been filtered out, but one is never sure...
     if (BL_UNLIKELY(string_offset >= string_region_size || string_region_size - string_offset < string_length))
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
 
     BLStringCore* dst = nullptr;
     switch (name_id) {

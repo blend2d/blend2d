@@ -45,7 +45,7 @@ static BLResult init_head(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexce
 
   if (!head.fits()) {
     trace.fail("%s\n", size_check_message(head.size));
-    return bl_trace_error(head.size ? BL_ERROR_INVALID_DATA : BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
+    return bl_make_error(head.size ? BL_ERROR_INVALID_DATA : BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
   }
   else {
     constexpr uint16_t kMinUnitsPerEm = 16;
@@ -79,7 +79,7 @@ static BLResult init_head(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexce
 
     if (BL_UNLIKELY(units_per_em < kMinUnitsPerEm || units_per_em > kMaxUnitsPerEm)) {
       trace.fail("Invalid UnitsPerEm [%u], must be within [%u:%u] range\n", units_per_em, kMinUnitsPerEm, kMaxUnitsPerEm);
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
     }
 
     uint32_t glyph_data_format = head->glyph_data_format();
@@ -87,12 +87,12 @@ static BLResult init_head(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexce
 
     if (glyph_data_format != 0) {
       trace.fail("Invalid GlyphDataFormat [%u], expected 0\n", glyph_data_format);
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
     }
 
     if (index_to_loc_format > 1) {
       trace.fail("Invalid IndexToLocFormat [%u], expected [0:1]\n", index_to_loc_format);
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
     }
 
     ot_face_impl->face_info.revision = revision;
@@ -114,7 +114,7 @@ static BLResult initMaxP(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcep
 
   if (!maxp.fits()) {
     trace.fail("%s\n", size_check_message(maxp.size));
-    return bl_trace_error(maxp.size ? BL_ERROR_INVALID_DATA : BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
+    return bl_make_error(maxp.size ? BL_ERROR_INVALID_DATA : BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
   }
   else {
     // We don't know yet if the font is TrueType or OpenType, so only use v0.5 header.
@@ -123,7 +123,7 @@ static BLResult initMaxP(OTFaceImpl* ot_face_impl, OTFaceTables& tables) noexcep
 
     if (glyph_count == 0) {
       trace.fail("Invalid GlyphCount [%u]\n", glyph_count);
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
     }
 
     ot_face_impl->face_info.glyph_count = uint16_t(glyph_count);

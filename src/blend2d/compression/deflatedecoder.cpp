@@ -576,7 +576,7 @@ BLResult Decoder::init(FormatType format, DecoderOptions options) noexcept {
 
 #if defined(BL_BUILD_OPT_AVX2)
   if (bl_runtime_has_avx2(&bl_runtime_context)) {
-    _fast_decode_func = Fast::decode_AVX2;
+    _fast_decode_func = Fast::decode_avx2;
   }
 #endif // BL_BUILD_OPT_AVX2
 #endif // BL_TARGET_ARCH_BITS >= 64
@@ -1493,7 +1493,7 @@ CopyBytesState: {
       // ------------
 
       case DecoderState::kInvalid: {
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
       }
     }
 
@@ -1520,7 +1520,7 @@ NotEnoughOutputBytes:
       // to fail early if the buffer decompresses to more bytes than it should. The implementation has to check the
       // size of the decompressed data anyway, but we don't want to grow above the threshold.
       if (bl_test_flag(_options, DecoderOptions::kNeverReallocOutputBuffer)) {
-        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
       }
 
       // We can calculate the number of bytes required exactly if this is a last block, which is uncompressed.
@@ -1542,7 +1542,7 @@ NotEnoughOutputBytes:
 
 #if BL_TARGET_ARCH_BITS < 64
       if (size_estimate > uint64_t(SIZE_MAX)) {
-        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
       }
 #endif
 
@@ -1605,7 +1605,7 @@ ErrorInvalidData:
   _state = DecoderState::kInvalid;
   _processed_bytes += PtrOps::byte_offset(src_data, src_ptr);
 
-  return bl_trace_error(BL_ERROR_DECOMPRESSION_FAILED);
+  return bl_make_error(BL_ERROR_DECOMPRESSION_FAILED);
 }
 
 } // {bl::Compression::Deflate}

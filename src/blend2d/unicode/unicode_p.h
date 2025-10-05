@@ -331,11 +331,11 @@ public:
 
 InvalidString:
     _ptr -= uc_size_in_bytes;
-    return bl_trace_error(BL_ERROR_INVALID_STRING);
+    return bl_make_error(BL_ERROR_INVALID_STRING);
 
 TruncatedString:
     _ptr -= uc_size_in_bytes;
-    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    return bl_make_error(BL_ERROR_DATA_TRUNCATED);
   }
 
   BL_INLINE void skip_one_unit() noexcept {
@@ -472,11 +472,11 @@ public:
 
 InvalidString:
     _ptr -= 2;
-    return bl_trace_error(BL_ERROR_INVALID_STRING);
+    return bl_make_error(BL_ERROR_INVALID_STRING);
 
 TruncatedString:
     _ptr -= 2;
-    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    return bl_make_error(BL_ERROR_DATA_TRUNCATED);
   }
 
   BL_INLINE void skip_one_unit() noexcept {
@@ -576,11 +576,11 @@ public:
 
     uc = readU32<kFlags>(_ptr);
     if (BL_UNLIKELY(uc > kCharMax))
-      return bl_trace_error(BL_ERROR_INVALID_STRING);
+      return bl_make_error(BL_ERROR_INVALID_STRING);
 
     if (bl_test_flag(kFlags, IOFlags::kStrict)) {
       if (BL_UNLIKELY(is_surrogate(uc)))
-        return bl_trace_error(BL_ERROR_INVALID_STRING);
+        return bl_make_error(BL_ERROR_INVALID_STRING);
     }
 
     if (bl_test_flag(kFlags, IOFlags::kCalcIndex)) {
@@ -674,7 +674,7 @@ public:
   BL_INLINE BLResult write_byte(uint32_t uc) noexcept {
     BL_ASSERT(uc <= 0x7Fu);
     if (BL_UNLIKELY(at_end()))
-      return bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+      return bl_make_error(BL_ERROR_NO_SPACE_LEFT);
 
     _ptr[0] = char(uint8_t(uc));
     _ptr++;
@@ -694,7 +694,7 @@ public:
     _ptr += 2;
     if (BL_UNLIKELY(_ptr > _end)) {
       _ptr -= 2;
-      return bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+      return bl_make_error(BL_ERROR_NO_SPACE_LEFT);
     }
 
     _ptr[-2] = char(uint8_t(0xC0u | (uc >> 6)));
@@ -719,7 +719,7 @@ public:
     _ptr += 3;
     if (BL_UNLIKELY(_ptr > _end)) {
       _ptr -= 3;
-      return bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+      return bl_make_error(BL_ERROR_NO_SPACE_LEFT);
     }
 
     _ptr[-3] = char(uint8_t(0xE0u | ((uc >> 12)     )));
@@ -746,7 +746,7 @@ public:
     _ptr += 4;
     if (BL_UNLIKELY(_ptr > _end)) {
       _ptr -= 4;
-      return bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+      return bl_make_error(BL_ERROR_NO_SPACE_LEFT);
     }
 
     _ptr[-4] = char(uint8_t(0xF0u | ((uc >> 18)     )));
@@ -811,7 +811,7 @@ public:
     BL_ASSERT(uc <= 0xFFFFu);
 
     if (BL_UNLIKELY(at_end()))
-      return bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+      return bl_make_error(BL_ERROR_NO_SPACE_LEFT);
 
     _writeMemU16(_ptr, uc);
     _ptr++;
@@ -832,7 +832,7 @@ public:
     _ptr += 2;
     if (BL_UNLIKELY(_ptr > _end)) {
       _ptr -= 2;
-      return bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+      return bl_make_error(BL_ERROR_NO_SPACE_LEFT);
     }
 
     uint32_t hi, lo;
@@ -899,7 +899,7 @@ public:
 
   BL_INLINE BLResult write(uint32_t uc) noexcept {
     if (BL_UNLIKELY(at_end()))
-      return bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+      return bl_make_error(BL_ERROR_NO_SPACE_LEFT);
 
     _writeMemU32(_ptr, uc);
     _ptr++;

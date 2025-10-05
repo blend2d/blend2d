@@ -7,6 +7,7 @@
 #if defined(BL_TARGET_OPT_SSE2)
 
 #include "../gradient_p.h"
+#include "../pixelops/funcs_p.h"
 #include "../simd/simd_p.h"
 #include "../support/math_p.h"
 
@@ -72,7 +73,7 @@ void BL_CDECL interpolate_prgb32_sse2(uint32_t* d_ptr, uint32_t d_size, const BL
 
       // Scale `cd` by taking advantage of SSE2-FP division.
       {
-        Vec2xF64 scale = div_1xf64(make128_f64(1 << 23), cvt_f64_from_scalar_i32(int(i)));
+        Vec2xF64 scale = div_f64x1(make128_f64(1 << 23), cvt_f64_from_scalar_i32(int(i)));
 
         ci = vec_i32(interleave_lo_u8(c0, c0));
         cd = vec_i32(interleave_lo_u8(c1, c1));

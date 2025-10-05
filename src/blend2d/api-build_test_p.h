@@ -20,10 +20,10 @@
 #endif
 //! \endcond
 
-// Include a unit testing package if this is a `blend2d_test_unit` build.
+// Include a unit testing package if this is a `bl_test_runner` build.
 #if defined(BL_TEST)
 
-#include "../../test/broken.h"
+#include "../../testing/tests/broken.h"
 
 //! \cond INTERNAL
 #define EXPECT_SUCCESS(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_SUCCESS(" #__VA_ARGS__ ")", (__VA_ARGS__) == BL_SUCCESS)

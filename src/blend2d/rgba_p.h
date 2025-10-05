@@ -22,7 +22,7 @@ namespace bl {
 namespace RgbaInternal {
 
 static BL_INLINE bool is_valid(const BLRgba& rgba) noexcept {
-  return !Math::isNaN(rgba.r, rgba.g, rgba.b, rgba.a);
+  return !Math::is_nan(rgba.r, rgba.g, rgba.b, rgba.a);
 }
 
 static BL_INLINE bool isRgba32FullyOpaque(uint32_t rgba32) noexcept {

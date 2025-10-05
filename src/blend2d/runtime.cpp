@@ -361,7 +361,7 @@ BL_API_IMPL BLResult bl_runtime_query_info(BLRuntimeInfoType info_type, void* in
     }
 
     default:
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 }
 

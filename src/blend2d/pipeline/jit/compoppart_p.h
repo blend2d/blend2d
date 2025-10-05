@@ -33,7 +33,7 @@ public:
   //! Pixel type of the composition.
   PixelType _pixel_type = PixelType::kNone;
   //! The current span mode.
-  CMaskLoopType _cMaskLoopType = CMaskLoopType::kNone;
+  CMaskLoopType _c_mask_loop_type = CMaskLoopType::kNone;
   //! Pixel coverage format expected by the compositor.
   PixelCoverageFormat _coverage_format = PixelCoverageFormat::kNone;
   //! Maximum pixels the compositor can handle at a time.
@@ -50,10 +50,10 @@ public:
   uint8_t _has_sa : 1;
 
   //! A hook that is used by the current loop.
-  asmjit::BaseNode* _cMaskLoopHook = nullptr;
+  asmjit::BaseNode* _c_mask_loop_hook = nullptr;
   //! Optimized solid pixel for operators that allow it.
   SolidPixel _solid_opt;
-  //! Pre-processed solid pixel for TypeA operators that always use `vMaskProc?()`.
+  //! Pre-processed solid pixel for TypeA operators that always use `v_mask_proc?()`.
   Pixel _solid_pre {};
   //! Partial fetch that happened at the end of the scanline (border case).
   Pixel _partial_pixel {};
@@ -125,15 +125,15 @@ public:
   BL_INLINE_NODEBUG bool has_sa() const noexcept { return _has_sa != 0; }
 
   BL_INLINE_NODEBUG PixelType pixel_type() const noexcept { return _pixel_type; }
-  BL_INLINE_NODEBUG bool isA8Pixel() const noexcept { return _pixel_type == PixelType::kA8; }
-  BL_INLINE_NODEBUG bool isRGBA32Pixel() const noexcept { return _pixel_type == PixelType::kRGBA32; }
+  BL_INLINE_NODEBUG bool is_a8_pixel() const noexcept { return _pixel_type == PixelType::kA8; }
+  BL_INLINE_NODEBUG bool is_rgba32_pixel() const noexcept { return _pixel_type == PixelType::kRGBA32; }
 
   //! Returns the current loop mode.
-  BL_INLINE_NODEBUG CMaskLoopType cMaskLoopType() const noexcept { return _cMaskLoopType; }
+  BL_INLINE_NODEBUG CMaskLoopType c_mask_loop_type() const noexcept { return _c_mask_loop_type; }
   //! Tests whether the current loop is fully opaque (no mask).
-  BL_INLINE_NODEBUG bool is_loop_opaque() const noexcept { return _cMaskLoopType == CMaskLoopType::kOpaque; }
+  BL_INLINE_NODEBUG bool is_loop_opaque() const noexcept { return _c_mask_loop_type == CMaskLoopType::kOpaque; }
   //! Tests whether the current loop is `CMask` (constant mask).
-  BL_INLINE_NODEBUG bool isLoopCMask() const noexcept { return _cMaskLoopType == CMaskLoopType::kVariant; }
+  BL_INLINE_NODEBUG bool is_loop_c_mask() const noexcept { return _c_mask_loop_type == CMaskLoopType::kVariant; }
 
   //! Returns the maximum pixels the composite part can handle at a time.
   //!
@@ -177,15 +177,15 @@ public:
   //! or `memset()`.
   bool should_just_copy_opaque_fill() const noexcept;
 
-  void startAtX(const Gp& x) noexcept;
-  void advanceX(const Gp& x, const Gp& diff) noexcept;
-  void advanceY() noexcept;
+  void start_at_x(const Gp& x) noexcept;
+  void advance_x(const Gp& x, const Gp& diff) noexcept;
+  void advance_y() noexcept;
 
   // These are just wrappers that call these on both source & destination parts.
-  void enterN() noexcept;
-  void leaveN() noexcept;
-  void prefetchN() noexcept;
-  void postfetchN() noexcept;
+  void enter_n() noexcept;
+  void leave_n() noexcept;
+  void prefetch_n() noexcept;
+  void postfetch_n() noexcept;
 
   void dst_fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
   void src_fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
@@ -194,51 +194,51 @@ public:
   void exit_partial_mode() noexcept;
   void next_partial_pixel() noexcept;
 
-  void cMaskInit(const Mem& mem) noexcept;
-  void cMaskInit(const Gp& sm_, const Vec& vm_) noexcept;
-  void cMaskInitOpaque() noexcept;
-  void cMaskFini() noexcept;
+  void c_mask_init(const Mem& mem) noexcept;
+  void c_mask_init(const Gp& sm_, const Vec& vm_) noexcept;
+  void c_mask_init_opaque() noexcept;
+  void c_mask_fini() noexcept;
 
-  void _cMaskLoopInit(CMaskLoopType loop_type) noexcept;
-  void _cMaskLoopFini() noexcept;
+  void _c_mask_loop_init(CMaskLoopType loop_type) noexcept;
+  void _c_mask_loop_fini() noexcept;
 
-  void cMaskGenericLoop(Gp& i) noexcept;
-  void cMaskGenericLoopVec(Gp& i) noexcept;
+  void c_mask_generic_loop(Gp& i) noexcept;
+  void c_mask_generic_loop_vec(Gp& i) noexcept;
 
-  void cMaskGranularLoop(Gp& i) noexcept;
-  void cMaskGranularLoopVec(Gp& i) noexcept;
+  void c_mask_granular_loop(Gp& i) noexcept;
+  void c_mask_granular_loop_vec(Gp& i) noexcept;
 
-  void cMaskMemcpyOrMemsetLoop(Gp& i) noexcept;
+  void c_mask_memcpy_or_memset_loop(Gp& i) noexcept;
 
-  void cMaskProcStoreAdvance(const Gp& d_ptr, PixelCount n, Alignment alignment = Alignment(1)) noexcept;
-  void cMaskProcStoreAdvance(const Gp& d_ptr, PixelCount n, Alignment alignment, PixelPredicate& predicate) noexcept;
+  void c_mask_proc_store_advance(const Gp& d_ptr, PixelCount n, Alignment alignment = Alignment(1)) noexcept;
+  void c_mask_proc_store_advance(const Gp& d_ptr, PixelCount n, Alignment alignment, PixelPredicate& predicate) noexcept;
 
-  void vMaskGenericLoop(Gp& i, const Gp& d_ptr, const Gp& mPtr, GlobalAlpha* ga, const Label& done) noexcept;
-  void vMaskGenericStep(const Gp& d_ptr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga) noexcept;
-  void vMaskGenericStep(const Gp& d_ptr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga, PixelPredicate& predicate) noexcept;
+  void v_mask_generic_loop(Gp& i, const Gp& d_ptr, const Gp& mPtr, GlobalAlpha* ga, const Label& done) noexcept;
+  void v_mask_generic_step(const Gp& d_ptr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga) noexcept;
+  void v_mask_generic_step(const Gp& d_ptr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga, PixelPredicate& predicate) noexcept;
 
-  void vMaskProcStoreAdvance(const Gp& d_ptr, PixelCount n, const VecArray& vm, PixelCoverageFlags coverage_flags, Alignment alignment = Alignment(1)) noexcept;
-  void vMaskProcStoreAdvance(const Gp& d_ptr, PixelCount n, const VecArray& vm, PixelCoverageFlags coverage_flags, Alignment alignment, PixelPredicate& predicate) noexcept;
+  void v_mask_proc_store_advance(const Gp& d_ptr, PixelCount n, const VecArray& vm, PixelCoverageFlags coverage_flags, Alignment alignment = Alignment(1)) noexcept;
+  void v_mask_proc_store_advance(const Gp& d_ptr, PixelCount n, const VecArray& vm, PixelCoverageFlags coverage_flags, Alignment alignment, PixelPredicate& predicate) noexcept;
 
-  void vMaskProc(Pixel& out, PixelFlags flags, Gp& msk, PixelCoverageFlags coverage_flags) noexcept;
+  void v_mask_proc(Pixel& out, PixelFlags flags, Gp& msk, PixelCoverageFlags coverage_flags) noexcept;
 
-  void cMaskInitA8(const Gp& sm_, const Vec& vm_) noexcept;
-  void cMaskFiniA8() noexcept;
+  void c_mask_init_a8(const Gp& sm_, const Vec& vm_) noexcept;
+  void c_mask_fini_a8() noexcept;
 
-  void cMaskProcA8Gp(Pixel& out, PixelFlags flags) noexcept;
-  void vMaskProcA8Gp(Pixel& out, PixelFlags flags, const Gp& msk, PixelCoverageFlags coverage_flags) noexcept;
+  void c_mask_proc_a8_gp(Pixel& out, PixelFlags flags) noexcept;
+  void v_mask_proc_a8_gp(Pixel& out, PixelFlags flags, const Gp& msk, PixelCoverageFlags coverage_flags) noexcept;
 
-  void cMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
-  void vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, const VecArray& vm, PixelCoverageFlags coverage_flags, PixelPredicate& predicate) noexcept;
+  void c_mask_proc_a8_vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
+  void v_mask_proc_a8_vec(Pixel& out, PixelCount n, PixelFlags flags, const VecArray& vm, PixelCoverageFlags coverage_flags, PixelPredicate& predicate) noexcept;
 
-  void cMaskInitRGBA32(const Vec& vm) noexcept;
-  void cMaskFiniRGBA32() noexcept;
+  void c_mask_init_rgba32(const Vec& vm) noexcept;
+  void c_mask_fini_rgba32() noexcept;
 
-  void cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
-  void vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, const VecArray& vm, PixelCoverageFlags coverage_flags, PixelPredicate& predicate) noexcept;
+  void c_mask_proc_rgba32_vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
+  void v_mask_proc_rgba32_vec(Pixel& out, PixelCount n, PixelFlags flags, const VecArray& vm, PixelCoverageFlags coverage_flags, PixelPredicate& predicate) noexcept;
 
-  void vMaskProcRGBA32InvertMask(VecArray& vn, const VecArray& vm, PixelCoverageFlags coverage_flags) noexcept;
-  void vMaskProcRGBA32InvertDone(VecArray& vn, const VecArray& vm, PixelCoverageFlags coverage_flags) noexcept;
+  void v_mask_proc_rgba32_invert_mask(VecArray& vn, const VecArray& vm, PixelCoverageFlags coverage_flags) noexcept;
+  void v_mask_proc_rgba32_invert_done(VecArray& vn, const VecArray& vm, PixelCoverageFlags coverage_flags) noexcept;
 };
 
 } // {bl::Pipeline::JIT}

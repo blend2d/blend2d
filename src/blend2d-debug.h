@@ -191,7 +191,7 @@ static void bl_debug_runtime_system_info(void) {
 // BLDebug - Matrix
 // ================
 
-static void blDebugMatrix2D_(const BLMatrix2D* obj, const char* name, int indent) {
+static void bl_debug_matrix2d_(const BLMatrix2D* obj, const char* name, int indent) {
   static const char matrix_type_enum[] =
     "IDENTITY\0"
     "TRANSLATE\0"
@@ -396,7 +396,7 @@ static void bl_debug_pattern_(const BLPatternCore* obj, const char* name, int in
     indent++;
     bl_debug_image_(&image, "Image", indent);
     BL_DEBUG_FMT("ExtendMode: %s\n", bl_debug_get_enum_as_string(extend_mode, extend_mode_enum));
-    blDebugMatrix2D_(&transform, "Transform", indent);
+    bl_debug_matrix2d_(&transform, "Transform", indent);
     indent--;
   }
   BL_DEBUG_OUT("}\n");
@@ -485,7 +485,7 @@ static void bl_debug_gradient_(const BLGradientCore* obj, const char* name, int 
     indent--;
     BL_DEBUG_OUT("}\n");
 
-    blDebugMatrix2D_(&transform, "Transform", indent);
+    bl_debug_matrix2d_(&transform, "Transform", indent);
     indent--;
   }
   BL_DEBUG_OUT("}\n");
@@ -674,9 +674,9 @@ static void bl_debug_context_(const BLContextCore* obj, const char* name, int in
     BL_DEBUG_FMT("GlobalAlpha: %f\n", state->global_alpha);
     BL_DEBUG_FMT("SavedStateCount: %u\n", state->saved_state_count);
 
-    blDebugMatrix2D_(&state->meta_transform, "MetaTransform", indent);
-    blDebugMatrix2D_(&state->user_transform, "UserTransform", indent);
-    blDebugMatrix2D_(&state->final_transform, "FinalTransform", indent);
+    bl_debug_matrix2d_(&state->meta_transform, "MetaTransform", indent);
+    bl_debug_matrix2d_(&state->user_transform, "UserTransform", indent);
+    bl_debug_matrix2d_(&state->final_transform, "FinalTransform", indent);
 
     bl_debug_object_(&fill_style, "FillStyle", indent);
     BL_DEBUG_FMT("FillAlpha: %f\n", state->style_alpha[BL_CONTEXT_STYLE_SLOT_FILL]);
@@ -885,8 +885,8 @@ static void bl_debug_image(const BLImageCore* obj) {
   bl_debug_image_(obj, "BLImage", 0);
 }
 
-static void blDebugMatrix2D(const BLMatrix2D* obj) {
-  blDebugMatrix2D_(obj, "BLMatrix", 0);
+static void bl_debug_matrix2d(const BLMatrix2D* obj) {
+  bl_debug_matrix2d_(obj, "BLMatrix", 0);
 }
 
 //! Dumps BLObjectCore or BLObject.

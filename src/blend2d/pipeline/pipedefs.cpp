@@ -17,7 +17,7 @@ namespace FetchUtils {
 // Pipeline - FetchData - Extend Modes
 // ===================================
 
-static BL_INLINE uint32_t extendXFromExtendMode(uint32_t extend_mode) noexcept {
+static BL_INLINE uint32_t extend_xFromExtendMode(uint32_t extend_mode) noexcept {
   BL_ASSERT(extend_mode <= BL_EXTEND_MODE_COMPLEX_MAX_VALUE);
 
   constexpr uint32_t kTable = (BL_EXTEND_MODE_PAD     <<  0) | // [pad-x     pad-y    ]
@@ -32,7 +32,7 @@ static BL_INLINE uint32_t extendXFromExtendMode(uint32_t extend_mode) noexcept {
   return (kTable >> (extend_mode * 2u)) & 0x3u;
 }
 
-static BL_INLINE uint32_t extendYFromExtendMode(uint32_t extend_mode) noexcept {
+static BL_INLINE uint32_t extend_yFromExtendMode(uint32_t extend_mode) noexcept {
   BL_ASSERT(extend_mode <= BL_EXTEND_MODE_COMPLEX_MAX_VALUE);
 
   constexpr uint32_t kTable = (BL_EXTEND_MODE_PAD     <<  0) | // [pad-x     pad-y    ]
@@ -51,8 +51,8 @@ static BL_INLINE uint32_t extendYFromExtendMode(uint32_t extend_mode) noexcept {
 // ===================================
 
 static BL_INLINE Signature init_pattern_tx_ty(FetchData::Pattern& fetch_data, FetchType fetch_base, uint32_t extend_mode, int tx, int ty, bool is_fractional) noexcept {
-  uint32_t extendX = extendXFromExtendMode(extend_mode);
-  uint32_t extendY = extendYFromExtendMode(extend_mode);
+  uint32_t extend_x = extend_xFromExtendMode(extend_mode);
+  uint32_t extend_y = extend_yFromExtendMode(extend_mode);
   uint32_t ix_index = 17;
 
   int rx = 0;
@@ -60,11 +60,11 @@ static BL_INLINE Signature init_pattern_tx_ty(FetchData::Pattern& fetch_data, Fe
 
   // If the pattern width/height is 1 all extend modes produce the same output. However, it's safer to just set it to
   // PAD as FetchPatternPart requires `width` to be equal or greater than 2 if the extend mode is REPEAT or REFLECT.
-  if (fetch_data.src.size.w <= 1) extendX = BL_EXTEND_MODE_PAD;
-  if (fetch_data.src.size.h <= 1) extendY = BL_EXTEND_MODE_PAD;
+  if (fetch_data.src.size.w <= 1) extend_x = BL_EXTEND_MODE_PAD;
+  if (fetch_data.src.size.h <= 1) extend_y = BL_EXTEND_MODE_PAD;
 
-  if (extendX >= BL_EXTEND_MODE_REPEAT) {
-    bool is_reflect = extendX == BL_EXTEND_MODE_REFLECT;
+  if (extend_x >= BL_EXTEND_MODE_REPEAT) {
+    bool is_reflect = extend_x == BL_EXTEND_MODE_REFLECT;
 
     rx = int(fetch_data.src.size.w) << uint32_t(is_reflect);
     if (unsigned(tx) >= unsigned(rx))
@@ -79,7 +79,7 @@ static BL_INLINE Signature init_pattern_tx_ty(FetchData::Pattern& fetch_data, Fe
 
     // Don't specialize `Repeat vs Reflect` when we are not pixel aligned.
     if (is_fractional)
-      extendX = 1; // TODO: Naming...
+      extend_x = 1; // TODO: Naming...
   }
 
   // Setup v_extend_data initially for PADding, then refine in REPEAT|REFLECT case.
@@ -89,16 +89,16 @@ static BL_INLINE Signature init_pattern_tx_ty(FetchData::Pattern& fetch_data, Fe
   ext_data.y_stop[0] = uint32_t(fetch_data.src.size.h);
   ext_data.y_stop[1] = 0;
   ext_data.y_rewind_offset = 0;
-  ext_data.pixel_ptr_rewind_offset = (extendY != BL_EXTEND_MODE_REPEAT ? intptr_t(0) : intptr_t(fetch_data.src.size.h - 1)) * fetch_data.src.stride;
+  ext_data.pixel_ptr_rewind_offset = (extend_y != BL_EXTEND_MODE_REPEAT ? intptr_t(0) : intptr_t(fetch_data.src.size.h - 1)) * fetch_data.src.stride;
 
-  if (extendY >= BL_EXTEND_MODE_REPEAT) {
-    ry = int(fetch_data.src.size.h) << uint32_t(extendY == BL_EXTEND_MODE_REFLECT);
+  if (extend_y >= BL_EXTEND_MODE_REPEAT) {
+    ry = int(fetch_data.src.size.h) << uint32_t(extend_y == BL_EXTEND_MODE_REFLECT);
     if (unsigned(ty) >= unsigned(ry))
       ty %= ry;
     if (ty < 0)
       ty += ry;
 
-    ext_data.stride[1] = (extendY == BL_EXTEND_MODE_REPEAT) ? fetch_data.src.stride : -fetch_data.src.stride;
+    ext_data.stride[1] = (extend_y == BL_EXTEND_MODE_REPEAT) ? fetch_data.src.stride : -fetch_data.src.stride;
     ext_data.y_stop[1] = uint32_t(fetch_data.src.size.h);
     ext_data.y_rewind_offset = uint32_t(fetch_data.src.size.h);
   }
@@ -109,7 +109,7 @@ static BL_INLINE Signature init_pattern_tx_ty(FetchData::Pattern& fetch_data, Fe
   fetch_data.simple.ry = ry;
   fetch_data.simple.ix = modulo_table[ix_index];
 
-  return Signature::from_fetch_type(FetchType(uint32_t(fetch_base) + extendX));
+  return Signature::from_fetch_type(FetchType(uint32_t(fetch_base) + extend_x));
 }
 
 Signature init_pattern_ax_ay(FetchData::Pattern& fetch_data, BLExtendMode extend_mode, int x, int y) noexcept {
@@ -162,17 +162,29 @@ Signature init_pattern_fx_fy(FetchData::Pattern& fetch_data, BLExtendMode extend
 Signature init_pattern_affine(FetchData::Pattern& fetch_data, BLExtendMode extend_mode, BLPatternQuality quality, uint32_t bytes_per_pixel, const BLMatrix2D& transform) noexcept {
   // Inverted transformation matrix.
   BLMatrix2D inv;
-  if (BLMatrix2D::invert(inv, transform) != BL_SUCCESS)
+  if (BL_UNLIKELY(BLMatrix2D::invert(inv, transform) != BL_SUCCESS)) {
     return Signature::from_pending_flag(1);
+  }
+
+  // Pattern bounds.
+  int tw = int(fetch_data.src.size.w);
+  int th = int(fetch_data.src.size.h);
+
+  if (BL_UNLIKELY(tw == 0)) {
+    return Signature::from_pending_flag(1);
+  }
 
   double xx = inv.m00;
   double xy = inv.m01;
   double yx = inv.m10;
   double yy = inv.m11;
 
-  if (Math::is_near_one(xx) && Math::is_near_zero(xy) && Math::is_near_zero(yx) && Math::is_near_one(yy)) {
-    int64_t tx64 = Math::floorToInt64(-inv.m20 * 256.0);
-    int64_t ty64 = Math::floorToInt64(-inv.m21 * 256.0);
+  if (bool_and(Math::is_near_one(xx),
+               Math::is_near_zero(xy),
+               Math::is_near_zero(yx),
+               Math::is_near_one(yy))) {
+    int64_t tx64 = Math::floor_to_int64(-inv.m20 * 256.0);
+    int64_t ty64 = Math::floor_to_int64(-inv.m21 * 256.0);
     return init_pattern_fx_fy(fetch_data, extend_mode, quality, bytes_per_pixel, tx64, ty64);
   }
 
@@ -181,18 +193,15 @@ Signature init_pattern_affine(FetchData::Pattern& fetch_data, BLExtendMode exten
       ? FetchType::kPatternAffineNNAny
       : FetchType::kPatternAffineBIAny;
 
-  // Pattern bounds.
-  int tw = int(fetch_data.src.size.w);
-  int th = int(fetch_data.src.size.h);
-
 #if 1 // BL_TARGET_ARCH_X86
   uint32_t opt = bl_max(tw, th) < 32767 &&
                  fetch_data.src.stride >= 0 &&
                  fetch_data.src.stride <= intptr_t(Traits::max_value<int16_t>());
 
   // TODO: [JIT] OPTIMIZATION: Not implemented for bilinear yet.
-  if (quality == BL_PATTERN_QUALITY_BILINEAR)
+  if (quality == BL_PATTERN_QUALITY_BILINEAR) {
     opt = 0;
+  }
 #else
   constexpr uint32_t opt = 0;
 #endif // BL_TARGET_ARCH_X86
@@ -200,8 +209,8 @@ Signature init_pattern_affine(FetchData::Pattern& fetch_data, BLExtendMode exten
   fetch_type = FetchType(uint32_t(fetch_type) + opt);
 
   // Pattern X/Y extends.
-  uint32_t extendX = extendXFromExtendMode(extend_mode);
-  uint32_t extendY = extendYFromExtendMode(extend_mode);
+  uint32_t extend_x = extend_xFromExtendMode(extend_mode);
+  uint32_t extend_y = extend_yFromExtendMode(extend_mode);
 
   // Translation.
   double tx = inv.m20;
@@ -231,13 +240,13 @@ Signature init_pattern_affine(FetchData::Pattern& fetch_data, BLExtendMode exten
   fetch_data.affine.cor_x = int32_t(tw - 1);
   fetch_data.affine.cor_y = int32_t(th - 1);
 
-  if (extendX != BL_EXTEND_MODE_PAD) {
+  if (extend_x != BL_EXTEND_MODE_PAD) {
     fetch_data.affine.min_x = Traits::min_value<int32_t>();
-    if (extendX == BL_EXTEND_MODE_REPEAT)
+    if (extend_x == BL_EXTEND_MODE_REPEAT)
       fetch_data.affine.cor_x = 0;
 
     ox = tw;
-    if (extendX == BL_EXTEND_MODE_REFLECT)
+    if (extend_x == BL_EXTEND_MODE_REFLECT)
       tw *= 2;
 
     if (xx < 0.0) {
@@ -245,7 +254,7 @@ Signature init_pattern_affine(FetchData::Pattern& fetch_data, BLExtendMode exten
       yx = -yx;
       tx = double(tw) - tx;
 
-      if (extendX == BL_EXTEND_MODE_REPEAT) {
+      if (extend_x == BL_EXTEND_MODE_REPEAT) {
         ox = 0;
         fetch_data.affine.cor_x = fetch_data.affine.max_x;
         fetch_data.affine.max_x = -1;
@@ -254,13 +263,13 @@ Signature init_pattern_affine(FetchData::Pattern& fetch_data, BLExtendMode exten
     ox--;
   }
 
-  if (extendY != BL_EXTEND_MODE_PAD) {
+  if (extend_y != BL_EXTEND_MODE_PAD) {
     fetch_data.affine.min_y = Traits::min_value<int32_t>();
-    if (extendY == BL_EXTEND_MODE_REPEAT)
+    if (extend_y == BL_EXTEND_MODE_REPEAT)
       fetch_data.affine.cor_y = 0;
 
     oy = th;
-    if (extendY == BL_EXTEND_MODE_REFLECT)
+    if (extend_y == BL_EXTEND_MODE_REFLECT)
       th *= 2;
 
     if (xy < 0.0) {
@@ -268,7 +277,7 @@ Signature init_pattern_affine(FetchData::Pattern& fetch_data, BLExtendMode exten
       yy = -yy;
       ty = double(th) - ty;
 
-      if (extendY == BL_EXTEND_MODE_REPEAT) {
+      if (extend_y == BL_EXTEND_MODE_REPEAT) {
         oy = 0;
         fetch_data.affine.cor_y = fetch_data.affine.max_y;
         fetch_data.affine.max_y = -1;
@@ -291,7 +300,7 @@ Signature init_pattern_affine(FetchData::Pattern& fetch_data, BLExtendMode exten
 
   // Normalize the matrix in a way that it won't overflow the pattern more than once per a single iteration. Happens
   // when scaling part is very small. Only useful for repeated / reflected cases.
-  if (extendX == BL_EXTEND_MODE_PAD) {
+  if (extend_x == BL_EXTEND_MODE_PAD) {
     tw_d = 2147483647.0;
   }
   else {
@@ -300,7 +309,7 @@ Signature init_pattern_affine(FetchData::Pattern& fetch_data, BLExtendMode exten
     if (xx >= tw_d) xx = fmod(xx, tw_d);
   }
 
-  if (extendY == BL_EXTEND_MODE_PAD) {
+  if (extend_y == BL_EXTEND_MODE_PAD) {
     th_d = 2147483647.0;
   }
   else {
@@ -326,12 +335,12 @@ Signature init_pattern_affine(FetchData::Pattern& fetch_data, BLExtendMode exten
   all_max = bl_max(bl_max(tx, ty), all_max);
 
   if (all_min >= double(INT64_MIN + 1) && all_max <= double(INT64_MAX)) {
-    fetch_data.affine.xx.i64 = Math::floorToInt64(xx);
-    fetch_data.affine.xy.i64 = Math::floorToInt64(xy);
-    fetch_data.affine.yx.i64 = Math::floorToInt64(yx);
-    fetch_data.affine.yy.i64 = Math::floorToInt64(yy);
-    fetch_data.affine.tx.i64 = Math::floorToInt64(tx);
-    fetch_data.affine.ty.i64 = Math::floorToInt64(ty);
+    fetch_data.affine.xx.i64 = Math::floor_to_int64(xx);
+    fetch_data.affine.xy.i64 = Math::floor_to_int64(xy);
+    fetch_data.affine.yx.i64 = Math::floor_to_int64(yx);
+    fetch_data.affine.yy.i64 = Math::floor_to_int64(yy);
+    fetch_data.affine.tx.i64 = Math::floor_to_int64(tx);
+    fetch_data.affine.ty.i64 = Math::floor_to_int64(ty);
   }
   else {
     fetch_data.affine.xx.i64 = 0;
@@ -356,8 +365,8 @@ Signature init_pattern_affine(FetchData::Pattern& fetch_data, BLExtendMode exten
   fetch_data.affine.xx2.u64 = fetch_data.affine.xx.u64 << 1u;
   fetch_data.affine.xy2.u64 = fetch_data.affine.xy.u64 << 1u;
 
-  if (extendX >= BL_EXTEND_MODE_REPEAT && fetch_data.affine.xx2.u32_hi >= uint32_t(tw)) fetch_data.affine.xx2.u32_hi %= uint32_t(tw);
-  if (extendY >= BL_EXTEND_MODE_REPEAT && fetch_data.affine.xy2.u32_hi >= uint32_t(th)) fetch_data.affine.xy2.u32_hi %= uint32_t(th);
+  if (extend_x >= BL_EXTEND_MODE_REPEAT && fetch_data.affine.xx2.u32_hi >= uint32_t(tw)) fetch_data.affine.xx2.u32_hi %= uint32_t(tw);
+  if (extend_y >= BL_EXTEND_MODE_REPEAT && fetch_data.affine.xy2.u32_hi >= uint32_t(th)) fetch_data.affine.xy2.u32_hi %= uint32_t(th);
 
   if (opt) {
     fetch_data.affine.addr_mul16[0] = int16_t(bytes_per_pixel);
@@ -408,9 +417,9 @@ static BL_INLINE Signature init_linear_gradient(FetchData::Gradient& fetch_data,
   dy *= scale;
   offset *= scale;
 
-  fetch_data.linear.dy.i64 = Math::floorToInt64(dy);
-  fetch_data.linear.dt.i64 = Math::floorToInt64(dt);
-  fetch_data.linear.pt[0].i64 = Math::floorToInt64(offset);
+  fetch_data.linear.dy.i64 = Math::floor_to_int64(dy);
+  fetch_data.linear.dt.i64 = Math::floor_to_int64(dt);
+  fetch_data.linear.pt[0].i64 = Math::floor_to_int64(offset);
   fetch_data.linear.pt[1].u64 = fetch_data.linear.pt[0].u64 + fetch_data.linear.dt.u64;
 
   fetch_data.linear.maxi = maxi;

@@ -10,7 +10,7 @@
 
 namespace bl::Compression::Deflate::Fast {
 
-DecoderFastResult decode_AVX2(
+DecoderFastResult decode_avx2(
   Decoder* ctx,
   uint8_t* dst_start,
   uint8_t* dst_ptr,

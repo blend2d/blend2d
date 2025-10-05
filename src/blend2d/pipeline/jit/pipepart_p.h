@@ -44,7 +44,7 @@ enum class PipePartFlags : uint32_t {
   kExpensive = 0x00000020u,
 
   //! Fetching always performs multiple pixels at once, thus the fetcher always stays in vectorized N mode
-  //! and not in scalar mode. This flag helps with avoiding enterN() and leaveN() when entering main loops.
+  //! and not in scalar mode. This flag helps with avoiding enter_n() and leave_n() when entering main loops.
   kAlwaysMultiple = 0x00000040u,
 
   //! Advancing in X direction is simple and can be called even with zero `x`.
@@ -75,7 +75,7 @@ public:
   //! Pointer to `PipeCompiler`.
   PipeCompiler* pc = nullptr;
   //! Pointer to `asmjit::<arch>::Compiler`.
-  AsmCompiler* cc = nullptr;
+  BackendCompiler* cc = nullptr;
 
   //! Reference to a common constant pool.
   const CommonTable& ct;

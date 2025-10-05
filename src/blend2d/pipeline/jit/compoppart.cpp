@@ -112,19 +112,22 @@ void CompOpPart::prepare_part() noexcept {
 
   _part_flags |= (dst_part()->part_flags() | src_part()->part_flags()) & PipePartFlags::kFetchFlags;
 
-  if (src_part()->has_masked_access() && dst_part()->has_masked_access())
+  if (src_part()->has_masked_access() && dst_part()->has_masked_access()) {
     _part_flags |= PipePartFlags::kMaskedAccess;
+  }
 
   // Limit the maximum pixel-step to 4 it the style is not solid and the target is not 64-bit.
   // There's not enough registers to process 8 pixels in parallel in 32-bit mode.
-  if (bl_runtime_is_32bit() && !is_solid && _pixel_type != PixelType::kA8)
+  if (bl_runtime_is_32bit() && !is_solid && _pixel_type != PixelType::kA8) {
     pixel_limit = 4;
+  }
 
   // Decrease the maximum pixels to 4 if the source is expensive to fetch. In such case fetching and processing more
   // pixels would result in emitting bloated pipelines that are not faster compared to pipelines working with just
   // 4 pixels at a time.
-  if (dst_part()->is_expensive() || src_part()->is_expensive())
+  if (dst_part()->is_expensive() || src_part()->is_expensive()) {
     pixel_limit = 4;
+  }
 
   switch (pixel_type()) {
     case PixelType::kA8: {
@@ -182,9 +185,10 @@ void CompOpPart::prepare_part() noexcept {
   // This is suboptimal, but can happen if the fetch part is not optimized.
   max_pixels = bl_min(max_pixels, pixel_limit, src_part()->max_pixels());
 
-  if (isRGBA32Pixel()) {
-    if (max_pixels >= 4)
-      _min_alignment = 16;
+  if (is_rgba32_pixel()) {
+    if (max_pixels >= 4) {
+      _min_alignment = Alignment(16);
+    }
   }
 
   set_max_pixels(max_pixels);
@@ -194,7 +198,7 @@ void CompOpPart::prepare_part() noexcept {
 // ===========================================
 
 void CompOpPart::init(const PipeFunction& fn, Gp& x, Gp& y, uint32_t pixel_granularity) noexcept {
-  _pixel_granularity = uint8_t(pixel_granularity);
+  _pixel_granularity = PixelCount(pixel_granularity);
 
   dst_part()->init(fn, x, y, pixel_type(), pixel_granularity);
   src_part()->init(fn, x, y, pixel_type(), pixel_granularity);
@@ -204,7 +208,7 @@ void CompOpPart::fini() noexcept {
   dst_part()->fini();
   src_part()->fini();
 
-  _pixel_granularity = 0;
+  _pixel_granularity = PixelCount(0);
 }
 
 // bl::Pipeline::JIT::CompOpPart - Optimization Opportunities
@@ -212,19 +216,22 @@ void CompOpPart::fini() noexcept {
 
 bool CompOpPart::should_optimize_opaque_fill() const noexcept {
   // Should be always optimized if the source is not solid.
-  if (!src_part()->is_solid())
+  if (!src_part()->is_solid()) {
     return true;
+  }
 
   // Do not optimize if the CompOp is TypeA. This operator doesn't need any
   // special handling as the source pixel is multiplied with mask before it's
   // passed to the compositor.
-  if (bl_test_flag(comp_op_flags(), CompOpFlags::kTypeA))
+  if (bl_test_flag(comp_op_flags(), CompOpFlags::kTypeA)) {
     return false;
+  }
 
   // Modulate operator just needs to multiply source with mask and add (1 - m)
   // to it.
-  if (is_modulate())
+  if (is_modulate()) {
     return false;
+  }
 
   // We assume that in all other cases there is a benefit of using optimized
   // `c_mask` loop for a fully opaque mask.
@@ -232,14 +239,17 @@ bool CompOpPart::should_optimize_opaque_fill() const noexcept {
 }
 
 bool CompOpPart::should_just_copy_opaque_fill() const noexcept {
-  if (!is_src_copy())
+  if (!is_src_copy()) {
     return false;
+  }
 
-  if (src_part()->is_solid())
+  if (src_part()->is_solid()) {
     return true;
+  }
 
-  if (src_part()->is_fetch_type(FetchType::kPatternAlignedBlit) && src_part()->format() == dst_part()->format())
+  if (src_part()->is_fetch_type(FetchType::kPatternAlignedBlit) && src_part()->format() == dst_part()->format()) {
     return true;
+  }
 
   return false;
 }
@@ -247,42 +257,42 @@ bool CompOpPart::should_just_copy_opaque_fill() const noexcept {
 // bl::Pipeline::JIT::CompOpPart - Advance
 // =======================================
 
-void CompOpPart::startAtX(const Gp& x) noexcept {
-  dst_part()->startAtX(x);
-  src_part()->startAtX(x);
+void CompOpPart::start_at_x(const Gp& x) noexcept {
+  dst_part()->start_at_x(x);
+  src_part()->start_at_x(x);
 }
 
-void CompOpPart::advanceX(const Gp& x, const Gp& diff) noexcept {
-  dst_part()->advanceX(x, diff);
-  src_part()->advanceX(x, diff);
+void CompOpPart::advance_x(const Gp& x, const Gp& diff) noexcept {
+  dst_part()->advance_x(x, diff);
+  src_part()->advance_x(x, diff);
 }
 
-void CompOpPart::advanceY() noexcept {
-  dst_part()->advanceY();
-  src_part()->advanceY();
+void CompOpPart::advance_y() noexcept {
+  dst_part()->advance_y();
+  src_part()->advance_y();
 }
 
 // bl::Pipeline::JIT::CompOpPart - Prefetch & Postfetch
 // ====================================================
 
-void CompOpPart::enterN() noexcept {
-  dst_part()->enterN();
-  src_part()->enterN();
+void CompOpPart::enter_n() noexcept {
+  dst_part()->enter_n();
+  src_part()->enter_n();
 }
 
-void CompOpPart::leaveN() noexcept {
-  dst_part()->leaveN();
-  src_part()->leaveN();
+void CompOpPart::leave_n() noexcept {
+  dst_part()->leave_n();
+  src_part()->leave_n();
 }
 
-void CompOpPart::prefetchN() noexcept {
-  dst_part()->prefetchN();
-  src_part()->prefetchN();
+void CompOpPart::prefetch_n() noexcept {
+  dst_part()->prefetch_n();
+  src_part()->prefetch_n();
 }
 
-void CompOpPart::postfetchN() noexcept {
-  dst_part()->postfetchN();
-  src_part()->postfetchN();
+void CompOpPart::postfetch_n() noexcept {
+  dst_part()->postfetch_n();
+  src_part()->postfetch_n();
 }
 
 // bl::Pipeline::JIT::CompOpPart - Fetch
@@ -296,8 +306,9 @@ void CompOpPart::src_fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredic
   // Pixels must match as we have already pre-configured the CompOpPart.
   BL_ASSERT(p.type() == pixel_type());
 
-  if (p.count() == 0)
+  if (p.count() == PixelCount(0)) {
     p.set_count(n);
+  }
 
   // Composition with a preprocessed solid color.
   if (is_using_solid_pre()) {
@@ -305,7 +316,7 @@ void CompOpPart::src_fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredic
 
     // INJECT:
     {
-      ScopedInjector injector(cc, &_cMaskLoopHook);
+      ScopedInjector injector(cc, &_c_mask_loop_hook);
       FetchUtils::satisfy_solid_pixels(pc, s, flags);
     }
 
@@ -313,8 +324,8 @@ void CompOpPart::src_fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredic
       VecWidth pc_vec_width = pc->vec_width_of(DataWidth::k32, n);
       VecWidth uc_vec_width = pc->vec_width_of(DataWidth::k64, n);
 
-      uint32_t pc_count = pc->vec_count_of(DataWidth::k32, n);
-      uint32_t uc_count = pc->vec_count_of(DataWidth::k64, n);
+      size_t pc_count = pc->vec_count_of(DataWidth::k32, n);
+      size_t uc_count = pc->vec_count_of(DataWidth::k64, n);
 
       if (bl_test_flag(flags, PixelFlags::kImmutable)) {
         if (bl_test_flag(flags, PixelFlags::kPC)) {
@@ -366,7 +377,7 @@ void CompOpPart::src_fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredic
   // Partial mode is designed to fetch pixels on the right side of the border one by one, so it's an error
   // if the pipeline requests more than 1 pixel at a time.
   if (is_in_partial_mode()) {
-    BL_ASSERT(n == 1);
+    BL_ASSERT(n == PixelCount(1));
 
     if (p.isRGBA32()) {
       if (!bl_test_flag(flags, PixelFlags::kImmutable)) {
@@ -400,12 +411,13 @@ void CompOpPart::src_fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredic
 
 void CompOpPart::enter_partial_mode(PixelFlags partial_flags) noexcept {
   // Doesn't apply to solid fills.
-  if (is_using_solid_pre())
+  if (is_using_solid_pre()) {
     return;
+  }
 
   // TODO: [JIT] We only support partial fetch of 4 pixels at the moment.
   BL_ASSERT(!is_in_partial_mode());
-  BL_ASSERT(pixel_granularity() == 4);
+  BL_ASSERT(pixel_granularity() == PixelCount(4));
 
   switch (pixel_type()) {
     case PixelType::kA8: {
@@ -427,8 +439,9 @@ void CompOpPart::enter_partial_mode(PixelFlags partial_flags) noexcept {
 
 void CompOpPart::exit_partial_mode() noexcept {
   // Doesn't apply to solid fills.
-  if (is_using_solid_pre())
+  if (is_using_solid_pre()) {
     return;
+  }
 
   BL_ASSERT(is_in_partial_mode());
 
@@ -461,12 +474,12 @@ void CompOpPart::next_partial_pixel() noexcept {
 // bl::Pipeline::JIT::CompOpPart - CMask - Init & Fini
 // ===================================================
 
-void CompOpPart::cMaskInit(const Mem& mem) noexcept {
+void CompOpPart::c_mask_init(const Mem& mem) noexcept {
   switch (pixel_type()) {
     case PixelType::kA8: {
       Gp mGp = pc->new_gp32("msk");
       pc->load_u8(mGp, mem);
-      cMaskInitA8(mGp, Vec());
+      c_mask_init_a8(mGp, Vec());
       break;
     }
 
@@ -476,7 +489,7 @@ void CompOpPart::cMaskInit(const Mem& mem) noexcept {
         pc->v_broadcast_u8z(vm, mem);
       else
         pc->v_broadcast_u16z(vm, mem);
-      cMaskInitRGBA32(vm);
+      c_mask_init_rgba32(vm);
       break;
     }
 
@@ -485,13 +498,13 @@ void CompOpPart::cMaskInit(const Mem& mem) noexcept {
   }
 }
 
-void CompOpPart::cMaskInit(const Gp& sm_, const Vec& vm_) noexcept {
+void CompOpPart::c_mask_init(const Gp& sm_, const Vec& vm_) noexcept {
   Gp sm(sm_);
   Vec vm(vm_);
 
   switch (pixel_type()) {
     case PixelType::kA8: {
-      cMaskInitA8(sm, vm);
+      c_mask_init_a8(sm, vm);
       break;
     }
 
@@ -504,7 +517,7 @@ void CompOpPart::cMaskInit(const Gp& sm_, const Vec& vm_) noexcept {
           pc->v_broadcast_u16z(vm, sm);
       }
 
-      cMaskInitRGBA32(vm);
+      c_mask_init_rgba32(vm);
       break;
     }
 
@@ -513,15 +526,15 @@ void CompOpPart::cMaskInit(const Gp& sm_, const Vec& vm_) noexcept {
   }
 }
 
-void CompOpPart::cMaskInitOpaque() noexcept {
+void CompOpPart::c_mask_init_opaque() noexcept {
   switch (pixel_type()) {
     case PixelType::kA8: {
-      cMaskInitA8(Gp(), Vec());
+      c_mask_init_a8(Gp(), Vec());
       break;
     }
 
     case PixelType::kRGBA32: {
-      cMaskInitRGBA32(Vec());
+      c_mask_init_rgba32(Vec());
       break;
     }
 
@@ -530,15 +543,15 @@ void CompOpPart::cMaskInitOpaque() noexcept {
   }
 }
 
-void CompOpPart::cMaskFini() noexcept {
+void CompOpPart::c_mask_fini() noexcept {
   switch (pixel_type()) {
     case PixelType::kA8: {
-      cMaskFiniA8();
+      c_mask_fini_a8();
       break;
     }
 
     case PixelType::kRGBA32: {
-      cMaskFiniRGBA32();
+      c_mask_fini_rgba32();
       break;
     }
 
@@ -547,37 +560,37 @@ void CompOpPart::cMaskFini() noexcept {
   }
 }
 
-void CompOpPart::_cMaskLoopInit(CMaskLoopType loop_type) noexcept {
-  // Make sure `_cMaskLoopInit()` and `_cMaskLoopFini()` are used as a pair.
-  BL_ASSERT(_cMaskLoopType == CMaskLoopType::kNone);
-  BL_ASSERT(_cMaskLoopHook == nullptr);
+void CompOpPart::_c_mask_loop_init(CMaskLoopType loop_type) noexcept {
+  // Make sure `_c_mask_loop_init()` and `_c_mask_loop_fini()` are used as a pair.
+  BL_ASSERT(_c_mask_loop_type == CMaskLoopType::kNone);
+  BL_ASSERT(_c_mask_loop_hook == nullptr);
 
-  _cMaskLoopType = loop_type;
-  _cMaskLoopHook = cc->cursor();
+  _c_mask_loop_type = loop_type;
+  _c_mask_loop_hook = cc->cursor();
 }
 
-void CompOpPart::_cMaskLoopFini() noexcept {
-  // Make sure `_cMaskLoopInit()` and `_cMaskLoopFini()` are used as a pair.
-  BL_ASSERT(_cMaskLoopType != CMaskLoopType::kNone);
-  BL_ASSERT(_cMaskLoopHook != nullptr);
+void CompOpPart::_c_mask_loop_fini() noexcept {
+  // Make sure `_c_mask_loop_init()` and `_c_mask_loop_fini()` are used as a pair.
+  BL_ASSERT(_c_mask_loop_type != CMaskLoopType::kNone);
+  BL_ASSERT(_c_mask_loop_hook != nullptr);
 
-  _cMaskLoopType = CMaskLoopType::kNone;
-  _cMaskLoopHook = nullptr;
+  _c_mask_loop_type = CMaskLoopType::kNone;
+  _c_mask_loop_hook = nullptr;
 }
 
 // bl::Pipeline::JIT::CompOpPart - CMask - Generic Loop
 // ====================================================
 
-void CompOpPart::cMaskGenericLoop(Gp& i) noexcept {
+void CompOpPart::c_mask_generic_loop(Gp& i) noexcept {
   if (is_loop_opaque() && should_just_copy_opaque_fill()) {
-    cMaskMemcpyOrMemsetLoop(i);
+    c_mask_memcpy_or_memset_loop(i);
     return;
   }
 
-  cMaskGenericLoopVec(i);
+  c_mask_generic_loop_vec(i);
 }
 
-void CompOpPart::cMaskGenericLoopVec(Gp& i) noexcept {
+void CompOpPart::c_mask_generic_loop_vec(Gp& i) noexcept {
   uint32_t n = max_pixels();
 
   Gp d_ptr = dst_part()->as<FetchPixelPtrPart>()->ptr();
@@ -587,13 +600,13 @@ void CompOpPart::cMaskGenericLoopVec(Gp& i) noexcept {
     Label L_Loop = pc->new_label();
 
     pc->bind(L_Loop);
-    cMaskProcStoreAdvance(d_ptr, PixelCount(1), Alignment(1));
+    c_mask_proc_store_advance(d_ptr, PixelCount(1), Alignment(1));
     pc->j(L_Loop, sub_nz(i, 1));
 
     return;
   }
 
-  BL_ASSERT(min_alignment() >= 1);
+  BL_ASSERT(min_alignment() >= Alignment(1));
   // uint32_t alignment_mask = min_alignment().value() - 1;
 
   // 4 pixels at a time.
@@ -602,13 +615,13 @@ void CompOpPart::cMaskGenericLoopVec(Gp& i) noexcept {
     Label L_Tail = pc->new_label();
     Label L_Done = pc->new_label();
 
-    enterN();
-    prefetchN();
+    enter_n();
+    prefetch_n();
 
     pc->j(L_Tail, sub_c(i, n));
 
     pc->bind(L_Loop);
-    cMaskProcStoreAdvance(d_ptr, PixelCount(n));
+    c_mask_proc_store_advance(d_ptr, PixelCount(n));
     pc->j(L_Loop, sub_nc(i, n));
 
     pc->bind(L_Tail);
@@ -616,12 +629,12 @@ void CompOpPart::cMaskGenericLoopVec(Gp& i) noexcept {
 
     PixelPredicate predicate;
     predicate.init(n, PredicateFlags::kNeverFull, i);
-    cMaskProcStoreAdvance(d_ptr, PixelCount(n), Alignment(1), predicate);
+    c_mask_proc_store_advance(d_ptr, PixelCount(n), Alignment(1), predicate);
 
     pc->bind(L_Done);
 
-    postfetchN();
-    leaveN();
+    postfetch_n();
+    leave_n();
     return;
   }
 
@@ -631,13 +644,13 @@ void CompOpPart::cMaskGenericLoopVec(Gp& i) noexcept {
     Label L_SkipN = pc->new_label();
     Label L_Exit = pc->new_label();
 
-    enterN();
-    prefetchN();
+    enter_n();
+    prefetch_n();
 
     pc->j(L_SkipN, sub_c(i, n));
 
     pc->bind(L_LoopN);
-    cMaskProcStoreAdvance(d_ptr, PixelCount(n), Alignment(1));
+    c_mask_proc_store_advance(d_ptr, PixelCount(n), Alignment(1));
     pc->j(L_LoopN, sub_nc(i, n));
 
     pc->bind(L_SkipN);
@@ -645,23 +658,23 @@ void CompOpPart::cMaskGenericLoopVec(Gp& i) noexcept {
 
     if (pc->use_512bit_simd()) {
       PixelPredicate predicate(n, PredicateFlags::kNeverFull, i);
-      cMaskProcStoreAdvance(d_ptr, PixelCount(n), Alignment(1), predicate);
+      c_mask_proc_store_advance(d_ptr, PixelCount(n), Alignment(1), predicate);
     }
     else {
       Label L_Skip4 = pc->new_label();
       pc->j(L_Skip4, ucmp_lt(i, 4));
-      cMaskProcStoreAdvance(d_ptr, PixelCount(4), Alignment(1));
+      c_mask_proc_store_advance(d_ptr, PixelCount(4), Alignment(1));
       pc->j(L_Exit, sub_z(i, 4));
 
       pc->bind(L_Skip4);
       PixelPredicate predicate(8u, PredicateFlags::kNeverFull, i);
-      cMaskProcStoreAdvance(d_ptr, PixelCount(4), Alignment(1), predicate);
+      c_mask_proc_store_advance(d_ptr, PixelCount(4), Alignment(1), predicate);
     }
 
     pc->bind(L_Exit);
 
-    postfetchN();
-    leaveN();
+    postfetch_n();
+    leave_n();
 
     return;
   }
@@ -671,13 +684,13 @@ void CompOpPart::cMaskGenericLoopVec(Gp& i) noexcept {
     Label L_SkipN = pc->new_label();
     Label L_Exit = pc->new_label();
 
-    enterN();
-    prefetchN();
+    enter_n();
+    prefetch_n();
 
     pc->j(L_SkipN, sub_c(i, n));
 
     pc->bind(L_LoopN);
-    cMaskProcStoreAdvance(d_ptr, PixelCount(n), Alignment(1));
+    c_mask_proc_store_advance(d_ptr, PixelCount(n), Alignment(1));
     pc->j(L_LoopN, sub_nc(i, n));
 
     pc->bind(L_SkipN);
@@ -685,23 +698,23 @@ void CompOpPart::cMaskGenericLoopVec(Gp& i) noexcept {
 
     if (pc->use_512bit_simd()) {
       PixelPredicate predicate(n, PredicateFlags::kNeverFull, i);
-      cMaskProcStoreAdvance(d_ptr, PixelCount(n), Alignment(1), predicate);
+      c_mask_proc_store_advance(d_ptr, PixelCount(n), Alignment(1), predicate);
     }
     else {
       Label L_Skip8 = pc->new_label();
       pc->j(L_Skip8, ucmp_lt(i, 8));
-      cMaskProcStoreAdvance(d_ptr, PixelCount(8), Alignment(1));
+      c_mask_proc_store_advance(d_ptr, PixelCount(8), Alignment(1));
       pc->j(L_Exit, sub_z(i, 8));
 
       pc->bind(L_Skip8);
       PixelPredicate predicate(8u, PredicateFlags::kNeverFull, i);
-      cMaskProcStoreAdvance(d_ptr, PixelCount(8), Alignment(1), predicate);
+      c_mask_proc_store_advance(d_ptr, PixelCount(8), Alignment(1), predicate);
     }
 
     pc->bind(L_Exit);
 
-    postfetchN();
-    leaveN();
+    postfetch_n();
+    leave_n();
 
     return;
   }
@@ -714,13 +727,13 @@ void CompOpPart::cMaskGenericLoopVec(Gp& i) noexcept {
     Label L_Skip8 = pc->new_label();
     Label L_Exit = pc->new_label();
 
-    enterN();
-    prefetchN();
+    enter_n();
+    prefetch_n();
 
     pc->j(L_SkipN, sub_c(i, n));
 
     pc->bind(L_LoopN);
-    cMaskProcStoreAdvance(d_ptr, PixelCount(n), Alignment(1));
+    c_mask_proc_store_advance(d_ptr, PixelCount(n), Alignment(1));
     pc->j(L_LoopN, sub_nc(i, n));
 
     pc->bind(L_SkipN);
@@ -728,19 +741,19 @@ void CompOpPart::cMaskGenericLoopVec(Gp& i) noexcept {
     pc->j(L_Skip8, sub_c(i, 8));
 
     pc->bind(L_Loop8);
-    cMaskProcStoreAdvance(d_ptr, PixelCount(8), Alignment(1));
+    c_mask_proc_store_advance(d_ptr, PixelCount(8), Alignment(1));
     pc->j(L_Loop8, sub_nc(i, 8));
 
     pc->bind(L_Skip8);
     pc->j(L_Exit, add_z(i, 8));
 
     PixelPredicate predicate(8u, PredicateFlags::kNeverFull, i);
-    cMaskProcStoreAdvance(d_ptr, PixelCount(8), Alignment(1), predicate);
+    c_mask_proc_store_advance(d_ptr, PixelCount(8), Alignment(1), predicate);
 
     pc->bind(L_Exit);
 
-    postfetchN();
-    leaveN();
+    postfetch_n();
+    leave_n();
 
     return;
   }
@@ -751,20 +764,20 @@ void CompOpPart::cMaskGenericLoopVec(Gp& i) noexcept {
 // bl::Pipeline::JIT::CompOpPart - CMask - Granular Loop
 // =====================================================
 
-void CompOpPart::cMaskGranularLoop(Gp& i) noexcept {
+void CompOpPart::c_mask_granular_loop(Gp& i) noexcept {
   if (is_loop_opaque() && should_just_copy_opaque_fill()) {
-    cMaskMemcpyOrMemsetLoop(i);
+    c_mask_memcpy_or_memset_loop(i);
     return;
   }
 
-  cMaskGranularLoopVec(i);
+  c_mask_granular_loop_vec(i);
 }
 
-void CompOpPart::cMaskGranularLoopVec(Gp& i) noexcept {
-  BL_ASSERT(pixel_granularity() == 4);
+void CompOpPart::c_mask_granular_loop_vec(Gp& i) noexcept {
+  BL_ASSERT(pixel_granularity() == PixelCount(4));
 
   Gp d_ptr = dst_part()->as<FetchPixelPtrPart>()->ptr();
-  if (pixel_granularity() == 4) {
+  if (pixel_granularity() == PixelCount(4)) {
     // 1 pixel at a time.
     if (max_pixels() == 1) {
       Label L_Loop = pc->new_label();
@@ -774,7 +787,7 @@ void CompOpPart::cMaskGranularLoopVec(Gp& i) noexcept {
       enter_partial_mode();
 
       pc->bind(L_Step);
-      cMaskProcStoreAdvance(d_ptr, PixelCount(1));
+      c_mask_proc_store_advance(d_ptr, PixelCount(1));
       pc->dec(i);
       next_partial_pixel();
 
@@ -790,7 +803,7 @@ void CompOpPart::cMaskGranularLoopVec(Gp& i) noexcept {
       Label L_Loop = pc->new_label();
 
       pc->bind(L_Loop);
-      cMaskProcStoreAdvance(d_ptr, PixelCount(4));
+      c_mask_proc_store_advance(d_ptr, PixelCount(4));
       pc->j(L_Loop, sub_nz(i, 4));
 
       return;
@@ -805,14 +818,14 @@ void CompOpPart::cMaskGranularLoopVec(Gp& i) noexcept {
       pc->j(L_Skip, sub_c(i, 8));
 
       pc->bind(L_Loop_Iter8);
-      cMaskProcStoreAdvance(d_ptr, PixelCount(8));
+      c_mask_proc_store_advance(d_ptr, PixelCount(8));
       pc->j(L_Loop_Iter8, sub_nc(i, 8));
 
       pc->bind(L_Skip);
       pc->j(L_End, add_z(i, 8));
 
       // 4 remaining pixels.
-      cMaskProcStoreAdvance(d_ptr, PixelCount(4));
+      c_mask_proc_store_advance(d_ptr, PixelCount(4));
 
       pc->bind(L_End);
       return;
@@ -828,7 +841,7 @@ void CompOpPart::cMaskGranularLoopVec(Gp& i) noexcept {
       pc->j(L_Skip, sub_c(i, 16));
 
       pc->bind(L_Loop_Iter16);
-      cMaskProcStoreAdvance(d_ptr, PixelCount(16));
+      c_mask_proc_store_advance(d_ptr, PixelCount(16));
       pc->j(L_Loop_Iter16, sub_nc(i, 16));
 
       pc->bind(L_Skip);
@@ -836,7 +849,7 @@ void CompOpPart::cMaskGranularLoopVec(Gp& i) noexcept {
 
       // 4 remaining pixels.
       pc->bind(L_Loop_Iter4);
-      cMaskProcStoreAdvance(d_ptr, PixelCount(4));
+      c_mask_proc_store_advance(d_ptr, PixelCount(4));
       pc->j(L_Loop_Iter4, sub_nz(i, 4));
 
       pc->bind(L_End);
@@ -853,7 +866,7 @@ void CompOpPart::cMaskGranularLoopVec(Gp& i) noexcept {
       pc->j(L_Skip, sub_c(i, 32));
 
       pc->bind(L_Loop_Iter32);
-      cMaskProcStoreAdvance(d_ptr, PixelCount(32));
+      c_mask_proc_store_advance(d_ptr, PixelCount(32));
       pc->j(L_Loop_Iter32, sub_nc(i, 32));
 
       pc->bind(L_Skip);
@@ -861,7 +874,7 @@ void CompOpPart::cMaskGranularLoopVec(Gp& i) noexcept {
 
       // 4 remaining pixels.
       pc->bind(L_Loop_Iter4);
-      cMaskProcStoreAdvance(d_ptr, PixelCount(4));
+      c_mask_proc_store_advance(d_ptr, PixelCount(4));
       pc->j(L_Loop_Iter4, sub_nz(i, 4));
 
       pc->bind(L_End);
@@ -875,18 +888,18 @@ void CompOpPart::cMaskGranularLoopVec(Gp& i) noexcept {
 // bl::Pipeline::JIT::CompOpPart - CMask - MemCopy & MemSet Loop
 // =============================================================
 
-void CompOpPart::cMaskMemcpyOrMemsetLoop(Gp& i) noexcept {
+void CompOpPart::c_mask_memcpy_or_memset_loop(Gp& i) noexcept {
   BL_ASSERT(should_just_copy_opaque_fill());
   Gp d_ptr = dst_part()->as<FetchPixelPtrPart>()->ptr();
 
   if (src_part()->is_solid()) {
     // Optimized solid opaque fill -> MemSet.
     BL_ASSERT(_solid_opt.px.is_valid());
-    FetchUtils::inline_fill_span_loop(pc, d_ptr, _solid_opt.px, i, 64, dst_part()->bpp(), pixel_granularity().value());
+    FetchUtils::inline_fill_span_loop(pc, d_ptr, _solid_opt.px, i, 64, dst_part()->bpp(), uint32_t(pixel_granularity()));
   }
   else if (src_part()->is_fetch_type(FetchType::kPatternAlignedBlit)) {
     // Optimized solid opaque blit -> MemCopy.
-    FetchUtils::inline_copy_span_loop(pc, d_ptr, src_part()->as<FetchSimplePatternPart>()->f->srcp1, i, 64, dst_part()->bpp(), pixel_granularity().value(), dst_part()->format());
+    FetchUtils::inline_copy_span_loop(pc, d_ptr, src_part()->as<FetchSimplePatternPart>()->f->srcp1, i, 64, dst_part()->bpp(), uint32_t(pixel_granularity()), dst_part()->format());
   }
   else {
     BL_NOT_REACHED();
@@ -896,26 +909,26 @@ void CompOpPart::cMaskMemcpyOrMemsetLoop(Gp& i) noexcept {
 // bl::Pipeline::JIT::CompOpPart - CMask - Composition Helpers
 // ===========================================================
 
-void CompOpPart::cMaskProcStoreAdvance(const Gp& d_ptr, PixelCount n, Alignment alignment) noexcept {
+void CompOpPart::c_mask_proc_store_advance(const Gp& d_ptr, PixelCount n, Alignment alignment) noexcept {
   PixelPredicate ptr_mask;
-  cMaskProcStoreAdvance(d_ptr, n, alignment, ptr_mask);
+  c_mask_proc_store_advance(d_ptr, n, alignment, ptr_mask);
 }
 
-void CompOpPart::cMaskProcStoreAdvance(const Gp& d_ptr, PixelCount n, Alignment alignment, PixelPredicate& predicate) noexcept {
+void CompOpPart::c_mask_proc_store_advance(const Gp& d_ptr, PixelCount n, Alignment alignment, PixelPredicate& predicate) noexcept {
   Pixel d_pix("d", pixel_type());
 
   switch (pixel_type()) {
     case PixelType::kA8: {
-      if (n == 1)
-        cMaskProcA8Gp(d_pix, PixelFlags::kSA | PixelFlags::kImmutable);
+      if (n == PixelCount(1))
+        c_mask_proc_a8_gp(d_pix, PixelFlags::kSA | PixelFlags::kImmutable);
       else
-        cMaskProcA8Vec(d_pix, n, PixelFlags::kImmutable, predicate);
+        c_mask_proc_a8_vec(d_pix, n, PixelFlags::kImmutable, predicate);
       FetchUtils::store_pixels_and_advance(pc, d_ptr, d_pix, n, 1, alignment, predicate);
       break;
     }
 
     case PixelType::kRGBA32: {
-      cMaskProcRGBA32Vec(d_pix, n, PixelFlags::kImmutable, predicate);
+      c_mask_proc_rgba32_vec(d_pix, n, PixelFlags::kImmutable, predicate);
       FetchUtils::store_pixels_and_advance(pc, d_ptr, d_pix, n, 4, alignment, predicate);
       break;
     }
@@ -934,7 +947,7 @@ enum class CompOpLoopStrategy : uint32_t {
   kLoopNTailN
 };
 
-void CompOpPart::vMaskGenericLoop(Gp& i, const Gp& d_ptr, const Gp& mPtr, GlobalAlpha* ga, const Label& done) noexcept {
+void CompOpPart::v_mask_generic_loop(Gp& i, const Gp& d_ptr, const Gp& mPtr, GlobalAlpha* ga, const Label& done) noexcept {
   CompOpLoopStrategy strategy = CompOpLoopStrategy::kLoop1;
 
   if (max_pixels() >= 8) {
@@ -950,7 +963,7 @@ void CompOpPart::vMaskGenericLoop(Gp& i, const Gp& d_ptr, const Gp& mPtr, Global
       Label L_Done = done.is_valid() ? done : pc->new_label();
 
       pc->bind(L_Loop1);
-      vMaskGenericStep(d_ptr, PixelCount(1), mPtr, ga);
+      v_mask_generic_step(d_ptr, PixelCount(1), mPtr, ga);
       pc->j(L_Loop1, sub_nz(i, 1));
 
       if (done.is_valid())
@@ -969,29 +982,29 @@ void CompOpPart::vMaskGenericLoop(Gp& i, const Gp& d_ptr, const Gp& mPtr, Global
       Label L_Skip4 = pc->new_label();
       Label L_Done = pc->new_label();
 
-      enterN();
-      prefetchN();
+      enter_n();
+      prefetch_n();
 
       pc->j(L_SkipN, sub_c(i, n));
 
       pc->bind(L_LoopN);
-      vMaskGenericStep(d_ptr, PixelCount(n), mPtr, ga);
+      v_mask_generic_step(d_ptr, PixelCount(n), mPtr, ga);
       pc->j(L_LoopN, sub_nc(i, n));
 
       pc->bind(L_SkipN);
       pc->j(L_Done, add_z(i, n));
 
       pc->j(L_Skip4, ucmp_lt(i, 4));
-      vMaskGenericStep(d_ptr, PixelCount(4), mPtr, ga);
+      v_mask_generic_step(d_ptr, PixelCount(4), mPtr, ga);
       pc->j(L_Done, sub_z(i, 4));
 
       pc->bind(L_Skip4);
       PixelPredicate predicate(n, PredicateFlags::kNeverFull, i);
-      vMaskGenericStep(d_ptr, PixelCount(4), mPtr, ga, predicate);
+      v_mask_generic_step(d_ptr, PixelCount(4), mPtr, ga, predicate);
       pc->bind(L_Done);
 
-      postfetchN();
-      leaveN();
+      postfetch_n();
+      leave_n();
 
       if (done.is_valid())
         pc->j(done);
@@ -1006,25 +1019,25 @@ void CompOpPart::vMaskGenericLoop(Gp& i, const Gp& d_ptr, const Gp& mPtr, Global
       Label L_SkipN = pc->new_label();
       Label L_Done = pc->new_label();
 
-      enterN();
-      prefetchN();
+      enter_n();
+      prefetch_n();
 
       pc->j(L_SkipN, sub_c(i, n));
 
       pc->bind(L_LoopN);
-      vMaskGenericStep(d_ptr, PixelCount(n), mPtr, ga);
+      v_mask_generic_step(d_ptr, PixelCount(n), mPtr, ga);
       pc->j(L_LoopN, sub_nc(i, n));
 
       pc->bind(L_SkipN);
       pc->j(L_Done, add_z(i, n));
 
       PixelPredicate predicate(n, PredicateFlags::kNeverFull, i);
-      vMaskGenericStep(d_ptr, PixelCount(n), mPtr, ga, predicate);
+      v_mask_generic_step(d_ptr, PixelCount(n), mPtr, ga, predicate);
 
       pc->bind(L_Done);
 
-      postfetchN();
-      leaveN();
+      postfetch_n();
+      leave_n();
 
       if (done.is_valid())
         pc->j(done);
@@ -1034,20 +1047,20 @@ void CompOpPart::vMaskGenericLoop(Gp& i, const Gp& d_ptr, const Gp& mPtr, Global
   }
 }
 
-void CompOpPart::vMaskGenericStep(const Gp& d_ptr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga) noexcept {
+void CompOpPart::v_mask_generic_step(const Gp& d_ptr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga) noexcept {
   PixelPredicate no_predicate;
-  vMaskGenericStep(d_ptr, n, mPtr, ga, no_predicate);
+  v_mask_generic_step(d_ptr, n, mPtr, ga, no_predicate);
 }
 
-void CompOpPart::vMaskGenericStep(const Gp& d_ptr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga, PixelPredicate& predicate) noexcept {
+void CompOpPart::v_mask_generic_step(const Gp& d_ptr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga, PixelPredicate& predicate) noexcept {
   switch (pixel_type()) {
     case PixelType::kA8: {
-      if (n == 1u) {
+      if (n == PixelCount(1)) {
         BL_ASSERT(predicate.is_empty());
 
         Gp sm = pc->new_gp32("sm");
         pc->load_u8(sm, mem_ptr(mPtr));
-        pc->add(mPtr, mPtr, n.value());
+        pc->add(mPtr, mPtr, uint32_t(n));
 
         if (ga) {
           pc->mul(sm, sm, ga->sa().r32());
@@ -1055,21 +1068,21 @@ void CompOpPart::vMaskGenericStep(const Gp& d_ptr, PixelCount n, const Gp& mPtr,
         }
 
         Pixel d_pix("d", pixel_type());
-        vMaskProcA8Gp(d_pix, PixelFlags::kSA | PixelFlags::kImmutable, sm, PixelCoverageFlags::kNone);
+        v_mask_proc_a8_gp(d_pix, PixelFlags::kSA | PixelFlags::kImmutable, sm, PixelCoverageFlags::kNone);
         FetchUtils::store_pixels_and_advance(pc, d_ptr, d_pix, n, 1, Alignment(1), pc->empty_predicate());
       }
       else {
         VecArray vm;
-        FetchUtils::fetchMaskA8(pc, vm, mPtr, n, pixel_type(), coverage_format(), AdvanceMode::kAdvance, predicate, ga);
-        vMaskProcStoreAdvance(d_ptr, n, vm, PixelCoverageFlags::kNone, Alignment(1), predicate);
+        FetchUtils::fetch_mask_a8(pc, vm, mPtr, n, pixel_type(), coverage_format(), AdvanceMode::kAdvance, predicate, ga);
+        v_mask_proc_store_advance(d_ptr, n, vm, PixelCoverageFlags::kNone, Alignment(1), predicate);
       }
       break;
     }
 
     case PixelType::kRGBA32: {
       VecArray vm;
-      FetchUtils::fetchMaskA8(pc, vm, mPtr, n, pixel_type(), coverage_format(), AdvanceMode::kAdvance, predicate, ga);
-      vMaskProcStoreAdvance(d_ptr, n, vm, PixelCoverageFlags::kNone, Alignment(1), predicate);
+      FetchUtils::fetch_mask_a8(pc, vm, mPtr, n, pixel_type(), coverage_format(), AdvanceMode::kAdvance, predicate, ga);
+      v_mask_proc_store_advance(d_ptr, n, vm, PixelCoverageFlags::kNone, Alignment(1), predicate);
       break;
     }
 
@@ -1078,25 +1091,25 @@ void CompOpPart::vMaskGenericStep(const Gp& d_ptr, PixelCount n, const Gp& mPtr,
   }
 }
 
-void CompOpPart::vMaskProcStoreAdvance(const Gp& d_ptr, PixelCount n, const VecArray& vm, PixelCoverageFlags coverage_flags, Alignment alignment) noexcept {
+void CompOpPart::v_mask_proc_store_advance(const Gp& d_ptr, PixelCount n, const VecArray& vm, PixelCoverageFlags coverage_flags, Alignment alignment) noexcept {
   PixelPredicate ptr_mask;
-  vMaskProcStoreAdvance(d_ptr, n, vm, coverage_flags, alignment, ptr_mask);
+  v_mask_proc_store_advance(d_ptr, n, vm, coverage_flags, alignment, ptr_mask);
 }
 
-void CompOpPart::vMaskProcStoreAdvance(const Gp& d_ptr, PixelCount n, const VecArray& vm, PixelCoverageFlags coverage_flags, Alignment alignment, PixelPredicate& predicate) noexcept {
+void CompOpPart::v_mask_proc_store_advance(const Gp& d_ptr, PixelCount n, const VecArray& vm, PixelCoverageFlags coverage_flags, Alignment alignment, PixelPredicate& predicate) noexcept {
   Pixel d_pix("d", pixel_type());
 
   switch (pixel_type()) {
     case PixelType::kA8: {
-      BL_ASSERT(n != 1);
+      BL_ASSERT(n != PixelCount(1));
 
-      vMaskProcA8Vec(d_pix, n, PixelFlags::kPA | PixelFlags::kImmutable, vm, coverage_flags, predicate);
+      v_mask_proc_a8_vec(d_pix, n, PixelFlags::kPA | PixelFlags::kImmutable, vm, coverage_flags, predicate);
       FetchUtils::store_pixels_and_advance(pc, d_ptr, d_pix, n, 1, alignment, predicate);
       break;
     }
 
     case PixelType::kRGBA32: {
-      vMaskProcRGBA32Vec(d_pix, n, PixelFlags::kImmutable, vm, coverage_flags, predicate);
+      v_mask_proc_rgba32_vec(d_pix, n, PixelFlags::kImmutable, vm, coverage_flags, predicate);
       FetchUtils::store_pixels_and_advance(pc, d_ptr, d_pix, n, 4, alignment, predicate);
       break;
     }
@@ -1106,10 +1119,10 @@ void CompOpPart::vMaskProcStoreAdvance(const Gp& d_ptr, PixelCount n, const VecA
   }
 }
 
-void CompOpPart::vMaskProc(Pixel& out, PixelFlags flags, Gp& msk, PixelCoverageFlags coverage_flags) noexcept {
+void CompOpPart::v_mask_proc(Pixel& out, PixelFlags flags, Gp& msk, PixelCoverageFlags coverage_flags) noexcept {
   switch (pixel_type()) {
     case PixelType::kA8: {
-      vMaskProcA8Gp(out, flags, msk, coverage_flags);
+      v_mask_proc_a8_gp(out, flags, msk, coverage_flags);
       break;
     }
 
@@ -1128,7 +1141,7 @@ void CompOpPart::vMaskProc(Pixel& out, PixelFlags flags, Gp& msk, PixelCoverageF
       }
 
       VecArray vm_(vm);
-      vMaskProcRGBA32Vec(out, PixelCount(1), flags, vm_, PixelCoverageFlags::kNone, pc->empty_predicate());
+      v_mask_proc_rgba32_vec(out, PixelCount(1), flags, vm_, PixelCoverageFlags::kNone, pc->empty_predicate());
       break;
     }
 
@@ -1140,7 +1153,7 @@ void CompOpPart::vMaskProc(Pixel& out, PixelFlags flags, Gp& msk, PixelCoverageF
 // bl::Pipeline::JIT::CompOpPart - CMask - Init & Fini - A8
 // ========================================================
 
-void CompOpPart::cMaskInitA8(const Gp& sm_, const Vec& vm_) noexcept {
+void CompOpPart::c_mask_init_a8(const Gp& sm_, const Vec& vm_) noexcept {
   Gp sm(sm_);
   Vec vm(vm_);
 
@@ -1465,10 +1478,10 @@ void CompOpPart::cMaskInitA8(const Gp& sm_, const Vec& vm_) noexcept {
     */
   }
 
-  _cMaskLoopInit(has_mask ? CMaskLoopType::kVariant : CMaskLoopType::kOpaque);
+  _c_mask_loop_init(has_mask ? CMaskLoopType::kVariant : CMaskLoopType::kOpaque);
 }
 
-void CompOpPart::cMaskFiniA8() noexcept {
+void CompOpPart::c_mask_fini_a8() noexcept {
   if (src_part()->is_solid()) {
     _solid_opt.reset();
     _solid_pre.reset();
@@ -1478,16 +1491,16 @@ void CompOpPart::cMaskFiniA8() noexcept {
   }
 
   _mask->reset();
-  _cMaskLoopFini();
+  _c_mask_loop_fini();
 }
 
 // bl::Pipeline::JIT::CompOpPart - CMask - Proc - A8
 // =================================================
 
-void CompOpPart::cMaskProcA8Gp(Pixel& out, PixelFlags flags) noexcept {
+void CompOpPart::c_mask_proc_a8_gp(Pixel& out, PixelFlags flags) noexcept {
   out.set_count(PixelCount(1));
 
-  bool has_mask = isLoopCMask();
+  bool has_mask = is_loop_c_mask();
 
   if (src_part()->is_solid()) {
     Pixel d("d", pixel_type());
@@ -1614,13 +1627,13 @@ void CompOpPart::cMaskProcA8Gp(Pixel& out, PixelFlags flags) noexcept {
     }
   }
 
-  vMaskProcA8Gp(out, flags, _mask->sm, PixelCoverageFlags::kImmutable);
+  v_mask_proc_a8_gp(out, flags, _mask->sm, PixelCoverageFlags::kImmutable);
 }
 
-void CompOpPart::cMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
+void CompOpPart::c_mask_proc_a8_vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
   out.set_count(n);
 
-  bool has_mask = isLoopCMask();
+  bool has_mask = is_loop_c_mask();
 
   if (src_part()->is_solid()) {
     Pixel d("d", pixel_type());
@@ -1628,10 +1641,10 @@ void CompOpPart::cMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, Pixe
 
     VecWidth pa_vec_width = pc->vec_width_of(DataWidth::k8, n);
     VecWidth ua_vec_width = pc->vec_width_of(DataWidth::k16, n);
-    uint32_t kFullN = pc->vec_count_of(DataWidth::k16, n);
+    const size_t full_n = pc->vec_count_of(DataWidth::k16, n);
 
     VecArray xa;
-    pc->new_vec_array(xa, kFullN, ua_vec_width, "x");
+    pc->new_vec_array(xa, full_n, ua_vec_width, "x");
 
     // CMaskProc - A8 - SrcCopy
     // ------------------------
@@ -1646,7 +1659,7 @@ void CompOpPart::cMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, Pixe
 #if defined(BL_JIT_ARCH_A64)
         dst_fetch(d, n, PixelFlags::kPA, predicate);
 
-        CompOpUtils::mul_u8_widen(pc, xa, d.pa, o.vn, n.value());
+        CompOpUtils::mul_u8_widen(pc, xa, d.pa, o.vn, uint32_t(n));
         pc->v_add_u16(xa, xa, o.ux);
         CompOpUtils::combine_div255_and_out_a8(pc, out, flags, xa);
 #else
@@ -1676,7 +1689,7 @@ void CompOpPart::cMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, Pixe
       // Da' = Xa + Da.Ya
       dst_fetch(d, n, PixelFlags::kPA, predicate);
 
-      CompOpUtils::mul_u8_widen(pc, xa, d.pa, o.py, n.value());
+      CompOpUtils::mul_u8_widen(pc, xa, d.pa, o.py, uint32_t(n));
       pc->v_add_i16(xa, xa, o.ux);
       CompOpUtils::combine_div255_and_out_a8(pc, out, flags, xa);
 #else
@@ -1789,13 +1802,13 @@ void CompOpPart::cMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, Pixe
   VecArray vm;
   if (_mask->vm.is_valid())
     vm.init(_mask->vm);
-  vMaskProcA8Vec(out, n, flags, vm, PixelCoverageFlags::kRepeatedImmutable, predicate);
+  v_mask_proc_a8_vec(out, n, flags, vm, PixelCoverageFlags::kRepeatedImmutable, predicate);
 }
 
 // bl::Pipeline::JIT::CompOpPart - VMask Proc - A8 (Scalar)
 // ========================================================
 
-void CompOpPart::vMaskProcA8Gp(Pixel& out, PixelFlags flags, const Gp& msk, PixelCoverageFlags coverage_flags) noexcept {
+void CompOpPart::v_mask_proc_a8_gp(Pixel& out, PixelFlags flags, const Gp& msk, PixelCoverageFlags coverage_flags) noexcept {
   bool has_mask = msk.is_valid();
 
   Pixel d("d", PixelType::kA8);
@@ -2068,9 +2081,9 @@ void CompOpPart::vMaskProcA8Gp(Pixel& out, PixelFlags flags, const Gp& msk, Pixe
 // bl::Pipeline::JIT::CompOpPart - VMask - Proc - A8 (Vec)
 // =======================================================
 
-void CompOpPart::vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, const VecArray& vm_, PixelCoverageFlags coverage_flags, PixelPredicate& predicate) noexcept {
+void CompOpPart::v_mask_proc_a8_vec(Pixel& out, PixelCount n, PixelFlags flags, const VecArray& vm_, PixelCoverageFlags coverage_flags, PixelPredicate& predicate) noexcept {
   VecWidth vw = pc->vec_width_of(DataWidth::k16, n);
-  uint32_t kFullN = pc->vec_count_of(DataWidth::k16, n);
+  size_t full_n = pc->vec_count_of(DataWidth::k16, n);
 
   VecArray vm = vm_.clone_as(vw);
   bool has_mask = !vm.is_empty();
@@ -2082,8 +2095,8 @@ void CompOpPart::vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, cons
   VecArray& sa = s.ua;
 
   VecArray xv, yv;
-  pc->new_vec_array(xv, kFullN, vw, "x");
-  pc->new_vec_array(yv, kFullN, vw, "y");
+  pc->new_vec_array(xv, full_n, vw, "x");
+  pc->new_vec_array(yv, full_n, vw, "y");
 
   out.set_count(n);
 
@@ -2104,11 +2117,11 @@ void CompOpPart::vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, cons
       VecArray& vd = d.pa;
       VecArray vn;
 
-      CompOpUtils::mul_u8_widen(pc, xv, vs, vm, n.value());
-      vMaskProcRGBA32InvertMask(vn, vm, coverage_flags);
+      CompOpUtils::mul_u8_widen(pc, xv, vs, vm, uint32_t(n));
+      v_mask_proc_rgba32_invert_mask(vn, vm, coverage_flags);
 
-      CompOpUtils::madd_u8_widen(pc, xv, vd, vn, n.value());
-      vMaskProcRGBA32InvertDone(vn, vm, coverage_flags);
+      CompOpUtils::madd_u8_widen(pc, xv, vd, vn, uint32_t(n));
+      v_mask_proc_rgba32_invert_done(vn, vm, coverage_flags);
 
       CompOpUtils::combine_div255_and_out_a8(pc, out, flags, xv);
 #else
@@ -2143,14 +2156,14 @@ void CompOpPart::vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, cons
       src_fetch(s, n, PixelFlags::kPA | PixelFlags::kPI | PixelFlags::kImmutable, predicate);
       dst_fetch(d, n, PixelFlags::kPA, predicate);
 
-      CompOpUtils::mul_u8_widen(pc, xv, d.pa, s.pi, n.value());
+      CompOpUtils::mul_u8_widen(pc, xv, d.pa, s.pi, uint32_t(n));
       CompOpUtils::div255_pack(pc, d.pa, xv);
       pc->v_add_u8(d.pa, d.pa, s.pa);
       out.pa.init(d.pa);
     }
     else {
       VecArray zv;
-      pc->new_vec_array(zv, kFullN, vw, "z");
+      pc->new_vec_array(zv, full_n, vw, "z");
 
       src_fetch(s, n, PixelFlags::kPA | PixelFlags::kImmutable, predicate);
       dst_fetch(d, n, PixelFlags::kPA, predicate);
@@ -2158,12 +2171,12 @@ void CompOpPart::vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, cons
       VecArray xv_half = xv.half();
       VecArray yv_half = yv.half();
 
-      CompOpUtils::mul_u8_widen(pc, xv, s.pa, vm, n.value());
+      CompOpUtils::mul_u8_widen(pc, xv, s.pa, vm, uint32_t(n));
       CompOpUtils::div255_pack(pc, xv_half, xv);
 
       pc->v_not_u32(yv_half, xv_half);
 
-      CompOpUtils::mul_u8_widen(pc, zv, d.pa, yv_half, n.value());
+      CompOpUtils::mul_u8_widen(pc, zv, d.pa, yv_half, uint32_t(n));
       CompOpUtils::div255_pack(pc, d.pa, zv);
 
       pc->v_add_u8(d.pa, d.pa, xv_half);
@@ -2220,7 +2233,7 @@ void CompOpPart::vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, cons
 
       pc->v_mul_u16(sa, sa, vm);
       pc->v_div255_u16(sa);
-      pc->v_add_i16(sa, sa, pc->simd_const(&ct.i_00FF00FF00FF00FF, Bcst::kNA, sa));
+      pc->v_add_i16(sa, sa, pc->simd_const(&ct.p_00FF00FF00FF00FF, Bcst::kNA, sa));
       pc->v_sub_i16(sa, sa, vm);
       pc->v_mul_u16(da, da, sa);
       pc->v_div255_u16(da);
@@ -2399,7 +2412,7 @@ void CompOpPart::vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, cons
 // bl::Pipeline::JIT::CompOpPart - CMask - Init & Fini - RGBA
 // ==========================================================
 
-void CompOpPart::cMaskInitRGBA32(const Vec& vm) noexcept {
+void CompOpPart::c_mask_init_rgba32(const Vec& vm) noexcept {
   bool has_mask = vm.is_valid();
   bool use_da = has_da();
 
@@ -2440,7 +2453,7 @@ void CompOpPart::cMaskInitRGBA32(const Vec& vm) noexcept {
         o.vn = vm;
 
         pc->v_mul_u16(o.ux, s.uc[0], o.vn);
-        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.i_0080008000800080, Bcst::kNA, o.ux));
+        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.p_0080008000800080, Bcst::kNA, o.ux));
         pc->v_inv255_u16(o.vn, o.vn);
 #endif
       }
@@ -2476,7 +2489,7 @@ void CompOpPart::cMaskInitRGBA32(const Vec& vm) noexcept {
         pc->v_swizzle_u32x4(o.px, o.px, swizzle(0, 0, 0, 0));
 
         pc->v_not_u32(o.py, o.px);
-        pc->v_swizzlev_u8(o.py, o.py, pc->simd_vec_const(&pc->ct.swizu8_3xxx2xxx1xxx0xxx_to_3333222211110000, Bcst::kNA, o.py));
+        pc->v_swizzlev_u8(o.py, o.py, pc->simd_vec_const(&ct.swizu8_3xxx2xxx1xxx0xxx_to_3333222211110000, Bcst::kNA, o.py));
       }
 #else
       if (!has_mask) {
@@ -2491,7 +2504,7 @@ void CompOpPart::cMaskInitRGBA32(const Vec& vm) noexcept {
 
         pc->v_slli_i16(o.ux, s.uc[0], 8);
         pc->v_sub_i16(o.ux, o.ux, s.uc[0]);
-        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.i_0080008000800080, Bcst::kNA, o.ux));
+        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.p_0080008000800080, Bcst::kNA, o.ux));
       }
       else {
         // Xca = Sca * m + 0.5 <Rounding>
@@ -2508,7 +2521,7 @@ void CompOpPart::cMaskInitRGBA32(const Vec& vm) noexcept {
 
         pc->v_slli_i16(o.ux, o.uy, 8);
         pc->v_sub_i16(o.ux, o.ux, o.uy);
-        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.i_0080008000800080, Bcst::kNA, o.ux));
+        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.p_0080008000800080, Bcst::kNA, o.ux));
 
         pc->v_expand_alpha_16(o.uy, o.uy);
         pc->v_inv255_u16(o.uy, o.uy);
@@ -2810,7 +2823,7 @@ void CompOpPart::cMaskInitRGBA32(const Vec& vm) noexcept {
         o.ux = pc->new_similar_reg(s.uc[0], "solid.ux");
         pc->v_mul_u16(o.ux, s.uc[0], vm);
         pc->v_div255_u16(o.ux);
-        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.i_00FF00FF00FF00FF, Bcst::kNA, o.ux));
+        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.p_00FF00FF00FF00FF, Bcst::kNA, o.ux));
         pc->v_sub_i16(o.ux, o.ux, vm);
       }
     }
@@ -2910,7 +2923,7 @@ void CompOpPart::cMaskInitRGBA32(const Vec& vm) noexcept {
         pc->v_inv255_u16(o.uy, o.ux);
         pc->v_slli_i16(o.ux, s.uc[0], 8);
         pc->v_sub_i16(o.ux, o.ux, s.uc[0]);
-        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.i_0080008000800080, Bcst::kNA, o.ux));
+        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.p_0080008000800080, Bcst::kNA, o.ux));
       }
       else {
         // Xca = Sca * m + 0.5 <Rounding>
@@ -2926,7 +2939,7 @@ void CompOpPart::cMaskInitRGBA32(const Vec& vm) noexcept {
         pc->v_div255_u16(o.uy);
         pc->v_slli_i16(o.ux, o.uy, 8);
         pc->v_sub_i16(o.ux, o.ux, o.uy);
-        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.i_0080008000800080, Bcst::kNA, o.ux));
+        pc->v_add_i16(o.ux, o.ux, pc->simd_const(&ct.p_0080008000800080, Bcst::kNA, o.ux));
         pc->v_inv255_u16(o.uy, o.uy);
       }
 #endif
@@ -3003,10 +3016,10 @@ void CompOpPart::cMaskInitRGBA32(const Vec& vm) noexcept {
     }
   }
 
-  _cMaskLoopInit(has_mask ? CMaskLoopType::kVariant : CMaskLoopType::kOpaque);
+  _c_mask_loop_init(has_mask ? CMaskLoopType::kVariant : CMaskLoopType::kOpaque);
 }
 
-void CompOpPart::cMaskFiniRGBA32() noexcept {
+void CompOpPart::c_mask_fini_rgba32() noexcept {
   if (src_part()->is_solid()) {
     _solid_opt.reset();
     _solid_pre.reset();
@@ -3016,7 +3029,7 @@ void CompOpPart::cMaskFiniRGBA32() noexcept {
   }
 
   _mask->reset();
-  _cMaskLoopFini();
+  _c_mask_loop_fini();
 }
 
 // bl::Pipeline::JIT::CompOpPart - CMask - Proc - RGBA
@@ -3033,18 +3046,18 @@ static VecArray x_pack_pixels(PipeCompiler* pc, VecArray& src, PixelCount n, con
   else
 #endif // BL_JIT_ARCH_X86
   {
-    FetchUtils::_x_pack_pixel(pc, out, src, n.value() * 4, "", name);
+    FetchUtils::_x_pack_pixel(pc, out, src, uint32_t(n) * 4u, "", name);
   }
 
   return out;
 }
 
-void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
-  bool has_mask = isLoopCMask();
+void CompOpPart::c_mask_proc_rgba32_vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
+  bool has_mask = is_loop_c_mask();
 
   VecWidth vw = pc->vec_width_of(DataWidth::k64, n);
-  uint32_t kFullN = pc->vec_count_of(DataWidth::k64, n);
-  uint32_t kUseHi = n > 1;
+  size_t full_n = pc->vec_count_of(DataWidth::k64, n);
+  uint32_t use_hi = n > PixelCount(1);
 
   out.set_count(n);
 
@@ -3053,9 +3066,9 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
     SolidPixel& o = _solid_opt;
 
     VecArray xv, yv, zv;
-    pc->new_vec_array(xv, kFullN, vw, "x");
-    pc->new_vec_array(yv, kFullN, vw, "y");
-    pc->new_vec_array(zv, kFullN, vw, "z");
+    pc->new_vec_array(xv, full_n, vw, "x");
+    pc->new_vec_array(yv, full_n, vw, "y");
+    pc->new_vec_array(zv, full_n, vw, "z");
 
     bool use_da = has_da();
 
@@ -3073,7 +3086,7 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
 #if defined(BL_JIT_ARCH_A64)
         dst_fetch(d, n, PixelFlags::kPC, predicate);
 
-        CompOpUtils::mul_u8_widen(pc, xv, d.pc, o.vn, n.value() * 4);
+        CompOpUtils::mul_u8_widen(pc, xv, d.pc, o.vn, uint32_t(n) * 4u);
         pc->v_add_u16(xv, xv, o.ux);
         CompOpUtils::combineDiv255AndOutRGBA32(pc, out, flags, xv);
 #else
@@ -3103,7 +3116,7 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
 #if defined(BL_JIT_ARCH_A64)
       dst_fetch(d, n, PixelFlags::kPC, predicate);
 
-      CompOpUtils::mul_u8_widen(pc, xv, d.pc, o.py, n.value() * 4u);
+      CompOpUtils::mul_u8_widen(pc, xv, d.pc, o.py, uint32_t(n) * 4u);
       CompOpUtils::div255_pack(pc, d.pc, xv);
       pc->v_add_u8(d.pc, d.pc, o.px);
       out.pc.init(d.pc);
@@ -3188,7 +3201,7 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
         Vec s_ux = o.ux.clone_as(dv[0]);
         Vec s_vn = o.vn.clone_as(dv[0]);
 
-        pc->v_expand_alpha_16(xv, dv, kUseHi);
+        pc->v_expand_alpha_16(xv, dv, use_hi);
         pc->v_inv255_u16(xv, xv);
         pc->v_mul_u16(xv, xv, s_ux);
         pc->v_mul_u16(dv, dv, s_vn);
@@ -3213,7 +3226,7 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       Vec s_ux = o.ux.clone_as(dv[0]);
       Vec s_uy = o.uy.clone_as(dv[0]);
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, dv, use_hi);
       pc->v_mul_u16(dv, dv, s_uy);
       pc->v_mul_u16(xv, xv, s_ux);
 
@@ -3289,7 +3302,7 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
         Vec s_ux = o.ux.clone_as(dv[0]);
         Vec s_uy = o.uy.clone_as(dv[0]);
 
-        pc->v_expand_alpha_16(xv, dv, kUseHi);
+        pc->v_expand_alpha_16(xv, dv, use_hi);
         pc->v_mul_u16(dv, dv, s_uy);
         pc->v_inv255_u16(xv, xv);
         pc->v_mul_u16(xv, xv, s_ux);
@@ -3347,7 +3360,7 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
           Vec s_ux = o.ux.clone_as(dv[0]);
           Vec s_uy = o.uy.clone_as(dv[0]);
 
-          pc->v_expand_alpha_16(xv, dv, kUseHi);
+          pc->v_expand_alpha_16(xv, dv, use_hi);
           pc->v_inv255_u16(xv, xv);
           pc->v_mul_u16(xv, xv, s_uy);
           pc->v_subs_u16(dv, dv, s_ux);
@@ -3380,7 +3393,7 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
           Vec s_vn = o.vn.clone_as(dv[0]);
           Vec s_vm = o.vm.clone_as(dv[0]);
 
-          pc->v_expand_alpha_16(xv, dv, kUseHi);
+          pc->v_expand_alpha_16(xv, dv, use_hi);
           pc->v_inv255_u16(xv, xv);
           pc->v_mul_u16(yv, dv, s_vn);
           pc->v_subs_u16(dv, dv, s_ux);
@@ -3451,7 +3464,7 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       Vec s_ux = o.ux.clone_as(dv[0]);
       Vec s_uy = o.uy.clone_as(dv[0]);
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, dv, use_hi);
       pc->v_inv255_u16(xv, xv);
       pc->v_mul_u16(xv, xv, s_ux);
       pc->v_div255_u16(xv);
@@ -3482,7 +3495,7 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       Vec s_ux = o.ux.clone_as(dv[0]);
       Vec s_uy = o.uy.clone_as(dv[0]);
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, dv, use_hi);
       pc->v_mul_u16(xv, xv, s_uy);
       pc->v_add_i16(dv, dv, s_ux);
       pc->v_div255_u16(xv);
@@ -3505,7 +3518,7 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       Vec s_ux = o.ux.clone_as(dv[0]);
       Vec s_uy = o.uy.clone_as(dv[0]);
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, dv, use_hi);
       pc->v_mul_u16(yv, s_uy, dv);
       pc->v_mul_u16(xv, xv, s_ux);
       pc->v_add_i16(dv, dv, s_ux);
@@ -3549,28 +3562,29 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
     vm.init(_mask->vm);
   }
 
-  vMaskProcRGBA32Vec(out, n, flags, vm, PixelCoverageFlags::kImmutable, predicate);
+  v_mask_proc_rgba32_vec(out, n, flags, vm, PixelCoverageFlags::kImmutable, predicate);
 }
 
 // bl::Pipeline::JIT::CompOpPart - VMask - RGBA32 (Vec)
 // ====================================================
 
-void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, const VecArray& vm_, PixelCoverageFlags coverage_flags, PixelPredicate& predicate) noexcept {
+void CompOpPart::v_mask_proc_rgba32_vec(Pixel& out, PixelCount n, PixelFlags flags, const VecArray& vm_, PixelCoverageFlags coverage_flags, PixelPredicate& predicate) noexcept {
   VecWidth vw = pc->vec_width_of(DataWidth::k64, n);
-  uint32_t kFullN = pc->vec_count_of(DataWidth::k64, n);
-  uint32_t kUseHi = n > 1;
-  uint32_t kSplit = kFullN == 1 ? 1 : 2;
+  size_t full_n = pc->vec_count_of(DataWidth::k64, n);
+
+  const uint32_t use_hi = n > PixelCount(1);
+  const uint32_t n_split = full_n == 1u ? 1u : 2u;
 
   VecArray vm = vm_.clone_as(vw);
   bool has_mask = !vm.is_empty();
 
   bool use_da = has_da();
-  bool use_sa = has_sa() || isLoopCMask() || has_mask;
+  bool use_sa = has_sa() || is_loop_c_mask() || has_mask;
 
   VecArray xv, yv, zv;
-  pc->new_vec_array(xv, kFullN, vw, "x");
-  pc->new_vec_array(yv, kFullN, vw, "y");
-  pc->new_vec_array(zv, kFullN, vw, "z");
+  pc->new_vec_array(xv, full_n, vw, "x");
+  pc->new_vec_array(yv, full_n, vw, "y");
+  pc->new_vec_array(zv, full_n, vw, "z");
 
   Pixel d("d", PixelType::kRGBA32);
   Pixel s("s", PixelType::kRGBA32);
@@ -3601,11 +3615,11 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       VecArray& vd = d.pc;
       VecArray vn;
 
-      CompOpUtils::mul_u8_widen(pc, xv, vs, vm, n.value() * 4);
-      vMaskProcRGBA32InvertMask(vn, vm, coverage_flags);
+      CompOpUtils::mul_u8_widen(pc, xv, vs, vm, uint32_t(n) * 4u);
+      v_mask_proc_rgba32_invert_mask(vn, vm, coverage_flags);
 
-      CompOpUtils::madd_u8_widen(pc, xv, vd, vn, n.value() * 4);
-      vMaskProcRGBA32InvertDone(vn, vm, coverage_flags);
+      CompOpUtils::madd_u8_widen(pc, xv, vd, vn, uint32_t(n) * 4u);
+      v_mask_proc_rgba32_invert_done(vn, vm, coverage_flags);
 
       CompOpUtils::combineDiv255AndOutRGBA32(pc, out, flags, xv);
 #else
@@ -3618,11 +3632,11 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_mul_u16(vs, vs, vm);
 
       VecArray vn;
-      vMaskProcRGBA32InvertMask(vn, vm, coverage_flags);
+      v_mask_proc_rgba32_invert_mask(vn, vm, coverage_flags);
 
       pc->v_mul_u16(vd, vd, vn);
       pc->v_add_i16(vd, vd, vs);
-      vMaskProcRGBA32InvertDone(vn, vm, coverage_flags);
+      v_mask_proc_rgba32_invert_done(vn, vm, coverage_flags);
 
       pc->v_div255_u16(vd);
       out.uc.init(vd);
@@ -3646,7 +3660,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       src_fetch(s, n, PixelFlags::kPC | PixelFlags::kPI | PixelFlags::kImmutable, predicate);
       dst_fetch(d, n, PixelFlags::kPC, predicate);
 
-      CompOpUtils::mul_u8_widen(pc, xv, d.pc, s.pi, n.value() * 4u);
+      CompOpUtils::mul_u8_widen(pc, xv, d.pc, s.pi, uint32_t(n) * 4u);
       CompOpUtils::div255_pack(pc, d.pc, xv);
       pc->v_add_u8(d.pc, d.pc, s.pc);
       out.pc.init(d.pc);
@@ -3658,13 +3672,13 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       VecArray xv_half = xv.half();
       VecArray yv_half = yv.half();
 
-      CompOpUtils::mul_u8_widen(pc, xv, s.pc, vm, n.value() * 4u);
+      CompOpUtils::mul_u8_widen(pc, xv, s.pc, vm, uint32_t(n) * 4u);
       CompOpUtils::div255_pack(pc, xv_half, xv);
 
-      pc->v_swizzlev_u8(yv_half, xv_half, pc->simd_vec_const(&pc->ct.swizu8_3xxx2xxx1xxx0xxx_to_3333222211110000, Bcst::kNA, yv_half));
+      pc->v_swizzlev_u8(yv_half, xv_half, pc->simd_vec_const(&ct.swizu8_3xxx2xxx1xxx0xxx_to_3333222211110000, Bcst::kNA, yv_half));
       pc->v_not_u32(yv_half, yv_half);
 
-      CompOpUtils::mul_u8_widen(pc, zv, d.pc, yv_half, n.value() * 4u);
+      CompOpUtils::mul_u8_widen(pc, zv, d.pc, yv_half, uint32_t(n) * 4u);
       CompOpUtils::div255_pack(pc, d.pc, zv);
       pc->v_add_u8(d.pc, d.pc, xv_half);
       out.pc.init(d.pc);
@@ -3700,7 +3714,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_mul_u16(sv, sv, vm);
       pc->v_div255_u16(sv);
 
-      pc->v_expand_alpha_16(xv, sv, kUseHi);
+      pc->v_expand_alpha_16(xv, sv, use_hi);
       pc->v_inv255_u16(xv, xv);
       pc->v_mul_u16(dv, dv, xv);
       pc->v_div255_u16(dv);
@@ -3744,16 +3758,16 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       VecArray& sv = s.uc;
       VecArray& dv = d.uc;
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, dv, use_hi);
       pc->v_mul_u16(xv, xv, sv);
       pc->v_div255_u16(xv);
       pc->v_mul_u16(xv, xv, vm);
 
       VecArray vn;
-      vMaskProcRGBA32InvertMask(vn, vm, coverage_flags);
+      v_mask_proc_rgba32_invert_mask(vn, vm, coverage_flags);
 
       pc->v_mul_u16(dv, dv, vn);
-      vMaskProcRGBA32InvertDone(vn, vm, coverage_flags);
+      v_mask_proc_rgba32_invert_done(vn, vm, coverage_flags);
 
       pc->v_add_i16(dv, dv, xv);
       pc->v_div255_u16(dv);
@@ -3794,7 +3808,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       VecArray& sv = s.uc;
       VecArray& dv = d.uc;
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, dv, use_hi);
       pc->v_inv255_u16(xv, xv);
 
       pc->v_mul_u16(xv, xv, sv);
@@ -3802,10 +3816,10 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_mul_u16(xv, xv, vm);
 
       VecArray vn;
-      vMaskProcRGBA32InvertMask(vn, vm, coverage_flags);
+      v_mask_proc_rgba32_invert_mask(vn, vm, coverage_flags);
 
       pc->v_mul_u16(dv, dv, vn);
-      vMaskProcRGBA32InvertDone(vn, vm, coverage_flags);
+      v_mask_proc_rgba32_invert_done(vn, vm, coverage_flags);
 
       pc->v_add_i16(dv, dv, xv);
       pc->v_div255_u16(dv);
@@ -3834,7 +3848,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       VecArray& uv = s.ui;
       VecArray& dv = d.uc;
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, dv, use_hi);
       pc->v_mul_u16(dv, dv, uv);
       pc->v_mul_u16(xv, xv, sv);
       pc->v_add_i16(dv, dv, xv);
@@ -3854,9 +3868,9 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_mul_u16(sv, sv, vm);
       pc->v_div255_u16(sv);
 
-      pc->v_expand_alpha_16(xv, sv, kUseHi);
+      pc->v_expand_alpha_16(xv, sv, use_hi);
       pc->v_inv255_u16(xv, xv);
-      pc->v_expand_alpha_16(yv, dv, kUseHi);
+      pc->v_expand_alpha_16(yv, dv, use_hi);
       pc->v_mul_u16(dv, dv, xv);
       pc->v_mul_u16(yv, yv, sv);
       pc->v_add_i16(dv, dv, yv);
@@ -4036,7 +4050,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       VecArray& uv = s.ua;
       VecArray& dv = d.uc;
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, dv, use_hi);
       pc->v_mul_u16(dv, dv, uv);
       pc->v_inv255_u16(xv, xv);
       pc->v_mul_u16(xv, xv, sv);
@@ -4055,7 +4069,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       VecArray& uv = s.ui;
       VecArray& dv = d.uc;
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, dv, use_hi);
       pc->v_mul_u16(sv, sv, vm);
       pc->v_mul_u16(uv, uv, vm);
 
@@ -4093,7 +4107,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       VecArray& uv = s.ui;
       VecArray& dv = d.uc;
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, dv, use_hi);
       pc->v_mul_u16(dv, dv, uv);
       pc->v_inv255_u16(xv, xv);
       pc->v_mul_u16(xv, xv, sv);
@@ -4114,8 +4128,8 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_mul_u16(sv, sv, vm);
       pc->v_div255_u16(sv);
 
-      pc->v_expand_alpha_16(xv, sv, kUseHi);
-      pc->v_expand_alpha_16(yv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, sv, use_hi);
+      pc->v_expand_alpha_16(yv, dv, use_hi);
       pc->v_inv255_u16(xv, xv);
       pc->v_inv255_u16(yv, yv);
       pc->v_mul_u16(dv, dv, xv);
@@ -4182,7 +4196,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
         VecArray& sv = s.uc;
         VecArray& dv = d.uc;
 
-        pc->v_expand_alpha_16(xv, dv, kUseHi);
+        pc->v_expand_alpha_16(xv, dv, use_hi);
         pc->v_inv255_u16(xv, xv);
         pc->v_mul_u16(xv, xv, sv);
         pc->vZeroAlphaW(sv, sv);
@@ -4217,7 +4231,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
         VecArray& sv = s.uc;
         VecArray& dv = d.uc;
 
-        pc->v_expand_alpha_16(xv, dv, kUseHi);
+        pc->v_expand_alpha_16(xv, dv, use_hi);
         pc->v_mov(yv, dv);
         pc->v_inv255_u16(xv, xv);
         pc->v_subs_u16(dv, dv, sv);
@@ -4292,7 +4306,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
 
       pc->v_mul_u16(sv, sv, vm);
       pc->v_div255_u16(sv);
-      pc->v_add_i16(sv, sv, pc->simd_const(&ct.i_00FF00FF00FF00FF, Bcst::kNA, sv));
+      pc->v_add_i16(sv, sv, pc->simd_const(&ct.p_00FF00FF00FF00FF, Bcst::kNA, sv));
       pc->v_sub_i16(sv, sv, vm);
       pc->v_mul_u16(dv, dv, sv);
       pc->v_div255_u16(dv);
@@ -4323,14 +4337,14 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
         VecArray& dv = d.uc;
 
         // SPLIT.
-        for (unsigned int i = 0; i < kSplit; i++) {
+        for (unsigned int i = 0; i < n_split; i++) {
           VecArray sh = sv.even_odd(i);
           VecArray dh = dv.even_odd(i);
           VecArray xh = xv.even_odd(i);
           VecArray yh = yv.even_odd(i);
 
-          pc->v_expand_alpha_16(yh, sh, kUseHi);
-          pc->v_expand_alpha_16(xh, dh, kUseHi);
+          pc->v_expand_alpha_16(yh, sh, use_hi);
+          pc->v_expand_alpha_16(xh, dh, use_hi);
           pc->v_inv255_u16(yh, yh);
           pc->v_add_i16(yh, yh, sh);
           pc->v_inv255_u16(xh, xh);
@@ -4351,7 +4365,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
         VecArray& sv = s.uc;
         VecArray& dv = d.uc;
 
-        pc->v_expand_alpha_16(xv, dv, kUseHi);
+        pc->v_expand_alpha_16(xv, dv, use_hi);
         pc->v_inv255_u16(xv, xv);
         pc->v_add_i16(dv, dv, xv);
         pc->v_mul_u16(dv, dv, sv);
@@ -4368,7 +4382,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
         VecArray& sv = s.uc;
         VecArray& dv = d.uc;
 
-        pc->v_expand_alpha_16(xv, sv, kUseHi);
+        pc->v_expand_alpha_16(xv, sv, use_hi);
         pc->v_inv255_u16(xv, xv);
         pc->v_add_i16(xv, xv, sv);
         pc->v_mul_u16(dv, dv, xv);
@@ -4403,14 +4417,14 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
         pc->v_div255_u16(sv);
 
         // SPLIT.
-        for (unsigned int i = 0; i < kSplit; i++) {
+        for (unsigned int i = 0; i < n_split; i++) {
           VecArray sh = sv.even_odd(i);
           VecArray dh = dv.even_odd(i);
           VecArray xh = xv.even_odd(i);
           VecArray yh = yv.even_odd(i);
 
-          pc->v_expand_alpha_16(yh, sh, kUseHi);
-          pc->v_expand_alpha_16(xh, dh, kUseHi);
+          pc->v_expand_alpha_16(yh, sh, use_hi);
+          pc->v_expand_alpha_16(xh, dh, use_hi);
           pc->v_inv255_u16(yh, yh);
           pc->v_add_i16(yh, yh, sh);
           pc->v_inv255_u16(xh, xh);
@@ -4432,7 +4446,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
         pc->v_mul_u16(sv, sv, vm);
         pc->v_div255_u16(sv);
 
-        pc->v_expand_alpha_16(xv, sv, kUseHi);
+        pc->v_expand_alpha_16(xv, sv, use_hi);
         pc->v_inv255_u16(xv, xv);
         pc->v_add_i16(xv, xv, sv);
         pc->v_mul_u16(dv, dv, xv);
@@ -4472,7 +4486,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       //   Da'  = Da  + Sa  + (Da .Sa + Sa .Da - 2.Sa .Da ) - Sa.Da
       //   Da'  = Da  + Sa  - Sa.Da
 
-      for (unsigned int i = 0; i < kSplit; i++) {
+      for (unsigned int i = 0; i < n_split; i++) {
         VecArray sh = sv.even_odd(i);
         VecArray dh = dv.even_odd(i);
 
@@ -4483,8 +4497,8 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
         if (!use_da)
           pc->vFillAlpha255W(dh, dh);
 
-        pc->v_expand_alpha_16(xh, dh, kUseHi);
-        pc->v_expand_alpha_16(yh, sh, kUseHi);
+        pc->v_expand_alpha_16(xh, dh, use_hi);
+        pc->v_expand_alpha_16(yh, sh, use_hi);
 
         pc->v_mul_u16(xh, xh, sh);                                 // Sca.Da
         pc->v_mul_u16(yh, yh, dh);                                 // Dca.Sa
@@ -4494,15 +4508,15 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
         pc->v_sub_i16(xh, xh, zh);                                 // Sca.Da - Dca.Sca
         pc->vZeroAlphaW(zh, zh);
         pc->v_add_i16(xh, xh, yh);                                 // Dca.Sa + Sca.Da - Dca.Sca
-        pc->v_expand_alpha_16(yh, dh, kUseHi);                     // Da
+        pc->v_expand_alpha_16(yh, dh, use_hi);                     // Da
         pc->v_sub_i16(xh, xh, zh);                                 // [C=Dca.Sa + Sca.Da - 2.Dca.Sca] [A=Sa.Da]
 
         pc->v_slli_i16(dh, dh, 1);                                 // 2.Dca
         pc->v_cmp_gt_i16(yh, yh, dh);                              // 2.Dca < Da
         pc->v_div255_u16(xh);
-        pc->v_or_i64(yh, yh, pc->simd_const(&ct.i_FFFF000000000000, Bcst::k64, yh));
+        pc->v_or_i64(yh, yh, pc->simd_const(&ct.p_FFFF000000000000, Bcst::k64, yh));
 
-        pc->v_expand_alpha_16(zh, xh, kUseHi);
+        pc->v_expand_alpha_16(zh, xh, use_hi);
         // if (2.Dca < Da)
         //   X = [C = -(Dca.Sa + Sca.Da - 2.Sca.Dca)] [A = -Sa.Da]
         // else
@@ -4530,7 +4544,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       //   Dca' = 2.Dca - Da + Sc.(1 - (2.Dca - Da))
       //   Da'  = 1
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);                       // Da
+      pc->v_expand_alpha_16(xv, dv, use_hi);                       // Da
       pc->v_slli_i16(dv, dv, 1);                                   // 2.Dca
 
       pc->v_cmp_gt_i16(yv, xv, dv);                                //  (2.Dca < Da) ? -1 : 0
@@ -4539,7 +4553,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_xor_i32(xv, xv, yv);
       pc->v_sub_i16(xv, xv, yv);                                   // 2.Dca < Da ? 2.Dca - Da : -(2.Dca - Da)
       pc->v_bic_i32(yv, xv, yv);                                   // 2.Dca < Da ? 0          : -(2.Dca - Da)
-      pc->v_add_i16(xv, xv, pc->simd_const(&ct.i_00FF00FF00FF00FF, Bcst::kNA, xv));
+      pc->v_add_i16(xv, xv, pc->simd_const(&ct.p_00FF00FF00FF00FF, Bcst::kNA, xv));
 
       pc->v_mul_u16(xv, xv, sv);
       pc->v_div255_u16(xv);
@@ -4553,14 +4567,14 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       // else
       //   Dc'  = 2.Dc + 2.Sc - 1 - 2.Dc.Sc
 
-      pc->v_mul_u16(xv, dv, sv);                                                                // Dc.Sc
-      pc->v_cmp_gt_i16(yv, dv, pc->simd_const(&ct.i_007F007F007F007F, Bcst::kNA, yv));           // !(2.Dc < 1)
-      pc->v_add_i16(dv, dv, sv);                                                                // Dc + Sc
+      pc->v_mul_u16(xv, dv, sv);                                                                 // Dc.Sc
+      pc->v_cmp_gt_i16(yv, dv, pc->simd_const(&ct.p_007F007F007F007F, Bcst::kNA, yv));           // !(2.Dc < 1)
+      pc->v_add_i16(dv, dv, sv);                                                                 // Dc + Sc
       pc->v_div255_u16(xv);
 
       pc->v_slli_i16(dv, dv, 1);                                                                 // 2.Dc + 2.Sc
       pc->v_slli_i16(xv, xv, 1);                                                                 // 2.Dc.Sc
-      pc->v_sub_i16(dv, dv, pc->simd_const(&ct.i_00FF00FF00FF00FF, Bcst::kNA, dv));               // 2.Dc + 2.Sc - 1
+      pc->v_sub_i16(dv, dv, pc->simd_const(&ct.p_00FF00FF00FF00FF, Bcst::kNA, dv));              // 2.Dc + 2.Sc - 1
 
       pc->v_xor_i32(xv, xv, yv);
       pc->v_and_i32(dv, dv, yv);                                                                 // 2.Dc < 1 ? 0 : 2.Dc + 2.Sc - 1
@@ -4588,14 +4602,14 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
     VecArray src = s.pc;
 
     if (has_mask) {
-      CompOpUtils::mul_u8_widen(pc, xv, src, vm, n.value() * 4u);
+      CompOpUtils::mul_u8_widen(pc, xv, src, vm, uint32_t(n) * 4u);
       CompOpUtils::div255_pack(pc, xv_half, xv);
       src = xv_half;
     }
 
     pc->v_not_u32(yv_half, src);
 
-    CompOpUtils::mul_u8_widen(pc, zv, d.pc, yv_half, n.value() * 4u);
+    CompOpUtils::mul_u8_widen(pc, zv, d.pc, yv_half, uint32_t(n) * 4u);
     CompOpUtils::div255_pack(pc, d.pc, zv);
 
     pc->v_add_u8(d.pc, d.pc, src);
@@ -4629,7 +4643,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
   // -------------------------------------
 
   if (is_darken() || is_lighten()) {
-    OpcodeVVV min_or_max = is_darken() ? OpcodeVVV::kMinU8 : OpcodeVVV::kMaxU8;
+    UniOpVVV min_or_max = is_darken() ? UniOpVVV::kMinU8 : UniOpVVV::kMaxU8;
 
     src_fetch(s, n, PixelFlags::kUC, predicate);
     dst_fetch(d, n, PixelFlags::kUC, predicate);
@@ -4646,14 +4660,14 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
     if (use_sa && use_da) {
       // Dca' = minmax(Dca + Sca.(1 - Da), Sca + Dca.(1 - Sa))
       // Da'  = Sa + Da.(1 - Sa)
-      for (unsigned int i = 0; i < kSplit; i++) {
+      for (unsigned int i = 0; i < n_split; i++) {
         VecArray sh = sv.even_odd(i);
         VecArray dh = dv.even_odd(i);
         VecArray xh = xv.even_odd(i);
         VecArray yh = yv.even_odd(i);
 
-        pc->v_expand_alpha_16(xh, dh, kUseHi);
-        pc->v_expand_alpha_16(yh, sh, kUseHi);
+        pc->v_expand_alpha_16(xh, dh, use_hi);
+        pc->v_expand_alpha_16(yh, sh, use_hi);
 
         pc->v_inv255_u16(xh, xh);
         pc->v_inv255_u16(yh, yh);
@@ -4673,7 +4687,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
     else if (use_da) {
       // Dca' = minmax(Dca + Sc.(1 - Da), Sc)
       // Da'  = 1
-      pc->v_expand_alpha_16(xv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, dv, use_hi);
       pc->v_inv255_u16(xv, xv);
       pc->v_mul_u16(xv, xv, sv);
       pc->v_div255_u16(xv);
@@ -4684,7 +4698,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
     }
     else if (use_sa) {
       // Dc' = minmax(Dc, Sca + Dc.(1 - Sa))
-      pc->v_expand_alpha_16(xv, sv, kUseHi);
+      pc->v_expand_alpha_16(xv, sv, use_hi);
       pc->v_inv255_u16(xv, xv);
       pc->v_mul_u16(xv, xv, dv);
       pc->v_div255_u16(xv);
@@ -4707,7 +4721,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
   // VMaskProc - RGBA32 - ColorDodge (SCALAR)
   // ----------------------------------------
 
-  if (is_color_dodge() && n == 1) {
+  if (is_color_dodge() && n == PixelCount(1)) {
     // Dca' = min(Dca.Sa.Sa / max(Sa - Sca, 0.001), Sa.Da) + Sca.(1 - Da) + Dca.(1 - Sa);
     // Da'  = min(Da .Sa.Sa / max(Sa - Sa , 0.001), Sa.Da) + Sa .(1 - Da) + Da .(1 - Sa);
 
@@ -4733,9 +4747,9 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
     pc->v_packs_i32_i16(d0, d0, s0);
 
     pc->vExpandAlphaPS(x0, y0);
-    pc->v_xor_f32(y0, y0, pc->simd_const(&ct.f32_sgn, Bcst::k32, y0));
+    pc->v_xor_f32(y0, y0, pc->simd_const(&ct.p_8000000080000000, Bcst::k32, y0));
     pc->v_mul_f32(z0, z0, x0);
-    pc->v_and_f32(y0, y0, pc->simd_const(&ct.i_FFFFFFFF_FFFFFFFF_FFFFFFFF_0, Bcst::kNA, y0));
+    pc->v_and_f32(y0, y0, pc->simd_const(&ct.p_FFFFFFFF_FFFFFFFF_FFFFFFFF_0, Bcst::kNA, y0));
     pc->v_add_f32(y0, y0, x0);
 
     pc->v_max_f32(y0, y0, pc->simd_const(&ct.f32_1e_m3, Bcst::k32, y0));
@@ -4767,7 +4781,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
   // VMaskProc - RGBA32 - ColorBurn (SCALAR)
   // ---------------------------------------
 
-  if (is_color_burn() && n == 1) {
+  if (is_color_burn() && n == PixelCount(1)) {
     // Dca' = Sa.Da - min(Sa.Da, (Da - Dca).Sa.Sa / max(Sca, 0.001)) + Sca.(1 - Da) + Dca.(1 - Sa)
     // Da'  = Sa.Da - min(Sa.Da, (Da - Da ).Sa.Sa / max(Sa , 0.001)) + Sa .(1 - Da) + Da .(1 - Sa)
     src_fetch(s, n, PixelFlags::kUC, predicate);
@@ -4796,9 +4810,9 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
     pc->v_mul_f32(z0, z0, x0);                                     // Dca.Sa
 
     pc->vExpandAlphaPS(x0, z0);                                    // Sa.Da
-    pc->v_xor_f32(z0, z0, pc->simd_const(&ct.f32_sgn, Bcst::k32, z0));
+    pc->v_xor_f32(z0, z0, pc->simd_const(&ct.p_8000000080000000, Bcst::k32, z0));
 
-    pc->v_and_f32(z0, z0, pc->simd_const(&ct.i_FFFFFFFF_FFFFFFFF_FFFFFFFF_0, Bcst::kNA, z0));
+    pc->v_and_f32(z0, z0, pc->simd_const(&ct.p_FFFFFFFF_FFFFFFFF_FFFFFFFF_0, Bcst::kNA, z0));
     pc->v_add_f32(z0, z0, x0);                                     // (Da - Dxa).Sa
     pc->v_div_f32(z0, z0, y0);
 
@@ -4814,7 +4828,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
     pc->v_mul_f32(z0, z0, x0);
     pc->vExpandAlphaPS(x0, z0);                                    // Sa.Da
     pc->v_min_f32(z0, z0, x0);
-    pc->v_and_f32(z0, z0, pc->simd_const(&ct.i_FFFFFFFF_FFFFFFFF_FFFFFFFF_0, Bcst::kNA, z0));
+    pc->v_and_f32(z0, z0, pc->simd_const(&ct.p_FFFFFFFF_FFFFFFFF_FFFFFFFF_0, Bcst::kNA, z0));
     pc->v_sub_f32(x0, x0, z0);
 
     pc->v_cvt_trunc_f32_to_i32(x0, x0);
@@ -4846,22 +4860,22 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
     if (use_da && use_sa) {
       // Dca' = Dca + Sca - Sa.Da
       // Da'  = Da  + Sa  - Sa.Da
-      pc->v_expand_alpha_16(xv, sv, kUseHi);
-      pc->v_expand_alpha_16(yv, dv, kUseHi);
+      pc->v_expand_alpha_16(xv, sv, use_hi);
+      pc->v_expand_alpha_16(yv, dv, use_hi);
       pc->v_mul_u16(xv, xv, yv);
       pc->v_div255_u16(xv);
       pc->v_add_i16(dv, dv, sv);
       pc->v_subs_u16(dv, dv, xv);
     }
     else if (use_da || use_sa) {
-      pc->v_expand_alpha_16(xv, use_da ? dv : sv, kUseHi);
+      pc->v_expand_alpha_16(xv, use_da ? dv : sv, use_hi);
       pc->v_add_i16(dv, dv, sv);
       pc->v_subs_u16(dv, dv, xv);
     }
     else {
       // Dca' = Dc + Sc - 1
       pc->v_add_i16(dv, dv, sv);
-      pc->v_subs_u16(dv, dv, pc->simd_const(&ct.i_000000FF00FF00FF, Bcst::kNA, dv));
+      pc->v_subs_u16(dv, dv, pc->simd_const(&ct.p_000000FF00FF00FF, Bcst::kNA, dv));
     }
 
     out.uc.init(dv);
@@ -4872,7 +4886,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
   // VMaskProc - RGBA32 - LinearLight
   // --------------------------------
 
-  if (is_linear_light() && n == 1) {
+  if (is_linear_light() && n == PixelCount(1)) {
     src_fetch(s, n, PixelFlags::kUC, predicate);
     dst_fetch(d, n, PixelFlags::kUC, predicate);
 
@@ -4924,8 +4938,8 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       // Dc' = min(max((Dc + 2.Sc - 1), 0), 1)
       pc->v_slli_i16(sv, sv, 1);
       pc->v_add_i16(dv, dv, sv);
-      pc->v_subs_u16(dv, dv, pc->simd_const(&ct.i_000000FF00FF00FF, Bcst::kNA, dv));
-      pc->v_min_i16(dv, dv, pc->simd_const(&ct.i_00FF00FF00FF00FF, Bcst::kNA, dv));
+      pc->v_subs_u16(dv, dv, pc->simd_const(&ct.p_000000FF00FF00FF, Bcst::kNA, dv));
+      pc->v_min_i16(dv, dv, pc->simd_const(&ct.p_00FF00FF00FF00FF, Bcst::kNA, dv));
 
       out.uc.init(dv);
     }
@@ -4959,8 +4973,8 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       //   Dca' = max(Dca + Sca - Sca.Da, Dca + Sca + Sca.Da - Dca.Sa - Da.Sa)
       //   Da'  = max(Da  + Sa  - Sa .Da, Da  + Sa  + Sa .Da - Da .Sa - Da.Sa) = Da + Sa.(1 - Da)
 
-      pc->v_expand_alpha_16(yv, sv, kUseHi);                                                       // Sa
-      pc->v_expand_alpha_16(xv, dv, kUseHi);                                                       // Da
+      pc->v_expand_alpha_16(yv, sv, use_hi);                                                       // Sa
+      pc->v_expand_alpha_16(xv, dv, use_hi);                                                       // Da
 
       pc->v_mul_u16(yv, yv, dv);                                                                   // Dca.Sa
       pc->v_mul_u16(xv, xv, sv);                                                                   // Sca.Da
@@ -4971,12 +4985,12 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_sub_i16(dv, dv, xv);                                                                   // Dca + Sca - Sca.Da
       pc->v_sub_i16(xv, xv, yv);                                                                   // Dca + Sca + Sca.Da - Dca.Sa
 
-      pc->v_expand_alpha_16(yv, sv, kUseHi);                                                       // Sa
+      pc->v_expand_alpha_16(yv, sv, use_hi);                                                       // Sa
       pc->v_slli_i16(sv, sv, 1);                                                                   // 2.Sca
       pc->v_cmp_gt_i16(sv, sv, yv);                                                                // !(2.Sca <= Sa)
 
       pc->v_sub_i16(zv, dv, xv);
-      pc->v_expand_alpha_16(zv, zv, kUseHi);                                                       // -Da.Sa
+      pc->v_expand_alpha_16(zv, zv, use_hi);                                                       // -Da.Sa
       pc->v_and_i32(zv, zv, sv);                                                                   // 2.Sca <= Sa ? 0 : -Da.Sa
       pc->v_add_i16(xv, xv, zv);                                                                   // 2.Sca <= Sa ? Dca + Sca + Sca.Da - Dca.Sa : Dca + Sca + Sca.Da - Dca.Sa - Da.Sa
 
@@ -4999,12 +5013,12 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       //   Dca' = max(Dca + Sc - Sc.Da, Sc + Sc.Da - Da)
       //   Da'  = max(Da  + 1  - 1 .Da, 1  + 1 .Da - Da) = 1
 
-      pc->v_expand_alpha_16(xv, dv, kUseHi);                                                       // Da
+      pc->v_expand_alpha_16(xv, dv, use_hi);                                                       // Da
       pc->v_mul_u16(xv, xv, sv);                                                                   // Sc.Da
       pc->v_add_i16(dv, dv, sv);                                                                   // Dca + Sc
       pc->v_div255_u16(xv);
 
-      pc->v_cmp_gt_i16(yv, sv, pc->simd_const(&ct.i_007F007F007F007F, Bcst::kNA, yv));              // !(2.Sc <= 1)
+      pc->v_cmp_gt_i16(yv, sv, pc->simd_const(&ct.p_007F007F007F007F, Bcst::kNA, yv));             // !(2.Sc <= 1)
       pc->v_add_i16(sv, sv, xv);                                                                   // Sc + Sc.Da
       pc->v_sub_i16(dv, dv, xv);                                                                   // Dca + Sc - Sc.Da
       pc->v_expand_alpha_16(xv, xv);                                                               // Da
@@ -5028,7 +5042,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       // else
       //   Dc' = max(Dc, Dc + 2.Sca - Dc.Sa - Sa)
 
-      pc->v_expand_alpha_16(xv, sv, kUseHi);                                                       // Sa
+      pc->v_expand_alpha_16(xv, sv, use_hi);                                                       // Sa
       pc->v_slli_i16(sv, sv, 1);                                                                   // 2.Sca
       pc->v_cmp_gt_i16(yv, sv, xv);                                                                // !(2.Sca <= Sa)
       pc->v_and_i32(yv, yv, xv);                                                                   // 2.Sca <= Sa ? 0 : Sa
@@ -5036,7 +5050,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_add_i16(sv, sv, dv);                                                                   // Dc + 2.Sca
       pc->v_div255_u16(xv);
       pc->v_sub_i16(sv, sv, yv);                                                                   // 2.Sca <= Sa ? Dc + 2.Sca : Dc + 2.Sca - Sa
-      pc->v_cmp_eq_i16(yv, yv, pc->simd_const(&ct.i_0000000000000000, Bcst::kNA, yv));              // 2.Sc <= 1
+      pc->v_cmp_eq_i16(yv, yv, pc->simd_const(&ct.p_0000000000000000, Bcst::kNA, yv));             // 2.Sc <= 1
       pc->v_sub_i16(sv, sv, xv);                                                                   // 2.Sca <= Sa ? Dc + 2.Sca - Dc.Sa : Dc + 2.Sca - Dc.Sa - Sa
 
       // if 2.Sc <= 1:
@@ -5059,8 +5073,8 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_slli_i16(sv, sv, 1);                                                                   // 2.Sc
       pc->v_min_i16(xv, sv, dv);                                                                   // min(Dc, 2.Sc)
 
-      pc->v_cmp_gt_i16(yv, sv, pc->simd_const(&ct.i_00FF00FF00FF00FF, Bcst::kNA, yv));              // !(2.Sc <= 1)
-      pc->v_sub_i16(sv, sv, pc->simd_const(&ct.i_00FF00FF00FF00FF, Bcst::kNA, sv));                 // 2.Sc - 1
+      pc->v_cmp_gt_i16(yv, sv, pc->simd_const(&ct.p_00FF00FF00FF00FF, Bcst::kNA, yv));             // !(2.Sc <= 1)
+      pc->v_sub_i16(sv, sv, pc->simd_const(&ct.p_00FF00FF00FF00FF, Bcst::kNA, sv));                // 2.Sc - 1
       pc->v_max_i16(dv, dv, sv);                                                                   // max(Dc, 2.Sc - 1)
 
       pc->v_blendv_u8(xv, xv, dv, yv);                                                             // 2.Sc <= 1 ? min(Dc, 2.Sc) : max(Dc, 2.Sc - 1)
@@ -5093,15 +5107,15 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
     }
 
     // SPLIT.
-    for (unsigned int i = 0; i < kSplit; i++) {
+    for (unsigned int i = 0; i < n_split; i++) {
       VecArray sh = sv.even_odd(i);
       VecArray dh = dv.even_odd(i);
       VecArray xh = xv.even_odd(i);
       VecArray yh = yv.even_odd(i);
       VecArray zh = zv.even_odd(i);
 
-      pc->v_expand_alpha_16(xh, dh, kUseHi);
-      pc->v_expand_alpha_16(yh, sh, kUseHi);
+      pc->v_expand_alpha_16(xh, dh, use_hi);
+      pc->v_expand_alpha_16(yh, sh, use_hi);
 
       pc->v_mul_u16(xh, xh, sh); // Sca.Da
       pc->v_mul_u16(yh, yh, dh); // Dca.Sa
@@ -5112,8 +5126,8 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_add_i16(xh, xh, yh);
       pc->v_sub_i16(xh, xh, zh);
 
-      pc->v_expand_alpha_16(yh, yh, kUseHi);
-      pc->v_expand_alpha_16(zh, sh, kUseHi);
+      pc->v_expand_alpha_16(yh, yh, use_hi);
+      pc->v_expand_alpha_16(zh, sh, use_hi);
       pc->v_div255_u16_2x(xh, yh);
 
       pc->v_slli_i16(sh, sh, 1);
@@ -5135,7 +5149,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
   // VMaskProc - RGBA32 - SoftLight (SCALAR)
   // ---------------------------------------
 
-  if (is_soft_light() && n == 1) {
+  if (is_soft_light() && n == PixelCount(1)) {
     // Dc = Dca/Da
     //
     // Dca' =
@@ -5175,7 +5189,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
 
     pc->vExpandAlphaPS(b0, d0);                                                                    // Da
     pc->v_mul_f32(x0, s0, b0);                                                                     // Sca.Da
-    pc->v_max_f32(b0, b0, pc->simd_const(&ct.f32_1e_m3, Bcst::k32, b0));                            // max(Da, 0.001)
+    pc->v_max_f32(b0, b0, pc->simd_const(&ct.f32_1e_m3, Bcst::k32, b0));                           // max(Da, 0.001)
 
     pc->v_div_f32(a0, d0, b0);                                                                     // Dc <- Dca/Da
     pc->v_add_f32(d0, d0, s0);                                                                     // Dca + Sca
@@ -5184,7 +5198,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
 
     pc->v_sub_f32(d0, d0, x0);                                                                     // Dca + Sca.(1 - Da)
     pc->v_add_f32(s0, s0, s0);                                                                     // 2.Sca
-    pc->v_mul_f32(z0, a0, pc->simd_const(&ct.f32_4, Bcst::k32, z0));                                // 4.Dc
+    pc->v_mul_f32(z0, a0, pc->simd_const(&ct.f32_4, Bcst::k32, z0));                               // 4.Dc
 
     pc->v_sqrt_f32(x0, a0);                                                                        // sqrt(Dc)
     pc->v_sub_f32(s0, s0, y0);                                                                     // 2.Sca - Sa
@@ -5214,7 +5228,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
 
     pc->v_mul_f32(b0, b0, a0);                                                                     // Dc.(1 - Dc)
     pc->v_bic_f32(x0, b0, x0);
-    pc->v_and_f32(s0, s0, pc->simd_const(&ct.i_FFFFFFFF_FFFFFFFF_FFFFFFFF_0, Bcst::kNA, s0));       // Zero alpha.
+    pc->v_and_f32(s0, s0, pc->simd_const(&ct.p_FFFFFFFF_FFFFFFFF_FFFFFFFF_0, Bcst::kNA, s0));      // Zero alpha.
 
     pc->v_or_f32(z0, z0, x0);
     pc->v_mul_f32(s0, s0, z0);
@@ -5246,13 +5260,13 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       VecArray& dv = d.uc;
 
       // SPLIT.
-      for (unsigned int i = 0; i < kSplit; i++) {
+      for (unsigned int i = 0; i < n_split; i++) {
         VecArray sh = sv.even_odd(i);
         VecArray uh = uv.even_odd(i);
         VecArray dh = dv.even_odd(i);
         VecArray xh = xv.even_odd(i);
 
-        pc->v_expand_alpha_16(xh, dh, kUseHi);
+        pc->v_expand_alpha_16(xh, dh, use_hi);
         pc->v_mul_u16(uh, uh, dh);
         pc->v_mul_u16(xh, xh, sh);
         pc->v_add_i16(dh, dh, sh);
@@ -5279,14 +5293,14 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_div255_u16(sv);
 
       // SPLIT.
-      for (unsigned int i = 0; i < kSplit; i++) {
+      for (unsigned int i = 0; i < n_split; i++) {
         VecArray sh = sv.even_odd(i);
         VecArray dh = dv.even_odd(i);
         VecArray xh = xv.even_odd(i);
         VecArray yh = yv.even_odd(i);
 
-        pc->v_expand_alpha_16(yh, sh, kUseHi);
-        pc->v_expand_alpha_16(xh, dh, kUseHi);
+        pc->v_expand_alpha_16(yh, sh, use_hi);
+        pc->v_expand_alpha_16(xh, dh, use_hi);
         pc->v_mul_u16(yh, yh, dh);
         pc->v_mul_u16(xh, xh, sh);
         pc->v_add_i16(dh, dh, sh);
@@ -5358,18 +5372,18 @@ static void CompOpPart_negateMask(CompOpPart* self, VecArray& vn, const VecArray
   }
 }
 
-void CompOpPart::vMaskProcRGBA32InvertMask(VecArray& vn, const VecArray& vm, PixelCoverageFlags coverage_flags) noexcept {
+void CompOpPart::v_mask_proc_rgba32_invert_mask(VecArray& vn, const VecArray& vm, PixelCoverageFlags coverage_flags) noexcept {
   bl_unused(coverage_flags);
-  uint32_t size = vm.size();
+  size_t size = vm.size();
 
-  if (cMaskLoopType() == CMaskLoopType::kVariant) {
+  if (c_mask_loop_type() == CMaskLoopType::kVariant) {
     if (_mask->vn.is_valid()) {
       bool ok = true;
 
       // TODO: [JIT] A leftover from a template-based code, I don't understand
       // it anymore and it seems it's unnecessary so verify this and all places
       // that hit `ok == false`.
-      for (uint32_t i = 0; i < bl_min(vn.size(), size); i++)
+      for (size_t i = 0; i < bl_min(vn.size(), size); i++)
         if (vn[i].id() != vm[i].id())
           ok = false;
 
@@ -5386,11 +5400,11 @@ void CompOpPart::vMaskProcRGBA32InvertMask(VecArray& vn, const VecArray& vm, Pix
   CompOpPart_negateMask(this, vn, vm);
 }
 
-void CompOpPart::vMaskProcRGBA32InvertDone(VecArray& vn, const VecArray& vm, PixelCoverageFlags coverage_flags) noexcept {
+void CompOpPart::v_mask_proc_rgba32_invert_done(VecArray& vn, const VecArray& vm, PixelCoverageFlags coverage_flags) noexcept {
   if (!bl_test_flag(coverage_flags, PixelCoverageFlags::kImmutable))
     return;
 
-  // The inverted mask must be the same, masks cannot be empty as this is called after `vMaskProcRGBA32InvertMask()`.
+  // The inverted mask must be the same, masks cannot be empty as this is called after `v_mask_proc_rgba32_invert_mask()`.
   BL_ASSERT(!vn.is_empty());
   BL_ASSERT(!vm.is_empty());
   BL_ASSERT(vn.size() == vm.size());

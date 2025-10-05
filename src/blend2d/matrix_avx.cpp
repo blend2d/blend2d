@@ -59,7 +59,7 @@ static BLResult BL_CDECL map_point_darray_translate_avx(const BLMatrix2D* self, 
   using namespace SIMD;
 
   size_t i = size;
-  Vec4xF64 m21_m20 = load_broadcast_2xf64<Vec4xF64>(&self->m20);
+  Vec4xF64 m21_m20 = load_broadcast_f64x2<Vec4xF64>(&self->m20);
 
   while (i >= 8) {
     Vec4xF64 v0 = loadu<Vec4xF64>(src + 0) + m21_m20;
@@ -96,7 +96,7 @@ static BLResult BL_CDECL map_point_darray_scale_avx(const BLMatrix2D* self, BLPo
 
   size_t i = size;
   Vec4xF64 m11_m00 = make256_f64(self->m11, self->m00);
-  Vec4xF64 m21_m20 = load_broadcast_2xf64<Vec4xF64>(&self->m20);
+  Vec4xF64 m21_m20 = load_broadcast_f64x2<Vec4xF64>(&self->m20);
 
   while (i >= 8) {
     Vec4xF64 v0 = loadu<Vec4xF64>(src + 0) * m11_m00 + m21_m20;
@@ -133,7 +133,7 @@ static BLResult BL_CDECL map_point_darray_swap_avx(const BLMatrix2D* self, BLPoi
 
   size_t i = size;
   Vec4xF64 m01_m10 = make256_f64(self->m01, self->m10);
-  Vec4xF64 m21_m20 = load_broadcast_2xf64<Vec4xF64>(&self->m20);
+  Vec4xF64 m21_m20 = load_broadcast_f64x2<Vec4xF64>(&self->m20);
 
   while (i >= 8) {
     Vec4xF64 v0 = swap_f64(loadu<Vec4xF64>(src + 0)) * m01_m10 + m21_m20;
@@ -171,7 +171,7 @@ static BLResult BL_CDECL map_point_darray_affine_avx(const BLMatrix2D* self, BLP
   size_t i = size;
   Vec4xF64 m11_m00 = make256_f64(self->m11, self->m00);
   Vec4xF64 m01_m10 = make256_f64(self->m01, self->m10);
-  Vec4xF64 m21_m20 = load_broadcast_2xf64<Vec4xF64>(&self->m20);
+  Vec4xF64 m21_m20 = load_broadcast_f64x2<Vec4xF64>(&self->m20);
 
   while (i >= 8) {
     Vec4xF64 v0 = loadu<Vec4xF64>(src + 0);

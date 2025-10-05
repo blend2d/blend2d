@@ -73,7 +73,7 @@ struct PreallocatedStructPool {
 
     T* allocated_ptr = allocator.allocT<T>(count * kItemSize, kAlignment);
     if (BL_UNLIKELY(!allocated_ptr))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     ptr = allocated_ptr;
     end = allocated_ptr + count;
@@ -132,7 +132,7 @@ struct PreallocatedBytePool {
 
     uint8_t* allocated_ptr = static_cast<uint8_t*>(allocator.alloc(n + extra_size, alignment));
     if (BL_UNLIKELY(!allocated_ptr))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     ptr = allocated_ptr;
     end = allocated_ptr + n;
@@ -316,7 +316,7 @@ public:
 
     command_queue = new_command_queue();
     if (BL_UNLIKELY(!command_queue))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     current_batch()->_command_list.append(command_queue);
     _command_appender.reset(*command_queue);
@@ -349,7 +349,7 @@ public:
 
     job_queue = new_job_queue();
     if (BL_UNLIKELY(!job_queue))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     current_batch()->_job_list.append(job_queue);
     _job_appender.reset(*job_queue);

@@ -147,7 +147,7 @@ UNIT(var_basic_types, BL_TEST_GROUP_CORE_OBJECT) {
     EXPECT_TRUE(BLVar(1u).to_double(&f64) == BL_SUCCESS && f64 == 1.0);
     EXPECT_TRUE(BLVar(0.0).to_double(&f64) == BL_SUCCESS && f64 == 0.0);
     EXPECT_TRUE(BLVar(1.0).to_double(&f64) == BL_SUCCESS && f64 == 1.0);
-    EXPECT_TRUE(BLVar(Math::nan<double>()).to_double(&f64) == BL_SUCCESS && Math::isNaN(f64));
+    EXPECT_TRUE(BLVar(Math::nan<double>()).to_double(&f64) == BL_SUCCESS && Math::is_nan(f64));
   }
 }
 

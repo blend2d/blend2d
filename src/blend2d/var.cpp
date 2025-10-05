@@ -29,7 +29,7 @@ BL_API_IMPL BLResult bl_var_init_type(BLUnknown* self, BLObjectType type) noexce
 
   if (BL_UNLIKELY(uint32_t(type) > BL_OBJECT_TYPE_MAX_VALUE)) {
     type = BL_OBJECT_TYPE_NULL;
-    result = bl_trace_error(BL_ERROR_INVALID_VALUE);
+    result = bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   bl_as_object(self)->_d = bl_object_defaults[type]._d;
@@ -212,7 +212,7 @@ BL_API_IMPL BLResult bl_var_to_bool(const BLUnknown* self, bool* out) noexcept {
     }
 
     case BL_OBJECT_TYPE_DOUBLE: {
-      *out = (d.f64_data[0] != 0.0 && !bl::Math::isNaN(d.f64_data[0]));
+      *out = (d.f64_data[0] != 0.0 && !bl::Math::is_nan(d.f64_data[0]));
       return BL_SUCCESS;
     }
 
@@ -222,7 +222,7 @@ BL_API_IMPL BLResult bl_var_to_bool(const BLUnknown* self, bool* out) noexcept {
 
     default: {
       *out = false;
-      return bl_trace_error(BL_ERROR_INVALID_CONVERSION);
+      return bl_make_error(BL_ERROR_INVALID_CONVERSION);
     }
   }
 }
@@ -246,12 +246,12 @@ BL_API_IMPL BLResult bl_var_to_int32(const BLUnknown* self, int32_t* out) noexce
 
       if (v < int64_t(INT32_MIN)) {
         *out = INT32_MIN;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       if (v > int64_t(INT32_MAX)) {
         *out = INT32_MAX;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       *out = int32_t(v);
@@ -261,7 +261,7 @@ BL_API_IMPL BLResult bl_var_to_int32(const BLUnknown* self, int32_t* out) noexce
     case BL_OBJECT_TYPE_UINT64: {
       if (d.u64_data[0] > uint64_t(INT32_MAX)) {
         *out = INT32_MAX;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       *out = int32_t(d.i64_data[0]);
@@ -271,33 +271,33 @@ BL_API_IMPL BLResult bl_var_to_int32(const BLUnknown* self, int32_t* out) noexce
     case BL_OBJECT_TYPE_DOUBLE: {
       double f = d.f64_data[0];
 
-      if (bl::Math::isNaN(f)) {
+      if (bl::Math::is_nan(f)) {
         *out = 0;
-        return bl_trace_error(BL_ERROR_INVALID_CONVERSION);
+        return bl_make_error(BL_ERROR_INVALID_CONVERSION);
       }
 
       if (f < double(INT32_MIN)) {
         *out = INT32_MIN;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       if (f > double(INT32_MAX)) {
         *out = INT32_MAX;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       int32_t v = bl::Math::trunc_to_int(f);
 
       *out = v;
       if (double(v) != f)
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       else
         return BL_SUCCESS;
     }
 
     default: {
       *out = 0;
-      return bl_trace_error(BL_ERROR_INVALID_CONVERSION);
+      return bl_make_error(BL_ERROR_INVALID_CONVERSION);
     }
   }
 }
@@ -320,7 +320,7 @@ BL_API_IMPL BLResult bl_var_to_int64(const BLUnknown* self, int64_t* out) noexce
     case BL_OBJECT_TYPE_UINT64: {
       if (d.u64_data[0] > uint64_t(INT64_MAX)) {
         *out = INT64_MAX;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       *out = d.i64_data[0];
@@ -330,33 +330,33 @@ BL_API_IMPL BLResult bl_var_to_int64(const BLUnknown* self, int64_t* out) noexce
     case BL_OBJECT_TYPE_DOUBLE: {
       double f = d.f64_data[0];
 
-      if (bl::Math::isNaN(f)) {
+      if (bl::Math::is_nan(f)) {
         *out = 0;
-        return bl_trace_error(BL_ERROR_INVALID_CONVERSION);
+        return bl_make_error(BL_ERROR_INVALID_CONVERSION);
       }
 
       if (f < double(INT64_MIN)) {
         *out = INT64_MIN;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       if (f > double(INT64_MAX)) {
         *out = INT64_MAX;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
-      int64_t v = bl::Math::truncToInt64(f);
+      int64_t v = bl::Math::trunc_to_int64(f);
 
       *out = v;
       if (double(v) != f)
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       else
         return BL_SUCCESS;
     }
 
     default: {
       *out = 0;
-      return bl_trace_error(BL_ERROR_INVALID_CONVERSION);
+      return bl_make_error(BL_ERROR_INVALID_CONVERSION);
     }
   }
 }
@@ -380,7 +380,7 @@ BL_API_IMPL BLResult bl_var_to_uint32(const BLUnknown* self, uint32_t* out) noex
 
       if (v > uint64_t(UINT32_MAX)) {
         *out = UINT32_MAX;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       *out = uint32_t(v);
@@ -392,12 +392,12 @@ BL_API_IMPL BLResult bl_var_to_uint32(const BLUnknown* self, uint32_t* out) noex
 
       if (v < 0) {
         *out = 0;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       if (v > int64_t(UINT32_MAX)) {
         *out = UINT32_MAX;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       *out = uint32_t(v);
@@ -407,33 +407,33 @@ BL_API_IMPL BLResult bl_var_to_uint32(const BLUnknown* self, uint32_t* out) noex
     case BL_OBJECT_TYPE_DOUBLE: {
       double f = d.f64_data[0];
 
-      if (bl::Math::isNaN(f)) {
+      if (bl::Math::is_nan(f)) {
         *out = 0u;
-        return bl_trace_error(BL_ERROR_INVALID_CONVERSION);
+        return bl_make_error(BL_ERROR_INVALID_CONVERSION);
       }
 
       if (f < 0) {
         *out = 0u;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       if (f > double(UINT32_MAX)) {
         *out = UINT32_MAX;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       uint32_t v = uint32_t(f);
 
       *out = v;
       if (double(v) != f)
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
 
       return BL_SUCCESS;
     }
 
     default: {
       *out = 0u;
-      return bl_trace_error(BL_ERROR_INVALID_CONVERSION);
+      return bl_make_error(BL_ERROR_INVALID_CONVERSION);
     }
   }
 }
@@ -458,7 +458,7 @@ BL_API_IMPL BLResult bl_var_to_uint64(const BLUnknown* self, uint64_t* out) noex
 
       if (v < 0) {
         *out = 0;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       *out = uint64_t(v);
@@ -468,33 +468,33 @@ BL_API_IMPL BLResult bl_var_to_uint64(const BLUnknown* self, uint64_t* out) noex
     case BL_OBJECT_TYPE_DOUBLE: {
       double f = d.f64_data[0];
 
-      if (bl::Math::isNaN(f)) {
+      if (bl::Math::is_nan(f)) {
         *out = 0u;
-        return bl_trace_error(BL_ERROR_INVALID_CONVERSION);
+        return bl_make_error(BL_ERROR_INVALID_CONVERSION);
       }
 
       if (f < 0) {
         *out = 0u;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       if (f > double(UINT64_MAX)) {
         *out = UINT64_MAX;
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
       }
 
       uint64_t v = uint64_t(f);
 
       *out = v;
       if (double(v) != f)
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
 
       return BL_SUCCESS;
     }
 
     default: {
       *out = 0u;
-      return bl_trace_error(BL_ERROR_INVALID_CONVERSION);
+      return bl_make_error(BL_ERROR_INVALID_CONVERSION);
     }
   }
 }
@@ -517,7 +517,7 @@ BL_API_IMPL BLResult bl_var_to_double(const BLUnknown* self, double* out) noexce
 
       *out = v;
       if (int64_t(v) != d.i64_data[0])
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
 
       return BL_SUCCESS;
     }
@@ -527,7 +527,7 @@ BL_API_IMPL BLResult bl_var_to_double(const BLUnknown* self, double* out) noexce
 
       *out = v;
       if (uint64_t(v) != d.u64_data[0])
-        return bl_trace_error(BL_ERROR_OVERFLOW);
+        return bl_make_error(BL_ERROR_OVERFLOW);
 
       return BL_SUCCESS;
     }
@@ -539,7 +539,7 @@ BL_API_IMPL BLResult bl_var_to_double(const BLUnknown* self, double* out) noexce
 
     default: {
       *out = 0.0;
-      return bl_trace_error(BL_ERROR_INVALID_STATE);
+      return bl_make_error(BL_ERROR_INVALID_STATE);
     }
   }
 }
@@ -562,7 +562,7 @@ BL_API_IMPL BLResult bl_var_to_rgba(const BLUnknown* self, BLRgba* out) noexcept
     return BL_SUCCESS;
   }
 
-  return bl_trace_error(BL_ERROR_INVALID_STATE);
+  return bl_make_error(BL_ERROR_INVALID_STATE);
 }
 
 BL_API_IMPL BLResult bl_var_to_rgba32(const BLUnknown* self, uint32_t* out) noexcept {
@@ -583,7 +583,7 @@ BL_API_IMPL BLResult bl_var_to_rgba32(const BLUnknown* self, uint32_t* out) noex
     return BL_SUCCESS;
   }
 
-  return bl_trace_error(BL_ERROR_INVALID_STATE);
+  return bl_make_error(BL_ERROR_INVALID_STATE);
 }
 
 BL_API_IMPL BLResult bl_var_to_rgba64(const BLUnknown* self, uint64_t* out) noexcept {
@@ -604,7 +604,7 @@ BL_API_IMPL BLResult bl_var_to_rgba64(const BLUnknown* self, uint64_t* out) noex
     return BL_SUCCESS;
   }
 
-  return bl_trace_error(BL_ERROR_INVALID_STATE);
+  return bl_make_error(BL_ERROR_INVALID_STATE);
 }
 
 // bl::Var - API - Equality & Comparison
@@ -802,7 +802,7 @@ BL_API_IMPL bool bl_var_equals_double(const BLUnknown* self, double value) noexc
       return double(d.u64_data[0]) == value && uint64_t(double(d.u64_data[0])) == d.u64_data[0];
 
     case BL_OBJECT_TYPE_DOUBLE:
-      return d.f64_data[0] == value || (bl::Math::isNaN(d.f64_data[0]) && bl::Math::isNaN(value));
+      return d.f64_data[0] == value || (bl::Math::is_nan(d.f64_data[0]) && bl::Math::is_nan(value));
 
     default:
       return false;

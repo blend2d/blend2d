@@ -26,7 +26,7 @@ static BL_INLINE BLResult bl_glyph_buffer_ensure_data(BLGlyphBufferCore* self, B
 
   *impl = BLGlyphBufferPrivateImpl::create();
   if (BL_UNLIKELY(!*impl))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   self->impl = *impl;
   return BL_SUCCESS;
@@ -233,7 +233,7 @@ BL_API_IMPL const BLGlyphPlacement* bl_glyph_buffer_get_placement_data(const BLG
 
 BL_API_IMPL BLResult bl_glyph_buffer_set_text(BLGlyphBufferCore* self, const void* text_data, size_t size, BLTextEncoding encoding) noexcept {
   if (BL_UNLIKELY(uint32_t(encoding) > BL_TEXT_ENCODING_MAX_VALUE))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLGlyphBufferPrivateImpl* d;
   BL_PROPAGATE(bl_glyph_buffer_ensure_data(self, &d));
@@ -269,13 +269,13 @@ BL_API_IMPL BLResult bl_glyph_buffer_set_text(BLGlyphBufferCore* self, const voi
 
     default:
       // Avoids a compile-time warning, should never be reached.
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 }
 
 BL_API_IMPL BLResult bl_glyph_buffer_set_glyphs(BLGlyphBufferCore* self, const uint32_t* glyph_data, size_t size) noexcept {
   if (BL_UNLIKELY(sizeof(size_t) > 4 && size > 0xFFFFFFFFu))
-    return bl_trace_error(BL_ERROR_DATA_TOO_LARGE);
+    return bl_make_error(BL_ERROR_DATA_TOO_LARGE);
 
   BLGlyphBufferPrivateImpl* d;
 
@@ -287,10 +287,10 @@ BL_API_IMPL BLResult bl_glyph_buffer_set_glyphs(BLGlyphBufferCore* self, const u
 
 BL_API_IMPL BLResult bl_glyph_buffer_set_glyphs_from_struct(BLGlyphBufferCore* self, const void* glyph_data, size_t size, size_t glyph_id_size, intptr_t glyph_id_advance) noexcept {
   if (BL_UNLIKELY(glyph_id_size != 2 && glyph_id_size != 4))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if (BL_UNLIKELY(sizeof(size_t) > 4 && size > 0xFFFFFFFFu))
-    return bl_trace_error(BL_ERROR_DATA_TOO_LARGE);
+    return bl_make_error(BL_ERROR_DATA_TOO_LARGE);
 
   BLGlyphBufferPrivateImpl* d;
 

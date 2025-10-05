@@ -398,7 +398,7 @@ static unsigned BL_STDCALL bl_thread_entry_point(void* arg) noexcept {
 BLResult BL_CDECL bl_thread_create(BLThread** thread_out, const BLThreadAttributes* attributes, BLThreadFunc exit_func, void* exit_data) noexcept {
   BLInternalWorkerThread* thread = bl_thread_new(exit_func, exit_data);
   if (BL_UNLIKELY(!thread))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   BLResult result = BL_SUCCESS;
   uint32_t flags = 0;
@@ -467,7 +467,7 @@ BLResult BL_CDECL bl_thread_create(BLThread** thread_out, const BLThreadAttribut
   BLInternalWorkerThread* thread = bl_thread_new(exit_func, exit_data);
   if (BL_UNLIKELY(!thread)) {
     pthread_attr_destroy(&pt_attr);
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
   }
 
   // Probe loop - Since some implementations fail to create a thread with small stack-size, we would probe a safe value

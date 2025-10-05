@@ -50,7 +50,7 @@ static BL_INLINE BLResult validate_latin1_string(const char* data, size_t size, 
   size_t utf8_size = bl::IntOps::add_overflow(size, extra, &of);
 
   if (BL_UNLIKELY(of))
-    return bl_trace_error(BL_ERROR_DATA_TOO_LARGE);
+    return bl_make_error(BL_ERROR_DATA_TOO_LARGE);
 
   state.utf8_index = utf8_size;
   return BL_SUCCESS;
@@ -85,7 +85,7 @@ BLResult bl_validate_unicode(const void* data, size_t size_in_bytes, BLTextEncod
         result = validate_unicode_string<Utf16Reader, IOFlags::kStrict>(data, size_in_bytes, state);
 
       if (result == BL_SUCCESS && BL_UNLIKELY(size_in_bytes & 0x1))
-        result = bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+        result = bl_make_error(BL_ERROR_DATA_TRUNCATED);
       return result;
 
     case BL_TEXT_ENCODING_UTF32:
@@ -96,11 +96,11 @@ BLResult bl_validate_unicode(const void* data, size_t size_in_bytes, BLTextEncod
         result = validate_unicode_string<Utf32Reader, IOFlags::kStrict>(data, size_in_bytes, state);
 
       if (result == BL_SUCCESS && BL_UNLIKELY(size_in_bytes & 0x3))
-        result = bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+        result = bl_make_error(BL_ERROR_DATA_TRUNCATED);
       return result;
 
     default:
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 }
 
@@ -142,7 +142,7 @@ static BL_INLINE BLResult convert_unicode_impl(void* dst, size_t dst_size_in_byt
   state.src_index = offset_of_ptr(src, iter._ptr);
 
   if (Iterator::kCharSize > 1 && result == BL_SUCCESS && !IntOps::is_aligned(state.src_index, Iterator::kCharSize))
-    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    return bl_make_error(BL_ERROR_DATA_TRUNCATED);
   else
     return result;
 }
@@ -170,7 +170,7 @@ BLResult convert_unicode(
       state.src_index = copy_size;
 
       if (dst_size_in_bytes < src_size_in_bytes)
-        result = bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+        result = bl_make_error(BL_ERROR_NO_SPACE_LEFT);
       break;
     }
 
@@ -228,7 +228,7 @@ BLResult convert_unicode(
 
       // Prevent `BL_ERROR_DATA_TRUNCATED` in case there is not enough space in destination.
       if (copy_size < src_size_in_bytes && (result == BL_SUCCESS || result == BL_ERROR_DATA_TRUNCATED))
-        result = bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+        result = bl_make_error(BL_ERROR_NO_SPACE_LEFT);
 
       state.dst_index = validated_size;
       state.src_index = validated_size;
@@ -272,7 +272,7 @@ BLResult convert_unicode(
       }
 
       if (count < src_size_in_bytes)
-        result = bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+        result = bl_make_error(BL_ERROR_NO_SPACE_LEFT);
 
       state.dst_index = count * 2u;
       state.src_index = count;
@@ -304,12 +304,12 @@ BLResult convert_unicode(
 
       // Prevent `BL_ERROR_DATA_TRUNCATED` in case there is not enough space in destination.
       if (copy_size < src_size_in_bytes && (result == BL_SUCCESS || result == BL_ERROR_DATA_TRUNCATED))
-        result = bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+        result = bl_make_error(BL_ERROR_NO_SPACE_LEFT);
 
       // Report `BL_ERROR_DATA_TRUNCATED` is everything went right, but the
       // source size was not aligned to 2 bytes.
       if (result == BL_SUCCESS && !IntOps::is_aligned(src_size_in_bytes, 2))
-        result = bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+        result = bl_make_error(BL_ERROR_DATA_TRUNCATED);
 
       state.dst_index = validated_size;
       state.src_index = validated_size;
@@ -343,7 +343,7 @@ BLResult convert_unicode(
       }
 
       if (count < src_size_in_bytes)
-        result = bl_trace_error(BL_ERROR_NO_SPACE_LEFT);
+        result = bl_make_error(BL_ERROR_NO_SPACE_LEFT);
 
       state.dst_index = count * 4u;
       state.src_index = count;
@@ -387,7 +387,7 @@ BLResult convert_unicode(
     // -------
 
     default: {
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
     }
   }
 

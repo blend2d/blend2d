@@ -65,14 +65,14 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
                                                       \
   do {                                                \
     if (remain < MinSize)                             \
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED); \
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);  \
                                                       \
     size = MemOps::readU16uBE(p);                     \
     if (size < MinSize)                               \
-      return bl_trace_error(BL_ERROR_INVALID_DATA);   \
+      return bl_make_error(BL_ERROR_INVALID_DATA);    \
                                                       \
     if (size > remain)                                \
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED); \
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);  \
                                                       \
     p += 2;                                           \
     remain = size - 2;                                \
@@ -98,14 +98,14 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
     uint32_t sof_marker = m;
 
     // Forbid multiple SOF markers in a single JPEG file.
-    if (decoder_impl->sof_marker)
-      return bl_trace_error(BL_ERROR_JPEG_MULTIPLE_SOF);
+    if (decoder_impl->sof_marker) {
+      return bl_make_error(BL_ERROR_JPEG_MULTIPLE_SOF);
+    }
 
     // Check if SOF type is supported.
-    if (sof_marker != kMarkerSOF0 &&
-        sof_marker != kMarkerSOF1 &&
-        sof_marker != kMarkerSOF2)
-      return bl_trace_error(BL_ERROR_JPEG_UNSUPPORTED_SOF);
+    if (sof_marker != kMarkerSOF0 && sof_marker != kMarkerSOF1 && sof_marker != kMarkerSOF2) {
+      return bl_make_error(BL_ERROR_JPEG_UNSUPPORTED_SOF);
+    }
 
     // 11 bytes is a minimum size of SOF describing exactly one component.
     GET_PAYLOAD_SIZE(2 + 6 + 3);
@@ -116,28 +116,33 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
     uint32_t component_count = p[5];
 
     if (size != 8 + 3 * component_count)
-      return bl_trace_error(BL_ERROR_JPEG_INVALID_SOF);
+      return bl_make_error(BL_ERROR_JPEG_INVALID_SOF);
 
     // Advance header.
     p += 6;
 
-    if (w == 0)
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+    if (w == 0) {
+      return bl_make_error(BL_ERROR_INVALID_DATA);
+    }
 
     // TODO: [JPEG] Unsupported delayed height (0).
-    if (h == 0)
-      return bl_trace_error(BL_ERROR_JPEG_UNSUPPORTED_FEATURE);
+    if (h == 0) {
+      return bl_make_error(BL_ERROR_JPEG_UNSUPPORTED_FEATURE);
+    }
 
-    if (w > BL_RUNTIME_MAX_IMAGE_SIZE || h > BL_RUNTIME_MAX_IMAGE_SIZE)
-      return bl_trace_error(BL_ERROR_IMAGE_TOO_LARGE);
+    if (w > BL_RUNTIME_MAX_IMAGE_SIZE || h > BL_RUNTIME_MAX_IMAGE_SIZE) {
+      return bl_make_error(BL_ERROR_IMAGE_TOO_LARGE);
+    }
 
     // Check number of components and SOF size.
-    if ((component_count != 1 && component_count != 3))
-      return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    if ((component_count != 1 && component_count != 3)) {
+      return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    }
 
     // TODO: [JPEG] 16-BPC.
-    if (bpp != 8)
-      return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    if (bpp != 8) {
+      return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    }
 
     // Maximum horizontal/vertical sampling factor of all components.
     uint32_t mcu_sf_w = 1;
@@ -150,16 +155,18 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
       // Check if the ID doesn't collide with previous components.
       uint32_t comp_id = p[0];
       for (j = 0; j < i; j++) {
-        if (decoder_impl->comp[j].comp_id == comp_id)
-          return bl_trace_error(BL_ERROR_INVALID_DATA);
+        if (decoder_impl->comp[j].comp_id == comp_id) {
+          return bl_make_error(BL_ERROR_INVALID_DATA);
+        }
       }
 
       // TODO: [JPEG] Is this necessary?
       // Required by JFIF.
       if (comp_id != i + 1) {
         // Some version of JpegTran outputs non-JFIF-compliant files!
-        if (comp_id != i)
-          return bl_trace_error(BL_ERROR_INVALID_DATA);
+        if (comp_id != i) {
+          return bl_make_error(BL_ERROR_INVALID_DATA);
+        }
       }
 
       // Horizontal/Vertical sampling factor.
@@ -167,8 +174,9 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
       uint32_t sf_w = sf >> 4;
       uint32_t sf_h = sf & 15;
 
-      if (sf_w == 0 || sf_w > 4 || sf_h == 0 || sf_h > 4)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (sf_w == 0 || sf_w > 4 || sf_h == 0 || sf_h > 4) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
       // Bail to 1 if there is only one component as it contributes to nothing.
       if (component_count == 1) {
@@ -178,8 +186,9 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
 
       // Quantization ID.
       uint32_t quant_id = p[2];
-      if (quant_id > 3)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (quant_id > 3) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
       // Save to DecoderComponent.
       comp->comp_id  = uint8_t(comp_id);
@@ -215,16 +224,18 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
       comp->os_h = comp->bl_h * kDctSize;
 
       comp->data = static_cast<uint8_t*>(decoder_impl->allocator.alloc(comp->os_w * comp->os_h));
-      if (comp->data == nullptr)
-        return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      if (comp->data == nullptr) {
+        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+      }
 
       if (!is_baseline) {
         uint32_t kBlock8x8UInt16 = kDctSize2 * uint32_t(sizeof(int16_t));
         size_t coeff_size = comp->bl_w * comp->bl_h * kBlock8x8UInt16;
         int16_t* coeff_data = static_cast<int16_t*>(decoder_impl->allocator.alloc(coeff_size, 16));
 
-        if (coeff_data == nullptr)
-          return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+        if (coeff_data == nullptr) {
+          return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+        }
 
         comp->coeff = coeff_data;
         memset(comp->coeff, 0, coeff_size);
@@ -238,8 +249,9 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
     image_info.plane_count = uint16_t(component_count);
     image_info.frame_count = 1;
 
-    if (!is_baseline)
+    if (!is_baseline) {
       image_info.flags |= BL_IMAGE_INFO_FLAG_PROGRESSIVE;
+    }
 
     decoder_impl->sof_marker = uint8_t(sof_marker);
     decoder_impl->delayed_height = (h == 0);
@@ -275,16 +287,17 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
       uint32_t table_id = q & 15; // Table id (0-3).
 
       // Invalid class or id.
-      if (table_class >= kTableCount || table_id > 3)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (table_class >= kTableCount || table_id > 3) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
       size_t table_size_in_bytes;
       if (table_class == kTableDC) {
-        BL_PROPAGATE(buildHuffmanDC(&decoder_impl->dc_table[table_id], p, remain, &table_size_in_bytes));
+        BL_PROPAGATE(build_huffman_dc(&decoder_impl->dc_table[table_id], p, remain, &table_size_in_bytes));
         decoder_impl->dc_table_mask = uint8_t(decoder_impl->dc_table_mask | IntOps::lsb_bit_at<uint32_t>(table_id));
       }
       else {
-        BL_PROPAGATE(buildHuffmanAC(&decoder_impl->ac_table[table_id], p, remain, &table_size_in_bytes));
+        BL_PROPAGATE(build_huffman_ac(&decoder_impl->ac_table[table_id], p, remain, &table_size_in_bytes));
         decoder_impl->ac_table_mask = uint8_t(decoder_impl->ac_table_mask | IntOps::lsb_bit_at<uint32_t>(table_id));
       }
 
@@ -313,30 +326,35 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
       uint32_t q_size = q >> 4;
       uint32_t q_id = q & 15;
 
-      if (q_size > 1 || q_id > 3)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (q_size > 1 || q_id > 3) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
       uint16_t* q_table = decoder_impl->q_table[q_id].data;
       uint32_t required_size = 1 + 64 * (q_size + 1);
 
-      if (required_size > remain)
+      if (required_size > remain) {
         break;
+      }
 
       if (q_size == 0) {
-        for (uint32_t k = 0; k < 64; k++, p++)
+        for (uint32_t k = 0; k < 64; k++, p++) {
           q_table[decoder_de_zig_zag_table[k]] = *p;
+        }
       }
       else {
-        for (uint32_t k = 0; k < 64; k++, p += 2)
+        for (uint32_t k = 0; k < 64; k++, p += 2) {
           q_table[decoder_de_zig_zag_table[k]] = uint16_t(MemOps::readU16uBE(reinterpret_cast<const uint16_t*>(p)));
+        }
       }
 
-      decoder_impl->q_table_mask = uint8_t(decoder_impl->q_table_mask | IntOps::lsb_bit_at<uint8_t>(q_id));
+      decoder_impl->q_table_mask = uint8_t(decoder_impl->q_table_mask | IntOps::lsb_bit_at<uint32_t>(q_id));
       remain -= required_size;
     }
 
-    if (remain != 0)
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+    if (remain != 0) {
+      return bl_make_error(BL_ERROR_INVALID_DATA);
+    }
 
     consumed_bytes = size;
     return BL_SUCCESS;
@@ -350,15 +368,17 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
   //   [00] WORD - Restart interval.
 
   if (m == kMarkerDRI) {
-    if (remain < 4)
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    if (remain < 4) {
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);
+    }
 
     size_t size = MemOps::readU16uBE(p + 0);
     uint32_t ri = MemOps::readU16uBE(p + 2);
 
     // DRI payload should be 4 bytes.
-    if (size != 4)
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+    if (size != 4) {
+      return bl_make_error(BL_ERROR_INVALID_DATA);
+    }
 
     decoder_impl->restart_interval = ri;
     consumed_bytes = size;
@@ -391,11 +411,13 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
     uint32_t sc_count = *p++;
     uint32_t sc_mask = 0;
 
-    if (size != 6 + sc_count * 2)
-      return bl_trace_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    if (size != 6 + sc_count * 2) {
+      return bl_make_error(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
+    }
 
-    if (sc_count < 1 || sc_count > component_count)
-      return bl_trace_error(BL_ERROR_JPEG_INVALID_SOS);
+    if (sc_count < 1 || sc_count > component_count) {
+      return bl_make_error(BL_ERROR_JPEG_INVALID_SOS);
+    }
 
     uint32_t ss_start    = uint32_t(p[sc_count * 2 + 0]);
     uint32_t ss_end      = uint32_t(p[sc_count * 2 + 1]);
@@ -403,20 +425,23 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
     uint32_t sa_high_bit = uint32_t(p[sc_count * 2 + 2]) >> 4;
 
     if (sof_marker == kMarkerSOF0 || sof_marker == kMarkerSOF1) {
-      if (ss_start != 0 || sa_low_bit != 0 || sa_high_bit != 0)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (ss_start != 0 || sa_low_bit != 0 || sa_high_bit != 0) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
       // The value should be 63, but it's zero sometimes.
       ss_end = 63;
     }
 
     if (sof_marker == kMarkerSOF2) {
-      if (ss_start > 63 || ss_end > 63 || ss_start > ss_end || sa_low_bit > 13 || sa_high_bit > 13)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (ss_start > 63 || ss_end > 63 || ss_start > ss_end || sa_low_bit > 13 || sa_high_bit > 13) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
       // AC & DC cannot be merged in a progressive JPEG.
-      if (ss_start == 0 && ss_end != 0)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (ss_start == 0 && ss_end != 0) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
     }
 
     DecoderSOS& sos = decoder_impl->sos;
@@ -430,13 +455,16 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
       uint32_t comp_id = p[0];
       uint32_t index = 0;
 
-      while (decoder_impl->comp[index].comp_id != comp_id)
-        if (++index >= component_count)
-          return bl_trace_error(BL_ERROR_JPEG_INVALID_SOS);
+      while (decoder_impl->comp[index].comp_id != comp_id) {
+        if (++index >= component_count) {
+          return bl_make_error(BL_ERROR_JPEG_INVALID_SOS);
+        }
+      }
 
       // One huffman stream shouldn't overwrite the same component.
-      if (IntOps::bit_test(sc_mask, index))
-        return bl_trace_error(BL_ERROR_JPEG_INVALID_SOS);
+      if (IntOps::bit_test(sc_mask, index)) {
+        return bl_make_error(BL_ERROR_JPEG_INVALID_SOS);
+      }
 
       sc_mask |= IntOps::lsb_bit_at<uint32_t>(index);
 
@@ -445,11 +473,13 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
       uint32_t dc_id = selector >> 4;
 
       // Validate AC & DC selectors.
-      if (ac_id > 3 || (!IntOps::bit_test(decoder_impl->ac_table_mask, ac_id) && ss_end  > 0))
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (ac_id > 3 || (!IntOps::bit_test(decoder_impl->ac_table_mask, ac_id) && ss_end  > 0)) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
-      if (dc_id > 3 || (!IntOps::bit_test(decoder_impl->dc_table_mask, dc_id) && ss_end == 0))
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (dc_id > 3 || (!IntOps::bit_test(decoder_impl->dc_table_mask, dc_id) && ss_end == 0)) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
       // Link the current component to the `index` and update AC & DC selectors.
       DecoderComponent* comp = &decoder_impl->comp[index];
@@ -472,11 +502,13 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
     // ---------------
 
     if (m == kMarkerAPP0 && remain >= 5 && memcmp(p, "JFIF", 5) == 0) {
-      if (bl_test_flag(decoder_impl->status_flags, DecoderStatusFlags::kDoneJFIF))
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (bl_test_flag(decoder_impl->status_flags, DecoderStatusFlags::kDoneJFIF)) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
-      if (remain < 14)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (remain < 14) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
       uint32_t jfif_major = p[5];
       uint32_t jfif_minor = p[6];
@@ -514,8 +546,9 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
       if (thumb_w && thumb_h) {
         uint32_t thumb_size = thumb_w * thumb_h * 3;
 
-        if (thumb_size + 14 < remain)
-          return bl_trace_error(BL_ERROR_INVALID_DATA);
+        if (thumb_size + 14 < remain) {
+          return bl_make_error(BL_ERROR_INVALID_DATA);
+        }
 
         DecoderThumbnail& thumb = decoder_impl->thumb;
         thumb.format = kThumbnailRGB24;
@@ -531,11 +564,13 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
     // ---------------
 
     if (m == kMarkerAPP0 && remain >= 5 && memcmp(p, "JFXX", 5) == 0) {
-      if (bl_test_flag(decoder_impl->status_flags, DecoderStatusFlags::kDoneJFXX))
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (bl_test_flag(decoder_impl->status_flags, DecoderStatusFlags::kDoneJFXX)) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
-      if (remain < 6)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+      if (remain < 6) {
+        return bl_make_error(BL_ERROR_INVALID_DATA);
+      }
 
       uint32_t format = p[5];
       uint32_t thumb_w = 0;
@@ -561,11 +596,11 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
           break;
 
         default:
-          return bl_trace_error(BL_ERROR_INVALID_DATA);
+          return bl_make_error(BL_ERROR_INVALID_DATA);
       }
 
       if (thumb_size + 6 > remain)
-        return bl_trace_error(BL_ERROR_INVALID_DATA);
+        return bl_make_error(BL_ERROR_INVALID_DATA);
 
       decoder_impl->thumb.format = uint8_t(format);
       decoder_impl->thumb.w = uint8_t(thumb_w);
@@ -589,7 +624,7 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
 
         // Need at least more 8 bytes required by TIFF header.
         if (remain < 8)
-          return bl_trace_error(kErrorExifInvalidHeader);
+          return bl_make_error(kErrorExifInvalidHeader);
 
         // Check if the EXIF marker has a proper TIFF header.
         uint32_t byte_order;
@@ -600,7 +635,7 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
         else if (memcmp(p, blJpegExifBE, 4))
           byte_order = BL_BYTE_ORDER_BE;
         else
-          return bl_trace_error(kErrorExifInvalidHeader);
+          return bl_make_error(kErrorExifInvalidHeader);
 
         do_byte_swap = byte_order != BL_BYTE_ORDER_NATIVE;
         decoder_impl->status_flags |= BL_JPEG_DECODER_DONE_EXIF;
@@ -633,7 +668,7 @@ static BLResult decoder_process_marker(BLJpegDecoderImpl* decoder_impl, uint32_t
   // Invalid / Unknown
   // -----------------
 
-  return bl_trace_error(BL_ERROR_INVALID_DATA);
+  return bl_make_error(BL_ERROR_INVALID_DATA);
 
 #undef GET_PAYLOAD_SIZE
 }
@@ -672,7 +707,7 @@ static BLResult decoder_handle_restart(BLJpegDecoderImpl* decoder_impl, DecoderB
   reader.refill();
 
   if (!reader.at_end() || (size_t)(pEnd - reader.ptr) < 2 || !is_marker_rst(reader.ptr[1]))
-    return bl_trace_error(BL_ERROR_DECOMPRESSION_FAILED);
+    return bl_make_error(BL_ERROR_DECOMPRESSION_FAILED);
 
   // Skip the marker and flush entropy bits.
   reader.flush();
@@ -906,7 +941,7 @@ static BLResult decoder_read_progressive_block(BLJpegDecoderImpl* decoder_impl, 
           }
           else {
             if (BL_UNLIKELY(s != 1))
-              return bl_trace_error(BL_ERROR_DECOMPRESSION_FAILED);
+              return bl_make_error(BL_ERROR_DECOMPRESSION_FAILED);
 
             BL_PROPAGATE(reader.require_bits(1));
             uint32_t sign = reader.read_bit<uint32_t>();
@@ -974,8 +1009,8 @@ static BLResult decoder_process_stream(BLJpegDecoderImpl* decoder_impl, const ui
   uint32_t i;
   uint32_t sc_count = sos.sc_count;
 
-  uint32_t mcuX = 0;
-  uint32_t mcuY = 0;
+  uint32_t mcu_x = 0;
+  uint32_t mcu_y = 0;
 
   // TODO: [JPEG] This is not right, we must calculate MCU W/H every time.
   uint32_t mcu_w = decoder_impl->mcu.count.w;
@@ -1049,8 +1084,8 @@ static BLResult decoder_process_stream(BLJpegDecoderImpl* decoder_impl, const ui
     Block<int16_t> tmp_block;
 
     for (;;) {
-      // Increment it here so we can use `mcuX == mcu_w` in the inner loop.
-      mcuX++;
+      // Increment it here so we can use `mcu_x == mcu_w` in the inner loop.
+      mcu_x++;
 
       // Decode all blocks required by a single MCU.
       for (i = 0; i < sc_count; i++) {
@@ -1064,14 +1099,15 @@ static BLResult decoder_process_stream(BLJpegDecoderImpl* decoder_impl, const ui
           opts.idct8(block_data + run->offset[n], intptr_t(run->stride), tmp_block.data, run->q_table->data);
         }
 
-        run->data = block_data + run->advance[mcuX == mcu_w];
+        run->data = block_data + run->advance[mcu_x == mcu_w];
       }
 
       // Advance.
-      if (mcuX == mcu_w) {
-        if (++mcuY == mcu_h)
+      if (mcu_x == mcu_w) {
+        if (++mcu_y == mcu_h) {
           break;
-        mcuX = 0;
+        }
+        mcu_x = 0;
       }
 
       // Restart.
@@ -1084,8 +1120,8 @@ static BLResult decoder_process_stream(BLJpegDecoderImpl* decoder_impl, const ui
 
   else if (sof_marker == kMarkerSOF2) {
     for (;;) {
-      // Increment it here so we can use `mcuX == mcu_w` in the inner loop.
-      mcuX++;
+      // Increment it here so we can use `mcu_x == mcu_w` in the inner loop.
+      mcu_x++;
 
       // Decode all blocks required by a single MCU.
       for (i = 0; i < sc_count; i++) {
@@ -1099,14 +1135,15 @@ static BLResult decoder_process_stream(BLJpegDecoderImpl* decoder_impl, const ui
             reinterpret_cast<int16_t*>(block_data + run->offset[n])));
         }
 
-        run->data = block_data + run->advance[mcuX == mcu_w];
+        run->data = block_data + run->advance[mcu_x == mcu_w];
       }
 
       // Advance.
-      if (mcuX == mcu_w) {
-        if (++mcuY == mcu_h)
+      if (mcu_x == mcu_w) {
+        if (++mcu_y == mcu_h) {
           break;
-        mcuX = 0;
+        }
+        mcu_x = 0;
       }
 
       // Restart.
@@ -1124,8 +1161,9 @@ static BLResult decoder_process_stream(BLJpegDecoderImpl* decoder_impl, const ui
   p = stream.ptr;
 
   // Skip zeros at the end of the entropy stream that was not consumed `refill()`
-  while (p != end && p[0] == 0x00)
+  while (p != end && p[0] == 0x00) {
     p++;
+  }
 
   consumed_bytes = (size_t)(p - start);
   return BL_SUCCESS;
@@ -1134,7 +1172,7 @@ static BLResult decoder_process_stream(BLJpegDecoderImpl* decoder_impl, const ui
 // bl:::Jpeg::Decoder - Process MCUs
 // =================================
 
-static BLResult decoderProcessMCUs(BLJpegDecoderImpl* decoder_impl) noexcept {
+static BLResult decoder_process_mcus(BLJpegDecoderImpl* decoder_impl) noexcept {
   if (decoder_impl->sof_marker == kMarkerSOF2) {
     uint32_t component_count = decoder_impl->image_info.plane_count;
 
@@ -1176,7 +1214,7 @@ struct DecoderUpsample {
   uint8_t* (BL_CDECL* upsample)(uint8_t* out, uint8_t* in0, uint8_t* in1, uint32_t w, uint32_t hs) noexcept;
 };
 
-static BLResult decoderConvertToRGB(BLJpegDecoderImpl* decoder_impl, BLImageData& dst) noexcept {
+static BLResult decoder_convert_to_rgb(BLJpegDecoderImpl* decoder_impl, BLImageData& dst) noexcept {
   uint32_t w = uint32_t(decoder_impl->image_info.size.w);
   uint32_t h = uint32_t(decoder_impl->image_info.size.h);
 
@@ -1196,7 +1234,7 @@ static BLResult decoderConvertToRGB(BLJpegDecoderImpl* decoder_impl, BLImageData
   uint8_t* line_buffer = static_cast<uint8_t*>(tmp_mem.alloc(line_stride * component_count));
 
   if (BL_UNLIKELY(!line_buffer))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   DecoderUpsample upsample[4];
   uint8_t* pPlane[4];
@@ -1235,8 +1273,10 @@ static BLResult decoderConvertToRGB(BLJpegDecoderImpl* decoder_impl, BLImageData
       if (++r->ystep >= r->vs) {
         r->ystep = 0;
         r->line[0] = r->line[1];
-        if (++r->ypos < comp.px_h)
+
+        if (++r->ypos < comp.px_h) {
           r->line[1] += comp.os_w;
+        }
       }
     }
 
@@ -1262,14 +1302,14 @@ static BLResult decoder_read_info_impl_internal(BLJpegDecoderImpl* decoder_impl,
   // (start of file) marker contains 1 byte signature and at least 8 bytes of
   // data describing basic information of the image.
   if (size < 2 + 8 + 1)
-    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    return bl_make_error(BL_ERROR_DATA_TRUNCATED);
 
   const uint8_t* start = p;
   const uint8_t* end = p + size;
 
   // Check JPEG signature (SOI marker).
   if (p[0] != 0xFF || p[1] != kMarkerSOI)
-    return bl_trace_error(BL_ERROR_INVALID_SIGNATURE);
+    return bl_make_error(BL_ERROR_INVALID_SIGNATURE);
 
   memcpy(decoder_impl->image_info.format, "JPEG", 5);
   memcpy(decoder_impl->image_info.compression, "HUFFMAN", 8);
@@ -1282,21 +1322,24 @@ static BLResult decoder_read_info_impl_internal(BLJpegDecoderImpl* decoder_impl,
     decoder_impl->buffer_index = (size_t)(p - start);
 
     if ((size_t)(end - p) < 2)
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);
 
     if (p[0] != 0xFF)
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
 
     uint32_t m = p[1];
     p += 2;
 
     // Some files have an extra padding (0xFF) after their blocks, ignore it.
     if (m == kMarkerInvalid) {
-      while (p != end && (m = p[0]) == kMarkerInvalid)
+      while (p != end && (m = p[0]) == kMarkerInvalid) {
         p++;
+      }
 
-      if (p == end)
+      if (p == end) {
         break;
+      }
+
       p++;
     }
 
@@ -1321,7 +1364,7 @@ static BLResult decoder_read_frame_impl_internal(BLJpegDecoderImpl* decoder_impl
   const uint8_t* end = p + size;
 
   if (size < decoder_impl->buffer_index)
-    return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    return bl_make_error(BL_ERROR_DATA_TRUNCATED);
 
   p += decoder_impl->buffer_index;
 
@@ -1330,22 +1373,26 @@ static BLResult decoder_read_frame_impl_internal(BLJpegDecoderImpl* decoder_impl
   // We are already after SOF, which was processed by `decoder_read_info_impl_internal`.
   for (;;) {
     decoder_impl->buffer_index = (size_t)(p - start);
-    if ((size_t)(end - p) < 2)
-      return bl_trace_error(BL_ERROR_DATA_TRUNCATED);
+    if ((size_t)(end - p) < 2) {
+      return bl_make_error(BL_ERROR_DATA_TRUNCATED);
+    }
 
-    if (p[0] != 0xFF)
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+    if (p[0] != 0xFF) {
+      return bl_make_error(BL_ERROR_INVALID_DATA);
+    }
 
     uint32_t m = p[1];
     p += 2;
 
     // Some files have an extra padding (0xFF) after their blocks, ignore it.
     if (m == kMarkerInvalid) {
-      while (p != end && (m = p[0]) == kMarkerInvalid)
+      while (p != end && (m = p[0]) == kMarkerInvalid) {
         p++;
+      }
 
-      if (p == end)
+      if (p == end) {
         break;
+      }
       p++;
     }
 
@@ -1359,8 +1406,9 @@ static BLResult decoder_read_frame_impl_internal(BLJpegDecoderImpl* decoder_impl
     }
 
     // EOI - terminate.
-    if (m == kMarkerEOI)
+    if (m == kMarkerEOI) {
       break;
+    }
 
     // SOS - process the entropy coded data-stream that follows SOS.
     if (m == kMarkerSOS) {
@@ -1369,11 +1417,12 @@ static BLResult decoder_read_frame_impl_internal(BLJpegDecoderImpl* decoder_impl
 
       BL_ASSERT((size_t)(end - p) >= consumed_bytes);
       p += consumed_bytes;
+      decoder_impl->status_flags |= DecoderStatusFlags::kDoneSOS;
     }
   }
 
   // Process MCUs.
-  BL_PROPAGATE(decoderProcessMCUs(decoder_impl));
+  BL_PROPAGATE(decoder_process_mcus(decoder_impl));
 
   // Create the final image and convert YCbCr -> RGB.
   uint32_t w = uint32_t(decoder_impl->image_info.size.w);
@@ -1383,7 +1432,7 @@ static BLResult decoder_read_frame_impl_internal(BLJpegDecoderImpl* decoder_impl
 
   BL_PROPAGATE(image_out->create(int(w), int(h), format));
   BL_PROPAGATE(image_out->make_mutable(&image_data));
-  BL_PROPAGATE(decoderConvertToRGB(decoder_impl, image_data));
+  BL_PROPAGATE(decoder_convert_to_rgb(decoder_impl, image_data));
 
   decoder_impl->buffer_index = (size_t)(p - start);
   decoder_impl->frame_index++;
@@ -1442,7 +1491,7 @@ static BLResult BL_CDECL decoder_read_frame_impl(BLImageDecoderImpl* impl, BLIma
   BL_PROPAGATE(decoder_read_info_impl(decoder_impl, nullptr, p, size));
 
   if (decoder_impl->frame_index)
-    return bl_trace_error(BL_ERROR_NO_MORE_DATA);
+    return bl_make_error(BL_ERROR_NO_MORE_DATA);
 
   BLResult result = decoder_read_frame_impl_internal(decoder_impl, static_cast<BLImage*>(image_out), p, size);
   if (result != BL_SUCCESS)
@@ -1503,7 +1552,7 @@ static BLResult BL_CDECL codec_create_encoder_impl(const BLImageCodecImpl* impl,
   bl_unused(impl);
   bl_unused(dst);
 
-  return bl_trace_error(BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED);
+  return bl_make_error(BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED);
 
   // TODO: [JPEG] Encoder
   /*

@@ -187,7 +187,7 @@ static BLResult BL_CDECL get_glyph_outlines(
   typedef GlyfTable::Compound Compound;
 
   if (BL_UNLIKELY(glyph_id >= ot_face_impl->face_info.glyph_count))
-    return bl_trace_error(BL_ERROR_INVALID_GLYPH);
+    return bl_make_error(BL_ERROR_INVALID_GLYPH);
 
   RawTable glyf_table = ot_face_impl->glyf.glyf_table;
   RawTable loca_table = ot_face_impl->glyf.loca_table;
@@ -281,7 +281,7 @@ static BLResult BL_CDECL get_glyph_outlines(
 
           uint8_t* fDataPtr = static_cast<uint8_t*>(tmp_buffer->alloc(tt_vertex_count));
           if (BL_UNLIKELY(!fDataPtr))
-            return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+            return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
           // Sizes of x_coordinates[] and y_coordinates[] arrays in TrueType data.
           size_t xCoordinatesSize;
@@ -496,7 +496,7 @@ static BLResult BL_CDECL get_glyph_outlines(
         //   [Scale/Affine]
         //     a) <None>
         //     b) int16_t scale;
-        //     c) int16_t scaleX, scaleY;
+        //     c) int16_t scale_x, scale_y;
         //     d) int16_t m00, m01, m10, m11;
 
 ContinueCompound:
@@ -612,7 +612,7 @@ ContinueCompound:
 
 InvalidData:
   *contour_count_out = 0;
-  return bl_trace_error(BL_ERROR_INVALID_DATA);
+  return bl_make_error(BL_ERROR_INVALID_DATA);
 }
 
 // bl::OpenType::GlyfImpl - Init

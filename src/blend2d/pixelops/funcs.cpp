@@ -7,33 +7,7 @@
 #include "../runtime_p.h"
 #include "../pixelops/funcs_p.h"
 
-namespace bl {
-namespace PixelOps {
-
-// bl::PixelOps - Globals
-// ======================
-
-Funcs funcs;
-
-// bl::PixelOps - Interpolation Functions
-// ======================================
-
-namespace Interpolation {
-
-BL_HIDDEN void BL_CDECL interpolate_prgb32(uint32_t* d_ptr, uint32_t d_size, const BLGradientStop* s_ptr, size_t s_size) noexcept;
-BL_HIDDEN void BL_CDECL interpolate_prgb64(uint64_t* d_ptr, uint32_t d_size, const BLGradientStop* s_ptr, size_t s_size) noexcept;
-
-#ifdef BL_BUILD_OPT_SSE2
-BL_HIDDEN void BL_CDECL interpolate_prgb32_sse2(uint32_t* d_ptr, uint32_t d_size, const BLGradientStop* s_ptr, size_t s_size) noexcept;
-#endif
-
-#ifdef BL_BUILD_OPT_AVX2
-BL_HIDDEN void BL_CDECL interpolate_prgb32_avx2(uint32_t* d_ptr, uint32_t d_width, const BLGradientStop* s_ptr, size_t s_size) noexcept;
-#endif
-
-} // {Interpolation}
-} // {PixelOps}
-} // {bl}
+namespace bl::PixelOps { Funcs funcs; }
 
 // bl::PixelOps - Runtime Registration
 // ===================================

@@ -37,8 +37,8 @@ public:
 
   template<typename T>
   BL_INLINE void init_rect(const T& x, const T& y, const T& width) noexcept {
-    advanceY(y);
-    advanceX(x);
+    advance_y(y);
+    advance_x(x);
 
     // Each AdvanceY would advance to the beginning of the next scanline from the
     // end of the current scanline. Since this is a FillRect operation we assume
@@ -48,19 +48,19 @@ public:
 
   template<typename T>
   BL_INLINE void init_generic(const T& y) noexcept {
-    advanceY(y);
+    advance_y(y);
   }
 
   template<typename T>
-  BL_INLINE void advanceX(const T& x) noexcept { _ptr += size_t(IntOps::asStdUInt(x)) * kBytesPerPixel; }
+  BL_INLINE void advance_x(const T& x) noexcept { _ptr += size_t(IntOps::asStdUInt(x)) * kBytesPerPixel; }
   template<typename T>
-  BL_INLINE void advanceY(const T& y) noexcept { _ptr += intptr_t(size_t(IntOps::asStdUInt(y))) * _stride; }
+  BL_INLINE void advance_y(const T& y) noexcept { _ptr += intptr_t(size_t(IntOps::asStdUInt(y))) * _stride; }
 
   template<typename T>
   BL_INLINE void deadvanceX(const T& x) noexcept { _ptr -= size_t(IntOps::asStdUInt(x)) * kBytesPerPixel; }
 
-  BL_INLINE void advanceX() noexcept { advanceX(1); }
-  BL_INLINE void advanceY() noexcept { advanceY(1); }
+  BL_INLINE void advance_x() noexcept { advance_x(1); }
+  BL_INLINE void advance_y() noexcept { advance_y(1); }
 };
 
 } // {anonymous}

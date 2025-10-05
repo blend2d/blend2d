@@ -13,7 +13,7 @@
 #include "matrix.h"
 #include "path.h"
 
-#include "../test/resources/abeezee_regular_ttf.h"
+#include "../testing/resources/abeezee_regular_ttf.h"
 
 // bl::Font - Tests
 // ================

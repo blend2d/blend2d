@@ -113,7 +113,7 @@ BLResult read_float(const uint8_t* p, const uint8_t* pEnd, double& value_out, si
   for (;;) {
     if (acc & 0x100u) {
       if (BL_UNLIKELY(p == pEnd))
-        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
       acc = (uint32_t(*p++) << 24) | 0x1;
     }
 
@@ -136,13 +136,13 @@ BLResult read_float(const uint8_t* p, const uint8_t* pEnd, double& value_out, si
     }
     else {
       if (BL_UNLIKELY(flags & msk))
-        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
       flags |= msk;
       if (nib == kMinusSign) {
         // Minus must start the string, so check the whole mask...
         if (BL_UNLIKELY(flags & (0xFFFF ^ (1u << kMinusSign))))
-          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
       }
       else if (nib != kDecimalPoint) {
         break;
@@ -159,7 +159,7 @@ BLResult read_float(const uint8_t* p, const uint8_t* pEnd, double& value_out, si
     for (;;) {
       if (acc & 0x100u) {
         if (BL_UNLIKELY(p == pEnd))
-          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         acc = (uint32_t(*p++) << 24) | 0x1;
       }
 
@@ -171,7 +171,7 @@ BLResult read_float(const uint8_t* p, const uint8_t* pEnd, double& value_out, si
 
       // If this happens the data is probably invalid anyway...
       if (BL_UNLIKELY(exp_digits >= 6))
-        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
       exp_value = exp_value * 10 + int(nib);
       exp_digits += int(exp_value != 0);
@@ -184,7 +184,7 @@ BLResult read_float(const uint8_t* p, const uint8_t* pEnd, double& value_out, si
   }
 
   if (nib != kEndOfNumber)
-    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   if (scale) {
     double s = Math::pow(10.0, bl_abs(double(scale)));
@@ -225,14 +225,14 @@ static BLResult read_index(const void* data, size_t data_size, uint32_t cff_vers
 
   if (cff_version == CFFData::kVersion1) {
     if (BL_UNLIKELY(data_size < 2))
-      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+      return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
     count = MemOps::readU16uBE(data);
     header_size = 2;
   }
   else {
     if (BL_UNLIKELY(data_size < 4))
-      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+      return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
     count = MemOps::readU32uBE(data);
     header_size = 4;
@@ -247,21 +247,21 @@ static BLResult read_index(const void* data, size_t data_size, uint32_t cff_vers
   // Include also `offset_size` in header, if the `count` is non-zero.
   header_size++;
   if (BL_UNLIKELY(data_size < header_size))
-    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   uint32_t offset_size = MemOps::readU8(PtrOps::offset<const uint8_t>(data, header_size - 1));
   uint32_t offset_array_size = (count + 1) * offset_size;
   uint32_t index_size_including_offsets = header_size + offset_array_size;
 
   if (BL_UNLIKELY(offset_size < 1 || offset_size > 4 || index_size_including_offsets > data_size))
-    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   const uint8_t* offset_array = PtrOps::offset<const uint8_t>(data, header_size);
   uint32_t offset = read_offset(offset_array, offset_size);
 
   // The first offset should be 1.
   if (BL_UNLIKELY(offset != 1))
-    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   // Validate that the offsets are increasing and don't cross each other. The specification says that size of each
   // object stored in the table can be determined by checking its offset and the next one, so valid data should
@@ -276,7 +276,7 @@ static BLResult read_index(const void* data, size_t data_size, uint32_t cff_vers
       for (uint32_t i = 1; i <= count; i++) {
         uint32_t next = MemOps::readU8(offset_array + i);
         if (BL_UNLIKELY(next < offset || next > max_offset))
-          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
       }
       break;
@@ -286,7 +286,7 @@ static BLResult read_index(const void* data, size_t data_size, uint32_t cff_vers
       for (uint32_t i = 1; i <= count; i++) {
         uint32_t next = MemOps::readU16uBE(offset_array + i * 2u);
         if (BL_UNLIKELY(next < offset || next > max_offset))
-          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
       }
       break;
@@ -295,7 +295,7 @@ static BLResult read_index(const void* data, size_t data_size, uint32_t cff_vers
       for (uint32_t i = 1; i <= count; i++) {
         uint32_t next = MemOps::readU24uBE(offset_array + i * 3u);
         if (BL_UNLIKELY(next < offset || next > max_offset))
-          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
       }
       break;
@@ -304,7 +304,7 @@ static BLResult read_index(const void* data, size_t data_size, uint32_t cff_vers
       for (uint32_t i = 1; i <= count; i++) {
         uint32_t next = MemOps::readU32uBE(offset_array + i * 4u);
         if (BL_UNLIKELY(next < offset || next > max_offset))
-          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
       }
       break;
@@ -343,7 +343,7 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
       // 12 is a special escape code to encode additional operators.
       if (b0 == CFFTable::kEscapeDictOp) {
         if (BL_UNLIKELY(_data_ptr == _data_end))
-          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         b0 = (b0 << 8) | (*_data_ptr++);
       }
       op = b0;
@@ -366,7 +366,7 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
         }
         else if (b0 >= 247 && b0 <= 254) {
           if (BL_UNLIKELY(_data_ptr == _data_end))
-            return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+            return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
           uint32_t b1 = *_data_ptr++;
           v_int = b0 <= 250 ? (108 - 247 * 256) + int(b0 * 256 + b1)
@@ -375,25 +375,25 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
         else if (b0 == 28) {
           _data_ptr += 2;
           if (BL_UNLIKELY(_data_ptr > _data_end))
-            return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+            return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
           v_int = MemOps::readI16uBE(_data_ptr - 2);
         }
         else if (b0 == 29) {
           _data_ptr += 4;
           if (BL_UNLIKELY(_data_ptr > _data_end))
-            return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+            return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
           v_int = MemOps::readI32uBE(_data_ptr - 4);
         }
         else {
           // Byte values 22..27, 31, and 255 are reserved.
-          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         }
 
         v = double(v_int);
       }
 
       if (BL_UNLIKELY(i == DictEntry::kValueCapacity - 1))
-        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
       entry.values[i++] = v;
     }
@@ -401,7 +401,7 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
 
   // Specification doesn't talk about entries that have no values.
   if (BL_UNLIKELY(!i))
-    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   entry.op = op;
   entry.count = i;
@@ -845,7 +845,7 @@ static BLResult get_glyph_outlines_t(
   // handling a function call and handling the initial CharString program.
   if (BL_UNLIKELY(glyph_id >= subr_index->entry_count)) {
     trace.fail("Invalid Glyph ID\n");
-    return bl_trace_error(BL_ERROR_INVALID_GLYPH);
+    return bl_make_error(BL_ERROR_INVALID_GLYPH);
   }
 
   // LSubR index that will be used by CallLSubR operator. CID fonts provide multiple indexes that can be used based
@@ -914,7 +914,7 @@ OnSubRCall:
 
     if (BL_UNLIKELY(o_array[0] >= o_array[1] || o_array[1] > payload_size)) {
       trace.fail("Invalid SubR range [Start=%u End=%u Max=%u]\n", o_array[0], o_array[1], payload_size);
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
     }
 
     ip     += o_array[0];
@@ -923,7 +923,7 @@ OnSubRCall:
     size_t program_size = o_array[1] - o_array[0];
     if (BL_UNLIKELY(kCFFProgramLimit - bytes_processed < program_size)) {
       trace.fail("Program limit exceeded [%zu bytes processed]\n", bytes_processed);
-      return bl_trace_error(BL_ERROR_FONT_PROGRAM_TERMINATED);
+      return bl_make_error(BL_ERROR_FONT_PROGRAM_TERMINATED);
     }
     bytes_processed += program_size;
   }
@@ -1860,7 +1860,7 @@ InvalidData:
   consumer.done();
   trace.fail("Invalid data [%zu bytes processed]\n", bytes_processed);
 
-  return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+  return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 }
 
 // bl::OpenType::CFFImpl - GetGlyphBounds
@@ -2108,30 +2108,30 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
 
   Table<CFFTable> cff { cff_version == CFFData::kVersion1 ? tables.cff : tables.cff2 };
   if (BL_UNLIKELY(!cff.fits()))
-    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   // The specification says that the implementation should refuse MAJOR version, which it doesn't understand.
   // We understand version 1 & 2 (there seems to be no other version) so refuse anything else. It also says
   // that change in MINOR version should never cause an incompatibility, so we ignore it completely.
   if (BL_UNLIKELY(cff_version + 1 != cff->header.major_version()))
-    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   uint32_t top_dict_size = 0;
   uint32_t header_size = cff->header.header_size();
 
   if (cff_version == CFFData::kVersion1) {
     if (BL_UNLIKELY(header_size < 4 || header_size > cff.size - 4)) {
-      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+      return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
 
     uint32_t offset_size = cff->headerV1()->offset_size();
     if (BL_UNLIKELY(offset_size < 1 || offset_size > 4)) {
-      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+      return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
   }
   else {
     if (BL_UNLIKELY(header_size < 5 || header_size > cff.size - 5)) {
-      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+      return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
 
     top_dict_size = cff->headerV2()->top_dict_length();
@@ -2147,7 +2147,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
 
     // There should be exactly one font in the table according to OpenType specification.
     if (BL_UNLIKELY(name_index.count != 1)) {
-      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+      return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
 
     top_dict_offset = name_offset + name_index.total_size;
@@ -2166,7 +2166,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
   else {
     // CFF2 specifies the size in the header, so make sure it doesn't overflow our limits.
     if (BL_UNLIKELY(top_dict_size > cff.size - top_dict_offset)) {
-      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+      return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
   }
 
@@ -2174,7 +2174,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
   if (cff_version == CFFData::kVersion1) {
     // TopDict index size must match NameIndex size (v1).
     if (BL_UNLIKELY(name_index.count != top_dict_index.count)) {
-      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+      return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
   }
 
@@ -2188,7 +2188,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
     switch (dict_entry.op) {
       case CFFTable::kDictOpTopCharStrings: {
         if (BL_UNLIKELY(dict_entry.count != 1)) {
-          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         }
 
         char_string_offset = uint32_t(dict_entry.values[0]);
@@ -2197,7 +2197,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
 
       case CFFTable::kDictOpTopPrivate: {
         if (BL_UNLIKELY(dict_entry.count != 2)) {
-          return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+          return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
         }
 
         private_offset = uint32_t(dict_entry.values[1]);
@@ -2258,7 +2258,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
     if (BL_UNLIKELY(private_offset < begin_data_offset ||
                     private_offset > cff.size ||
                     private_length > cff.size - private_offset)) {
-        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
 
     // There are fonts where `private_offset` is equal to `cff.size` and `private_length` is
@@ -2270,7 +2270,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
         switch (dict_entry.op) {
           case CFFTable::kDictOpPrivSubrs: {
             if (BL_UNLIKELY(dict_entry.count != 1)) {
-              return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+              return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
             }
 
             lsubr_offset = uint32_t(dict_entry.values[0]);
@@ -2287,7 +2287,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
   if (lsubr_offset) {
     // `lsubr_offset` is relative to `private_offset`.
     if (BL_UNLIKELY(lsubr_offset < private_length || lsubr_offset > cff.size - private_offset)) {
-      return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+      return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
     }
 
     lsubr_offset += private_offset;
@@ -2298,7 +2298,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
   // ---------------
 
   if (BL_UNLIKELY(char_string_offset < begin_data_offset || char_string_offset >= cff.size)) {
-    return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+    return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
   }
 
   BL_PROPAGATE(read_index(cff.data + char_string_offset, cff.size - char_string_offset, cff_version, &char_string_index));
@@ -2313,11 +2313,11 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
     // CID fonts require both FDArray and FDOffset.
     if (fd_array_offset && fd_select_offset) {
       if (fd_array_offset < begin_data_offset || fd_array_offset >= cff.size) {
-        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
       }
 
       if (fd_select_offset < begin_data_offset || fd_select_offset >= cff.size) {
-        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
       }
 
       // The index contains offsets to the additional TopDicts. To speed up glyph processing we read
@@ -2352,14 +2352,14 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
             switch (dict_entry.op) {
               case CFFTable::kDictOpTopPrivate: {
                 if (BL_UNLIKELY(dict_entry.count != 2)) {
-                  return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+                  return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
                 }
 
                 uint32_t offset = uint32_t(dict_entry.values[1]);
                 uint32_t length = uint32_t(dict_entry.values[0]);
 
                 if (BL_UNLIKELY(offset < begin_data_offset || offset > cff.size || length > cff.size - offset)) {
-                  return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+                  return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
                 }
 
                 dict_data[1].reset(cff.data + offset, length);
@@ -2369,13 +2369,13 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
 
               case CFFTable::kDictOpPrivSubrs: {
                 if (BL_UNLIKELY(dict_entry.count != 1)) {
-                  return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+                  return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
                 }
 
                 // The local subr `offset` is relative to the `subr_base_offset`.
                 subr_offset = uint32_t(dict_entry.values[0]);
                 if (BL_UNLIKELY(subr_offset > cff.size - subr_base_offset)) {
-                  return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+                  return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
                 }
 
                 subr_offset += subr_base_offset;
@@ -2401,7 +2401,7 @@ BLResult init(OTFaceImpl* ot_face_impl, OTFaceTables& tables, uint32_t cff_versi
       // Validate FDSelect data.
       cid.fd_select_format = cff.data[fd_select_offset];
       if (BL_UNLIKELY(!isSupportedFDSelectFormat(cid.fd_select_format))) {
-        return bl_trace_error(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return bl_make_error(BL_ERROR_FONT_CFF_INVALID_DATA);
       }
     }
   }

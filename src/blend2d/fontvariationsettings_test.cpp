@@ -82,7 +82,7 @@ UNIT(font_variation_settings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     EXPECT_EQ(ffs.capacity(), BLFontVariationSettings::kSSOCapacity);
 
     // Getting an unknown tag should return invalid value.
-    EXPECT_TRUE(Math::isNaN(ffs.get_value(BL_MAKE_TAG('-', '-', '-', '-'))));
+    EXPECT_TRUE(Math::is_nan(ffs.get_value(BL_MAKE_TAG('-', '-', '-', '-'))));
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(sso_tags); i++) {
       EXPECT_SUCCESS(ffs.set_value(sso_tags[i], 1u));
@@ -102,7 +102,7 @@ UNIT(font_variation_settings, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(sso_tags); i++) {
       EXPECT_SUCCESS(ffs.remove_value(sso_tags[i]));
-      EXPECT_TRUE(Math::isNaN(ffs.get_value(sso_tags[i])));
+      EXPECT_TRUE(Math::is_nan(ffs.get_value(sso_tags[i])));
       EXPECT_EQ(ffs.size(), BL_ARRAY_SIZE(sso_tags) - i - 1);
       EXPECT_TRUE(ffs._d.sso());
       verify_font_variation_settings(ffs);
@@ -128,7 +128,7 @@ UNIT(font_variation_settings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     EXPECT_EQ(ffs.capacity(), BLFontVariationSettings::kSSOCapacity);
 
     // Getting an unknown tag should return invalid value.
-    EXPECT_TRUE(Math::isNaN(ffs.get_value(BL_MAKE_TAG('-', '-', '-', '-'))));
+    EXPECT_TRUE(Math::is_nan(ffs.get_value(BL_MAKE_TAG('-', '-', '-', '-'))));
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(dynamic_tags); i++) {
       EXPECT_SUCCESS(ffs.set_value(dynamic_tags[i], 1u));
@@ -150,7 +150,7 @@ UNIT(font_variation_settings, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(dynamic_tags); i++) {
       EXPECT_SUCCESS(ffs.remove_value(dynamic_tags[i]));
-      EXPECT_TRUE(Math::isNaN(ffs.get_value(dynamic_tags[i])));
+      EXPECT_TRUE(Math::is_nan(ffs.get_value(dynamic_tags[i])));
       EXPECT_EQ(ffs.size(), BL_ARRAY_SIZE(dynamic_tags) - i - 1);
       verify_font_variation_settings(ffs);
     }

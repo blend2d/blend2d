@@ -140,7 +140,7 @@ static BLResult fix_unsorted_kern_pairs(KernCollection& collection, const KernTa
   if (unsorted_pair_sum) {
     Pair* synthesized_pairs = static_cast<Pair*>(malloc(unsorted_pair_sum * sizeof(Pair)));
     if (BL_UNLIKELY(!synthesized_pairs))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
     size_t synthesized_index = 0;
     for (size_t i = 0; i < unsorted_count; i++) {

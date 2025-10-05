@@ -28,7 +28,7 @@ FetchSolidPart::FetchSolidPart(PipeCompiler* pc, FormatExt format) noexcept
   _part_flags |= PipePartFlags::kMaskedAccess;
 
   _max_pixels = kUnlimitedMaxPixels;
-  _max_vec_width_supported = VecWidth::kMaxPlatformWidth;
+  _max_vec_width_supported = kMaxPlatformWidth;
   _pixel.set_count(PixelCount(1));
 }
 
@@ -104,7 +104,7 @@ void FetchSolidPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredic
 
   switch (p.type()) {
     case PixelType::kA8: {
-      if (n == 1) {
+      if (n == PixelCount(1)) {
         if (bl_test_flag(flags, PixelFlags::kSA)) {
           init_solid_flags(PixelFlags::kSA);
 
@@ -127,8 +127,8 @@ void FetchSolidPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredic
         VecWidth pa_vec_width = pc->vec_width_of(DataWidth::k8, n);
         VecWidth ua_vec_width = pc->vec_width_of(DataWidth::k16, n);
 
-        uint32_t pa_count = pc->vec_count_of(DataWidth::k8, n);
-        uint32_t ua_count = pc->vec_count_of(DataWidth::k16, n);
+        size_t pa_count = pc->vec_count_of(DataWidth::k8, n);
+        size_t ua_count = pc->vec_count_of(DataWidth::k16, n);
 
         if (bl_test_flag(flags, PixelFlags::kImmutable)) {
           if (bl_test_flag(flags, PixelFlags::kPA)) { p.pa = s.pa.clone_as(pa_vec_width); }
@@ -161,8 +161,8 @@ void FetchSolidPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredic
       VecWidth pc_width = pc->vec_width_of(DataWidth::k32, n);
       VecWidth uc_width = pc->vec_width_of(DataWidth::k64, n);
 
-      uint32_t pc_count = pc->vec_count_of(DataWidth::k32, n);
-      uint32_t uc_count = pc->vec_count_of(DataWidth::k64, n);
+      size_t pc_count = pc->vec_count_of(DataWidth::k32, n);
+      size_t uc_count = pc->vec_count_of(DataWidth::k64, n);
 
       if (bl_test_flag(flags, PixelFlags::kImmutable)) {
         if (bl_test_flag(flags, PixelFlags::kPC)) { p.pc = s.pc.clone_as(pc_width); }

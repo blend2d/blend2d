@@ -18,7 +18,7 @@ namespace bl::Pipeline::JIT {
 struct PipeDebug {
   static void print_gp(PipeCompiler* pc, const char* key, const Gp& reg) noexcept {
     asmjit::InvokeNode* invoke_node;
-    Gp func_ptr = pc->new_gp("func_ptr");
+    Gp func_ptr = pc->new_gpz("func_ptr");
 
     if (reg.size() <= 4) {
       pc->mov(func_ptr, Imm((uintptr_t)_printGp32Cb));
@@ -48,7 +48,7 @@ struct PipeDebug {
     pc->v_storeu128(m, reg);
     load_address(pc, a, m);
 
-    Gp func_ptr = pc->new_gp("func_ptr");
+    Gp func_ptr = pc->new_gpz("func_ptr");
     pc->mov(func_ptr, Imm((uintptr_t)_print_xmm_pi_cb));
 
     asmjit::InvokeNode* invoke_node;
@@ -65,7 +65,7 @@ struct PipeDebug {
     pc->v_storeu32(m, reg);
     load_address(pc, a, m);
 
-    Gp func_ptr = pc->new_gp("func_ptr");
+    Gp func_ptr = pc->new_gpz("func_ptr");
     pc->mov(func_ptr, Imm((uintptr_t)_printScalarF32));
 
     asmjit::InvokeNode* invoke_node;
@@ -82,7 +82,7 @@ struct PipeDebug {
     pc->v_storeu128(m, reg);
     load_address(pc, a, m);
 
-    Gp func_ptr = pc->new_gp("func_ptr");
+    Gp func_ptr = pc->new_gpz("func_ptr");
     pc->mov(func_ptr, Imm((uintptr_t)_print_xmm_ps_cb));
 
     asmjit::InvokeNode* invoke_node;
@@ -99,7 +99,7 @@ struct PipeDebug {
     pc->v_storeu128(m, reg);
     load_address(pc, a, m);
 
-    Gp func_ptr = pc->new_gp("func_ptr");
+    Gp func_ptr = pc->new_gpz("func_ptr");
     pc->mov(func_ptr, Imm((uintptr_t)_print_xmm_pd_cb));
 
     asmjit::InvokeNode* invoke_node;

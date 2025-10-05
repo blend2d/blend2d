@@ -83,7 +83,7 @@ static BLResult BL_CDECL mem_get_table_tags_impl(const BLFontDataImpl* impl_, ui
 
   if (BL_UNLIKELY(face_index >= impl->face_count)) {
     bl_array_clear(out);
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   uint32_t header_offset = 0;
@@ -110,7 +110,7 @@ static BLResult BL_CDECL mem_get_table_tags_impl(const BLFontDataImpl* impl_, ui
   }
 
   bl_array_clear(out);
-  return bl_trace_error(BL_ERROR_INVALID_DATA);
+  return bl_make_error(BL_ERROR_INVALID_DATA);
 }
 
 static size_t BL_CDECL mem_get_tables_impl(const BLFontDataImpl* impl_, uint32_t face_index, BLFontTable* dst, const BLTag* tags, size_t n) noexcept {
@@ -300,7 +300,7 @@ BLResult bl_font_data_create_from_file(BLFontDataCore* self, const char* file_na
   BL_PROPAGATE(BLFileSystem::read_file(file_name, buffer, 0, read_flags));
 
   if (buffer.is_empty())
-    return bl_trace_error(BL_ERROR_FILE_EMPTY);
+    return bl_make_error(BL_ERROR_FILE_EMPTY);
 
   return bl_font_data_create_from_data_array(self, &buffer);
 }
@@ -311,10 +311,10 @@ static BLResult bl_font_data_create_from_data_internal(BLFontDataCore* self, con
 
   constexpr uint32_t kBaseSize = bl_min<uint32_t>(SFNTHeader::kBaseSize, TTCFHeader::kBaseSize);
   if (BL_UNLIKELY(data_size < kBaseSize))
-    return bl_trace_error(BL_ERROR_INVALID_DATA);
+    return bl_make_error(BL_ERROR_INVALID_DATA);
 
   if (BL_UNLIKELY(sizeof(size_t) > 4 && data_size > 0xFFFFFFFFu))
-    return bl_trace_error(BL_ERROR_DATA_TOO_LARGE);
+    return bl_make_error(BL_ERROR_DATA_TOO_LARGE);
 
   uint32_t header_tag = bl::PtrOps::offset<const UInt32>(data, 0)->value();
   uint32_t face_count = 1;
@@ -325,17 +325,17 @@ static BLResult bl_font_data_create_from_data_internal(BLFontDataCore* self, con
 
   if (bl::FontTagData::is_open_type_collection_tag(header_tag)) {
     if (BL_UNLIKELY(data_size < TTCFHeader::kBaseSize))
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
 
     const TTCFHeader* header = bl::PtrOps::offset<const TTCFHeader>(data, 0);
 
     face_count = header->fonts.count();
     if (BL_UNLIKELY(!face_count || face_count > BL_FONT_DATA_MAX_FACE_COUNT))
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
 
     size_t ttc_header_size = header->calc_size(face_count);
     if (BL_UNLIKELY(ttc_header_size > data_size))
-      return bl_trace_error(BL_ERROR_INVALID_DATA);
+      return bl_make_error(BL_ERROR_INVALID_DATA);
 
     offset_array = header->fonts.array();
     offset_array_index = (uint32_t)((uintptr_t)offset_array - (uintptr_t)header);
@@ -344,7 +344,7 @@ static BLResult bl_font_data_create_from_data_internal(BLFontDataCore* self, con
   }
   else {
     if (!bl::FontTagData::is_open_type_version_tag(header_tag))
-      return bl_trace_error(BL_ERROR_INVALID_SIGNATURE);
+      return bl_make_error(BL_ERROR_INVALID_SIGNATURE);
   }
 
   BLArray<BLFontFaceImpl*> face_cache;
@@ -384,7 +384,7 @@ BLResult bl_font_data_create_from_data_array(BLFontDataCore* self, const BLArray
   BL_ASSERT(self->_d.is_font_data());
 
   if (data_array->_d.raw_type() != BL_OBJECT_TYPE_ARRAY_UINT8)
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   const BLArray<uint8_t>& array = data_array->dcast<BLArray<uint8_t>>();
   const void* data = array.data();

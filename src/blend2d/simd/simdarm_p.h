@@ -999,8 +999,8 @@ BL_INLINE_NODEBUG uint64x2_t simd_dup_hi_u64(const uint64x2_t& a) noexcept { ret
 BL_INLINE_NODEBUG float32x4_t simd_dup_lo_f32(const float32x4_t& a) noexcept { return simd_swizzle_f32<2, 2, 0, 0>(a); }
 BL_INLINE_NODEBUG float32x4_t simd_dup_hi_f32(const float32x4_t& a) noexcept { return simd_swizzle_f32<3, 3, 1, 1>(a); }
 
-BL_INLINE_NODEBUG float32x4_t simd_dup_lo_2xf32(const float32x4_t& a) noexcept { return simd_swizzle_f32<1, 0, 1, 0>(a); }
-BL_INLINE_NODEBUG float32x4_t simd_dup_hi_2xf32(const float32x4_t& a) noexcept { return simd_swizzle_f32<3, 2, 3, 2>(a); }
+BL_INLINE_NODEBUG float32x4_t simd_dup_lo_f32x2(const float32x4_t& a) noexcept { return simd_swizzle_f32<1, 0, 1, 0>(a); }
+BL_INLINE_NODEBUG float32x4_t simd_dup_hi_f32x2(const float32x4_t& a) noexcept { return simd_swizzle_f32<3, 2, 3, 2>(a); }
 
 BL_INLINE_NODEBUG uint32x4_t simd_swap_u32(const uint32x4_t& a) noexcept { return simd_swizzle_u32<2, 3, 0, 1>(a); }
 BL_INLINE_NODEBUG uint64x2_t simd_swap_u64(const uint64x2_t& a) noexcept { return simd_swizzle_u64<0, 1>(a); }
@@ -2206,8 +2206,8 @@ template<typename V> BL_INLINE_NODEBUG V dup_hi_u64(const V& a) noexcept { retur
 
 template<typename V> BL_INLINE_NODEBUG V dup_lo_f32(const V& a) noexcept { return from_simd<V>(I::simd_dup_lo_f32(simd_f32(a.v))); }
 template<typename V> BL_INLINE_NODEBUG V dup_hi_f32(const V& a) noexcept { return from_simd<V>(I::simd_dup_hi_f32(simd_f32(a.v))); }
-template<typename V> BL_INLINE_NODEBUG V dup_lo_2xf32(const V& a) noexcept { return from_simd<V>(I::simd_dup_lo_2xf32(simd_f32(a.v))); }
-template<typename V> BL_INLINE_NODEBUG V dup_hi_2xf32(const V& a) noexcept { return from_simd<V>(I::simd_dup_hi_2xf32(simd_f32(a.v))); }
+template<typename V> BL_INLINE_NODEBUG V dup_lo_f32x2(const V& a) noexcept { return from_simd<V>(I::simd_dup_lo_f32x2(simd_f32(a.v))); }
+template<typename V> BL_INLINE_NODEBUG V dup_hi_f32x2(const V& a) noexcept { return from_simd<V>(I::simd_dup_hi_f32x2(simd_f32(a.v))); }
 
 template<typename V> BL_INLINE_NODEBUG V swap_u32(const V& a) noexcept { return from_simd<V>(I::simd_swap_u32(simd_u32(a.v))); }
 template<typename V> BL_INLINE_NODEBUG V swap_u64(const V& a) noexcept { return from_simd<V>(I::simd_swap_u64(simd_u64(a.v))); }

@@ -435,7 +435,7 @@ BL_API_IMPL BLResult bl_matrix2d_apply_op(BLMatrix2D* self, BLTransformOp op_typ
     }
 
     default:
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 }
 
@@ -443,7 +443,7 @@ BL_API_IMPL BLResult bl_matrix2d_invert(BLMatrix2D* dst, const BLMatrix2D* src) 
   double d = src->m00 * src->m11 - src->m01 * src->m10;
 
   if (d == 0.0 || !bl::Math::is_finite(d))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   double t00 =  src->m11;
   double t01 = -src->m01;

@@ -536,7 +536,7 @@
 #define BL_MAKE_VERSION(MAJOR, MINOR, PATCH) (((MAJOR) << 16) | ((MINOR) << 8) | (PATCH))
 
 //! Blend2D library version.
-#define BL_VERSION BL_MAKE_VERSION(0, 20, 0)
+#define BL_VERSION BL_MAKE_VERSION(0, 21, 0)
 
 //! \}
 //! \}
@@ -1646,14 +1646,14 @@ BL_INLINE_NODEBUG void operator delete(void*, const BLInternal::PlacementNew&) n
 
 //! Returns the `result` passed.
 //!
-//! Provided for debugging purposes. Putting a breakpoint inside `bl_trace_error()` can help with tracing an origin
+//! Provided for debugging purposes. Putting a breakpoint inside `bl_make_error()` can help with tracing an origin
 //! of errors reported / returned by Blend2D as each error goes through this function.
 //!
 //! It's a zero-cost solution that doesn't affect release builds in any way.
 #ifdef __cplusplus
 [[nodiscard]]
 #endif
-static inline BLResult bl_trace_error(BLResult result) BL_NOEXCEPT_C { return result; }
+static inline BLResult bl_make_error(BLResult result) BL_NOEXCEPT_C { return result; }
 
 BL_BEGIN_C_DECLS
 

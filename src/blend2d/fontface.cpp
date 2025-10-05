@@ -43,7 +43,7 @@ static BLResult BL_CDECL bl_null_font_face_map_text_to_glyphs(
   BLGlyphMappingState* state) noexcept {
 
   state->reset();
-  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL bl_null_font_face_get_glyph_bounds(
@@ -53,7 +53,7 @@ static BLResult BL_CDECL bl_null_font_face_get_glyph_bounds(
   BLBoxI* boxes,
   size_t count) noexcept {
 
-  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL bl_null_font_face_get_glyph_advances(
@@ -63,7 +63,7 @@ static BLResult BL_CDECL bl_null_font_face_get_glyph_advances(
   BLGlyphPlacement* placement_data,
   size_t count) noexcept {
 
-  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL bl_null_font_face_get_glyph_outlines(
@@ -75,7 +75,7 @@ static BLResult BL_CDECL bl_null_font_face_get_glyph_outlines(
   bl::ScopedBuffer* tmp_buffer) noexcept {
 
   *contour_count_out = 0;
-  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL bl_null_font_face_apply_kern(
@@ -84,7 +84,7 @@ static BLResult BL_CDECL bl_null_font_face_apply_kern(
   BLGlyphPlacement* placement_data,
   size_t count) noexcept {
 
-  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL bl_null_font_face_apply_gsub(
@@ -93,7 +93,7 @@ static BLResult BL_CDECL bl_null_font_face_apply_gsub(
   const uint32_t* bit_words,
   size_t bit_word_count) noexcept {
 
-  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL bl_null_font_face_apply_gpos(
@@ -102,7 +102,7 @@ static BLResult BL_CDECL bl_null_font_face_apply_gpos(
   const uint32_t* bit_words,
   size_t bit_word_count) noexcept {
 
-  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL bl_null_font_face_position_glyphs(
@@ -111,7 +111,7 @@ static BLResult BL_CDECL bl_null_font_face_position_glyphs(
   BLGlyphPlacement* placement_data,
   size_t count) noexcept {
 
-  return bl_trace_error(BL_ERROR_FONT_NOT_INITIALIZED);
+  return bl_make_error(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 BL_DIAGNOSTIC_POP
@@ -203,10 +203,10 @@ BLResult bl_font_face_create_from_data(BLFontFaceCore* self, const BLFontDataCor
   BL_ASSERT(font_data->_d.is_font_data());
 
   if (BL_UNLIKELY(!font_data->dcast().is_valid()))
-    return bl_trace_error(BL_ERROR_NOT_INITIALIZED);
+    return bl_make_error(BL_ERROR_NOT_INITIALIZED);
 
   if (face_index >= font_data->dcast().face_count())
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLFontFaceCore newO;
   BL_PROPAGATE(bl::OpenType::create_open_type_face(&newO, static_cast<const BLFontData*>(font_data), face_index));
@@ -299,7 +299,7 @@ BLResult bl_font_face_get_character_coverage(const BLFontFaceCore* self, BLBitSe
   BLFontFacePrivateImpl* self_impl = get_impl(self);
   if (!bl_object_atomic_content_test(&self_impl->character_coverage)) {
     if (self_impl->face_info.face_type != BL_FONT_FACE_TYPE_OPENTYPE)
-      return bl_trace_error(BL_ERROR_NOT_IMPLEMENTED);
+      return bl_make_error(BL_ERROR_NOT_IMPLEMENTED);
 
     BLBitSet tmp_bit_set;
     BL_PROPAGATE(bl::OpenType::CMapImpl::populate_character_coverage(static_cast<bl::OpenType::OTFaceImpl*>(self_impl), &tmp_bit_set.dcast()));

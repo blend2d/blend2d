@@ -14,7 +14,7 @@
 #include "../imageencoder.h"
 #include "../random.h"
 
-#include "../../../test/bl_test_imageutils.h"
+#include "../../../testing/commons/imagediff.h"
 
 // bl::Codecs - Tests
 // ==================

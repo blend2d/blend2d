@@ -1184,7 +1184,7 @@ BL_API_IMPL BLResult bl_bit_set_init_range(BLBitSetCore* self, uint32_t start_bi
 
   uint32_t mask = uint32_t(-int32_t(start_bit < end_bit));
   init_sso_range(self, start_bit & mask, end_bit & mask);
-  return mask ? BL_SUCCESS : bl_trace_error(BL_ERROR_INVALID_VALUE);
+  return mask ? BL_SUCCESS : bl_make_error(BL_ERROR_INVALID_VALUE);
 }
 
 BL_API_IMPL BLResult bl_bit_set_destroy(BLBitSetCore* self) noexcept {
@@ -1270,7 +1270,7 @@ BL_API_IMPL BLResult bl_bit_set_assign_range(BLBitSetCore* self, uint32_t start_
 
   if (BL_UNLIKELY(start_bit >= end_bit)) {
     if (start_bit > end_bit)
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
     else
       return bl_bit_set_clear(self);
   }
@@ -1300,15 +1300,15 @@ static BL_INLINE BLResult normalize_word_data_params(uint32_t& start_word, const
   using namespace bl::BitSetInternal;
 
   if (BL_UNLIKELY(start_word > kLastWord))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   if (word_count >= kLastWord + 1u - start_word) {
     if (word_count > kLastWord + 1u - start_word)
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     // Make sure the last word doesn't have the last bit set. This bit is not indexable, so refuse it.
     if (word_count > 0 && (word_data[word_count - 1] & 1u) != 0)
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
   // Skip zero words from the beginning and from the end.
@@ -2307,7 +2307,7 @@ BL_API_IMPL BLResult bl_bit_set_chop(BLBitSetCore* self, uint32_t start_bit, uin
 
   if (BL_UNLIKELY(start_bit >= end_bit)) {
     if (start_bit > end_bit)
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
     else
       return bl_bit_set_clear(self);
   }
@@ -2385,7 +2385,7 @@ BL_API_IMPL BLResult bl_bit_set_add_bit(BLBitSetCore* self, uint32_t bit_index) 
   BL_ASSERT(self->_d.is_bit_set());
 
   if (BL_UNLIKELY(bit_index == kInvalidIndex))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLBitSetSegment sso_segments[3];
   BLBitSetSegment* segment_data;
@@ -2571,7 +2571,7 @@ BL_API_IMPL BLResult bl_bit_set_add_range(BLBitSetCore* self, uint32_t range_sta
 
   if (BL_UNLIKELY(range_start_bit >= range_end_bit)) {
     if (range_start_bit > range_end_bit)
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
     return BL_SUCCESS;
   }
 
@@ -2925,7 +2925,7 @@ BL_API_IMPL BLResult bl_bit_set_add_words(BLBitSetCore* self, uint32_t start_wor
   if (requires_temporary_storage) {
     BLBitSetSegment* p = static_cast<BLBitSetSegment*>(tmp_segment_buffer.alloc(insert_segment_count * sizeof(BLBitSetSegment)));
     if (BL_UNLIKELY(!p))
-      return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
     inserter.reset(p, insert_segment_count);
   }
 
@@ -3116,7 +3116,7 @@ BL_API_IMPL BLResult bl_bit_set_clear_bit(BLBitSetCore* self, uint32_t bit_index
   BL_ASSERT(self->_d.is_bit_set());
 
   if (BL_UNLIKELY(bit_index == kInvalidIndex))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   BLBitSetSegment sso_segments[3];
   BLBitSetSegment* segment_data;
@@ -3273,7 +3273,7 @@ BL_API_IMPL BLResult bl_bit_set_clear_range(BLBitSetCore* self, uint32_t range_s
 
   if (BL_UNLIKELY(range_start_bit >= range_end_bit)) {
     if (range_start_bit > range_end_bit)
-      return bl_trace_error(BL_ERROR_INVALID_VALUE);
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
     return BL_SUCCESS;
   }
 

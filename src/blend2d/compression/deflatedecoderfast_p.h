@@ -49,7 +49,7 @@ DecoderFastResult BL_CDECL decode(
 ) noexcept;
 
 #if defined(BL_BUILD_OPT_AVX2)
-DecoderFastResult BL_CDECL decode_AVX2(
+DecoderFastResult BL_CDECL decode_avx2(
   Decoder* ctx,
   uint8_t* dst_start,
   uint8_t* dst_ptr,

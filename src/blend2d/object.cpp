@@ -37,7 +37,7 @@ void bl_object_destroy_external_data_dummy(void* impl, void* external_data, void
 
 static BL_INLINE BLResult bl_object_alloc_impl_internal(BLObjectCore* self, uint32_t object_info, size_t impl_size, size_t impl_flags, size_t impl_alignment, bool is_external = false) noexcept {
   if (BL_UNLIKELY(impl_size > BL_OBJECT_IMPL_MAX_SIZE))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   impl_size = bl::IntOps::align_up(impl_size, impl_alignment);
 
@@ -46,7 +46,7 @@ static BL_INLINE BLResult bl_object_alloc_impl_internal(BLObjectCore* self, uint
 
   void* ptr = malloc(allocation_size);
   if (BL_UNLIKELY(!ptr))
-    return bl_trace_error(BL_ERROR_OUT_OF_MEMORY);
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
 
   BLObjectImpl* impl = static_cast<BLObjectImpl*>(
     bl::IntOps::align_up(bl::PtrOps::offset(ptr, header_size), impl_alignment));
@@ -72,7 +72,7 @@ BL_API_IMPL BLResult bl_object_alloc_impl(BLObjectCore* self, uint32_t object_in
 
 BL_API_IMPL BLResult bl_object_alloc_impl_aligned(BLObjectCore* self, uint32_t object_info, size_t impl_size, size_t impl_alignment) noexcept {
   if (!bl::IntOps::is_power_of_2(impl_alignment))
-    return bl_trace_error(BL_ERROR_INVALID_VALUE);
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   size_t flags = BLObjectImplHeader::kRefCountedFlag;
   impl_alignment = bl_clamp<size_t>(impl_alignment, 16, 128);
@@ -213,7 +213,7 @@ BL_API_IMPL BLResult bl_object_get_property(const BLUnknown* self, const char* n
     name_size = strlen(name);
 
   if (!bl_as_object(self)->_d.is_virtual_object())
-    return bl_trace_error(BL_ERROR_INVALID_KEY);
+    return bl_make_error(BL_ERROR_INVALID_KEY);
 
   const BLObjectVirtImpl* impl = static_cast<const BLObjectVirtImpl*>(bl_as_object(self)->_d.impl);
   return impl->virt->base.get_property(impl, name, name_size, value_out);
@@ -296,7 +296,7 @@ BL_API_IMPL BLResult bl_object_set_property(BLUnknown* self, const char* name, s
     name_size = strlen(name);
 
   if (!bl_as_object(self)->_d.is_virtual_object())
-    return bl_trace_error(BL_ERROR_INVALID_KEY);
+    return bl_make_error(BL_ERROR_INVALID_KEY);
 
   BLObjectVirtImpl* impl = static_cast<BLObjectVirtImpl*>(bl_as_object(self)->_d.impl);
   return impl->virt->base.set_property(impl, name, name_size, static_cast<const BLVarCore*>(value));
@@ -346,10 +346,10 @@ BL_API_IMPL BLResult bl_object_set_property_double(BLUnknown* self, const char* 
 
 BLResult bl_object_impl_get_property(const BLObjectImpl* impl, const char* name, size_t name_size, BLVarCore* value_out) noexcept {
   bl_unused(impl, name, name_size, value_out);
-  return bl_trace_error(BL_ERROR_INVALID_KEY);
+  return bl_make_error(BL_ERROR_INVALID_KEY);
 }
 
 BLResult bl_object_impl_set_property(BLObjectImpl* impl, const char* name, size_t name_size, const BLVarCore* value) noexcept {
   bl_unused(impl, name, name_size, value);
-  return bl_trace_error(BL_ERROR_INVALID_KEY);
+  return bl_make_error(BL_ERROR_INVALID_KEY);
 }

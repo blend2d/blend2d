@@ -38,101 +38,105 @@ static void rotate_dither_bytes_right(PipeCompiler* pc, const Vec& vec, const Gp
   }
 #endif
 
-  Mem mPred = pc->simd_mem_const(pc->ct.swizu8_rotate_right, Bcst::kNA, vec);
+  Mem m_pred = pc->simd_mem_const(pc->ct<CommonTable>().swizu8_rotate_right, Bcst::kNA, vec);
 
 #if defined(BL_JIT_ARCH_X86)
-  mPred.set_index(count_as_index);
+  m_pred.set_index(count_as_index);
   if (!pc->has_avx()) {
     Vec v_pred = pc->new_similar_reg(vec, "@v_pred");
-    pc->v_loadu128(v_pred, mPred);
+    pc->v_loadu128(v_pred, m_pred);
     pc->v_swizzlev_u8(vec, vec, v_pred);
     return;
   }
 #else
-  Gp base = pc->new_gp("@swizu8_rotate_base");
-  pc->cc->load_address_of(base, mPred);
-  mPred = mem_ptr(base, count_as_index);
+  Gp base = pc->new_gpz("@swizu8_rotate_base");
+  pc->cc->load_address_of(base, m_pred);
+  m_pred = mem_ptr(base, count_as_index);
 #endif
 
-  pc->v_swizzlev_u8(vec, vec, mPred);
+  pc->v_swizzlev_u8(vec, vec, m_pred);
 }
 
-void GradientDitheringContext::initY(const PipeFunction& fn, const Gp& x, const Gp& y) noexcept {
+void GradientDitheringContext::init_y(const PipeFunction& fn, const Gp& x, const Gp& y) noexcept {
   _dm_position = pc->new_gp32("dm.position");
-  _dmOriginX = pc->new_gp32("dm.originX");
-  _dm_values = pc->new_vec(pc->vec_width(), "dm.values");
+  _dm_origin_x = pc->new_gp32("dm.origin_x");
+  _dm_values = pc->new_vec_with_width(pc->vec_width(), "dm.values");
   _is_rect_fill = x.is_valid();
 
   pc->load_u32(_dm_position, mem_ptr(fn.ctx_data(), BL_OFFSET_OF(ContextData, pixel_origin.y)));
-  pc->load_u32(_dmOriginX, mem_ptr(fn.ctx_data(), BL_OFFSET_OF(ContextData, pixel_origin.x)));
+  pc->load_u32(_dm_origin_x, mem_ptr(fn.ctx_data(), BL_OFFSET_OF(ContextData, pixel_origin.x)));
 
   pc->add(_dm_position, _dm_position, y.r32());
   if (is_rect_fill())
-    pc->add(_dmOriginX, _dmOriginX, x.r32());
+    pc->add(_dm_origin_x, _dm_origin_x, x.r32());
 
   pc->and_(_dm_position, _dm_position, 15);
   if (is_rect_fill())
-    pc->and_(_dmOriginX, _dmOriginX, 15);
+    pc->and_(_dm_origin_x, _dm_origin_x, 15);
 
   pc->shl(_dm_position, _dm_position, 5);
   if (is_rect_fill())
-    pc->add(_dm_position, _dm_position, _dmOriginX);
+    pc->add(_dm_position, _dm_position, _dm_origin_x);
 }
 
-void GradientDitheringContext::advanceY() noexcept {
+void GradientDitheringContext::advance_y() noexcept {
   pc->add(_dm_position, _dm_position, 16 * 2);
   pc->and_(_dm_position, _dm_position, 16 * 16 * 2 - 1);
 }
 
-void GradientDitheringContext::startAtX(const Gp& x) noexcept {
+void GradientDitheringContext::start_at_x(const Gp& x) noexcept {
   Gp dm_position = _dm_position;
 
   if (!is_rect_fill()) {
     // If not rectangular, we have to calculate the final position according to `x`.
     dm_position = pc->new_gp32("dm.final_position");
 
-    pc->mov(dm_position, _dmOriginX);
+    pc->mov(dm_position, _dm_origin_x);
     pc->add(dm_position, dm_position, x.r32());
     pc->and_(dm_position, dm_position, 15);
     pc->add(dm_position, dm_position, _dm_position);
   }
 
+  const int bayer_matrix_16x16_offset = int(uintptr_t(pc->ct<CommonTable>().bayer_matrix_16x16) - uintptr_t(pc->ct_ptr()));
+
   Mem m;
 #if defined(BL_JIT_ARCH_X86)
   if (pc->is_32bit()) {
-    m = x86::ptr(uint64_t(uintptr_t(common_table.bayerMatrix16x16)), dm_position);
+    m = x86::ptr(uint64_t(uintptr_t(pc->ct_ptr()) + uintptr_t(bayer_matrix_16x16_offset)), dm_position);
   }
   else {
-    pc->_init_common_table_ptr();
-    m = mem_ptr(pc->_common_table_ptr, dm_position.r64(), 0, -pc->_common_table_offset);
+    pc->_init_vec_const_table_ptr();
+    m = mem_ptr(pc->_common_table_ptr, dm_position.r64(), 0, bayer_matrix_16x16_offset - pc->_common_table_offset);
   }
 #else
-  pc->_init_common_table_ptr();
-  Gp dither_row = pc->new_gp("@dither_row");
-  pc->add(dither_row, pc->_common_table_ptr, -pc->_common_table_offset);
+  pc->_init_vec_const_table_ptr();
+  Gp dither_row = pc->new_gpz("@dither_row");
+  pc->add(dither_row, pc->_common_table_ptr, bayer_matrix_16x16_offset - pc->_common_table_offset);
   m = mem_ptr(dither_row, dm_position.r64());
 #endif
 
-  if (_dm_values.is_vec128())
+  if (_dm_values.is_vec128()) {
     pc->v_loadu128(_dm_values, m);
-  else
+  }
+  else {
     pc->v_broadcast_v128_u32(_dm_values, m);
+  }
 }
 
-void GradientDitheringContext::advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept {
+void GradientDitheringContext::advance_x(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept {
   bl_unused(x);
 
   if (diff_within_bounds) {
     rotate_dither_bytes_right(pc, _dm_values, diff);
   }
   else {
-    Gp diff0To15 = pc->new_similar_reg(diff, "@diff0To15");
-    pc->and_(diff0To15, diff, 0xF);
-    rotate_dither_bytes_right(pc, _dm_values, diff0To15);
+    Gp diff_0_to_15 = pc->new_similar_reg(diff, "@diff_0_to_15");
+    pc->and_(diff_0_to_15, diff, 0xF);
+    rotate_dither_bytes_right(pc, _dm_values, diff_0_to_15);
   }
 }
 
-void GradientDitheringContext::advanceXAfterFetch(uint32_t n) noexcept {
+void GradientDitheringContext::advance_x_after_fetch(uint32_t n) noexcept {
   // The compiler would optimize this to a cheap shuffle whenever possible.
   pc->v_alignr_u128(_dm_values, _dm_values, _dm_values, n & 15);
 }
@@ -146,11 +150,11 @@ void GradientDitheringContext::dither_unpacked_pixels(Pixel& p, AdvanceMode adva
 
   Vec dm_values = _dm_values;
 
-  switch (p.count().value()) {
+  switch (uint32_t(p.count())) {
     case 1: {
 #if defined(BL_JIT_ARCH_X86)
       if (!pc->has_ssse3()) {
-        pc->v_interleave_lo_u8(dither_predicate, dm_values, pc->simd_const(&common_table.i_0000000000000000, Bcst::kNA, dither_predicate));
+        pc->v_interleave_lo_u8(dither_predicate, dm_values, pc->simd_const(&common_table.p_0000000000000000, Bcst::kNA, dither_predicate));
         pc->v_swizzle_lo_u16x4(dither_predicate, dither_predicate, swizzle(0, 0, 0, 0));
       }
       else
@@ -165,7 +169,7 @@ void GradientDitheringContext::dither_unpacked_pixels(Pixel& p, AdvanceMode adva
       pc->v_srli_u16(p.uc[0], p.uc[0], 8);
 
       if (advance_mode == AdvanceMode::kAdvance) {
-        advanceXAfterFetch(1);
+        advance_x_after_fetch(1);
       }
       break;
     }
@@ -208,7 +212,7 @@ void GradientDitheringContext::dither_unpacked_pixels(Pixel& p, AdvanceMode adva
 
 #if defined(BL_JIT_ARCH_X86)
           if (!pc->has_ssse3()) {
-            pc->v_interleave_lo_u8(dither_predicate, dm, pc->simd_const(&common_table.i_0000000000000000, Bcst::kNA, dither_predicate));
+            pc->v_interleave_lo_u8(dither_predicate, dm, pc->simd_const(&common_table.p_0000000000000000, Bcst::kNA, dither_predicate));
             pc->v_interleave_lo_u16(dither_predicate, dither_predicate, dither_predicate);
             pc->v_swizzle_u32x4(dither_predicate, dither_predicate, swizzle(1, 1, 0, 0));
           }
@@ -228,7 +232,7 @@ void GradientDitheringContext::dither_unpacked_pixels(Pixel& p, AdvanceMode adva
         }
 
         if (advance_mode == AdvanceMode::kAdvance) {
-          Swizzle4 swiz = p.count().value() == 4 ? swizzle(0, 3, 2, 1) : swizzle(1, 0, 3, 2);
+          Swizzle4 swiz = p.count() == PixelCount(4) ? swizzle(0, 3, 2, 1) : swizzle(1, 0, 3, 2);
           pc->v_swizzle_u32x4(dm_values, dm_values, swiz);
         }
 
@@ -308,13 +312,13 @@ FetchLinearGradientPart::FetchLinearGradientPart(PipeCompiler* pc, FetchType fet
       BL_NOT_REACHED();
   }
 
-  _max_vec_width_supported = VecWidth::kMaxPlatformWidth;
+  _max_vec_width_supported = kMaxPlatformWidth;
 
   add_part_flags(PipePartFlags::kExpensive |
                PipePartFlags::kMaskedAccess |
                PipePartFlags::kAdvanceXNeedsDiff);
   set_dithering_enabled(dither);
-  JitUtils::reset_var_struct(&f, sizeof(f));
+  OpUtils::reset_var_struct(&f, sizeof(f));
 }
 
 // bl::Pipeline::JIT::FetchLinearGradientPart - Prepare
@@ -337,20 +341,20 @@ void FetchLinearGradientPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) n
   // Local Registers
   // ---------------
 
-  _table_ptr = pc->new_gp("f.table");                // Reg.
-  f->pt = pc->new_vec(vw, "f.pt");                     // Reg.
-  f->dt = pc->new_vec(vw, "f.dt");                     // Reg/Mem.
-  f->dtN = pc->new_vec(vw, "f.dtN");                   // Reg/Mem.
-  f->py = pc->new_vec(vw, "f.py");                     // Reg/Mem.
-  f->dy = pc->new_vec(vw, "f.dy");                     // Reg/Mem.
-  f->maxi = pc->new_vec(vw, "f.maxi");                 // Reg/Mem.
-  f->rori = pc->new_vec(vw, "f.rori");                 // Reg/Mem [RoR only].
-  f->v_idx = pc->new_vec(vw, "f.v_idx");                 // Reg/Tmp.
+  _table_ptr = pc->new_gpz("f.table");                 // Reg.
+  f->pt = pc->new_vec_with_width(vw, "f.pt");          // Reg.
+  f->dt = pc->new_vec_with_width(vw, "f.dt");          // Reg/Mem.
+  f->dt_n = pc->new_vec_with_width(vw, "f.dt_n");      // Reg/Mem.
+  f->py = pc->new_vec_with_width(vw, "f.py");          // Reg/Mem.
+  f->dy = pc->new_vec_with_width(vw, "f.dy");          // Reg/Mem.
+  f->maxi = pc->new_vec_with_width(vw, "f.maxi");      // Reg/Mem.
+  f->rori = pc->new_vec_with_width(vw, "f.rori");      // Reg/Mem [RoR only].
+  f->v_idx = pc->new_vec_with_width(vw, "f.v_idx");    // Reg/Tmp.
 
   // In 64-bit mode it's easier to use IMUL for 64-bit multiplication instead of SIMD, because
   // we need to multiply a scalar anyway that we then broadcast and add to our 'f.pt' vector.
   if (pc->is_64bit()) {
-    f->dt_gp = pc->new_gp64("f.dt_gp");                  // Reg/Mem.
+    f->dt_gp = pc->new_gp64("f.dt_gp");                // Reg/Mem.
   }
 
   // Part Initialization
@@ -359,7 +363,7 @@ void FetchLinearGradientPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) n
   pc->load(_table_ptr, mem_ptr(fn.fetch_data(), REL_GRADIENT(lut.data)));
 
   if (dithering_enabled())
-    _dithering_context.initY(fn, x, y);
+    _dithering_context.init_y(fn, x, y);
 
   pc->s_mov_u32(f->py, y);
   pc->v_broadcast_u64(f->dy, mem_ptr(fn.fetch_data(), REL_GRADIENT(linear.dy.u64)));
@@ -376,14 +380,14 @@ void FetchLinearGradientPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) n
   }
 
   pc->v_loadu128(f->pt, mem_ptr(fn.fetch_data(), REL_GRADIENT(linear.pt)));
-  pc->v_slli_i64(f->dtN, f->dt, 1u);
+  pc->v_slli_i64(f->dt_n, f->dt, 1u);
 
 #if defined(BL_JIT_ARCH_X86)
   if (pc->use_256bit_simd()) {
-    cc->vperm2i128(f->dtN, f->dtN, f->dtN, perm_2x128_imm(Perm2x128::kALo, Perm2x128::kZero));
+    cc->vperm2i128(f->dt_n, f->dt_n, f->dt_n, perm_2x128_imm(Perm2x128::kALo, Perm2x128::kZero));
     cc->vperm2i128(f->pt, f->pt, f->pt, perm_2x128_imm(Perm2x128::kALo, Perm2x128::kALo));
-    pc->v_add_i64(f->pt, f->pt, f->dtN);
-    pc->v_slli_i64(f->dtN, f->dt, 2u);
+    pc->v_add_i64(f->pt, f->pt, f->dt_n);
+    pc->v_slli_i64(f->dt_n, f->dt, 2u);
   }
 #endif // BL_JIT_ARCH_X86
 
@@ -393,8 +397,8 @@ void FetchLinearGradientPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) n
   // If we cannot use PACKUSDW, which was introduced by SSE4.1 we subtract 32768 from the pointer
   // and use PACKSSDW instead. However, if we do this, we have to adjust everything else accordingly.
   if (is_pad() && !pc->has_sse4_1()) {
-    pc->v_sub_i32(f->py, f->py, pc->simd_const(&ct.i_0000800000000000, Bcst::k32, f->py));
-    pc->v_sub_i16(f->maxi, f->maxi, pc->simd_const(&ct.i_8000800080008000, Bcst::kNA, f->maxi));
+    pc->v_sub_i32(f->py, f->py, pc->simd_const(&ct.p_0000800000000000, Bcst::k32, f->py));
+    pc->v_sub_i16(f->maxi, f->maxi, pc->simd_const(&ct.p_8000800080008000, Bcst::kNA, f->maxi));
   }
 #endif // BL_JIT_ARCH_X86
 
@@ -403,12 +407,12 @@ void FetchLinearGradientPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) n
 
   if (is_rect_fill()) {
     Vec adv = pc->new_similar_reg(f->dt, "f.adv");
-    calcAdvanceX(adv, x);
+    calc_advance_x(adv, x);
     pc->v_add_i64(f->py, f->py, adv);
   }
 
   if (pixel_granularity() > 1)
-    enterN();
+    enter_n();
 }
 
 void FetchLinearGradientPart::_fini_part() noexcept {}
@@ -416,16 +420,16 @@ void FetchLinearGradientPart::_fini_part() noexcept {}
 // bl::Pipeline::JIT::FetchLinearGradientPart - Advance
 // ====================================================
 
-void FetchLinearGradientPart::advanceY() noexcept {
+void FetchLinearGradientPart::advance_y() noexcept {
   pc->v_add_i64(f->py, f->py, f->dy);
 
   if (dithering_enabled())
-    _dithering_context.advanceY();
+    _dithering_context.advance_y();
 }
 
-void FetchLinearGradientPart::startAtX(const Gp& x) noexcept {
+void FetchLinearGradientPart::start_at_x(const Gp& x) noexcept {
   if (!is_rect_fill()) {
-    calcAdvanceX(f->pt, x);
+    calc_advance_x(f->pt, x);
     pc->v_add_i64(f->pt, f->pt, f->py);
   }
   else {
@@ -433,23 +437,23 @@ void FetchLinearGradientPart::startAtX(const Gp& x) noexcept {
   }
 
   if (dithering_enabled())
-    _dithering_context.startAtX(x);
+    _dithering_context.start_at_x(x);
 }
 
-void FetchLinearGradientPart::advanceX(const Gp& x, const Gp& diff) noexcept {
-  advanceX(x, diff, false);
+void FetchLinearGradientPart::advance_x(const Gp& x, const Gp& diff) noexcept {
+  advance_x(x, diff, false);
 }
 
-void FetchLinearGradientPart::advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept {
+void FetchLinearGradientPart::advance_x(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept {
   Vec adv = pc->new_similar_reg(f->pt, "f.adv");
-  calcAdvanceX(adv, diff);
+  calc_advance_x(adv, diff);
   pc->v_add_i64(f->pt, f->pt, adv);
 
   if (dithering_enabled())
-    _dithering_context.advanceX(x, diff, diff_within_bounds);
+    _dithering_context.advance_x(x, diff, diff_within_bounds);
 }
 
-void FetchLinearGradientPart::calcAdvanceX(const Vec& dst, const Gp& diff) const noexcept {
+void FetchLinearGradientPart::calc_advance_x(const Vec& dst, const Gp& diff) const noexcept {
   // Use 64-bit multiply on 64-bit targets as it's much shorter than doing a vectorized 64x32 multiply.
   if (pc->is_64bit()) {
     Gp adv_tmp = pc->new_gp64("f.adv_tmp");
@@ -465,22 +469,22 @@ void FetchLinearGradientPart::calcAdvanceX(const Vec& dst, const Gp& diff) const
 // bl::Pipeline::JIT::FetchLinearGradientPart - Fetch
 // ==================================================
 
-void FetchLinearGradientPart::enterN() noexcept {}
-void FetchLinearGradientPart::leaveN() noexcept {}
+void FetchLinearGradientPart::enter_n() noexcept {}
+void FetchLinearGradientPart::leave_n() noexcept {}
 
-void FetchLinearGradientPart::prefetchN() noexcept {}
-void FetchLinearGradientPart::postfetchN() noexcept {}
+void FetchLinearGradientPart::prefetch_n() noexcept {}
+void FetchLinearGradientPart::postfetch_n() noexcept {}
 
 void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
   p.set_count(n);
 
   GatherMode gather_mode = predicate.gather_mode();
 
-  switch (n.value()) {
+  switch (uint32_t(n)) {
     case 1: {
       BL_ASSERT(predicate.is_empty());
 
-      Gp gIdx = pc->new_gp32("f.gIdx");
+      Gp r_idx = pc->new_gp32("f.r_idx");
       Vec v_idx = pc->new_vec128("f.v_idx");
       uint32_t vIdxLane = 1u + uint32_t(!is_pad());
 
@@ -489,7 +493,7 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
         if (!pc->has_sse4_1()) {
           pc->v_packs_i32_i16(v_idx, f->pt.v128(), f->pt.v128());
           pc->v_min_i16(v_idx, v_idx, f->maxi.v128());
-          pc->v_add_i16(v_idx, v_idx, pc->simd_const(&ct.i_8000800080008000, Bcst::kNA, v_idx));
+          pc->v_add_i16(v_idx, v_idx, pc->simd_const(&ct.p_8000800080008000, Bcst::kNA, v_idx));
         }
         else
 #endif // BL_JIT_ARCH_X86
@@ -506,8 +510,8 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       }
 
       pc->v_add_i64(f->pt, f->pt, f->dt);
-      pc->s_extract_u16(gIdx, v_idx, vIdxLane);
-      fetch_single_pixel(p, flags, gIdx);
+      pc->s_extract_u16(r_idx, v_idx, vIdxLane);
+      fetch_single_pixel(p, flags, r_idx);
       FetchUtils::satisfy_pixels(pc, p, flags);
       break;
     }
@@ -525,12 +529,12 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       if (pc->use_256bit_simd()) {
         if (is_pad()) {
           pc->v_packs_i32_u16(v_idx, f->pt, f->pt);
-          pc->v_add_i64(v_pt, f->pt, f->dtN);
+          pc->v_add_i64(v_pt, f->pt, f->dt_n);
           pc->v_min_u16(v_idx, v_idx, f->maxi);
         }
         else {
           pc->v_and_i32(v_idx, f->pt, f->maxi);
-          pc->v_add_i64(v_pt, f->pt, f->dtN);
+          pc->v_add_i64(v_pt, f->pt, f->dt_n);
           pc->v_and_i32(v_tmp, v_pt, f->maxi);
           pc->v_packs_i32_u16(v_idx, v_idx, v_tmp);
           pc->v_xor_i32(v_tmp, v_idx, f->rori);
@@ -546,15 +550,15 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
         FetchUtils::IndexLayout index_layout = FetchUtils::IndexLayout::kUInt16;
 
         if (pc->has_non_destructive_src()) {
-          pc->v_add_i64(v_tmp, f->pt, f->dtN);
+          pc->v_add_i64(v_tmp, f->pt, f->dt_n);
           pc->v_interleave_shuffle_u32x4(v_idx, f->pt, v_tmp, swizzle(3, 1, 3, 1));
-          pc->v_add_i64(v_pt, v_tmp, f->dtN);
+          pc->v_add_i64(v_pt, v_tmp, f->dt_n);
         }
         else {
           pc->v_mov(v_idx, f->pt);
-          pc->v_add_i64(v_pt, f->pt, f->dtN);
+          pc->v_add_i64(v_pt, f->pt, f->dt_n);
           pc->v_interleave_shuffle_u32x4(v_idx, v_idx, v_pt, swizzle(3, 1, 3, 1));
-          pc->v_add_i64(v_pt, v_pt, f->dtN);
+          pc->v_add_i64(v_pt, v_pt, f->dt_n);
         }
 
         if (is_pad()) {
@@ -562,7 +566,7 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
           if (!pc->has_sse4_1()) {
             pc->v_packs_i32_i16(v_idx, v_idx, v_idx);
             pc->v_min_i16(v_idx, v_idx, f->maxi);
-            pc->v_add_i16(v_idx, v_idx, pc->simd_const(&ct.i_8000800080008000, Bcst::kNA, v_idx));
+            pc->v_add_i16(v_idx, v_idx, pc->simd_const(&ct.p_8000800080008000, Bcst::kNA, v_idx));
           }
           else
 #endif // BL_JIT_ARCH_X86
@@ -597,11 +601,11 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
 #if defined(BL_JIT_ARCH_X86)
       if (pc->vec_width() >= VecWidth::k256) {
         if (is_pad()) {
-          pc->v_add_i64(v_tmp, f->pt, f->dtN);
+          pc->v_add_i64(v_tmp, f->pt, f->dt_n);
           pc->v_packs_i32_u16(v_idx, f->pt, v_tmp);
 
           if (predicate.is_empty()) {
-            pc->v_add_i64(v_pt, v_tmp, f->dtN);
+            pc->v_add_i64(v_pt, v_tmp, f->dt_n);
           }
 
           pc->v_min_u16(v_idx, v_idx, f->maxi);
@@ -609,12 +613,12 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
         }
         else {
           pc->v_and_i32(v_idx, f->pt, f->maxi);
-          pc->v_add_i64(v_pt, f->pt, f->dtN);
+          pc->v_add_i64(v_pt, f->pt, f->dt_n);
           pc->v_and_i32(v_tmp, v_pt, f->maxi);
           pc->v_packs_i32_u16(v_idx, v_idx, v_tmp);
 
           if (predicate.is_empty()) {
-            pc->v_add_i64(v_pt, v_pt, f->dtN);
+            pc->v_add_i64(v_pt, v_pt, f->dt_n);
           }
 
           pc->v_xor_i32(v_tmp, v_idx, f->rori);
@@ -627,14 +631,14 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       else
 #endif // BL_JIT_ARCH_X86
       {
-        pc->v_add_i64(v_tmp, f->pt, f->dtN);
+        pc->v_add_i64(v_tmp, f->pt, f->dt_n);
         pc->v_interleave_shuffle_u32x4(v_idx, f->pt, v_tmp, swizzle(3, 1, 3, 1));
-        pc->v_add_i64(v_tmp, v_tmp, f->dtN);
-        pc->v_add_i64(v_pt, v_tmp, f->dtN);
+        pc->v_add_i64(v_tmp, v_tmp, f->dt_n);
+        pc->v_add_i64(v_pt, v_tmp, f->dt_n);
         pc->v_interleave_shuffle_u32x4(v_tmp, v_tmp, v_pt, swizzle(3, 1, 3, 1));
 
         if (predicate.is_empty()) {
-          pc->v_add_i64(v_pt, v_pt, f->dtN);
+          pc->v_add_i64(v_pt, v_pt, f->dt_n);
         }
 
         if (is_pad()) {
@@ -642,7 +646,7 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
           if (!pc->has_sse4_1()) {
             pc->v_packs_i32_i16(v_idx, v_idx, v_tmp);
             pc->v_min_i16(v_idx, v_idx, f->maxi);
-            pc->v_add_i16(v_idx, v_idx, pc->simd_const(&ct.i_8000800080008000, Bcst::kNA, v_idx));
+            pc->v_add_i16(v_idx, v_idx, pc->simd_const(&ct.p_8000800080008000, Bcst::kNA, v_idx));
           }
           else
 #endif // BL_JIT_ARCH_X86
@@ -671,7 +675,7 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
   }
 
   if (!predicate.is_empty()) {
-    advanceX(pc->_gp_none, predicate.count().r32());
+    advance_x(pc->_gp_none, predicate.count().r32());
   }
 }
 
@@ -681,7 +685,7 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
 FetchRadialGradientPart::FetchRadialGradientPart(PipeCompiler* pc, FetchType fetch_type, FormatExt format) noexcept
   : FetchGradientPart(pc, fetch_type, format) {
 
-  _max_vec_width_supported = VecWidth::kMaxPlatformWidth;
+  _max_vec_width_supported = kMaxPlatformWidth;
 
   bool dither = false;
   switch (fetch_type) {
@@ -708,10 +712,10 @@ FetchRadialGradientPart::FetchRadialGradientPart(PipeCompiler* pc, FetchType fet
   }
 
   add_part_flags(PipePartFlags::kAdvanceXNeedsDiff |
-               PipePartFlags::kMaskedAccess |
-               PipePartFlags::kExpensive);
+                 PipePartFlags::kMaskedAccess |
+                 PipePartFlags::kExpensive);
   set_dithering_enabled(dither);
-  JitUtils::reset_var_struct(&f, sizeof(f));
+  OpUtils::reset_var_struct(&f, sizeof(f));
 }
 
 // bl::Pipeline::JIT::FetchRadialGradientPart - Prepare
@@ -731,34 +735,34 @@ void FetchRadialGradientPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) n
 
   VecWidth vw = vec_width();
 
-  _table_ptr = pc->new_gp("f.table");                      // Reg.
+  _table_ptr = pc->new_gpz("f.table");                     // Reg.
 
-  f->ty_tx = pc->new_vec128_2xf64("f.ty_tx");              // Mem.
-  f->yy_yx = pc->new_vec128_2xf64("f.yy_yx");              // Mem.
-  f->dd0_b0 = pc->new_vec128_2xf64("f.dd0_b0");            // Mem.
-  f->ddy_by = pc->new_vec128_2xf64("f.ddy_by");            // Mem.
+  f->ty_tx = pc->new_vec128_f64x2("f.ty_tx");              // Mem.
+  f->yy_yx = pc->new_vec128_f64x2("f.yy_yx");              // Mem.
+  f->dd0_b0 = pc->new_vec128_f64x2("f.dd0_b0");            // Mem.
+  f->ddy_by = pc->new_vec128_f64x2("f.ddy_by");            // Mem.
 
-  f->vy = pc->new_vec128_2xf64("f.vy");                    // Reg/Mem.
+  f->vy = pc->new_vec128_f64x2("f.vy");                    // Reg/Mem.
 
-  f->inv2a_4a = pc->new_vec128_2xf64("f.inv2a_4a");        // Reg/Mem.
-  f->sqinv2a_sqfr = pc->new_vec128_2xf64("f.sqinv2a_sqfr");// Reg/Mem.
+  f->inv2a_4a = pc->new_vec128_f64x2("f.inv2a_4a");        // Reg/Mem.
+  f->sqinv2a_sqfr = pc->new_vec128_f64x2("f.sqinv2a_sqfr");// Reg/Mem.
 
-  f->d = pc->new_vec(vw, "f.d");                           // Reg.
-  f->b = pc->new_vec(vw, "f.b");                           // Reg.
-  f->dd = pc->new_vec(vw, "f.dd");                         // Reg/Mem.
-  f->vx = pc->new_vec(vw, "f.vx");                         // Reg.
-  f->value = pc->new_vec(vw, "f.value");                   // Reg.
+  f->d = pc->new_vec_with_width(vw, "f.d");                // Reg.
+  f->b = pc->new_vec_with_width(vw, "f.b");                // Reg.
+  f->dd = pc->new_vec_with_width(vw, "f.dd");              // Reg/Mem.
+  f->vx = pc->new_vec_with_width(vw, "f.vx");              // Reg.
+  f->value = pc->new_vec_with_width(vw, "f.value");        // Reg.
 
-  f->bd = pc->new_vec(vw, "f.bd");                         // Reg/Mem.
-  f->ddd = pc->new_vec(vw, "f.ddd");                       // Reg/Mem.
+  f->bd = pc->new_vec_with_width(vw, "f.bd");              // Reg/Mem.
+  f->ddd = pc->new_vec_with_width(vw, "f.ddd");            // Reg/Mem.
 
-  f->vmaxi = pc->new_vec(vw, "f.vmaxi");                   // Reg/Mem.
+  f->vmaxi = pc->new_vec_with_width(vw, "f.vmaxi");        // Reg/Mem.
 
   // Part Initialization
   // -------------------
 
   if (dithering_enabled())
-    _dithering_context.initY(fn, x, y);
+    _dithering_context.init_y(fn, x, y);
 
   pc->load(_table_ptr, mem_ptr(fn.fetch_data(), REL_GRADIENT(lut.data)));
 
@@ -788,7 +792,7 @@ void FetchRadialGradientPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) n
     }
   }
   else {
-    f->vrori = pc->new_vec(vw, "f.vrori");
+    f->vrori = pc->new_vec_with_width(vw, "f.vrori");
     pc->v_broadcast_u32(f->vmaxi, mem_ptr(fn.fetch_data(), REL_GRADIENT(radial.maxi)));
     pc->v_broadcast_u16(f->vrori, mem_ptr(fn.fetch_data(), REL_GRADIENT(radial.rori)));
   }
@@ -804,18 +808,18 @@ void FetchRadialGradientPart::_fini_part() noexcept {}
 // bl::Pipeline::JIT::FetchRadialGradientPart - Advance
 // ====================================================
 
-void FetchRadialGradientPart::advanceY() noexcept {
-  pc->v_add_f64(f->vy, f->vy, pc->simd_const(&pc->ct.f64_1, Bcst::k64, f->vy));
+void FetchRadialGradientPart::advance_y() noexcept {
+  pc->v_add_f64(f->vy, f->vy, pc->simd_const(&ct.f64_1, Bcst::k64, f->vy));
 
   if (dithering_enabled())
-    _dithering_context.advanceY();
+    _dithering_context.advance_y();
 }
 
-void FetchRadialGradientPart::startAtX(const Gp& x) noexcept {
-  Vec v0 = pc->new_vec128_2xf64("@v0");
-  Vec v1 = pc->new_vec128_2xf64("@v1");
-  Vec v2 = pc->new_vec128_2xf64("@v2");
-  Vec v3 = pc->new_vec128_2xf64("@v3");
+void FetchRadialGradientPart::start_at_x(const Gp& x) noexcept {
+  Vec v0 = pc->new_vec128_f64x2("@v0");
+  Vec v1 = pc->new_vec128_f64x2("@v1");
+  Vec v2 = pc->new_vec128_f64x2("@v2");
+  Vec v3 = pc->new_vec128_f64x2("@v3");
 
   pc->v_madd_f64(v1, f->vy, f->yy_yx, f->ty_tx);          // v1    = [ ty  + Y * yy      | tx + Y * yx          ] => [  py  |  px  ]
   pc->v_madd_f64(v0, f->vy, f->ddy_by, f->dd0_b0);        // v0    = [ dd0 + Y * ddy     | b0 + Y * by          ] => [  dd  |   b  ]
@@ -846,16 +850,16 @@ void FetchRadialGradientPart::startAtX(const Gp& x) noexcept {
     init_vx(f->vx, x);
 
   if (dithering_enabled())
-    _dithering_context.startAtX(x);
+    _dithering_context.start_at_x(x);
 }
 
-void FetchRadialGradientPart::advanceX(const Gp& x, const Gp& diff) noexcept {
-  advanceX(x, diff, false);
+void FetchRadialGradientPart::advance_x(const Gp& x, const Gp& diff) noexcept {
+  advance_x(x, diff, false);
 }
 
-void FetchRadialGradientPart::advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept {
+void FetchRadialGradientPart::advance_x(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept {
   VecWidth vw = vec_width();
-  Vec vd = pc->new_vec(vw, "@vd");
+  Vec vd = pc->new_vec_with_width(vw, "@vd");
 
   // `vd` is `diff` converted to f32 and broadcasted to all lanes.
   pc->s_cvt_int_to_f32(vd, diff);
@@ -863,13 +867,13 @@ void FetchRadialGradientPart::advanceX(const Gp& x, const Gp& diff, bool diff_wi
   pc->v_add_f32(f->vx, f->vx, vd);
 
   if (dithering_enabled())
-    _dithering_context.advanceX(x, diff, diff_within_bounds);
+    _dithering_context.advance_x(x, diff, diff_within_bounds);
 }
 
 // bl::Pipeline::JIT::FetchRadialGradientPart - Fetch
 // ==================================================
 
-void FetchRadialGradientPart::prefetchN() noexcept {
+void FetchRadialGradientPart::prefetch_n() noexcept {
   Vec v0 = f->value;
   Vec v1 = pc->new_similar_reg(v0, "v1");
 
@@ -880,7 +884,7 @@ void FetchRadialGradientPart::prefetchN() noexcept {
   pc->v_sqrt_f32(v0, v0);
 }
 
-void FetchRadialGradientPart::postfetchN() noexcept {}
+void FetchRadialGradientPart::postfetch_n() noexcept {}
 
 void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
   p.set_count(n);
@@ -891,11 +895,11 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
 
   GatherMode gather_mode = predicate.gather_mode();
 
-  switch (n.value()) {
+  switch (uint32_t(n)) {
     case 1: {
       BL_ASSERT(predicate.is_empty());
 
-      Gp gIdx = pc->new_gp("gIdx");
+      Gp r_idx = pc->new_gpz("r_idx");
       Vec v_idx = pc->new_vec128("v_idx");
       Vec v0 = pc->new_vec128("v0");
 
@@ -906,7 +910,7 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       pc->v_abs_f32(v0, v0);
       pc->s_sqrt_f32(v0, v0);
       pc->s_madd_f32(v_idx, f->bd, f->vx, f->b);
-      pc->v_add_f32(f->vx, f->vx, pc->simd_const(&pc->ct.f32_1, Bcst::k32, f->vx));
+      pc->v_add_f32(f->vx, f->vx, pc->simd_const(&ct.f32_1, Bcst::k32, f->vx));
 
       pc->v_add_f32(v_idx, v_idx, v0);
 
@@ -914,8 +918,8 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
 
       apply_extend(v_idx, v_idx, v0);
 
-      pc->s_extract_u16(gIdx, v_idx, 0u);
-      fetch_single_pixel(p, flags, gIdx);
+      pc->s_extract_u16(r_idx, v_idx, 0u);
+      fetch_single_pixel(p, flags, r_idx);
 
       FetchUtils::satisfy_pixels(pc, p, flags);
       break;
@@ -929,7 +933,7 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       pc->v_madd_f32(v_idx, f->bd.v128(), f->vx.v128(), f->b.v128());
 
       if (predicate.is_empty()) {
-        pc->v_add_f32(f->vx, f->vx, pc->simd_const(&pc->ct.f32_4, Bcst::k32, f->vx));
+        pc->v_add_f32(f->vx, f->vx, pc->simd_const(&ct.f32_4, Bcst::k32, f->vx));
       }
 
       pc->v_add_f32(v_idx, v_idx, v0.v128());
@@ -962,8 +966,8 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       });
 
       if (!predicate.is_empty()) {
-        advanceX(pc->_gp_none, predicate.count(), true);
-        prefetchN();
+        advance_x(pc->_gp_none, predicate.count(), true);
+        prefetch_n();
       }
 
       FetchUtils::satisfy_pixels(pc, p, flags);
@@ -980,7 +984,7 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
         pc->v_madd_f32(v_idx, f->bd, f->vx, f->b);
 
         if (predicate.is_empty()) {
-          pc->v_add_f32(f->vx, f->vx, pc->simd_const(&pc->ct.f32_8, Bcst::k32, f->vx));
+          pc->v_add_f32(f->vx, f->vx, pc->simd_const(&ct.f32_8, Bcst::k32, f->vx));
         }
 
         pc->v_add_f32(v_idx, v_idx, v0);
@@ -1017,8 +1021,8 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
         });
 
         if (!predicate.is_empty()) {
-          advanceX(pc->_gp_none, predicate.count(), true);
-          prefetchN();
+          advance_x(pc->_gp_none, predicate.count(), true);
+          prefetch_n();
         }
 
         FetchUtils::satisfy_pixels(pc, p, flags);
@@ -1032,12 +1036,12 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
         Vec vIdx0 = pc->new_vec128("vIdx0");
         Vec vIdx1 = pc->new_vec128("vIdx1");
 
-        pc->v_add_f32(v_tmp, f->vx, pc->simd_const(&pc->ct.f32_4, Bcst::k32, f->vx));
+        pc->v_add_f32(v_tmp, f->vx, pc->simd_const(&ct.f32_4, Bcst::k32, f->vx));
         pc->v_madd_f32(vIdx1, f->dd, v_tmp, f->d);
         pc->v_madd_f32(vIdx0, f->bd.v128(), f->vx.v128(), f->b.v128());
 
         if (predicate.is_empty()) {
-          pc->v_add_f32(f->vx, v_tmp, pc->simd_const(&pc->ct.f32_4, Bcst::k32, f->vx));
+          pc->v_add_f32(f->vx, v_tmp, pc->simd_const(&ct.f32_4, Bcst::k32, f->vx));
         }
 
         pc->v_mul_f32(v_tmp, v_tmp, v_tmp);
@@ -1076,8 +1080,8 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
         });
 
         if (!predicate.is_empty()) {
-          advanceX(pc->_gp_none, predicate.count(), true);
-          prefetchN();
+          advance_x(pc->_gp_none, predicate.count(), true);
+          prefetch_n();
         }
 
         FetchUtils::satisfy_pixels(pc, p, flags);
@@ -1105,7 +1109,7 @@ FetchUtils::IndexLayout FetchRadialGradientPart::apply_extend(const Vec& idx0, c
     if (!pc->has_sse4_1()) {
       pc->v_packs_i32_i16(idx0, idx0, idx1);
       pc->v_min_i16(idx0, idx0, f->vmaxi);
-      pc->v_max_i16(idx0, idx0, pc->simd_const(&ct.i_0000000000000000, Bcst::kNA, idx0));
+      pc->v_max_i16(idx0, idx0, pc->simd_const(&ct.p_0000000000000000, Bcst::kNA, idx0));
       return FetchUtils::IndexLayout::kUInt16;
     }
 
@@ -1113,7 +1117,7 @@ FetchUtils::IndexLayout FetchRadialGradientPart::apply_extend(const Vec& idx0, c
       // Must be the same when using AVX2 vectors (256-bit and wider).
       BL_ASSERT(idx0.id() == idx1.id());
 
-      pc->v_max_i32(idx0, idx0, pc->simd_const(&ct.i_0000000000000000, Bcst::kNA, idx0));
+      pc->v_max_i32(idx0, idx0, pc->simd_const(&ct.p_0000000000000000, Bcst::kNA, idx0));
       pc->v_min_u32(idx0, idx0, f->vmaxi.clone_as(idx0));
       return FetchUtils::IndexLayout::kUInt32Lo16;
     }
@@ -1145,11 +1149,11 @@ FetchUtils::IndexLayout FetchRadialGradientPart::apply_extend(const Vec& idx0, c
 FetchConicGradientPart::FetchConicGradientPart(PipeCompiler* pc, FetchType fetch_type, FormatExt format) noexcept
   : FetchGradientPart(pc, fetch_type, format) {
 
-  _max_vec_width_supported = VecWidth::kMaxPlatformWidth;
+  _max_vec_width_supported = kMaxPlatformWidth;
 
   add_part_flags(PipePartFlags::kMaskedAccess | PipePartFlags::kExpensive);
   set_dithering_enabled(fetch_type == FetchType::kGradientConicDither);
-  JitUtils::reset_var_struct(&f, sizeof(f));
+  OpUtils::reset_var_struct(&f, sizeof(f));
 }
 
 // bl::Pipeline::JIT::FetchConicGradientPart - Prepare
@@ -1168,23 +1172,23 @@ void FetchConicGradientPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) no
   // Local Registers
   // ---------------
 
-  _table_ptr = pc->new_gp("f.table");                // Reg.
+  _table_ptr = pc->new_gpz("f.table");                 // Reg.
 
-  f->ty_tx = pc->new_vec128_2xf64("f.ty_tx");              // Reg/Mem.
-  f->yy_yx = pc->new_vec128_2xf64("f.yy_yx");              // Reg/Mem.
+  f->ty_tx = pc->new_vec128_f64x2("f.ty_tx");          // Reg/Mem.
+  f->yy_yx = pc->new_vec128_f64x2("f.yy_yx");          // Reg/Mem.
 
-  f->tx = pc->new_vec(vw, "f.tx");                     // Reg/Mem.
-  f->xx = pc->new_vec(vw, "f.xx");                     // Reg/Mem.
-  f->vx = pc->new_vec(vw, "f.vx");                     // Reg.
+  f->tx = pc->new_vec_with_width(vw, "f.tx");          // Reg/Mem.
+  f->xx = pc->new_vec_with_width(vw, "f.xx");          // Reg/Mem.
+  f->vx = pc->new_vec_with_width(vw, "f.vx");          // Reg.
 
-  f->ay = pc->new_vec(vw, "f.ay");                     // Reg/Mem.
-  f->by = pc->new_vec(vw, "f.by");                     // Reg/Mem.
+  f->ay = pc->new_vec_with_width(vw, "f.ay");          // Reg/Mem.
+  f->by = pc->new_vec_with_width(vw, "f.by");          // Reg/Mem.
 
-  f->q_coeff = pc->new_vec(vw, "f.q_coeff");           // Reg/Mem.
-  f->n_coeff = pc->new_vec(vw, "f.n_coeff");           // Reg/Mem.
+  f->q_coeff = pc->new_vec_with_width(vw, "f.q_coeff");// Reg/Mem.
+  f->n_coeff = pc->new_vec_with_width(vw, "f.n_coeff");// Reg/Mem.
 
-  f->maxi = pc->new_vec(vw, "f.maxi");                 // Reg/Mem.
-  f->rori = pc->new_vec(vw, "f.rori");                 // Reg/Mem.
+  f->maxi = pc->new_vec_with_width(vw, "f.maxi");      // Reg/Mem.
+  f->rori = pc->new_vec_with_width(vw, "f.rori");      // Reg/Mem.
 
   // Part Initialization
   // -------------------
@@ -1192,7 +1196,7 @@ void FetchConicGradientPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) no
   pc->load(_table_ptr, mem_ptr(fn.fetch_data(), REL_GRADIENT(lut.data)));
 
   if (dithering_enabled())
-    _dithering_context.initY(fn, x, y);
+    _dithering_context.init_y(fn, x, y);
 
   pc->s_cvt_int_to_f64(f->ty_tx, y);
   pc->v_loadu128_f64(f->yy_yx, mem_ptr(fn.fetch_data(), REL_GRADIENT(conic.yx)));
@@ -1216,14 +1220,14 @@ void FetchConicGradientPart::_fini_part() noexcept {}
 // bl::Pipeline::JIT::FetchConicGradientPart - Advance
 // ===================================================
 
-void FetchConicGradientPart::advanceY() noexcept {
+void FetchConicGradientPart::advance_y() noexcept {
   pc->v_add_f64(f->ty_tx, f->ty_tx, f->yy_yx);
 
   if (dithering_enabled())
-    _dithering_context.advanceY();
+    _dithering_context.advance_y();
 }
 
-void FetchConicGradientPart::startAtX(const Gp& x) noexcept {
+void FetchConicGradientPart::start_at_x(const Gp& x) noexcept {
   Vec n_div_1 = pc->new_similar_reg(f->by, "@n_div_1");
 
   pc->v_cvt_f64_to_f32_lo(f->by.v128(), f->ty_tx);
@@ -1246,16 +1250,16 @@ void FetchConicGradientPart::startAtX(const Gp& x) noexcept {
     init_vx(f->vx, x);
 
   if (dithering_enabled())
-    _dithering_context.startAtX(x);
+    _dithering_context.start_at_x(x);
 }
 
-void FetchConicGradientPart::advanceX(const Gp& x, const Gp& diff) noexcept {
-  advanceX(x, diff, false);
+void FetchConicGradientPart::advance_x(const Gp& x, const Gp& diff) noexcept {
+  advance_x(x, diff, false);
 }
 
-void FetchConicGradientPart::advanceX(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept {
+void FetchConicGradientPart::advance_x(const Gp& x, const Gp& diff, bool diff_within_bounds) noexcept {
   VecWidth vw = vec_width(max_pixels());
-  Vec vd = pc->new_vec(vw, "@vd");
+  Vec vd = pc->new_vec_with_width(vw, "@vd");
 
   // `vd` is `diff` converted to f32 and broadcasted to all lanes.
   pc->s_cvt_int_to_f32(vd, diff);
@@ -1263,18 +1267,18 @@ void FetchConicGradientPart::advanceX(const Gp& x, const Gp& diff, bool diff_wit
   pc->v_add_f32(f->vx, f->vx, vd);
 
   if (dithering_enabled())
-    _dithering_context.advanceX(x, diff, diff_within_bounds);
+    _dithering_context.advance_x(x, diff, diff_within_bounds);
 }
 
 // bl::Pipeline::JIT::FetchConicGradientPart - Fetch
 // =================================================
 
-void FetchConicGradientPart::prefetchN() noexcept {}
+void FetchConicGradientPart::prefetch_n() noexcept {}
 
 void FetchConicGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
   p.set_count(n);
 
-  VecWidth vw = vec_width(n.value());
+  VecWidth vw = vec_width(uint32_t(n));
   GatherMode gather_mode = predicate.gather_mode();
 
   Vec ay = VecWidthUtils::clone_vec_as(f->ay, vw);
@@ -1284,16 +1288,16 @@ void FetchConicGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
   Vec q_coeff = VecWidthUtils::clone_vec_as(f->q_coeff, vw);
   Vec n_coeff = VecWidthUtils::clone_vec_as(f->n_coeff, vw);
 
-  Vec t0 = pc->new_vec(vw, "t0");
-  Vec t1 = pc->new_vec(vw, "t1");
-  Vec t2 = pc->new_vec(vw, "t2");
-  Vec t3 = pc->new_vec(vw, "t3");
-  Vec t4 = pc->new_vec(vw, "t4");
-  Vec t5 = pc->new_vec(vw, "t5");
+  Vec t0 = pc->new_vec_with_width(vw, "t0");
+  Vec t1 = pc->new_vec_with_width(vw, "t1");
+  Vec t2 = pc->new_vec_with_width(vw, "t2");
+  Vec t3 = pc->new_vec_with_width(vw, "t3");
+  Vec t4 = pc->new_vec_with_width(vw, "t4");
+  Vec t5 = pc->new_vec_with_width(vw, "t5");
 
-  switch (n.value()) {
+  switch (uint32_t(n)) {
     case 1: {
-      Gp idx = pc->new_gp("f.idx");
+      Gp idx = pc->new_gpz("f.idx");
 
       pc->s_madd_f32(t0, f->vx.clone_as(t0), xx, tx);
       pc->v_abs_f32(t1, t0);
@@ -1336,7 +1340,7 @@ void FetchConicGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
       fetch_single_pixel(p, flags, idx);
       FetchUtils::satisfy_pixels(pc, p, flags);
 
-      pc->v_add_f32(f->vx, f->vx, pc->simd_const(&pc->ct.f32_1, Bcst::k32, f->vx));
+      pc->v_add_f32(f->vx, f->vx, pc->simd_const(&ct.f32_1, Bcst::k32, f->vx));
       break;
     }
 
@@ -1383,15 +1387,15 @@ void FetchConicGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
       fetch_multiple_pixels(p, n, flags, t1, FetchUtils::IndexLayout::kUInt32Lo16, gather_mode);
 
       if (predicate.is_empty()) {
-        if (n == 4)
-          pc->v_add_f32(f->vx, f->vx, pc->simd_const(&pc->ct.f32_4, Bcst::k32, f->vx));
-        else if (n == 8)
-          pc->v_add_f32(f->vx, f->vx, pc->simd_const(&pc->ct.f32_8, Bcst::k32, f->vx));
-        else if (n == 16)
-          pc->v_add_f32(f->vx, f->vx, pc->simd_const(&pc->ct.f32_16, Bcst::k32, f->vx));
+        if (n == PixelCount(4))
+          pc->v_add_f32(f->vx, f->vx, pc->simd_const(&ct.f32_4, Bcst::k32, f->vx));
+        else if (n == PixelCount(8))
+          pc->v_add_f32(f->vx, f->vx, pc->simd_const(&ct.f32_8, Bcst::k32, f->vx));
+        else if (n == PixelCount(16))
+          pc->v_add_f32(f->vx, f->vx, pc->simd_const(&ct.f32_16, Bcst::k32, f->vx));
       }
       else {
-        advanceX(pc->_gp_none, predicate.count(), true);
+        advance_x(pc->_gp_none, predicate.count(), true);
       }
 
       FetchUtils::satisfy_pixels(pc, p, flags);
