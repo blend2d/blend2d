@@ -41,25 +41,21 @@ void PipeFunction::prepare(PipeCompiler& pc, PipePart* root) noexcept {
 }
 
 void PipeFunction::begin_function(PipeCompiler& pc) noexcept {
-  BackendCompiler* cc = pc.cc;
-  asmjit::FuncNode* func_node = cc->new_func(asmjit::FuncSignature::build<void, ContextData*, const void*, const void*>(asmjit::CallConvId::kCDecl));
+  asmjit::FuncNode* func = pc.add_func(asmjit::FuncSignature::build<void, ContextData*, const void*, const void*>(asmjit::CallConvId::kCDecl));
 
-  pc.init_function(func_node);
+  pc._func_end = func->end_node()->prev();
 
   _ctx_data = pc.new_gpz("ctx_data");
   _fill_data = pc.new_gpz("fill_data");
   _fetch_data = pc.new_gpz("fetch_data");
 
-  func_node->set_arg(0, _ctx_data);
-  func_node->set_arg(1, _fill_data);
-  func_node->set_arg(2, _fetch_data);
+  func->set_arg(0, _ctx_data);
+  func->set_arg(1, _fill_data);
+  func->set_arg(2, _fetch_data);
 }
 
 void PipeFunction::end_function(PipeCompiler& pc) noexcept {
-  BackendCompiler* cc = pc.cc;
-
-  // Finalize the pipeline function.
-  cc->end_func();
+  pc.end_func();
 }
 
 } // {bl::Pipeline::JIT}

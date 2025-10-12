@@ -26,6 +26,9 @@ public:
   //! \name Members
   //! \{
 
+  //! Function end hook (to add 'unlikely' branches).
+  asmjit::BaseNode* _func_end = nullptr;
+
   //! Empty predicate, used in cases where a predicate is required, but it's empty.
   PixelPredicate _empty_predicate {};
 

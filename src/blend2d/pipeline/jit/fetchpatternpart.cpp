@@ -273,7 +273,7 @@ void FetchSimplePatternPart::_init_part(const PipeFunction& fn, Gp& x, Gp& y) no
     pc->mul(f->srcp1, f->srcp1, f->stride);
 
     pc->add(f->srcp1, f->srcp1, mem_ptr(fn.fetch_data(), REL_PATTERN(src.pixel_data)));
-    pc->i_prefetch(mem_ptr(f->srcp1));
+    pc->prefetch(mem_ptr(f->srcp1));
 
     Gp cut = pc->new_gpz("@stride_cut");
     pc->mul(cut.r32(), mem_ptr(fn.fetch_data(), REL_PATTERN(src.size.w)), int(bpp()));

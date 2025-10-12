@@ -369,7 +369,7 @@ FillFunc PipeDynamicRuntime::_compile_fill_func(uint32_t signature) noexcept {
     pipe_function.begin_function(pc);
 
     if (_emit_stack_frames)
-      pc._func_node->frame().add_attributes(asmjit::FuncAttributes::kHasPreservedFP);
+      pc.cc->func()->frame().add_attributes(asmjit::FuncAttributes::kHasPreservedFP);
     fill_part->compile(pipe_function);
 
     pipe_function.end_function(pc);
