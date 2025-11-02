@@ -11,7 +11,7 @@ def read_text_file(file_name):
 
 def get_version():
   try:
-    api_h = read_text_file(os.path.join(BLEND2D_DIR, "src", "blend2d", "api.h"))
+    api_h = read_text_file(os.path.join(BLEND2D_DIR, "blend2d", "core", "api.h"))
     ver = re.search("#define BL_VERSION BL_MAKE_VERSION\\((\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\)", api_h)
     if ver:
         return "{}.{}.{}".format(ver[1], ver[2], ver[3])

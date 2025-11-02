@@ -1,9 +1,20 @@
 # Blend2D
 # =======
 
-# To consume blend2d as a dependency, use blend2d::blend2d alias.
+# To consume blend2d as a dependency, use `blend2d::blend2d` alias.
 
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
+
+# Blend2D - Integration
+# =====================
+
+# This is a hack for CMakePresets.json, which cannot conditionally include this when building Blend2D demos.
+# So instead, it passes BLEND2D_SETUP_VCPKG_TOOLCHAIN_FILE set to ON and the logic of setting up the toolchain
+# is here.
+if (BLEND2D_SETUP_VCPKG_TOOLCHAIN_FILE AND DEFINED ENV{VCPKG_ROOT} AND EXISTS "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+  message(STATUS "[blend2d] Setting CMake toolchain file to $ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+endif()
 
 # Blend2D - Project & Configuration
 # =================================
@@ -16,187 +27,186 @@ project(blend2d
 # BLEND2D_XXX are cmake variables whereas BL_XXX are build-time macros passed to compiler via flags.
 set(BLEND2D_SANITIZE           "" CACHE STRING "Sanitizers to use (development)")
 set(BLEND2D_SANITIZE_OPTS      "" CACHE STRING "Extra flags for sanitizers (development)")
-option(BLEND2D_STATIC          "Build 'blend2d' as a static library instead"                          OFF)
-option(BLEND2D_TEST            "Build 'blend2d' tests and samples (development)"                      OFF)
-option(BLEND2D_DEMOS           "Build 'blend2d' interactive demos that use Qt library (development)"  OFF)
+
+option(BLEND2D_STATIC          "Build 'blend2d' as a static library instead" OFF)
+option(BLEND2D_TEST            "Build 'blend2d' tests and samples (development)" OFF)
+option(BLEND2D_DEMOS           "Build 'blend2d' interactive demos that use Qt library (development)" OFF)
+
+option(BLEND2D_NO_NATVIS       "Disable 'blend2d' natvis support (development)" OFF)
 option(BLEND2D_NO_JIT          "Disable 'blend2d' JIT pipelines generation support (not recommended)" OFF)
-option(BLEND2D_NO_JIT_LOGGING  "Disable 'blend2d' JIT pipelines logging support (deployment)"         OFF)
-option(BLEND2D_NO_NATVIS       "Disable 'blend2d' natvis support (development)"                       OFF)
-option(BLEND2D_NO_TLS          "Disable 'blend2d' use of TLS (development)"                           OFF)
-option(BLEND2D_NO_FUTEX        "Disable 'blend2d' use of futexes (development)"                       OFF)
+option(BLEND2D_NO_JIT_LOGGING  "Disable 'blend2d' JIT pipelines logging support (deployment)" OFF)
+option(BLEND2D_NO_TLS          "Disable 'blend2d' use of TLS (development)" OFF)
+option(BLEND2D_NO_FUTEX        "Disable 'blend2d' use of futexes (development)" OFF)
 option(BLEND2D_NO_INSTALL      "Disable 'blend2d' install support for cmake (development/deployment)" OFF)
-option(BLEND2D_EXTERNAL_ASMJIT "Enable support for external asmjit library (not recommended)"         OFF)
+option(BLEND2D_EXTERNAL_ASMJIT "Enable support for external asmjit library (no support by upstream)" OFF)
 
 # Avoid linking to the C++ stdlib by default if blend2d is being built as a shared library with bundled asmjit.
 if (NOT BLEND2D_STATIC AND NOT BLEND2D_EXTERNAL_ASMJIT)
-  option(BLEND2D_NO_STDCXX "Disable 'blend2d' linking to a standard C++ library (deployment)" ON)
+  option(BLEND2D_NO_STDCXX     "Disable 'blend2d' linking to a standard C++ library (deployment)" ON)
 else()
-  option(BLEND2D_NO_STDCXX "Disable 'blend2d' linking to a standard C++ library (deployment)" OFF)
+  option(BLEND2D_NO_STDCXX     "Disable 'blend2d' linking to a standard C++ library (deployment)" OFF)
 endif()
 
 # Blend2D - Build Definitions and Source Files
 # ============================================
 
-set(BLEND2D_INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/src") # Include directory is the same as source dir.
-set(BLEND2D_DEPS "")                                      # Blend2D dependencies (libraries) for the linker.
-set(BLEND2D_CFLAGS "")                                    # Public compiler flags.
-set(BLEND2D_WARNING_CFLAGS "")                            # Flags that enable compiler warnings (we add them to various targets).
-set(BLEND2D_PRIVATE_CFLAGS "")                            # Private compiler flags independent of build type.
-set(BLEND2D_PRIVATE_CFLAGS_DBG "")                        # Private compiler flags used by debug builds.
-set(BLEND2D_PRIVATE_CFLAGS_REL "")                        # Private compiler flags used by release builds.
-set(BLEND2D_PRIVATE_LFLAGS "")                            # Private linker flags.
-set(BLEND2D_SANITIZE_CFLAGS "${BLEND2D_SANITIZE_OPTS}")   # Compiler flags required by currently enabled sanitizers.
-set(BLEND2D_SANITIZE_LFLAGS "")                           # Linker flags required by currently enabled sanitizers.
-set(BLEND2D_NO_STDCXX_CFLAGS "")                          # Private compiler flags to disable linking to a standard C++ library.
-set(BLEND2D_NO_STDCXX_LFLAGS "")                          # Private linker flags to disable linking to a standard C++ library.
+set(BLEND2D_INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}")   # Blend2D include directory is the same as <root> directory.
+set(BLEND2D_LIBS "")                                    # Blend2D library dependencies for the linker.
+set(BLEND2D_CFLAGS "")                                  # Public compiler flags.
+set(BLEND2D_WARNING_CFLAGS "")                          # Flags that enable compiler warnings (we add them to various targets).
+set(BLEND2D_PRIVATE_CFLAGS "")                          # Private compiler flags independent of build type.
+set(BLEND2D_PRIVATE_CFLAGS_DBG "")                      # Private compiler flags used by debug builds.
+set(BLEND2D_PRIVATE_CFLAGS_REL "")                      # Private compiler flags used by release builds.
+set(BLEND2D_PRIVATE_LFLAGS "")                          # Private linker flags.
+set(BLEND2D_SANITIZE_CFLAGS "${BLEND2D_SANITIZE_OPTS}") # Compiler flags required by currently enabled sanitizers.
+set(BLEND2D_SANITIZE_LFLAGS "")                         # Linker flags required by currently enabled sanitizers.
+set(BLEND2D_NO_STDCXX_CFLAGS "")                        # Private compiler flags to disable linking to a standard C++ library.
+set(BLEND2D_NO_STDCXX_LFLAGS "")                        # Private linker flags to disable linking to a standard C++ library.
 
 if (BLEND2D_STATIC)
-  message(STATUS "[blend2d] Building static library ('BLEND2D_STATIC=${BLEND2D_STATIC}' => 'BLEND2D_TARGET_TYPE=STATIC')")
   set(BLEND2D_TARGET_TYPE "STATIC")
   list(APPEND BLEND2D_CFLAGS -DBL_STATIC)
-  list(APPEND BLEND2D_PRIVATE_CFLAGS -DBL_STATIC)
 else()
-  message(STATUS "[blend2d] Building shared library ('BLEND2D_STATIC=OFF' => 'BLEND2D_TARGET_TYPE=SHARED')")
   set(BLEND2D_TARGET_TYPE "SHARED")
 endif()
+message(STATUS "[blend2d] == Configuring Blend2D ('BLEND2D_TARGET_TYPE=${BLEND2D_TARGET_TYPE}') ==")
 
 set(BLEND2D_SRC_LIST
-  blend2d.h
-  blend2d-debug.h
-  blend2d-impl.h
-  blend2d/api.h
-  blend2d/api-build_p.h
-  blend2d/api-build_test_p.h
-  blend2d/api-globals.cpp
-  blend2d/api-impl.h
-  blend2d/api-internal_p.h
-  blend2d/api-nocxx.cpp
-  blend2d/array.cpp
-  blend2d/array_test.cpp
-  blend2d/array.h
-  blend2d/array_p.h
-  blend2d/bitarray.cpp
-  blend2d/bitarray_test.cpp
-  blend2d/bitarray.h
-  blend2d/bitarray_p.h
-  blend2d/bitset.cpp
-  blend2d/bitset_test.cpp
-  blend2d/bitset.h
-  blend2d/bitset_p.h
-  blend2d/compop_p.h
-  blend2d/compopinfo_p.h
-  blend2d/compopinfo.cpp
-  blend2d/context.cpp
-  blend2d/context_test.cpp
-  blend2d/context.h
-  blend2d/context_p.h
-  blend2d/filesystem.cpp
-  blend2d/filesystem.h
-  blend2d/filesystem_p.h
-  blend2d/font.cpp
-  blend2d/font.h
-  blend2d/font_p.h
-  blend2d/font_test.cpp
-  blend2d/fontdata.cpp
-  blend2d/fontdata.h
-  blend2d/fontdata_p.h
-  blend2d/fontdefs.h
-  blend2d/fontface.cpp
-  blend2d/fontface.h
-  blend2d/fontface_p.h
-  blend2d/fontfeaturesettings.cpp
-  blend2d/fontfeaturesettings_test.cpp
-  blend2d/fontfeaturesettings.h
-  blend2d/fontfeaturesettings_p.h
-  blend2d/fontmanager.cpp
-  blend2d/fontmanager.h
-  blend2d/fontmanager_p.h
-  blend2d/fonttagdata_p.h
-  blend2d/fonttagdataids.cpp
-  blend2d/fonttagdataids_test.cpp
-  blend2d/fonttagdataids_p.h
-  blend2d/fonttagdatainfo.cpp
-  blend2d/fonttagdatainfo_test.cpp
-  blend2d/fonttagdatainfo_p.h
-  blend2d/fonttagset.cpp
-  blend2d/fonttagset_p.h
-  blend2d/fontvariationsettings.cpp
-  blend2d/fontvariationsettings_test.cpp
-  blend2d/fontvariationsettings.h
-  blend2d/fontvariationsettings_p.h
-  blend2d/format.cpp
-  blend2d/format.h
-  blend2d/format_p.h
-  blend2d/geometry.cpp
-  blend2d/geometry.h
-  blend2d/geometry_p.h
-  blend2d/glyphbuffer.cpp
-  blend2d/glyphbuffer.h
-  blend2d/glyphbuffer_p.h
-  blend2d/glyphrun.h
-  blend2d/gradient.cpp
-  blend2d/gradient_test.cpp
-  blend2d/gradient.h
-  blend2d/gradient_p.h
-  blend2d/image.cpp
-  blend2d/image_test.cpp
-  blend2d/image.h
-  blend2d/image_p.h
-  blend2d/imagecodec.cpp
-  blend2d/imagecodec_test.cpp
-  blend2d/imagecodec.h
-  blend2d/imagedecoder.cpp
-  blend2d/imagedecoder.h
-  blend2d/imageencoder.cpp
-  blend2d/imageencoder.h
-  blend2d/imagescale.cpp
-  blend2d/imagescale_p.h
-  blend2d/matrix.cpp
-  blend2d/matrix_avx.cpp
-  blend2d/matrix_sse2.cpp
-  blend2d/matrix_test.cpp
-  blend2d/matrix.h
-  blend2d/matrix_p.h
-  blend2d/object.cpp
-  blend2d/object.h
-  blend2d/object_p.h
-  blend2d/path.cpp
-  blend2d/path_test.cpp
-  blend2d/path.h
-  blend2d/path_p.h
-  blend2d/pathstroke.cpp
-  blend2d/pathstroke_p.h
-  blend2d/pattern.cpp
-  blend2d/pattern.h
-  blend2d/pattern_p.h
-  blend2d/pixelconverter.cpp
-  blend2d/pixelconverter_avx2.cpp
-  blend2d/pixelconverter_sse2.cpp
-  blend2d/pixelconverter_ssse3.cpp
-  blend2d/pixelconverter_test.cpp
-  blend2d/pixelconverter.h
-  blend2d/pixelconverter_p.h
-  blend2d/random.cpp
-  blend2d/random_test.cpp
-  blend2d/random.h
-  blend2d/random_p.h
-  blend2d/rgba_test.cpp
-  blend2d/rgba.h
-  blend2d/runtime.cpp
-  blend2d/runtime.h
-  blend2d/runtime_p.h
-  blend2d/runtimescope.cpp
-  blend2d/runtimescope.h
-  blend2d/string.cpp
-  blend2d/string_test.cpp
-  blend2d/string.h
-  blend2d/string_p.h
-  blend2d/trace.cpp
-  blend2d/trace_p.h
-  blend2d/var.cpp
-  blend2d/var_test.cpp
-  blend2d/var.h
-  blend2d/var_p.h
+  blend2d/blend2d.h
+  blend2d/blend2d-debug.h
+  blend2d/blend2d-impl.h
+
+  blend2d/core/api.h
+  blend2d/core/api-build_p.h
+  blend2d/core/api-build_test_p.h
+  blend2d/core/api-globals.cpp
+  blend2d/core/api-impl.h
+  blend2d/core/api-internal_p.h
+  blend2d/core/api-nocxx.cpp
+  blend2d/core/array.cpp
+  blend2d/core/array_test.cpp
+  blend2d/core/array.h
+  blend2d/core/array_p.h
+  blend2d/core/bitarray.cpp
+  blend2d/core/bitarray_test.cpp
+  blend2d/core/bitarray.h
+  blend2d/core/bitarray_p.h
+  blend2d/core/bitset.cpp
+  blend2d/core/bitset_test.cpp
+  blend2d/core/bitset.h
+  blend2d/core/bitset_p.h
+  blend2d/core/compop_p.h
+  blend2d/core/compopinfo_p.h
+  blend2d/core/compopinfo.cpp
+  blend2d/core/context.cpp
+  blend2d/core/context_test.cpp
+  blend2d/core/context.h
+  blend2d/core/context_p.h
+  blend2d/core/filesystem.cpp
+  blend2d/core/filesystem.h
+  blend2d/core/filesystem_p.h
+  blend2d/core/font.cpp
+  blend2d/core/font.h
+  blend2d/core/font_p.h
+  blend2d/core/font_test.cpp
+  blend2d/core/fontdata.cpp
+  blend2d/core/fontdata.h
+  blend2d/core/fontdata_p.h
+  blend2d/core/fontdefs.h
+  blend2d/core/fontface.cpp
+  blend2d/core/fontface.h
+  blend2d/core/fontface_p.h
+  blend2d/core/fontfeaturesettings.cpp
+  blend2d/core/fontfeaturesettings_test.cpp
+  blend2d/core/fontfeaturesettings.h
+  blend2d/core/fontfeaturesettings_p.h
+  blend2d/core/fontmanager.cpp
+  blend2d/core/fontmanager.h
+  blend2d/core/fontmanager_p.h
+  blend2d/core/fonttagdata_p.h
+  blend2d/core/fonttagdataids.cpp
+  blend2d/core/fonttagdataids_test.cpp
+  blend2d/core/fonttagdataids_p.h
+  blend2d/core/fonttagdatainfo.cpp
+  blend2d/core/fonttagdatainfo_test.cpp
+  blend2d/core/fonttagdatainfo_p.h
+  blend2d/core/fonttagset.cpp
+  blend2d/core/fonttagset_p.h
+  blend2d/core/fontvariationsettings.cpp
+  blend2d/core/fontvariationsettings_test.cpp
+  blend2d/core/fontvariationsettings.h
+  blend2d/core/fontvariationsettings_p.h
+  blend2d/core/format.cpp
+  blend2d/core/format.h
+  blend2d/core/format_p.h
+  blend2d/core/geometry.h
+  blend2d/core/glyphbuffer.cpp
+  blend2d/core/glyphbuffer.h
+  blend2d/core/glyphbuffer_p.h
+  blend2d/core/glyphrun.h
+  blend2d/core/gradient.cpp
+  blend2d/core/gradient_test.cpp
+  blend2d/core/gradient.h
+  blend2d/core/gradient_p.h
+  blend2d/core/image.cpp
+  blend2d/core/image_test.cpp
+  blend2d/core/image.h
+  blend2d/core/image_p.h
+  blend2d/core/imagecodec.cpp
+  blend2d/core/imagecodec_test.cpp
+  blend2d/core/imagecodec.h
+  blend2d/core/imagedecoder.cpp
+  blend2d/core/imagedecoder.h
+  blend2d/core/imageencoder.cpp
+  blend2d/core/imageencoder.h
+  blend2d/core/imagescale.cpp
+  blend2d/core/imagescale_p.h
+  blend2d/core/matrix.cpp
+  blend2d/core/matrix_avx.cpp
+  blend2d/core/matrix_sse2.cpp
+  blend2d/core/matrix_test.cpp
+  blend2d/core/matrix.h
+  blend2d/core/matrix_p.h
+  blend2d/core/object.cpp
+  blend2d/core/object.h
+  blend2d/core/object_p.h
+  blend2d/core/path.cpp
+  blend2d/core/path_test.cpp
+  blend2d/core/path.h
+  blend2d/core/path_p.h
+  blend2d/core/pathstroke.cpp
+  blend2d/core/pathstroke_p.h
+  blend2d/core/pattern.cpp
+  blend2d/core/pattern.h
+  blend2d/core/pattern_p.h
+  blend2d/core/pixelconverter.cpp
+  blend2d/core/pixelconverter_avx2.cpp
+  blend2d/core/pixelconverter_sse2.cpp
+  blend2d/core/pixelconverter_ssse3.cpp
+  blend2d/core/pixelconverter_test.cpp
+  blend2d/core/pixelconverter.h
+  blend2d/core/pixelconverter_p.h
+  blend2d/core/random.cpp
+  blend2d/core/random_test.cpp
+  blend2d/core/random.h
+  blend2d/core/random_p.h
+  blend2d/core/rgba_test.cpp
+  blend2d/core/rgba.h
+  blend2d/core/runtime.cpp
+  blend2d/core/runtime.h
+  blend2d/core/runtime_p.h
+  blend2d/core/runtimescope.cpp
+  blend2d/core/runtimescope.h
+  blend2d/core/string.cpp
+  blend2d/core/string_test.cpp
+  blend2d/core/string.h
+  blend2d/core/string_p.h
+  blend2d/core/trace.cpp
+  blend2d/core/trace_p.h
+  blend2d/core/var.cpp
+  blend2d/core/var_test.cpp
+  blend2d/core/var.h
+  blend2d/core/var_p.h
 
   blend2d/codec/bmpcodec.cpp
   blend2d/codec/bmpcodec_p.h
@@ -244,6 +254,13 @@ set(BLEND2D_SRC_LIST
   blend2d/compression/deflateencoderutils_p.h
   blend2d/compression/deflate_test.cpp
   blend2d/compression/matchfinder_p.h
+
+  blend2d/geometry/bezier_p.h
+  blend2d/geometry/bezier_test.cpp
+  blend2d/geometry/commons_p.h
+  blend2d/geometry/sizetable.cpp
+  blend2d/geometry/sizetable_p.h
+  blend2d/geometry/tolerance_p.h
 
   blend2d/opentype/otcff.cpp
   blend2d/opentype/otcff_test.cpp
@@ -443,22 +460,22 @@ set(BLEND2D_SRC_LIST
 )
 
 set(BLEND2D_BENCH_SRC
-  testing/bench/bl_bench_app.cpp
-  testing/bench/bl_bench_app.h
-  testing/bench/bl_bench_backend.cpp
-  testing/bench/bl_bench_backend.h
-  testing/bench/bl_bench_backend_agg.cpp
-  testing/bench/bl_bench_backend_blend2d.cpp
-  testing/bench/bl_bench_backend_cairo.cpp
-  testing/bench/bl_bench_backend_coregraphics.cpp
-  testing/bench/bl_bench_backend_juce.cpp
-  testing/bench/bl_bench_backend_qt.cpp
-  testing/bench/bl_bench_backend_skia.cpp
-  testing/bench/images_data.h
-  testing/bench/jsonbuilder.cpp
-  testing/bench/jsonbuilder.h
-  testing/bench/shape_data.cpp
-  testing/bench/shape_data.h
+  blend2d-testing/bench/bl_bench_app.cpp
+  blend2d-testing/bench/bl_bench_app.h
+  blend2d-testing/bench/bl_bench_backend.cpp
+  blend2d-testing/bench/bl_bench_backend.h
+  blend2d-testing/bench/bl_bench_backend_agg.cpp
+  blend2d-testing/bench/bl_bench_backend_blend2d.cpp
+  blend2d-testing/bench/bl_bench_backend_cairo.cpp
+  blend2d-testing/bench/bl_bench_backend_coregraphics.cpp
+  blend2d-testing/bench/bl_bench_backend_juce.cpp
+  blend2d-testing/bench/bl_bench_backend_qt.cpp
+  blend2d-testing/bench/bl_bench_backend_skia.cpp
+  blend2d-testing/bench/images_data.h
+  blend2d-testing/bench/shape_data.cpp
+  blend2d-testing/bench/shape_data.h
+  blend2d-testing/commons/jsonbuilder.cpp
+  blend2d-testing/commons/jsonbuilder.h
 )
 
 # Blend2D - CMake Utilities
@@ -663,75 +680,75 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU|Clang")
 endif()
 
 if (BLEND2D_TARGET_ARCH MATCHES "^(X86|X86_64)$")
-  set(BLEND2D_CFLAGS_SSE2 "")
+  set(BLEND2D_PRIVATE_CFLAGS_SSE2 "")
   if ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xMSVC" OR "x${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC")
     if ("${BLEND2D_TARGET_ARCH}" STREQUAL "X86")
-      set(BLEND2D_CFLAGS_SSE2 -arch:SSE2) # 32-bit target requires -arch:SSE2.
+      set(BLEND2D_PRIVATE_CFLAGS_SSE2 -arch:SSE2) # 32-bit target requires -arch:SSE2.
     endif()
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
       # To enable certain optimizations for clang-cl additional flags have to be passed (MSVC incompatibility).
-      set(BLEND2D_CFLAGS_SSE3    ${BLEND2D_CFLAGS_SSE2} -msse3)
-      set(BLEND2D_CFLAGS_SSSE3   ${BLEND2D_CFLAGS_SSE2} -mssse3)
-      set(BLEND2D_CFLAGS_SSE4_1  ${BLEND2D_CFLAGS_SSE2} -msse4.1)
-      set(BLEND2D_CFLAGS_SSE4_2  ${BLEND2D_CFLAGS_SSE2} -msse4.2 -mpopcnt -mpclmul)
-      set(BLEND2D_CFLAGS_AVX     -arch:AVX    -mpopcnt -mpclmul)
-      set(BLEND2D_CFLAGS_AVX2    -arch:AVX2   -mpopcnt -mpclmul -mbmi -mbmi2)
-      set(BLEND2D_CFLAGS_AVX2FMA -arch:AVX2   -mpopcnt -mpclmul -mbmi -mbmi2 -mfma)
-      set(BLEND2D_CFLAGS_AVX512  -arch:AVX512 -mpopcnt -mpclmul -mbmi -mbmi2)
+      set(BLEND2D_PRIVATE_CFLAGS_SSE3    ${BLEND2D_PRIVATE_CFLAGS_SSE2} -msse3)
+      set(BLEND2D_PRIVATE_CFLAGS_SSSE3   ${BLEND2D_PRIVATE_CFLAGS_SSE2} -mssse3)
+      set(BLEND2D_PRIVATE_CFLAGS_SSE4_1  ${BLEND2D_PRIVATE_CFLAGS_SSE2} -msse4.1)
+      set(BLEND2D_PRIVATE_CFLAGS_SSE4_2  ${BLEND2D_PRIVATE_CFLAGS_SSE2} -msse4.2 -mpopcnt -mpclmul)
+      set(BLEND2D_PRIVATE_CFLAGS_AVX     -arch:AVX    -mpopcnt -mpclmul)
+      set(BLEND2D_PRIVATE_CFLAGS_AVX2    -arch:AVX2   -mpopcnt -mpclmul -mbmi -mbmi2)
+      set(BLEND2D_PRIVATE_CFLAGS_AVX2FMA -arch:AVX2   -mpopcnt -mpclmul -mbmi -mbmi2 -mfma)
+      set(BLEND2D_PRIVATE_CFLAGS_AVX512  -arch:AVX512 -mpopcnt -mpclmul -mbmi -mbmi2)
     else()
       # MSVC doesn't distinguish between some optimization levels - so add some definitions manually.
-      set(BLEND2D_CFLAGS_SSE3    ${BLEND2D_CFLAGS_SSE2} -D__SSE3__)
-      set(BLEND2D_CFLAGS_SSSE3   ${BLEND2D_CFLAGS_SSE2} -D__SSSE3__)
-      set(BLEND2D_CFLAGS_SSE4_1  ${BLEND2D_CFLAGS_SSE2} -D__SSE4_1__)
-      set(BLEND2D_CFLAGS_SSE4_2  ${BLEND2D_CFLAGS_SSE2} -D__SSE4_2__)
-      set(BLEND2D_CFLAGS_AVX     -arch:AVX)
-      set(BLEND2D_CFLAGS_AVX2    -arch:AVX2)
-      set(BLEND2D_CFLAGS_AVX2FMA -arch:AVX2)
-      set(BLEND2D_CFLAGS_AVX512  -arch:AVX512)
+      set(BLEND2D_PRIVATE_CFLAGS_SSE3    ${BLEND2D_PRIVATE_CFLAGS_SSE2} -D__SSE3__)
+      set(BLEND2D_PRIVATE_CFLAGS_SSSE3   ${BLEND2D_PRIVATE_CFLAGS_SSE2} -D__SSSE3__)
+      set(BLEND2D_PRIVATE_CFLAGS_SSE4_1  ${BLEND2D_PRIVATE_CFLAGS_SSE2} -D__SSE4_1__)
+      set(BLEND2D_PRIVATE_CFLAGS_SSE4_2  ${BLEND2D_PRIVATE_CFLAGS_SSE2} -D__SSE4_2__)
+      set(BLEND2D_PRIVATE_CFLAGS_AVX     -arch:AVX)
+      set(BLEND2D_PRIVATE_CFLAGS_AVX2    -arch:AVX2)
+      set(BLEND2D_PRIVATE_CFLAGS_AVX2FMA -arch:AVX2)
+      set(BLEND2D_PRIVATE_CFLAGS_AVX512  -arch:AVX512)
     endif()
   else()
     if ("${BLEND2D_TARGET_ARCH}" STREQUAL "X86")
       if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        set(BLEND2D_CFLAGS_SSE2 -msse2 -mfpmath=sse)
+        set(BLEND2D_PRIVATE_CFLAGS_SSE2 -msse2 -mfpmath=sse)
       else()
-        set(BLEND2D_CFLAGS_SSE2 -msse2)
+        set(BLEND2D_PRIVATE_CFLAGS_SSE2 -msse2)
       endif()
     endif()
-    set(BLEND2D_CFLAGS_SSE3    -msse3)
-    set(BLEND2D_CFLAGS_SSSE3   -mssse3)
-    set(BLEND2D_CFLAGS_SSE4_1  -msse4.1)
-    set(BLEND2D_CFLAGS_SSE4_2  -mpopcnt -mpclmul -msse4.2)
-    set(BLEND2D_CFLAGS_AVX     -mpopcnt -mpclmul -mavx)
-    set(BLEND2D_CFLAGS_AVX2    -mpopcnt -mpclmul -mbmi -mbmi2 -mavx2)
-    set(BLEND2D_CFLAGS_AVX2FMA -mpopcnt -mpclmul -mbmi -mbmi2 -mavx2 -mfma)
-    set(BLEND2D_CFLAGS_AVX512  -mpopcnt -mpclmul -mbmi -mbmi2 -mavx512f  -mavx512bw -mavx512dq -mavx512cd -mavx512vl)
+    set(BLEND2D_PRIVATE_CFLAGS_SSE3    -msse3)
+    set(BLEND2D_PRIVATE_CFLAGS_SSSE3   -mssse3)
+    set(BLEND2D_PRIVATE_CFLAGS_SSE4_1  -msse4.1)
+    set(BLEND2D_PRIVATE_CFLAGS_SSE4_2  -mpopcnt -mpclmul -msse4.2)
+    set(BLEND2D_PRIVATE_CFLAGS_AVX     -mpopcnt -mpclmul -mavx)
+    set(BLEND2D_PRIVATE_CFLAGS_AVX2    -mpopcnt -mpclmul -mbmi -mbmi2 -mavx2)
+    set(BLEND2D_PRIVATE_CFLAGS_AVX2FMA -mpopcnt -mpclmul -mbmi -mbmi2 -mavx2 -mfma)
+    set(BLEND2D_PRIVATE_CFLAGS_AVX512  -mpopcnt -mpclmul -mbmi -mbmi2 -mavx512f  -mavx512bw -mavx512dq -mavx512cd -mavx512vl)
   endif()
 
-  list(APPEND BLEND2D_CFLAGS_AVX2    -DBL_TARGET_OPT_POPCNT -DBL_TARGET_OPT_BMI2)
-  list(APPEND BLEND2D_CFLAGS_AVX2FMA -DBL_TARGET_OPT_POPCNT -DBL_TARGET_OPT_BMI2 -DBL_TARGET_OPT_FMA)
-  list(APPEND BLEND2D_CFLAGS_AVX512  -DBL_TARGET_OPT_POPCNT -DBL_TARGET_OPT_BMI2)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS_AVX2    -DBL_TARGET_OPT_POPCNT -DBL_TARGET_OPT_BMI2)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS_AVX2FMA -DBL_TARGET_OPT_POPCNT -DBL_TARGET_OPT_BMI2 -DBL_TARGET_OPT_FMA)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS_AVX512  -DBL_TARGET_OPT_POPCNT -DBL_TARGET_OPT_BMI2)
 
   # SSE2 is our baseline if no other baseline is specified; AVX512 is our maximum.
-  list(APPEND BLEND2D_PRIVATE_CFLAGS ${BLEND2D_CFLAGS_SSE2} -DBL_BUILD_OPT_AVX512)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS ${BLEND2D_PRIVATE_CFLAGS_SSE2} -DBL_BUILD_OPT_AVX512)
 elseif ("${BLEND2D_TARGET_ARCH}" MATCHES "^(AARCH32|AARCH64)$")
   if ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xMSVC" OR "x${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC")
     # FIXME: Not sure whether it makes sense to detect anything in this case.
   else()
-    blend2d_detect_cflags(BLEND2D_CFLAGS_ASIMD -mfpu=neon-vfpv4)
+    blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_ASIMD -mfpu=neon-vfpv4)
     if ("${BLEND2D_TARGET_ARCH}" STREQUAL "AARCH64")
-      blend2d_detect_cflags(BLEND2D_CFLAGS_ASIMD_CRYPTO -march=armv8-a+aes+crc+crypto)
+      blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_ASIMD_CRYPTO -march=armv8-a+aes+crc+crypto)
     endif()
   endif()
 
-  if (BLEND2D_CFLAGS_ASIMD)
+  if (BLEND2D_PRIVATE_CFLAGS_ASIMD)
     list(APPEND BLEND2D_PRIVATE_CFLAGS -DBL_BUILD_OPT_ASIMD)
-    list(APPEND BLEND2D_CFLAGS_ASIMD -DBL_TARGET_OPT_ASIMD)
+    list(APPEND BLEND2D_PRIVATE_CFLAGS_ASIMD -DBL_TARGET_OPT_ASIMD)
   endif()
 
-  if (BLEND2D_CFLAGS_ASIMD_CRYPTO)
+  if (BLEND2D_PRIVATE_CFLAGS_ASIMD_CRYPTO)
     list(APPEND BLEND2D_PRIVATE_CFLAGS -DBL_BUILD_OPT_ASIMD_CRYPTO)
-    list(APPEND BLEND2D_CFLAGS_ASIMD_CRYPTO -DBL_TARGET_OPT_ASIMD_CRYPTO)
+    list(APPEND BLEND2D_PRIVATE_CFLAGS_ASIMD_CRYPTO -DBL_TARGET_OPT_ASIMD_CRYPTO)
   endif()
 endif()
 
@@ -760,32 +777,26 @@ if (BLEND2D_SANITIZE)
   endif()
 endif()
 
-# Blend2D - Compiler Support - Natvis Embedding
-# =============================================
-
-if (WIN32)
-  if(CMAKE_LINKER MATCHES "link\\.exe" OR CMAKE_LINKER MATCHES "lld-link\\.exe")
-    set(BLEND2D_LINKER_SUPPORTS_NATVIS TRUE)
-  endif()
-endif()
-
 # Blend2D - Dependencies
 # ======================
 
-if (WIN32)
-  # Dependency: nothing extra at the moment.
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "^Windows")
+  # Dependency: Windows target needs no extra dependencies, however, we have to check for .natvis support.
+  if(CMAKE_LINKER MATCHES "^(lld-link|link)\\.exe$")
+    set(BLEND2D_LINKER_SUPPORTS_NATVIS TRUE)
+  endif()
 elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
-  # Dependency: libc is the only required library on Android as it also provides libthread.
+  # Dependency: libc is the only required library on Android as it also provides libpthread.
   message(STATUS "[blend2d] Adding libc dependency (Android)")
-  list(APPEND BLEND2D_DEPS c)
+  list(APPEND BLEND2D_LIBS c)
 elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Haiku")
   # Dependency: libroot is used by Haiku instead of libc, so link to libroot and libpthread.
   message(STATUS "[blend2d] Adding libroot, libm, and libpthread dependencies (Haiku)")
-  list(APPEND BLEND2D_DEPS root m pthread)
+  list(APPEND BLEND2D_LIBS root m pthread)
 else()
   # Dependency: libc is always required.
   message(STATUS "[blend2d] Adding libc dependency (Linux, BSD, or other UNIX/POSIX environment)")
-  list(APPEND BLEND2D_DEPS c)
+  list(APPEND BLEND2D_LIBS c)
 
   # Dependency: pthread (required so Blend2D can use pthread_rwlock, pthread_create, ...).
   check_c_source_compiles("
@@ -811,7 +822,7 @@ else()
     message(STATUS "[blend2d] Library 'libpthread' provided by 'libc' (not linking to libpthread)")
   else()
     message(STATUS "[blend2d] Library 'libpthread' not provided by 'libc' (linking to libpthread)")
-    list(APPEND BLEND2D_DEPS pthread)
+    list(APPEND BLEND2D_LIBS pthread)
   endif()
 
   check_c_source_compiles("
@@ -824,7 +835,7 @@ else()
     message(STATUS "[blend2d] Library 'libm' provided by 'libc' (not linking to libm)")
   else()
     message(STATUS "[blend2d] Library 'libm' not provided by 'libc' (linking to libm)")
-    list(APPEND BLEND2D_DEPS m)
+    list(APPEND BLEND2D_LIBS m)
   endif()
 endif()
 
@@ -850,13 +861,13 @@ if (BLEND2D_BUILD_WITH_JIT)
       "just git checkout https://github.com/asmjit/asmjit into [root]/3rdparty/asmjit\n"
       "or set ASMJIT_DIR variable to point to a previously checked out asmjit.\n")
     find_package(asmjit REQUIRED)
-    list(APPEND BLEND2D_DEPS asmjit::asmjit)
+    list(APPEND BLEND2D_LIBS asmjit::asmjit)
   else()
-    message(STATUS "[blend2d] Trying to find bundled asmjit ('BLEND2D_EXTERNAL_ASMJIT=OFF')")
     if (NOT DEFINED ASMJIT_DIR)
       foreach(dir "${CMAKE_CURRENT_LIST_DIR}/3rdparty/asmjit" "${CMAKE_CURRENT_LIST_DIR}/../asmjit")
         if (EXISTS ${dir}/CMakeLists.txt)
           set(ASMJIT_DIR "${dir}" CACHE PATH "Location of 'asmjit'")
+          message(STATUS "[blend2d] AsmJit found ('BLEND2D_EXTERNAL_ASMJIT=OFF' => 'ASMJIT_DIR=${ASMJIT_DIR}')")
           break()
         endif()
       endforeach()
@@ -867,15 +878,15 @@ if (BLEND2D_BUILD_WITH_JIT)
           "Blend2D expects asmjit to be in the following directories:\n"
           "\n"
           "  - ASMJIT_DIR               - CMake variable specifying asmjit directory\n"
-          "  - '<root>/3rdparty/asmjit' - asmjit bundled in source releases\n"
-          "  - '<root>/../asmjit'       - asmjit location when developing Blend2D\n"
+          "  - '<root>/3rdparty/asmjit' - asmjit placed into 3rdparty subdirectory (dev & releases)\n"
+          "  - '<root>/../asmjit'       - asmjit placed outside of blend2d project (development)\n"
           "\n"
           "Alternatively, if you use C/C++ package managers and would like to use\n"
-          "a packaged asmjit instead, set BLEND2D_EXTERNAL_ASMJIT cmake variable to TRUE.\n"
+          "a packaged asmjit instead, set 'BLEND2D_EXTERNAL_ASMJIT' cmake variable to ON.\n"
           "This way Blend2D would not try to auto-detect the location of asmjit and would\n"
           "try to find it by using find_package() instead. Please note that using extenal\n"
           "asmjit means that Blend2D would not be able to avoid linking to a C++ standard\n"
-          "library, which it does by default when building a shared Blend2D library with\n"
+          "library, which it avoids by default when building a shared Blend2D library with\n"
           "bundled asmjit."
         )
       endif()
@@ -885,13 +896,9 @@ if (BLEND2D_BUILD_WITH_JIT)
       set(ASMJIT_EMBED TRUE CACHE BOOL "")
     endif()
 
-    message(STATUS "[blend2d] === Embedding asmjit (including its CMakeLists.txt) ===")
-    include("${ASMJIT_DIR}/CMakeLists.txt")
-    message(STATUS "[blend2d] === Embedding asmjit done ===")
-
-    list(APPEND BLEND2D_DEPS ${ASMJIT_LIBS})
-    list(APPEND BLEND2D_PRIVATE_CFLAGS ${ASMJIT_CFLAGS})
-    list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_NO_STDCXX -DASMJIT_NO_FOREIGN -DASMJIT_ABI_NAMESPACE=abi_bl)
+    add_subdirectory("${ASMJIT_DIR}" asmjit)
+    list(APPEND BLEND2D_LIBS $<BUILD_INTERFACE:asmjit::asmjit>)
+    list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_NO_FOREIGN -DASMJIT_NO_STDCXX -DASMJIT_ABI_NAMESPACE=abi_bl)
 
     # A possibility to reduce the resulting binary size by disabling asmjit logging.
     if (BLEND2D_NO_JIT_LOGGING)
@@ -906,25 +913,25 @@ endif()
 # Blend2D - Finalize Build Options
 # ================================
 
-list(REMOVE_DUPLICATES BLEND2D_DEPS)
+list(REMOVE_DUPLICATES BLEND2D_LIBS)
 list(REMOVE_DUPLICATES BLEND2D_PRIVATE_CFLAGS)
 
 # Blend2D - Source Files Processing
 # =================================
 
 if (MSVC AND NOT BLEND2D_NO_NATVIS)
-  list(APPEND BLEND2D_SRC_LIST blend2d.natvis)
+  list(APPEND BLEND2D_SRC_LIST blend2d/blend2d.natvis)
 endif()
 
 set(BLEND2D_SRC "")
-set(BLEND2D_TEST_SRC_FILES "")
+set(BLEND2D_TEST_SRC "")
 set(BLEND2D_OPT_EXTENSIONS "sse2|sse3|ssse3|sse4_1|sse4_2|avx|avx2|avx2fma|avx512|asimd|asimd_crypto")
 
 foreach(src_file ${BLEND2D_SRC_LIST})
-  set(src_file "${CMAKE_CURRENT_LIST_DIR}/src/${src_file}")
+  set(src_file "${CMAKE_CURRENT_LIST_DIR}/${src_file}")
 
   if ("${src_file}" MATCHES "_test(_(${BLEND2D_OPT_EXTENSIONS}))?\\.cpp$")
-    list(APPEND BLEND2D_TEST_SRC_FILES ${src_file})
+    list(APPEND BLEND2D_TEST_SRC ${src_file})
   else()
     list(APPEND BLEND2D_SRC ${src_file})
   endif()
@@ -933,11 +940,7 @@ foreach(src_file ${BLEND2D_SRC_LIST})
   if (FEATURE)
     # HACK 1: Cmake uses global variables everywhere, `CMAKE_MATCH_1` is the first capture...
     string(TOUPPER "${CMAKE_MATCH_1}" FEATURE)
-    # HACK 2: Interestingly COMPILE_OPTIONS is not available for SOURCE files before CMake 3.11.
-    # set_property(SOURCE "${src_file}" APPEND PROPERTY COMPILE_OPTIONS ${BLEND2D_CFLAGS_${FEATURE}})
-    foreach(src_cflag ${BLEND2D_CFLAGS_${FEATURE}})
-      set_property(SOURCE "${src_file}" APPEND_STRING PROPERTY COMPILE_FLAGS " ${src_cflag}")
-    endforeach()
+    set_property(SOURCE "${src_file}" APPEND PROPERTY COMPILE_OPTIONS ${BLEND2D_PRIVATE_CFLAGS_${FEATURE}})
   endif()
 
   if ("${src_file}" MATCHES "\\.natvis")
@@ -949,49 +952,50 @@ endforeach()
 
 source_group(TREE "${CMAKE_CURRENT_LIST_DIR}" FILES ${BLEND2D_SRC})
 
-set(BLEND2D_ALL_SRC_FILES ${BLEND2D_SRC})
-if (ASMJIT_EMBED)
-  list(APPEND BLEND2D_ALL_SRC_FILES ${ASMJIT_SRC})
-endif()
-
-# Blend2D - Summary
-# =================
-
-message("** Blend2D Summary **")
-message("   BLEND2D_DEPS=${BLEND2D_DEPS}")
-message("   BLEND2D_CFLAGS=${BLEND2D_CFLAGS}")
-message("   BLEND2D_WARNING_CFLAGS=${BLEND2D_WARNING_CFLAGS}")
-message("   BLEND2D_PRIVATE_CFLAGS=${BLEND2D_PRIVATE_CFLAGS}")
-message("   BLEND2D_PRIVATE_CFLAGS_DBG=${BLEND2D_PRIVATE_CFLAGS_DBG}")
-message("   BLEND2D_PRIVATE_CFLAGS_REL=${BLEND2D_PRIVATE_CFLAGS_REL}")
-if (BLEND2D_SANITIZE)
-  message("   BLEND2D_SANITIZE=${BLEND2D_SANITIZE}")
-  message("   BLEND2D_SANITIZE_CFLAGS=${BLEND2D_SANITIZE_CFLAGS}")
-  message("   BLEND2D_SANITIZE_LFLAGS=${BLEND2D_SANITIZE_LFLAGS}")
-endif()
-
 # Blend2D - Targets - Core Library & 'blend2d::blend2d' Alias
 # ===========================================================
 
+message(STATUS "[blend2d] Adding 'blend2d::blend2d' target ('BLEND2D_TARGET_TYPE=${BLEND2D_TARGET_TYPE}')")
+foreach(v "BLEND2D_LIBS"
+          "BLEND2D_CFLAGS"
+          "BLEND2D_WARNING_CFLAGS"
+          "BLEND2D_PRIVATE_CFLAGS"
+          "BLEND2D_PRIVATE_CFLAGS_DBG"
+          "BLEND2D_PRIVATE_CFLAGS_REL"
+          "BLEND2D_PRIVATE_CFLAGS_SSE3"
+          "BLEND2D_PRIVATE_CFLAGS_SSSE3"
+          "BLEND2D_PRIVATE_CFLAGS_SSE4_1"
+          "BLEND2D_PRIVATE_CFLAGS_SSE4_2"
+          "BLEND2D_PRIVATE_CFLAGS_AVX"
+          "BLEND2D_PRIVATE_CFLAGS_AVX2"
+          "BLEND2D_PRIVATE_CFLAGS_AVX2FMA"
+          "BLEND2D_PRIVATE_CFLAGS_AVX512"
+          "BLEND2D_PRIVATE_CFLAGS_ASIMD"
+          "BLEND2D_PRIVATE_CFLAGS_ASIMD_CRYPTO"
+          "BLEND2D_SANITIZE_CFLAGS"
+          "BLEND2D_SANITIZE_LFLAGS")
+  if (NOT "${${v}}" STREQUAL "")
+    message("   ${v}=${${v}}")
+  endif()
+endforeach()
+
 blend2d_add_target(blend2d ${BLEND2D_TARGET_TYPE}
-  SOURCES      ${BLEND2D_ALL_SRC_FILES}
-  LIBRARIES    ${BLEND2D_DEPS}
-  INCLUDE_DIRS ${ASMJIT_INCLUDE_DIRS}
+  SOURCES      ${BLEND2D_SRC}
+  LIBRARIES    ${BLEND2D_LIBS}
   CFLAGS       ${BLEND2D_PRIVATE_CFLAGS} ${BLEND2D_NO_STDCXX_CFLAGS}
   CFLAGS_DBG   ${BLEND2D_PRIVATE_CFLAGS_DBG}
   CFLAGS_REL   ${BLEND2D_PRIVATE_CFLAGS_REL}
   LFLAGS       ${BLEND2D_NO_STDCXX_LFLAGS})
 
-target_compile_options(blend2d INTERFACE ${BLEND2D_CFLAGS})
-target_include_directories(blend2d BEFORE INTERFACE
-  $<BUILD_INTERFACE:${BLEND2D_INCLUDE_DIRS}>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
-
+target_compile_options(blend2d PUBLIC ${BLEND2D_CFLAGS})
+target_include_directories(blend2d BEFORE PUBLIC $<BUILD_INTERFACE:${BLEND2D_INCLUDE_DIRS}>
+                                                 $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 add_library(blend2d::blend2d ALIAS blend2d)
 
 # Add Blend2D install instructions (library and public headers).
 if (NOT BLEND2D_NO_INSTALL)
   message(STATUS "[blend2d] Enabling install support ('BLEND2D_NO_INSTALL=OFF')")
+
   include(CMakePackageConfigHelpers)
 
   install(TARGETS blend2d
@@ -1016,7 +1020,7 @@ if (NOT BLEND2D_NO_INSTALL)
   foreach(src_file ${BLEND2D_SRC_LIST})
     if ("${src_file}" MATCHES "\\.h$" AND NOT "${src_file}" MATCHES "_p\\.h$")
       get_filename_component(_src_dir ${src_file} PATH)
-      install(FILES "${CMAKE_CURRENT_LIST_DIR}/src/${src_file}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${_src_dir}")
+      install(FILES "${CMAKE_CURRENT_LIST_DIR}/${src_file}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${_src_dir}")
     endif()
   endforeach()
 else()
@@ -1036,23 +1040,23 @@ if (BLEND2D_TEST)
   # bl_test_runner - optimize static builds (no need to build Blend2D twice).
   if (BLEND2D_STATIC)
     blend2d_add_target(bl_test_runner TEST
-      SOURCES      ${BLEND2D_TEST_SRC_FILES}
-                   testing/tests/bl_test_runner.cpp
-                   testing/tests/broken.cpp
-                   testing/tests/broken.h
-      LIBRARIES    blend2d::blend2d
+      SOURCES      ${BLEND2D_TEST_SRC}
+                   blend2d-testing/tests/bl_test_runner.cpp
+                   blend2d-testing/tests/broken.cpp
+                   blend2d-testing/tests/broken.h
+      LIBRARIES    ${BLEND2D_LIBS} blend2d::blend2d
       CFLAGS       ${BLEND2D_PRIVATE_CFLAGS} -DBL_TEST -DBL_STATIC
       CFLAGS_DBG   ${BLEND2D_PRIVATE_CFLAGS_DBG}
       CFLAGS_REL   ${BLEND2D_PRIVATE_CFLAGS_REL}
       INCLUDE_DIRS ${ASMJIT_INCLUDE_DIRS})
   else()
     blend2d_add_target(bl_test_runner TEST
-      SOURCES      ${BLEND2D_TEST_SRC_FILES}
-                   ${BLEND2D_ALL_SRC_FILES}
-                   testing/tests/bl_test_runner.cpp
-                   testing/tests/broken.cpp
-                   testing/tests/broken.h
-      LIBRARIES    ${BLEND2D_DEPS}
+      SOURCES      ${BLEND2D_TEST_SRC}
+                   ${BLEND2D_SRC}
+                   blend2d-testing/tests/bl_test_runner.cpp
+                   blend2d-testing/tests/broken.cpp
+                   blend2d-testing/tests/broken.h
+      LIBRARIES    ${BLEND2D_LIBS}
       CFLAGS       ${BLEND2D_PRIVATE_CFLAGS} -DBL_TEST -DBL_STATIC
       CFLAGS_DBG   ${BLEND2D_PRIVATE_CFLAGS_DBG}
       CFLAGS_REL   ${BLEND2D_PRIVATE_CFLAGS_REL}
@@ -1062,10 +1066,10 @@ if (BLEND2D_TEST)
   # bl_test_context_xxx are all based on the same base-app.
   foreach(app bl_test_context_simple bl_test_context_mt bl_test_context_jit)
     blend2d_add_target(${app} TEST
-      SOURCES    testing/tests/${app}.cpp
-                 testing/tests/bl_test_context_baseapp.cpp
-                 testing/tests/bl_test_context_baseapp.h
-                 testing/tests/bl_test_context_utilities.h
+      SOURCES    blend2d-testing/tests/${app}.cpp
+                 blend2d-testing/tests/bl_test_context_baseapp.cpp
+                 blend2d-testing/tests/bl_test_context_baseapp.h
+                 blend2d-testing/tests/bl_test_context_utilities.h
       LIBRARIES  blend2d::blend2d
       CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
       CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
@@ -1073,7 +1077,7 @@ if (BLEND2D_TEST)
   endforeach()
 
   blend2d_add_target(bl_test_image_io EXECUTABLE
-    SOURCES    testing/tests/bl_test_image_io.cpp
+    SOURCES    blend2d-testing/tests/bl_test_image_io.cpp
     LIBRARIES  blend2d::blend2d
     CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
     CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
@@ -1094,14 +1098,14 @@ if (BLEND2D_TEST)
 
   foreach(app bl_sample_1 bl_sample_2 bl_sample_3 bl_sample_4 bl_sample_5 bl_sample_6 bl_sample_7 bl_sample_8)
     blend2d_add_target(${app} EXECUTABLE
-      SOURCES   testing/samples/${app}.cpp
+      SOURCES   blend2d-testing/samples/${app}.cpp
       LIBRARIES blend2d::blend2d
       CFLAGS    ${BLEND2D_WARNING_CFLAGS})
   endforeach()
 
   foreach(app bl_sample_capi)
     blend2d_add_target(${app} EXECUTABLE
-      SOURCES   testing/samples/${app}.c
+      SOURCES   blend2d-testing/samples/${app}.c
       LIBRARIES blend2d::blend2d
       CFLAGS    ${BLEND2D_WARNING_CFLAGS})
 
@@ -1115,9 +1119,10 @@ if (BLEND2D_TEST)
   # -----------------
 
   blend2d_add_target(bl_generator EXECUTABLE
-    SOURCES testing/generator/bl_generator.cpp
-            testing/generator/bl_generator.h
-    CFLAGS  ${BLEND2D_WARNING_CFLAGS})
+    SOURCES      blend2d-testing/generator/bl_generator.cpp
+                 blend2d-testing/generator/bl_generator.h
+    INCLUDE_DIRS ${BLEND2D_INCLUDE_DIRS}
+    CFLAGS       ${BLEND2D_WARNING_CFLAGS})
   if (NOT WIN32)
     target_link_libraries(bl_generator "pthread")
   endif()
@@ -1127,13 +1132,13 @@ if (BLEND2D_TEST)
     if (NOT CMAKE_BUILD_TYPE)
       add_custom_command(TARGET blend2d POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy
-          "${CMAKE_CURRENT_SOURCE_DIR}/testing/resources/${resource}"
+          "${CMAKE_CURRENT_SOURCE_DIR}/blend2d-testing/resources/${resource}"
           "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/${resource}"
         COMMENT "Resources")
     else()
       add_custom_command(TARGET blend2d POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy
-          "${CMAKE_CURRENT_SOURCE_DIR}/testing/resources/${resource}"
+          "${CMAKE_CURRENT_SOURCE_DIR}/blend2d-testing/resources/${resource}"
           "${CMAKE_CURRENT_BINARY_DIR}/${resource}"
         COMMENT "Resources")
     endif()
@@ -1207,7 +1212,7 @@ if (BLEND2D_DEMOS)
     message(STATUS "[blend2d] JUCE found (./3rdparty/JUCE) - adding support for JUCE (benchmarking)")
 
     add_definitions(-DJUCE_USE_CURL=0 -DUSE_COREGRAPHICS_RENDERING=0)
-    add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/3rdparty/JUCE" JUCE)
+    add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/3rdparty/JUCE" juce)
 
     list(APPEND BLEND2D_BENCH_CFLAGS -DBL_BENCH_ENABLE_JUCE)
     list(APPEND BLEND2D_BENCH_LIBS juce::juce_core juce::juce_events juce::juce_graphics)
@@ -1241,10 +1246,10 @@ if (BLEND2D_DEMOS)
                 bl_demo_tiger)
       blend2d_add_target(${app} EXECUTABLE_WIN32
         SOURCES
-          testing/demos/${app}.cpp
-          testing/demos/bl_qt_canvas.cpp
-          testing/demos/bl_qt_canvas.h
-          testing/demos/bl_qt_headers.h
+          blend2d-testing/demos/${app}.cpp
+          blend2d-testing/demos/bl_qt_canvas.cpp
+          blend2d-testing/demos/bl_qt_canvas.h
+          blend2d-testing/demos/bl_qt_headers.h
         LIBRARIES
           blend2d::blend2d Qt6::Gui Qt6::Widgets)
       set_property(TARGET ${app} PROPERTY AUTOMOC TRUE)
@@ -1260,3 +1265,5 @@ if (BLEND2D_DEMOS)
 else()
   message(STATUS "[blend2d] Disabling Blend2D demos ('BLEND2D_DEMOS=OFF')")
 endif()
+
+message(STATUS "[blend2d] == Configuring done ==")

@@ -34,7 +34,7 @@ To make the reporting bugs as easy as possible Blend2D provides a header file ca
 Use the snippet below in your own code and include its output in your bug report. It will help us to identify the issue quicker. Debug API is provided for both C and C++ users.
 
 ```c
-#include <blend2d.h>
+#include <blend2d/blend2d.h>
 #include <blend2d-debug.h>
 
 int main(int argc, char* argv[]) {

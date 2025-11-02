@@ -5,7 +5,7 @@ Blend2D
 
   * [Official Home Page (blend2d.com)](https://blend2d.com)
   * [Official Repository (blend2d/blend2d)](https://github.com/blend2d/blend2d)
-  * [Public Chat Channel](https://gitter.im/blend2d/blend2d)
+  * [Public Chat Channel](https://app.element.io/#/room/#blend2d_blend2d:gitter.im)
   * [Zlib License](./LICENSE.md)
 
 See [blend2d.com](https://blend2d.com) page for more details.
@@ -62,7 +62,7 @@ Then you can simply configure and build blend2d with CMake:
 
 ```bash
 $ cmake -S blend2d -B blend2d/build/Release -DCMAKE_BUILD_TYPE=Release -DBLEND2D_TEST=ON
-$ cmake --build blend2d/build/Release
+$ cmake --build blend2d/build/Release --config Release
 ```
 
 And run samples:
@@ -77,7 +77,7 @@ To build Blend2D with interactive demos and with benchmark targeting Qt and othe
 
 ```bash
 $ cmake -S blend2d -B blend2d/build/Release -DCMAKE_BUILD_TYPE=Release -DBLEND2D_TEST=ON -DBLEND2D_DEMOS=ON
-$ cmake --build blend2d/build/Release
+$ cmake --build blend2d/build/Release --config Release
 ```
 
 Please note that to build interactive demos and benchmarking backends, you need to have Qt installed, in addition to all rendering libraries you would like to benchmark.

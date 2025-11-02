@@ -1,23 +1,17 @@
-#!/bin/bash
+#!/bin/sh
 
-BUILD_OPTIONS="-DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBLEND2D_TEST=ON"
-
-if [ -n "${ASMJIT_DIR}" ]; then
-  BUILD_OPTIONS="${BUILD_OPTIONS} -DASMJIT_DIR=\"${ASMJIT_DIR}\""
-fi
-
-echo "== [Configuring Build - Release_ASAN] =="
-eval cmake . -B build/Release_ASAN ${BUILD_OPTIONS} -DCMAKE_BUILD_TYPE=Release -DBLEND2D_SANITIZE=address "$@"
+echo "== [configure release-asan] =="
+cmake --preset release-asan "$@"
 echo ""
 
-echo "== [Configuring Build - Release_MSAN] =="
-eval cmake . -B build/Release_MSAN ${BUILD_OPTIONS} -DCMAKE_BUILD_TYPE=Release -DBLEND2D_SANITIZE=memory -DBLEND2D_NO_JIT=ON "$@"
+echo "== [configure release-msan] =="
+cmake --preset release-msan "$@"
 echo ""
 
-echo "== [Configuring Build - Release_TSAN] =="
-eval cmake . -B build/Release_TSAN ${BUILD_OPTIONS} -DCMAKE_BUILD_TYPE=Release -DBLEND2D_SANITIZE=thread "$@"
+echo "== [configure release-tsan] =="
+cmake --preset release-tsan "$@"
 echo ""
 
-echo "== [Configuring Build - Release_UBSAN] =="
-eval cmake . -B build/Release_UBSAN ${BUILD_OPTIONS} -DCMAKE_BUILD_TYPE=Release -DBLEND2D_SANITIZE=undefined "$@"
+echo "== [configure release-ubsan] =="
+cmake --preset release-ubsan "$@"
 echo ""
