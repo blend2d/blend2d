@@ -6,10 +6,11 @@
 #ifndef BLEND2D_API_H_INCLUDED
 #define BLEND2D_API_H_INCLUDED
 
-// This header can only be included by either <blend2d.h> or by internal Blend2D headers. Prevent users including
-// <blend2d/...> headers by accident and prevent not including "blend2d/api-build_p.h" during the Blend2D compilation.
+// This header can only be included by either <blend2d/blend2d.h> or by internal Blend2D headers. Prevent users
+// including <blend2d/core/...> headers by accident and prevent not including "blend2d/core/api-build_p.h" during
+// Blend2D compilation.
 #if !defined(BLEND2D_H_INCLUDED) && !defined(BLEND2D_API_BUILD_P_H_INCLUDED) && !defined(__INTELLISENSE__)
-  #pragma message("Include either <blend2d.h> or <blend2d-impl.h> to use Blend2D library")
+  #pragma message("Include either <blend2d/blend2d.h> or <blen2d/blend2d-impl.h> to use Blend2D library")
 #endif
 
 #include <stdarg.h>

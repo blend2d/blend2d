@@ -27,15 +27,15 @@ A good bug report should contain the following information:
 
 * Brief and detailed bug description
 * Steps to reproduce the bug (isolated test-case is preferred but not required)
-* Build and system information (use `<blend2d-debug.h>` to obtain it, see below)
+* Build and system information (use `<blend2d/blend2d-debug.h>` to obtain it, see below)
 
-To make the reporting bugs as easy as possible Blend2D provides a header file called `<blend2d-debug.h>`. It contains functions for C and C++ API users that can be used to query useful information from Blend2D runtime and to dump the content of some Blend2D objects.
+To make the reporting bugs as easy as possible Blend2D provides a header file called `<blend2d/blend2d-debug.h>`. It contains functions for C and C++ API users that can be used to query useful information from Blend2D runtime and to dump the content of some Blend2D objects.
 
 Use the snippet below in your own code and include its output in your bug report. It will help us to identify the issue quicker. Debug API is provided for both C and C++ users.
 
 ```c
 #include <blend2d/blend2d.h>
-#include <blend2d-debug.h>
+#include <blend2d/blend2d-debug.h>
 
 int main(int argc, char* argv[]) {
   // This will query and dump Blend2D build and system information. We

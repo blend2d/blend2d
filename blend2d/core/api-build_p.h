@@ -111,8 +111,8 @@ extern "C" void __tsan_release(void *addr);
 
 //! \cond NEVER
 
-// Turn off deprecation warnings when building 'blend2d'. Required as <blend2d.h> and other headers include some
-// essential C headers that could in some cases warn about using functions such as `snprintf()`, which we use
+// Turn off deprecation warnings when building 'blend2d'. Required as <blend2d/blend2d.h> and other headers include
+// some essential C headers that could in some cases warn about using functions such as `snprintf()`, which we use
 // correctly.
 #ifdef _MSC_VER
   #if !defined(_CRT_SECURE_NO_DEPRECATE)
