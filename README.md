@@ -5,7 +5,7 @@ Blend2D
 
   * [Official Home Page (blend2d.com)](https://blend2d.com)
   * [Official Repository (blend2d/blend2d)](https://github.com/blend2d/blend2d)
-  * [Public Chat Channel](https://app.element.io/#/room/#blend2d_blend2d:gitter.im)
+  * [Public Chat Channel](https://app.element.io/#/room/#blend2d:matrix.org)
   * [Zlib License](./LICENSE.md)
 
 See [blend2d.com](https://blend2d.com) page for more details.

@@ -13,11 +13,11 @@ The following is a set of guidelines for contributing to Blend2D and other repos
 
 ## Asking Questions
 
-We prefer GitHub issues to be used for reporting bugs and similar problems. So please consider using our [Gitter Channel](https://gitter.im/blend2d/blend2d) to ask questions. It is active and may provide you quick help.
+We prefer GitHub issues to be used for reporting bugs and similar problems. So please consider using our [Public Chat](https://app.element.io/#/room/#blend2d:matrix.org) to ask questions. It is active and may provide you quick help.
 
-* **Generic questions** should be asked on [Gitter](https://gitter.im/blend2d/blend2d) if possible
-* **Feature Suggestions** may be discussed on [Gitter](https://gitter.im/blend2d/blend2d), we will add features that match our future plans to the roadmap
-* For **C/C++ API Questions** use either [Gitter](https://gitter.im/blend2d/blend2d) or open a new issue on GitHub (see pinned issues first, we prefer to write a documentation regarding API functions that are not clear)
+* **Generic questions** should be asked on [Public Chat](https://app.element.io/#/room/#blend2d:matrix.org) if possible
+* **Feature Suggestions** may be discussed on [Public Chat](https://app.element.io/#/room/#blend2d:matrix.org), we will add features that match our future plans to the roadmap
+* For **C/C++ API Questions** use either [Public Chat](https://app.element.io/#/room/#blend2d:matrix.org) or via [GitHub issues](https://github.com/blend2d/blend2d/issues) (see pinned issues first, we prefer to write a documentation regarding API functions that are not clear)
 * Read our [FAQ](https://blend2d.com/about.html#FAQ) as well, we would gladly improve it if you found something missing or can improve the existing content
 
 
@@ -58,7 +58,7 @@ When reporting bugs related to incorrect renderings it is important to also incl
 
 ## Website Enhancement
 
-If you found a typo or have suggestions about the content on Blend2D website you can either contact us directly via email or discuss it on Gitter. Please don't open GitHub issues that are related to the website.
+If you found a typo or have suggestions about the content on Blend2D website you can either contact us directly via email or discuss it on our public chat. Please don't open GitHub issues that are related to the website.
 
 
 ## Coding Style
