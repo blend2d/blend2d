@@ -940,7 +940,7 @@ static BL_INLINE void approximate_cubic_with_two_quads(CubicRef curve, BLPoint q
 }
 
 template<typename Callback>
-static BL_INLINE BLResult approximate_cubic_with_quads(CubicRef curve, double simplify_tolerance, const Callback& callback) noexcept {
+static BL_INLINE BLResult approximate_cubic_with_quads(CubicRef curve, double simplify_tolerance, uint32_t max_split_steps, const Callback& callback) noexcept {
   // Tolerance consists of a prefactor (27/4 * 2^3) combined with `simplify_tolerance`.
   double tolerance_sq = Math::square(54.0 * simplify_tolerance);
 
@@ -953,12 +953,19 @@ static BL_INLINE BLResult approximate_cubic_with_quads(CubicRef curve, double si
   cubic[5] = curve.vtx[2];
   cubic[6] = curve.vtx[3];
 
+  uint32_t split_steps = 0;
+
   for (;;) {
     BLPoint quads[5];
-    t = bl_min(1.0, t);
-
-    if (t >= 0.999)
+    if (split_steps >= max_split_steps) {
       t = 1.0;
+    }
+    else {
+      t = bl_min(1.0, t);
+
+      if (t >= 0.999)
+        t = 1.0;
+    }
 
     // Split the cubic:
     //   - cubic[0:3] contains the part before `t`.
@@ -971,6 +978,8 @@ static BL_INLINE BLResult approximate_cubic_with_quads(CubicRef curve, double si
 
     if (t >= 1.0)
       return BL_SUCCESS;
+
+    split_steps++;
 
     // Recalculate the parameter.
     double oldT = t;
@@ -988,41 +997,98 @@ static BL_INLINE BLResult approximate_cubic_with_quads(CubicRef curve, double si
 //!
 //! \{
 
+static BL_INLINE void get_conic_projective_points(const BLPoint p[4], BLPoint out[6]) noexcept {
+  BLPoint p0 = p[0];
+  BLPoint p1 = p[1];
+  double w = p[2].x;
+  BLPoint p2 = p[3];
+
+  out[0] = p0;
+  out[1] = BLPoint(1.0, Math::nan<double>());
+  out[2] = p1 * w;
+  out[3] = BLPoint(w, Math::nan<double>());
+  out[4] = p2;
+  out[5] = BLPoint(1.0, Math::nan<double>());
+}
+
+static BL_INLINE void split_projective_conic(const BLPoint p[6], BLPoint left[6], BLPoint right[6], double t) noexcept {
+  BLPoint q01 = lerp(p[0], p[2], t);
+  BLPoint w01 = lerp(p[1], p[3], t);
+  BLPoint q12 = lerp(p[2], p[4], t);
+  BLPoint w12 = lerp(p[3], p[5], t);
+  BLPoint q012 = lerp(q01, q12, t);
+  BLPoint w012 = lerp(w01, w12, t);
+
+  left[0] = p[0];
+  left[1] = p[1];
+  left[2] = q01;
+  left[3] = w01;
+  left[4] = q012;
+  left[5] = w012;
+
+  right[0] = q012;
+  right[1] = w012;
+  right[2] = q12;
+  right[3] = w12;
+  right[4] = p[4];
+  right[5] = p[5];
+}
+
+static BL_INLINE void get_conic_derivative_coefficients(const BLPoint p[4], BLPoint& a, BLPoint& b, BLPoint& c) noexcept;
+
 template<QuadSplitOptions Options>
-static BL_INLINE BLPoint* split_conic_to_spline(const BLPoint p[3], BLPoint* out) noexcept {
+static BL_INLINE BLPoint* split_conic_to_spline(const BLPoint p[4], BLPoint* out) noexcept {
   static_assert(uint32_t(Options) != 0, "Split options cannot be empty");
 
-  // 2 extremas and 1 terminating `1.0` value.
-  constexpr uint32_t kMaxTCount = 3;
+  // Each axis can contribute up to two extrema.
+  constexpr uint32_t kMaxTCount = 4;
   FixedArray<double, kMaxTCount> ts;
 
-  QuadCoefficients qc = coefficients_of(quad_ref(p));
+  auto append_t = [&](double t) noexcept {
+    if (!(t > 0.0 && t < 1.0))
+      return;
 
-  // Find extremas.
-  if ((Options & QuadSplitOptions::kExtremaXY) == QuadSplitOptions::kExtremaXY) {
-    BLPoint extrema_ts = (p[0] - p[1]) / (p[0] - p[1] * 2.0 + p[2]);
-    double extremaT0 = bl_min(extrema_ts.x, extrema_ts.y);
-    double extremaT1 = bl_max(extrema_ts.x, extrema_ts.y);
+    size_t i = 0;
+    while (i != ts.size() && ts[i] < t)
+      i++;
 
-    ts.append_if(extremaT0, (extremaT0 > 0.0) & (extremaT0 < 1.0));
-    ts.append_if(extremaT1, (extremaT1 > bl_max(extremaT0, 0.0)) & (extremaT1 < 1.0));
+    if (i != ts.size() && bl_abs(ts[i] - t) <= Math::epsilon<double>())
+      return;
+
+    ts.append(0.0);
+    for (size_t j = ts.size() - 1; j != i; j--)
+      ts[j] = ts[j - 1];
+    ts[i] = t;
+  };
+
+  BLPoint a, b, c;
+  get_conic_derivative_coefficients(p, a, b, c);
+
+  auto append_roots = [&](double qa, double qb, double qc) noexcept {
+    if (Math::is_near_zero(qa)) {
+      if (!Math::is_near_zero(qb))
+        append_t(-qc / qb);
+      return;
+    }
+
+    double roots[2];
+    size_t n = Math::quad_roots(roots, qa, qb, qc, Math::kAfter0, Math::kBefore1);
+    for (size_t i = 0; i < n; i++)
+      append_t(roots[i]);
+  };
+
+  if ((Options & QuadSplitOptions::kExtremaXY) == QuadSplitOptions::kExtremaXY || bl_test_flag(Options, QuadSplitOptions::kExtremaX)) {
+    append_roots(a.x, b.x, c.x);
   }
-  else if (bl_test_flag(Options, QuadSplitOptions::kExtremaX)) {
-    double extrema_tx = (p[0].x - p[1].x) / (p[0].x - p[1].x * 2.0 + p[2].x);
-    ts.append_if(extrema_tx, (extrema_tx > 0.0) & (extrema_tx < 1.0));
-  }
-  else if (bl_test_flag(Options, QuadSplitOptions::kExtremaY)) {
-    double extrema_ty = (p[0].y - p[1].y) / (p[0].y - p[1].y * 2.0 + p[2].y);
-    ts.append_if(extrema_ty, (extrema_ty > 0.0) & (extrema_ty < 1.0));
+
+  if ((Options & QuadSplitOptions::kExtremaXY) == QuadSplitOptions::kExtremaXY || bl_test_flag(Options, QuadSplitOptions::kExtremaY)) {
+    append_roots(a.y, b.y, c.y);
   }
 
   // Split the curve into a spline, if necessary.
   if (!ts.is_empty()) {
-    // The last T we want is at 1.0.
-    ts.append(1.0);
-
-    out[0] = p[0];
-    BLPoint last = p[2];
+    BLPoint current[6];
+    get_conic_projective_points(p, current);
 
     size_t i = 0;
     double tCut = 0.0;
@@ -1032,22 +1098,22 @@ static BL_INLINE BLPoint* split_conic_to_spline(const BLPoint p[3], BLPoint* out
       BL_ASSERT(tVal >  0.0);
       BL_ASSERT(tVal <= 1.0);
 
-      double dt = (tVal - tCut) * 0.5;
+      double dt = (tVal - tCut) / (1.0 - tCut);
+      BLPoint next[6];
+      split_projective_conic(current, out, next, dt);
 
-      // Derivative: 2a*t + b.
-      BLPoint cp = (qc.a * (tVal * 2.0) + qc.b) * dt;
-      BLPoint tp = (qc.a * tVal + qc.b) * tVal + qc.c;
+      for (size_t j = 0; j < 6; j++)
+        current[j] = next[j];
 
-      // The last point must be exact.
-      if (++i == ts.size())
-        tp = last;
-
-      out[1].reset(tp - cp);
-      out[2].reset(tp);
-      out += 2;
+      out += 6;
+      i++;
 
       tCut = tVal;
-    } while (i != ts.size());
+    } while (i < ts.size());
+
+    for (size_t j = 0; j < 6; j++)
+      out[j] = current[j];
+    out += 6;
   }
 
   return out;
@@ -1069,35 +1135,25 @@ static BL_INLINE void get_conic_derivative_coefficients(const BLPoint p[4], BLPo
   c = 2 * w * v1;
 }
 
-static BL_INLINE void get_projective_points(const BLPoint p[4], BLPoint out[6]) noexcept {
-  BLPoint p0 = p[0];
-  BLPoint p1 = p[1];
-  double w = p[2].x;
-  BLPoint p2 = p[3];
-
-  out[0] = BLPoint(p0.x, 1);
-  out[1] = BLPoint(w * p1.x,  w);
-  out[2] = BLPoint(p2.x,  1);
-
-  out[3] = BLPoint(p0.y, 1);
-  out[4] = BLPoint(w * p1.y, w);
-  out[5] = BLPoint(p2.y, 1);
-}
-
 static BL_INLINE BLPoint eval_conic_precise(const BLPoint p[4], const BLPoint& t) noexcept {
   BLPoint pp[6];
-  get_projective_points(p, pp);
+  get_conic_projective_points(p, pp);
 
-  BLPoint ppx01(lerp(pp[0], pp[1], t.x));
-  BLPoint ppy01(lerp(pp[3], pp[4], t.y));
+  BLPoint q01x(lerp(pp[0], pp[2], t.x));
+  BLPoint w01x(lerp(pp[1], pp[3], t.x));
+  BLPoint q12x(lerp(pp[2], pp[4], t.x));
+  BLPoint w12x(lerp(pp[3], pp[5], t.x));
+  BLPoint q012x(lerp(q01x, q12x, t.x));
+  BLPoint w012x(lerp(w01x, w12x, t.x));
 
-  BLPoint ppx12(lerp(pp[1], pp[2], t.x));
-  BLPoint ppy12(lerp(pp[4], pp[5], t.y));
+  BLPoint q01y(lerp(pp[0], pp[2], t.y));
+  BLPoint w01y(lerp(pp[1], pp[3], t.y));
+  BLPoint q12y(lerp(pp[2], pp[4], t.y));
+  BLPoint w12y(lerp(pp[3], pp[5], t.y));
+  BLPoint q012y(lerp(q01y, q12y, t.y));
+  BLPoint w012y(lerp(w01y, w12y, t.y));
 
-  BLPoint ppx012(lerp(ppx01, ppx12, t.x));
-  BLPoint ppy012(lerp(ppy01, ppy12, t.y));
-
-  return BLPoint(ppx012.x / ppx012.y, ppy012.x / ppy012.y);
+  return BLPoint(q012x.x / w012x.x, q012y.y / w012y.x);
 }
 
 

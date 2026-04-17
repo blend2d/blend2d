@@ -27,12 +27,14 @@ static constexpr double kStrokeLengthEpsilon = 1e-10;
 static constexpr double kStrokeLengthEpsilonSq = Math::square(kStrokeLengthEpsilon);
 
 static constexpr double kStrokeCollinearityEpsilon = 1e-10;
+static constexpr double kStrokeCollinearityEpsilonSq = Math::square(kStrokeCollinearityEpsilon);
 
 static constexpr double kStrokeCuspTThreshold = 1e-10;
 static constexpr double kStrokeDegenerateFlatness = 1e-6;
 
 // Epsilon used to split quadratic bezier curves during offsetting.
 static constexpr double kOffsetQuadEpsilonT = 1e-5;
+static constexpr uint32_t kApproxCurveMaxDepth = 16;
 
 // Minimum vertices that would be required for any join + additional line.
 //
@@ -40,7 +42,7 @@ static constexpr double kOffsetQuadEpsilonT = 1e-5;
 //   JOIN:
 //     bevel: 1 vertex
 //     miter: 3 vertices
-//     round: 7 vertices (2 cubics at most)
+//     round: 4 vertices (2 conics at most)
 //   ADDITIONAL:
 //     end-point: 1 vertex
 //     line-to  : 1 vertex
@@ -52,16 +54,26 @@ static constexpr size_t kStrokeMaxJoinVertices = 9;
 struct CapVertexCountGen {
   static constexpr uint8_t value(size_t cap) noexcept {
     return BLStrokeCap(cap) == BL_STROKE_CAP_SQUARE       ? 3 :
-           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND        ? 6 :
-           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND_REV    ? 8 :
+           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND        ? 4 :
+           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND_REV    ? 6 :
            BLStrokeCap(cap) == BL_STROKE_CAP_TRIANGLE     ? 2 :
            BLStrokeCap(cap) == BL_STROKE_CAP_TRIANGLE_REV ? 4 :
            BLStrokeCap(cap) == BL_STROKE_CAP_BUTT         ? 1 : 0;
   }
 };
 
+struct CapConicCountGen {
+  static constexpr uint8_t value(size_t cap) noexcept {
+    return BLStrokeCap(cap) == BL_STROKE_CAP_ROUND     ? 2 :
+           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND_REV ? 2 : 0;
+  }
+};
+
 static constexpr auto cap_vertex_count_table =
   make_lookup_table<uint8_t, BL_STROKE_CAP_MAX_VALUE + 1, CapVertexCountGen>();
+
+static constexpr auto cap_conic_count_table =
+  make_lookup_table<uint8_t, BL_STROKE_CAP_MAX_VALUE + 1, CapConicCountGen>();
 
 // bl::Path - Stroke - Utilities
 // =============================
@@ -104,17 +116,21 @@ static BL_INLINE bool test_inner_join_intersecion(const BLPoint& a0, const BLPoi
          (join.x <= max.x) & (join.y <= max.y) ;
 }
 
-static BL_INLINE void dull_angle_arc_to(PathAppender& appender, const BLPoint& p0, const BLPoint& pa, const BLPoint& pb, const BLPoint& intersection) noexcept {
+static BL_INLINE void angle_arc_to(PathAppender& appender, const BLPoint& p0, const BLPoint& pa, const BLPoint& pb, const BLPoint& intersection) noexcept {
   BLPoint pm = (pa + pb) * 0.5;
 
-  double w = Math::sqrt(Geometry::magnitude(p0 - pm) / Geometry::magnitude(p0 - intersection));
-  double a = 4 * w / (3.0 * (1.0 + w));
+  double denominator = Geometry::magnitude(p0 - intersection);
+  if (!(denominator > 0.0))
+    return appender.line_to(pb);
 
-  BLPoint c0 = pa + a * (intersection - pa);
-  BLPoint c1 = pb + a * (intersection - pb);
+  double w = Math::sqrt(Geometry::magnitude(p0 - pm) / denominator);
+  if (!(w > 0.0) || !Math::is_finite(w))
+    return appender.line_to(pb);
 
-  appender.cubic_to(c0, c1, pb);
+  appender.conic_to(intersection, pb, w);
 };
+
+static constexpr size_t kStrokeMaxJoinConics = 2;
 
 // bl::Path - Stroke - Implementation
 // ==================================
@@ -214,15 +230,17 @@ public:
   BL_INLINE PathAppender& outer_appender(Side side) noexcept { return _side_data[size_t(side)].appender; }
   BL_INLINE PathAppender& inner_appender(Side side) noexcept { return _side_data[size_t(opposite_side(side))].appender; }
 
-  BL_INLINE BLResult ensure_appenders_capacity(size_t a_required, size_t b_required) noexcept {
+  BL_INLINE BLResult ensure_appenders_capacity(size_t a_required, size_t b_required, size_t a_conic_required = 0, size_t b_conic_required = 0) noexcept {
     uint32_t ok = uint32_t(a_out().remaining_size() >= a_required) &
-                  uint32_t(b_out().remaining_size() >= b_required) ;
+                  uint32_t(b_out().remaining_size() >= b_required) &
+                  uint32_t(a_out().remaining_conic_weight_size() >= a_conic_required) &
+                  uint32_t(b_out().remaining_conic_weight_size() >= b_conic_required) ;
 
     if (BL_LIKELY(ok))
       return BL_SUCCESS;
 
-    return a_out().ensure(a_path(), a_required) |
-           b_out().ensure(b_path(), b_required) ;
+    return a_out().ensure(a_path(), a_required, a_conic_required) |
+           b_out().ensure(b_path(), b_required, b_conic_required) ;
   }
 
   BL_INLINE_IF_NOT_DEBUG BLResult stroke(BLPathStrokeSinkFunc sink, void* user_data) noexcept {
@@ -249,7 +267,7 @@ public:
       BL_PROPAGATE(a_out().begin(a_path(), BL_MODIFY_OP_APPEND_GROW, _iter.remaining_forward()));
       BL_PROPAGATE(b_out().begin(b_path(), BL_MODIFY_OP_ASSIGN_GROW, 48));
 
-      BLPoint poly_pts[4];
+      BLPoint poly_pts[16];
       size_t poly_size;
 
       _p0 = *_iter.vtx;
@@ -259,7 +277,7 @@ public:
       // Content of the figure.
       _iter++;
       while (!_iter.at_end()) {
-        BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices));
+        BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices, kStrokeMaxJoinConics, kStrokeMaxJoinConics));
 
         uint8_t cmd = _iter.cmd[0]; // Next command.
         BLPoint p1 = _iter.vtx[0];  // Next line-to or control point.
@@ -286,7 +304,7 @@ LineTo:
             if (_iter.at_end())
               break;
 
-            BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices));
+            BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices, kStrokeMaxJoinConics, kStrokeMaxJoinConics));
 
             cmd = _iter.cmd[0];
             p1 = _iter.vtx[0];
@@ -359,6 +377,81 @@ SmoothPolyTo:
             BL_PROPAGATE(join_curve(n1));
 
           BL_PROPAGATE(offset_quad(_iter.vtx - 3));
+        }
+        else if (cmd == BL_PATH_CMD_CONIC) {
+          double w = _iter.conic_weight_data[0];
+          _iter += 2;
+          if (BL_UNLIKELY(_iter.after_end()))
+            return BL_ERROR_INVALID_GEOMETRY;
+
+          if (w == 1.0) {
+            BLPoint quad[3];
+            BLPoint p2 = _iter.vtx[-1];
+            BLPoint v2 = p2 - _iter.vtx[-2];
+
+            quad[0] = _p0;
+            quad[1] = _iter.vtx[-2];
+            quad[2] = p2;
+
+            v1 = quad[1] - _p0;
+            n1 = Geometry::normal(Geometry::unit_vector(v1));
+
+            double cm = Geometry::cross(v2, v1);
+            if (bl_abs(cm) <= kStrokeCollinearityEpsilon) {
+              double dot = Geometry::dot(-v1, v2);
+
+              if (dot > 0.0) {
+                double r1 = Geometry::dot(quad[1] - _p0, v1);
+                double r2 = Geometry::dot(quad[2] - _p0, v1);
+
+                double t = r1 / (2.0 * r1 - r2);
+                if (t > 0.0 && t < 1.0) {
+                  poly_pts[0] = Geometry::evaluate(Geometry::quad_ref(quad), t);
+                  poly_pts[1] = p2;
+                  poly_size = 2;
+                  goto SmoothPolyTo;
+                }
+              }
+
+              p1 = p2;
+              goto LineTo;
+            }
+
+            if (Geometry::magnitude_squared(v1) < kStrokeLengthEpsilonSq || Geometry::magnitude_squared(v2) < kStrokeLengthEpsilonSq) {
+              p1 = p2;
+              goto LineTo;
+            }
+
+            if (!is_open())
+              BL_PROPAGATE(open_curve(n1));
+            else
+              BL_PROPAGATE(join_curve(n1));
+
+            BL_PROPAGATE(offset_quad(quad));
+            continue;
+          }
+
+          BLPoint conic[4];
+          conic[0] = _p0;
+          conic[1] = _iter.vtx[-2];
+          conic[2].reset(w, Math::nan<double>());
+          conic[3] = _iter.vtx[-1];
+
+          v1 = (conic[1] - _p0) * w;
+          if (Geometry::magnitude_squared(v1) < kStrokeLengthEpsilonSq)
+            v1 = conic[3] - _p0;
+
+          if (Geometry::magnitude_squared(v1) < kStrokeLengthEpsilonSq)
+            continue;
+
+          n1 = Geometry::normal(Geometry::unit_vector(v1));
+
+          if (!is_open())
+            BL_PROPAGATE(open_curve(n1));
+          else
+            BL_PROPAGATE(join_curve(n1));
+
+          BL_PROPAGATE(offset_conic(conic));
         }
         else if (cmd == BL_PATH_CMD_CUBIC) {
           // Cubic curve segment.
@@ -445,7 +538,7 @@ SmoothPolyTo:
             if (cusp <= 0)
               break;
 
-            BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices));
+            BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices, kStrokeMaxJoinConics, kStrokeMaxJoinConics));
 
             // Second part of the cubic after the cusp. We assign `-1` to `cusp` so we can call `join_cusp()` later.
             // This is a special join that we need in this case.
@@ -487,7 +580,7 @@ SmoothPolyTo:
         // A and B have a content, path C will be empty and should be thus ignored by the sink.
 
         // Allocate space for the end join and close command.
-        BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices + 1, kStrokeMaxJoinVertices + 1));
+        BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices + 1, kStrokeMaxJoinVertices + 1, kStrokeMaxJoinConics, kStrokeMaxJoinConics));
 
         BL_PROPAGATE(join_end_point(_nInitial));
         a_out().close();
@@ -502,11 +595,11 @@ SmoothPolyTo:
         uint32_t start_cap = sanity_stroke_cap(_options.start_cap);
         uint32_t end_cap = sanity_stroke_cap(_options.end_cap);
 
-        BL_PROPAGATE(a_out().ensure(a_path(), cap_vertex_count_table[end_cap]));
+        BL_PROPAGATE(a_out().ensure(a_path(), cap_vertex_count_table[end_cap], cap_conic_count_table[end_cap]));
         BL_PROPAGATE(add_cap(a_out(), _p0, b_out().vtx[-1], end_cap));
 
         PathAppender c_out;
-        BL_PROPAGATE(c_out.begin(c_path(), BL_MODIFY_OP_ASSIGN_GROW, cap_vertex_count_table[start_cap] + 1));
+        BL_PROPAGATE(c_out.begin(c_path(), BL_MODIFY_OP_ASSIGN_GROW, cap_vertex_count_table[start_cap] + 1, cap_conic_count_table[start_cap]));
         c_out.move_to(b_path()->vertex_data()[0]);
         BL_PROPAGATE(add_cap(c_out, _pInitial, a_path()->vertex_data()[side_data(Side::kA).figure_offset], start_cap));
         c_out.done(c_path());
@@ -807,21 +900,12 @@ SmoothPolyTo:
         BLPoint pp1 = _p0 + q;
         BLPoint pc2 = Math::lerp(pc1, pp1, 2.0);
 
-        dull_angle_arc_to(appender, _p0, pa, pp1, pc1);
-        dull_angle_arc_to(appender, _p0, pp1, pb, pc2);
+        angle_arc_to(appender, _p0, pa, pp1, pc1);
+        angle_arc_to(appender, _p0, pp1, pb, pc2);
       }
       else {
         // Acute angle.
-        BLPoint pm = Math::lerp(pa, pb);
-        BLPoint pi = _p0 + k;
-
-        double w = Math::sqrt(Geometry::length(_p0, pm) / Geometry::length(_p0, pi));
-        double a = 4.0 * w / (3.0 * (1.0 + w));
-
-        BLPoint c0 = pa + a * (pi - pa);
-        BLPoint c1 = pb + a * (pi - pb);
-
-        appender.cubic_to(c0, c1, pb);
+        angle_arc_to(appender, _p0, pa, pb, _p0 + k);
       }
       return BL_SUCCESS;
     }
@@ -848,8 +932,8 @@ SmoothPolyTo:
     BLPoint pp1 = _p0 + q;
     BLPoint pc2 = Math::lerp(pc1, pp1, 2.0);
 
-    dull_angle_arc_to(out, _p0, pa, pp1, pc1);
-    dull_angle_arc_to(out, _p0, pp1, pb, pc2);
+    angle_arc_to(out, _p0, pa, pp1, pc1);
+    angle_arc_to(out, _p0, pp1, pb, pc2);
     return BL_SUCCESS;
   }
 
@@ -902,6 +986,114 @@ SmoothPolyTo:
     b_out().quad_to(p1 - k1, p2 - k2);
   }
 
+  static BL_INLINE BLPoint evaluate_projective_conic(const BLPoint proj[6], double t) noexcept {
+    BLPoint q01 = Math::lerp(proj[0], proj[2], t);
+    BLPoint w01 = Math::lerp(proj[1], proj[3], t);
+    BLPoint q12 = Math::lerp(proj[2], proj[4], t);
+    BLPoint w12 = Math::lerp(proj[3], proj[5], t);
+    BLPoint q012 = Math::lerp(q01, q12, t);
+    BLPoint w012 = Math::lerp(w01, w12, t);
+
+    return q012 / w012.x;
+  }
+
+  static BL_INLINE void approximate_projective_conic_with_quad(const BLPoint proj[6], BLPoint quad[3]) noexcept {
+    BLPoint p0 = proj[0] / proj[1].x;
+    BLPoint p2 = proj[4] / proj[5].x;
+
+    BLPoint v0 = proj[2] * proj[1].x - proj[0] * proj[3].x;
+    BLPoint v1 = proj[4] * proj[3].x - proj[2] * proj[5].x;
+    double v0m2 = Geometry::magnitude_squared(v0);
+    double v1m2 = Geometry::magnitude_squared(v1);
+    double cross = Geometry::cross(v0, v1);
+
+    quad[0] = p0;
+    quad[2] = p2;
+
+    if (v0m2 > kStrokeLengthEpsilonSq && v1m2 > kStrokeLengthEpsilonSq && Math::square(cross) > kStrokeCollinearityEpsilonSq * v0m2 * v1m2) {
+      quad[1] = Geometry::line_vector_intersection(p0, v0, p2, -v1);
+    }
+    else {
+      BLPoint pm = evaluate_projective_conic(proj, 0.5);
+      quad[1] = pm * 2.0 - (p0 + p2) * 0.5;
+    }
+  }
+
+  template<typename Callback>
+  BL_INLINE_IF_NOT_DEBUG BLResult approximate_conic_with_quads(const BLPoint conic[4], const Callback& callback) noexcept {
+    struct ConicApproximationPart {
+      BLPoint proj[6];
+      uint32_t depth;
+    };
+
+    BLPoint spline[30];
+    BLPoint projective[6];
+    BLPoint* spline_ptr = spline;
+    BLPoint* spline_end = Geometry::split_conic_to_spline<Geometry::QuadSplitOptions::kExtremaXY>(conic, spline_ptr);
+
+    if (spline_end == spline_ptr) {
+      Geometry::get_conic_projective_points(conic, projective);
+      spline_ptr = projective;
+      spline_end = projective + 6;
+    }
+
+    double tolerance_sq = Math::square(4.0 * _approx.simplify_tolerance);
+    ConicApproximationPart stack[kApproxCurveMaxDepth + 1];
+
+    do {
+      size_t stack_size = 1;
+      for (size_t i = 0; i < 6; i++)
+        stack[0].proj[i] = spline_ptr[i];
+      stack[0].depth = 0;
+
+      while (stack_size) {
+        ConicApproximationPart part = stack[--stack_size];
+        BLPoint quad[3];
+
+        approximate_projective_conic_with_quad(part.proj, quad);
+
+        BLPoint pm0 = evaluate_projective_conic(part.proj, 0.5);
+        BLPoint pm1 = Geometry::evaluate_precise(Geometry::quad_ref(quad), 0.5);
+
+        if (part.depth < kApproxCurveMaxDepth && Geometry::magnitude_squared(pm0 - pm1) > tolerance_sq) {
+          BLPoint left[6];
+          BLPoint right[6];
+
+          Geometry::split_projective_conic(part.proj, left, right, 0.5);
+
+          for (size_t i = 0; i < 6; i++) {
+            stack[stack_size].proj[i] = right[i];
+            stack[stack_size + 1].proj[i] = left[i];
+          }
+          stack[stack_size].depth = part.depth + 1;
+          stack[stack_size + 1].depth = part.depth + 1;
+          stack_size += 2;
+          continue;
+        }
+
+        BL_PROPAGATE(callback(quad));
+      }
+    } while ((spline_ptr += 6) != spline_end);
+
+    return BL_SUCCESS;
+  }
+
+  struct ConicApproximateSink {
+    PathStroker& _stroker;
+
+    BL_INLINE ConicApproximateSink(PathStroker& stroker) noexcept
+      : _stroker(stroker) {}
+
+    BL_INLINE BLResult operator()(const BLPoint quad[3]) const noexcept {
+      return _stroker.offset_quad(quad);
+    }
+  };
+
+  BL_INLINE_IF_NOT_DEBUG BLResult offset_conic(const BLPoint conic[4]) noexcept {
+    ConicApproximateSink sink(*this);
+    return approximate_conic_with_quads(conic, sink);
+  }
+
   struct CubicApproximateSink {
     PathStroker& _stroker;
 
@@ -915,7 +1107,7 @@ SmoothPolyTo:
 
   BL_INLINE_IF_NOT_DEBUG BLResult offset_cubic(const BLPoint bez[4]) noexcept {
     CubicApproximateSink sink(*this);
-    return Geometry::approximate_cubic_with_quads(Geometry::cubic_ref(bez), _approx.simplify_tolerance, sink);
+    return Geometry::approximate_cubic_with_quads(Geometry::cubic_ref(bez), _approx.simplify_tolerance, kApproxCurveMaxDepth, sink);
   }
 
   BL_INLINE_IF_NOT_DEBUG BLResult add_cap(PathAppender& out, BLPoint pivot, BLPoint p1, uint32_t cap_type) noexcept {

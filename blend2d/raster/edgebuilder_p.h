@@ -157,8 +157,8 @@ public:
   BL_INLINE void next_cubic_to(BLPoint&, BLPoint&, BLPoint&) noexcept {}
   BL_INLINE bool maybe_next_cubic_to(BLPoint&, BLPoint&, BLPoint&) noexcept { return false; }
 
-  BL_INLINE void next_conic_to(BLPoint&, BLPoint&) noexcept {}
-  BL_INLINE bool maybe_next_conic_to(BLPoint&, BLPoint&) noexcept { return false; }
+  BL_INLINE void next_conic_to(BLPoint&, BLPoint&, double&) noexcept {}
+  BL_INLINE bool maybe_next_conic_to(BLPoint&, BLPoint&, double&) noexcept { return false; }
 };
 
 template<class Transform = EdgeTransformNone>
@@ -166,6 +166,7 @@ class EdgeSourcePath {
 public:
   Transform _transform;
   const BLPoint* _vtx_ptr;
+  const double* _conic_weight_ptr;
   const uint8_t* _cmd_ptr;
   const uint8_t* _cmd_end;
   const uint8_t* _cmdEndMinus2;
@@ -173,25 +174,27 @@ public:
   BL_INLINE EdgeSourcePath(const Transform& transform) noexcept
     : _transform(transform),
       _vtx_ptr(nullptr),
+      _conic_weight_ptr(nullptr),
       _cmd_ptr(nullptr),
       _cmd_end(nullptr),
       _cmdEndMinus2(nullptr) {}
 
   BL_INLINE EdgeSourcePath(const Transform& transform, const BLPathView& view) noexcept
-    : _transform(transform) { reset(view.vertex_data, view.command_data, view.size); }
+    : _transform(transform) { reset(view.vertex_data, view.command_data, view.conic_weight_data, view.size); }
 
-  BL_INLINE EdgeSourcePath(const Transform& transform, const BLPoint* vtx_data, const uint8_t* cmd_data, size_t count) noexcept
-    : _transform(transform) { reset(vtx_data, cmd_data, count); }
+  BL_INLINE EdgeSourcePath(const Transform& transform, const BLPoint* vtx_data, const uint8_t* cmd_data, const double* conic_weight_data, size_t count) noexcept
+    : _transform(transform) { reset(vtx_data, cmd_data, conic_weight_data, count); }
 
-  BL_INLINE void reset(const BLPoint* vtx_data, const uint8_t* cmd_data, size_t count) noexcept {
+  BL_INLINE void reset(const BLPoint* vtx_data, const uint8_t* cmd_data, const double* conic_weight_data, size_t count) noexcept {
     _vtx_ptr = vtx_data;
+    _conic_weight_ptr = conic_weight_data;
     _cmd_ptr = cmd_data;
     _cmd_end = cmd_data + count;
     _cmdEndMinus2 = _cmd_end - 2;
   }
 
   BL_INLINE void reset(const BLPath& path) noexcept {
-    reset(path.vertex_data(), path.command_data(), path.size());
+    reset(path.vertex_data(), path.command_data(), path.conic_weight_data(), path.size());
   }
 
   BL_INLINE bool begin(BLPoint& initial) noexcept {
@@ -216,7 +219,7 @@ public:
   BL_INLINE bool is_close() const noexcept { return _cmd_ptr != _cmd_end && _cmd_ptr[0] == BL_PATH_CMD_CLOSE; }
   BL_INLINE bool is_line_to() const noexcept { return _cmd_ptr != _cmd_end && _cmd_ptr[0] == BL_PATH_CMD_ON; }
   BL_INLINE bool is_quad_to() const noexcept { return _cmd_ptr <= _cmdEndMinus2 && _cmd_ptr[0] == BL_PATH_CMD_QUAD; }
-  BL_INLINE bool is_conic_to() const noexcept { return _cmd_ptr < _cmdEndMinus2 && _cmd_ptr[0] == BL_PATH_CMD_CONIC; }
+  BL_INLINE bool is_conic_to() const noexcept { return _cmd_ptr <= _cmdEndMinus2 && _cmd_ptr[0] == BL_PATH_CMD_CONIC; }
   BL_INLINE bool is_cubic_to() const noexcept { return _cmd_ptr < _cmdEndMinus2 && _cmd_ptr[0] == BL_PATH_CMD_CUBIC; }
 
   BL_INLINE void next_line_to(BLPoint& pt1) noexcept {
@@ -264,18 +267,20 @@ public:
     return true;
   }
 
-  BL_INLINE void next_conic_to(BLPoint& pt1, BLPoint& pt2) noexcept {
+  BL_INLINE void next_conic_to(BLPoint& pt1, BLPoint& pt2, double& w) noexcept {
     _transform.apply(pt1, _vtx_ptr[0]);
-    _transform.apply(pt2, _vtx_ptr[2]);
+    _transform.apply(pt2, _vtx_ptr[1]);
+    w = _conic_weight_ptr[0];
     _cmd_ptr += 2;
     _vtx_ptr += 2;
+    _conic_weight_ptr++;
   }
 
-  BL_INLINE bool maybe_next_conic_to(BLPoint& pt1, BLPoint& pt2) noexcept {
+  BL_INLINE bool maybe_next_conic_to(BLPoint& pt1, BLPoint& pt2, double& w) noexcept {
     if (!is_conic_to())
       return false;
 
-    next_conic_to(pt1, pt2);
+    next_conic_to(pt1, pt2, w);
     return true;
   }
 };
@@ -288,6 +293,7 @@ class EdgeSourceReversePathFromStrokeSink {
 public:
   Transform _transform;
   const BLPoint* _vtx_ptr;
+  const double* _conic_weight_ptr;
   const uint8_t* _cmd_ptr;
   const uint8_t* _cmd_start;
   bool _must_close;
@@ -295,18 +301,20 @@ public:
   BL_INLINE EdgeSourceReversePathFromStrokeSink(const Transform& transform) noexcept
     : _transform(transform),
       _vtx_ptr(nullptr),
+      _conic_weight_ptr(nullptr),
       _cmd_ptr(nullptr),
       _cmd_start(nullptr),
       _must_close(false) {}
 
   BL_INLINE EdgeSourceReversePathFromStrokeSink(const Transform& transform, const BLPathView& view) noexcept
-    : _transform(transform) { reset(view.vertex_data, view.command_data, view.size); }
+    : _transform(transform) { reset(view.vertex_data, view.command_data, view.conic_weight_data, view.size, view.conic_weight_size); }
 
-  BL_INLINE EdgeSourceReversePathFromStrokeSink(const Transform& transform, const BLPoint* vtx_data, const uint8_t* cmd_data, size_t count) noexcept
-    : _transform(transform) { reset(vtx_data, cmd_data, count); }
+  BL_INLINE EdgeSourceReversePathFromStrokeSink(const Transform& transform, const BLPoint* vtx_data, const uint8_t* cmd_data, const double* conic_weight_data, size_t count, size_t conic_weight_size) noexcept
+    : _transform(transform) { reset(vtx_data, cmd_data, conic_weight_data, count, conic_weight_size); }
 
-  BL_INLINE void reset(const BLPoint* vtx_data, const uint8_t* cmd_data, size_t count) noexcept {
+  BL_INLINE void reset(const BLPoint* vtx_data, const uint8_t* cmd_data, const double* conic_weight_data, size_t count, size_t conic_weight_size) noexcept {
     _vtx_ptr = vtx_data + count;
+    _conic_weight_ptr = conic_weight_data + conic_weight_size;
     _cmd_ptr = cmd_data + count;
     _cmd_start = cmd_data;
     _must_close = count > 0 && _cmd_ptr[-1] == BL_PATH_CMD_CLOSE;
@@ -316,7 +324,7 @@ public:
   }
 
   BL_INLINE void reset(const BLPath& path) noexcept {
-    reset(path.vertex_data(), path.command_data(), path.size());
+    reset(path.vertex_data(), path.command_data(), path.conic_weight_data(), path.size(), path.conic_weight_size());
   }
 
   BL_INLINE bool begin(BLPoint& initial) noexcept {
@@ -389,18 +397,20 @@ public:
     return true;
   }
 
-  BL_INLINE void next_conic_to(BLPoint& pt1, BLPoint& pt2) noexcept {
+  BL_INLINE void next_conic_to(BLPoint& pt1, BLPoint& pt2, double& w) noexcept {
     _cmd_ptr -= 2;
     _vtx_ptr -= 2;
-    _transform.apply(pt1, _vtx_ptr[2]);
+    _conic_weight_ptr--;
+    _transform.apply(pt1, _vtx_ptr[1]);
     _transform.apply(pt2, _vtx_ptr[0]);
+    w = _conic_weight_ptr[0];
   }
 
-  BL_INLINE bool maybe_next_conic_to(BLPoint& pt1, BLPoint& pt2) noexcept {
+  BL_INLINE bool maybe_next_conic_to(BLPoint& pt1, BLPoint& pt2, double& w) noexcept {
     if (!is_conic_to())
       return false;
 
-    next_conic_to(pt1, pt2);
+    next_conic_to(pt1, pt2, w);
     return true;
   }
 };
@@ -422,7 +432,7 @@ typedef EdgeSourceReversePathFromStrokeSink<EdgeTransformAffine> EdgeSourceRever
 //! \name Edge Flattening
 //! \{
 
-//! Base data (mostly stack) used by `FlattenMonoQuad` and `FlattenMonoCubic`.
+//! Base data (mostly stack) used by `FlattenMonoQuad`, `FlattenMonoConic` and `FlattenMonoCubic`.
 class FlattenMonoData {
 public:
   enum : size_t {
@@ -430,7 +440,8 @@ public:
 
     kStackSizeQuad  = kRecursionLimit * 3,
     kStackSizeCubic = kRecursionLimit * 4,
-    kStackSizeTotal = kStackSizeCubic
+    kStackSizeConic = kRecursionLimit * 6,
+    kStackSizeTotal = kStackSizeConic
   };
 
   BLPoint _stack[kStackSizeTotal];
@@ -506,7 +517,7 @@ public:
     step.value = d * d;
     step.limit = _tolerance_sq * len_sq;
 
-    return step.value <= step.limit;
+    return step.value <= step.limit || len_sq <= _tolerance_sq;
   }
 
   BL_INLINE void split(SplitStep& step) const noexcept {
@@ -620,7 +631,7 @@ public:
     step.value = bl_max(d1_sq, d2_sq);
     step.limit = _tolerance_sq * len_sq;
 
-    return step.value <= step.limit;
+    return step.value <= step.limit || len_sq <= _tolerance_sq;
   }
 
   BL_INLINE void split(SplitStep& step) const noexcept {
@@ -662,12 +673,14 @@ public:
   }
 };
 
-//! Helper to flatten a monotonic quad curve.
+//! Helper to flatten a monotonic conic curve.
+//! Special care must be taken as conics use homogeneous coordinates.
 class FlattenMonoConic {
 public:
   FlattenMonoData& _flatten_data;
   double _tolerance_sq;
   BLPoint* _stack_ptr;
+  BLPoint _q0, _w0, _q1, _w1, _q2, _w2;
   BLPoint _p0, _p1, _p2;
 
   struct SplitStep {
@@ -677,8 +690,12 @@ public:
     double value;
     double limit;
 
-    BLPoint p01;
-    BLPoint p12;
+    BLPoint q01;
+    BLPoint w01;
+    BLPoint q12;
+    BLPoint w12;
+    BLPoint q012;
+    BLPoint w012;
     BLPoint p012;
   };
 
@@ -690,22 +707,32 @@ public:
     _stack_ptr = _flatten_data._stack;
 
     if (sign_bit == 0) {
-      _p0 = src[0];
-      _p1 = src[1];
-      _p2 = src[2];
+      _q0 = src[0];
+      _w0 = src[1];
+      _q1 = src[2];
+      _w1 = src[3];
+      _q2 = src[4];
+      _w2 = src[5];
     }
     else {
-      _p0 = src[2];
-      _p1 = src[1];
-      _p2 = src[0];
+      _q0 = src[4];
+      _w0 = src[5];
+      _q1 = src[2];
+      _w1 = src[3];
+      _q2 = src[0];
+      _w2 = src[1];
     }
+
+    _p0 = _q0 / _w0.x;
+    _p1 = _q1 / _w1.x;
+    _p2 = _q2 / _w2.x;
   }
 
   BL_INLINE const BLPoint& first() const noexcept { return _p0; }
   BL_INLINE const BLPoint& last() const noexcept { return _p2; }
 
-  BL_INLINE bool can_pop() const noexcept { return _stack_ptr != _flatten_data._stack; }
-  BL_INLINE bool can_push() const noexcept { return _stack_ptr != _flatten_data._stack + FlattenMonoData::kStackSizeQuad; }
+  BL_INLINE bool can_pop() const noexcept { return _stack_ptr >= _flatten_data._stack + 6; }
+  BL_INLINE bool can_push() const noexcept { return _stack_ptr + 6 <= _flatten_data._stack + FlattenMonoData::kStackSizeConic; }
 
   BL_INLINE bool is_left_to_right() const noexcept { return first().x < last().x; }
 
@@ -715,11 +742,13 @@ public:
   BL_INLINE void bound_left_to_right() noexcept {
     _p1.x = bl_clamp(_p1.x, _p0.x, _p2.x);
     _p1.y = bl_clamp(_p1.y, _p0.y, _p2.y);
+    _q1 = _p1 * _w1.x;
   }
 
   BL_INLINE void bound_right_to_left() noexcept {
     _p1.x = bl_clamp(_p1.x, _p2.x, _p0.x);
     _p1.y = bl_clamp(_p1.y, _p0.y, _p2.y);
+    _q1 = _p1 * _w1.x;
   }
 
   BL_INLINE bool is_flat(SplitStep& step) const noexcept {
@@ -732,38 +761,62 @@ public:
     step.value = d * d;
     step.limit = _tolerance_sq * len_sq;
 
-    return step.value <= step.limit;
+    return step.value <= step.limit || len_sq <= _tolerance_sq;
   }
 
   BL_INLINE void split(SplitStep& step) const noexcept {
-    step.p01 = (_p0 + _p1) * 0.5;
-    step.p12 = (_p1 + _p2) * 0.5;
-    step.p012 = (step.p01 + step.p12) * 0.5;
+    step.q01 = (_q0 + _q1) * 0.5;
+    step.w01.x = (_w0.x + _w1.x) * 0.5;
+    step.w01.y = bl::Math::nan<double>();
+    step.q12 = (_q1 + _q2) * 0.5;
+    step.w12.x = (_w1.x + _w2.x) * 0.5;
+    step.w12.y = bl::Math::nan<double>();
+    step.q012 = (step.q01 + step.q12) * 0.5;
+    step.w012.x = (step.w01.x + step.w12.x) * 0.5;
+    step.w012.y =  bl::Math::nan<double>();
+    step.p012 = step.q012 / step.w012.x;
   }
 
   BL_INLINE void push(const SplitStep& step) noexcept {
     // Must be checked before calling `push()`.
     BL_ASSERT(can_push());
 
-    _stack_ptr[0].reset(step.p012);
-    _stack_ptr[1].reset(step.p12);
-    _stack_ptr[2].reset(_p2);
-    _stack_ptr += 3;
+    _stack_ptr[0].reset(step.q012);
+    _stack_ptr[1].reset(step.w012);
+    _stack_ptr[2].reset(step.q12);
+    _stack_ptr[3].reset(step.w12);
+    _stack_ptr[4].reset(_q2);
+    _stack_ptr[5].reset(_w2);
+    _stack_ptr += 6;
 
-    _p1 = step.p01;
+    _q1 = step.q01;
+    _w1 = step.w01;
+    _p1 = _q1 / _w1.x;
+    _q2 = step.q012;
+    _w2 = step.w012;
     _p2 = step.p012;
   }
 
   BL_INLINE void discard_and_advance(const SplitStep& step) noexcept {
+    _q0 = step.q012;
+    _w0 = step.w012;
     _p0 = step.p012;
-    _p1 = step.p12;
+    _q1 = step.q12;
+    _w1 = step.w12;
+    _p1 = _q1 / _w1.x;
   }
 
   BL_INLINE void pop() noexcept {
-    _stack_ptr -= 3;
-    _p0 = _stack_ptr[0];
-    _p1 = _stack_ptr[1];
-    _p2 = _stack_ptr[2];
+    _stack_ptr -= 6;
+    _q0 = _stack_ptr[0];
+    _w0 = _stack_ptr[1];
+    _q1 = _stack_ptr[2];
+    _w1 = _stack_ptr[3];
+    _q2 = _stack_ptr[4];
+    _w2 = _stack_ptr[5];
+    _p0 = _q0 / _w0.x;
+    _p1 = _q1 / _w1.x;
+    _p2 = _q2 / _w2.x;
   }
 };
 
@@ -1896,16 +1949,20 @@ RestartClipLoop:
 
   template<class Source>
   BL_INLINE_IF_NOT_DEBUG BLResult conic_to(Source& source, State& state) noexcept {
-    // 2 extremas and 1 terminating `1.0` value.
-    constexpr uint32_t kMaxTCount = 2 + 1;
+    // 4 extrema and one terminating segment.
+    constexpr uint32_t kMaxTCount = 4 + 1;
 
-    BLPoint spline[kMaxTCount * 2 + 1];
+    BLPoint spline[kMaxTCount * 6];
+    BLPoint conic[4];
     BLPoint& p0 = state.a;
-    BLPoint& p1 = spline[1];
-    BLPoint& p2 = spline[2];
+    BLPoint& p1 = conic[1];
+    BLPoint& pw = conic[2];
+    BLPoint& p2 = conic[3];
 
     uint32_t& p0_flags = state.a_flags;
-    source.next_conic_to(p1, p2);
+    double w;
+    source.next_conic_to(p1, p2, w);
+    pw.reset(w, Math::nan<double>());
 
     for (;;) {
       uint32_t p1_flags = bl_clip_calc_xy_flags(p1, _clip_box_d);
@@ -1923,7 +1980,8 @@ RestartClipLoop:
             end = !source.is_conic_to();
             if (end) break;
 
-            source.next_conic_to(p1, p2);
+            source.next_conic_to(p1, p2, w);
+            pw.reset(w, Math::nan<double>());
             if (!((p1.y <= _clip_box_d.y0) & (p2.y <= _clip_box_d.y0)))
               break;
           }
@@ -1935,7 +1993,8 @@ RestartClipLoop:
             end = !source.is_conic_to();
             if (end) break;
 
-            source.next_conic_to(p1, p2);
+            source.next_conic_to(p1, p2, w);
+            pw.reset(w, Math::nan<double>());
             if (!((p1.y >= _clip_box_d.y1) & (p2.y >= _clip_box_d.y1)))
               break;
           }
@@ -1950,7 +2009,8 @@ RestartClipLoop:
               end = !source.is_conic_to();
               if (end) break;
 
-              source.next_conic_to(p1, p2);
+              source.next_conic_to(p1, p2, w);
+              pw.reset(w, Math::nan<double>());
               if (!((p1.x <= _clip_box_d.x0) & (p2.x <= _clip_box_d.x0)))
                 break;
             }
@@ -1964,7 +2024,8 @@ RestartClipLoop:
               end = !source.is_conic_to();
               if (end) break;
 
-              source.next_conic_to(p1, p2);
+              source.next_conic_to(p1, p2, w);
+              pw.reset(w, Math::nan<double>());
               if (!((p1.x >= _clip_box_d.x1) & (p2.x >= _clip_box_d.x1)))
                 break;
             }
@@ -1980,44 +2041,47 @@ RestartClipLoop:
         continue;
       }
 
-      spline[0] = p0;
+      conic[0] = p0;
 
+      BLPoint projective[6];
       BLPoint* spline_ptr = spline;
-      BLPoint* spline_end = Geometry::split_conic_to_spline<Geometry::QuadSplitOptions::kExtremaXY>(spline, spline_ptr);
+      BLPoint* spline_end = Geometry::split_conic_to_spline<Geometry::QuadSplitOptions::kExtremaXY>(conic, spline_ptr);
 
-      if (spline_end == spline_ptr)
-        spline_end = spline_ptr + 2;
+      if (spline_end == spline_ptr) {
+        Geometry::get_conic_projective_points(conic, projective);
+        spline_ptr = projective;
+        spline_end = projective + 6;
+      }
 
       Appender appender(*this);
       FlattenMonoConic mono_curve(state.flatten_data, _flatten_tolerance_sq);
 
       uint32_t any_flags = p0_flags | p1_flags | p2_flags;
       if (any_flags) {
-        // One or more quad may need clipping.
         do {
-          uint32_t sign_bit = spline_ptr[0].y > spline_ptr[2].y;
+          uint32_t sign_bit = (spline_ptr[0].y / spline_ptr[1].x) > (spline_ptr[4].y / spline_ptr[5].x);
           BL_PROPAGATE(
             flatten_unsafe_mono_curve<FlattenMonoConic>(mono_curve, appender, spline_ptr, sign_bit)
           );
-        } while ((spline_ptr += 2) != spline_end);
+        } while ((spline_ptr += 6) != spline_end);
 
-        p0 = spline_end[0];
+        p0 = p2;
         p0_flags = p2_flags;
       }
       else {
-        // No clipping - optimized fast-path.
         do {
-          uint32_t sign_bit = spline_ptr[0].y > spline_ptr[2].y;
+          uint32_t sign_bit = (spline_ptr[0].y / spline_ptr[1].x) > (spline_ptr[4].y / spline_ptr[5].x);
           BL_PROPAGATE(
             flatten_safe_mono_curve<FlattenMonoConic>(mono_curve, appender, spline_ptr, sign_bit)
           );
-        } while ((spline_ptr += 2) != spline_end);
+        } while ((spline_ptr += 6) != spline_end);
 
-        p0 = spline_end[0];
+        p0 = p2;
       }
 
-      if (!source.maybe_next_conic_to(p1, p2))
+      if (!source.maybe_next_conic_to(p1, p2, w))
         return BL_SUCCESS;
+      pw.reset(w, Math::nan<double>());
     }
   }
 
