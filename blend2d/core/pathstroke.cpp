@@ -12,7 +12,6 @@
 #include <blend2d/support/math_p.h>
 
 #include <limits>
-#include <utility>
 
 namespace bl {
 namespace PathInternal {
@@ -696,8 +695,7 @@ public:
     double a_sign = Geometry::dot(a_ref.vtx[-1] - pivot, before_unit) < 0.0 ? -1.0 : 1.0;
 
     if (a_sign != outer_sign) {
-      using std::swap;
-      swap(selection.outer, selection.inner);
+      bl::swap(selection.outer, selection.inner);
     }
 
     selection.before *= outer_sign;
