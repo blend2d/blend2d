@@ -147,7 +147,7 @@ void inline_fill_span_loop(
     BL_ASSERT(item_size <= 4u);
 
     uint32_t size_shift = IntOps::ctz(item_size);
-    uint32_t align_pattern = ((vec_size - 1u) * item_size) & (vec_size - 1u);
+    uint32_t align_pattern = vec_size - granularity_in_bytes;
 
     uint32_t one_step_in_items = 4u >> size_shift;
     uint32_t tail_step_in_items = 16u >> size_shift;
