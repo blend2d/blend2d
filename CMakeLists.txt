@@ -1103,6 +1103,11 @@ if (BLEND2D_TEST)
       CFLAGS    ${BLEND2D_WARNING_CFLAGS})
   endforeach()
 
+  blend2d_add_target(bl_repro_a8_jit_fill_path EXECUTABLE
+    SOURCES   blend2d-testing/repros/bl_repro_a8_jit_fill_path.cpp
+    LIBRARIES blend2d::blend2d
+    CFLAGS    ${BLEND2D_WARNING_CFLAGS})
+
   foreach(app bl_sample_capi)
     blend2d_add_target(${app} EXECUTABLE
       SOURCES   blend2d-testing/samples/${app}.c
