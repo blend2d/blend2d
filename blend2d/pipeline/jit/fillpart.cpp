@@ -1392,8 +1392,8 @@ void FillAnalyticPart::deadvance_dst_ptr_and_cell_ptr(const Gp& dst_ptr, const G
 
 #if defined(BL_JIT_ARCH_A64)
   pc->cc->sub(cell_ptr, cell_ptr, x_adv, a64::lsl(2));
-  if (asmjit::Support::is_power_of_2(dst_bpp)) {
-    uint32_t shift = asmjit::Support::ctz(dst_bpp);
+  if (asmjit::axl::is_power_of_2(dst_bpp)) {
+    uint32_t shift = asmjit::axl::ctz(dst_bpp);
     pc->cc->sub(dst_ptr, dst_ptr, x_adv, a64::lsl(shift));
   }
   else {

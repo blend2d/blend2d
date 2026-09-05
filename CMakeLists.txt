@@ -584,7 +584,7 @@ function(blend2d_add_target target target_type)
   set_target_properties(${target} PROPERTIES DEFINE_SYMBOL "" CXX_VISIBILITY_PRESET hidden)
   target_include_directories(${target} BEFORE PRIVATE ${ARG_INCLUDE_DIRS})
   target_compile_options(${target} PRIVATE ${ARG_CFLAGS} ${BLEND2D_SANITIZE_CFLAGS} $<IF:$<CONFIG:Debug>,${ARG_CFLAGS_DBG},${ARG_CFLAGS_REL}>)
-  target_compile_features(${target} PUBLIC cxx_std_17)
+  target_compile_features(${target} PUBLIC cxx_std_20)
   target_link_options(${target} PRIVATE ${ARG_LFLAGS} ${BLEND2D_SANITIZE_LFLAGS})
   target_link_libraries(${target} PRIVATE ${ARG_LIBRARIES})
 
@@ -1092,6 +1092,14 @@ if (BLEND2D_TEST)
       CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
       CFLAGS_REL ${BLEND2D_PRIVATE_CFLAGS_REL})
   endif()
+
+  # Standalone benchmarks.
+  blend2d_add_target(bl_bench_outline_decoder EXECUTABLE
+    SOURCES    blend2d-testing/bench/bl_bench_outline_decoder.cpp
+    LIBRARIES  blend2d::blend2d
+    CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
+    CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
+    CFLAGS_REL ${BLEND2D_PRIVATE_CFLAGS_REL})
 
   # Blend2D C & C++ Samples
   # -----------------------

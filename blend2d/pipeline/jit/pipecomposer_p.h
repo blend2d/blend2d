@@ -29,7 +29,7 @@ public:
   //! \{
 
   PipeCompiler& _pc;
-  asmjit::Arena& _arena;
+  asmjit::axl::Arena& _arena;
 
   //! \}
 
@@ -45,7 +45,7 @@ public:
 
   template<typename T>
   BL_INLINE T* new_part_t() noexcept {
-    void* p = _arena.alloc_oneshot(asmjit::Arena::aligned_size_of<T>());
+    void* p = _arena.alloc_oneshot(asmjit::axl::Arena::aligned_size_of<T>());
     if (BL_UNLIKELY(!p))
       return nullptr;
     return new(BLInternal::PlacementNew{p}) T(&_pc);
@@ -53,7 +53,7 @@ public:
 
   template<typename T, typename... Args>
   BL_INLINE T* new_part_t(Args&&... args) noexcept {
-    void* p = _arena.alloc_oneshot(asmjit::Arena::aligned_size_of<T>());
+    void* p = _arena.alloc_oneshot(asmjit::axl::Arena::aligned_size_of<T>());
     if (BL_UNLIKELY(!p))
       return nullptr;
     return new(BLInternal::PlacementNew{p}) T(&_pc, BLInternal::forward<Args>(args)...);

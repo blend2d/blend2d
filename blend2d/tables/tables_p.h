@@ -9,7 +9,7 @@
 #include <blend2d/support/lookuptable_p.h>
 
 #if !defined(BL_BUILD_NO_JIT)
-#include <asmjit/ujit/vecconsttable.h>
+#include <asmjit/ujit/vec_const_table.h>
 #endif // !BL_BUILD_NO_JIT
 
 //! \cond INTERNAL
