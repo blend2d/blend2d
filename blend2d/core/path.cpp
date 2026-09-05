@@ -54,6 +54,17 @@ static BL_INLINE void copy_content(uint8_t* cmd_dst, BLPoint* vtx_dst, const uin
   }
 }
 
+static BL_INLINE void copy_weights(double* dst, const double* src, size_t n) noexcept {
+  for (size_t i = 0; i < n; i++)
+    dst[i] = src[i];
+}
+
+static BL_INLINE BLPathView make_view(const BLPathPrivateImpl* impl, size_t start, size_t n) noexcept {
+  size_t conic_start = count_conics(impl->command_data, start);
+  size_t conic_weight_size = count_conics(impl->command_data + start, n);
+  return BLPathView { impl->command_data + start, impl->vertex_data + start, impl->conic_weight_data + conic_start, n, conic_weight_size };
+}
+
 // bl::Path - Internals
 // ====================
 
@@ -79,7 +90,7 @@ static BL_INLINE void set_size(BLPathCore* self, size_t size) noexcept {
   get_impl(self)->size = size;
 }
 
-static BL_INLINE BLResult alloc_impl(BLPathCore* self, size_t size, BLObjectImplSize impl_size) noexcept {
+static BL_INLINE BLResult alloc_impl(BLPathCore* self, size_t size, size_t conic_weight_size, BLObjectImplSize impl_size) noexcept {
   size_t capacity = capacity_from_impl_size(impl_size);
 
   BLObjectInfo info = BLObjectInfo::from_type_with_marker(BL_OBJECT_TYPE_PATH);
@@ -87,11 +98,14 @@ static BL_INLINE BLResult alloc_impl(BLPathCore* self, size_t size, BLObjectImpl
 
   BLPathPrivateImpl* impl = get_impl(self);
   BLPoint* vertex_data = PtrOps::offset<BLPoint>(impl, sizeof(BLPathPrivateImpl));
-  uint8_t* command_data = PtrOps::offset<uint8_t>(vertex_data, capacity * sizeof(BLPoint));
+  double* conic_weight_data = PtrOps::offset<double>(vertex_data, capacity * sizeof(BLPoint));
+  uint8_t* command_data = PtrOps::offset<uint8_t>(conic_weight_data, capacity * sizeof(double));
 
   impl->command_data = command_data;
   impl->vertex_data = vertex_data;
+  impl->conic_weight_data = conic_weight_data;
   impl->size = size;
+  impl->conic_weight_size = conic_weight_size;
   impl->capacity = capacity;
   impl->flags = BL_PATH_FLAG_DIRTY;
   return BL_SUCCESS;
@@ -102,32 +116,37 @@ static BL_INLINE BLResult alloc_impl(BLPathCore* self, size_t size, BLObjectImpl
 static BL_NOINLINE BLResult realloc_path(BLPathCore* self, BLObjectImplSize impl_size) noexcept {
   BLPathPrivateImpl* old_impl = get_impl(self);
   size_t path_size = old_impl->size;
+  size_t conic_weight_size = old_impl->conic_weight_size;
 
   BLPathCore newO;
-  BL_PROPAGATE(alloc_impl(&newO, path_size, impl_size));
+  BL_PROPAGATE(alloc_impl(&newO, path_size, conic_weight_size, impl_size));
 
   BLPathPrivateImpl* new_impl = get_impl(&newO);
   copy_content(new_impl->command_data, new_impl->vertex_data, old_impl->command_data, old_impl->vertex_data, path_size);
+  copy_weights(new_impl->conic_weight_data, old_impl->conic_weight_data, conic_weight_size);
   return replace_instance(self, &newO);
 }
 
 // Called by `prepare_add` and some others to create a new path, copy a content from `self` into it, and release
 // the current impl. The size of the new path will be set to `new_size` so this function should really be only used
 // as an append fallback.
-static BL_NOINLINE BLResult realloc_path_to_add(BLPathCore* self, size_t new_size, uint8_t** cmd_out, BLPoint** vtx_out) noexcept {
+static BL_NOINLINE BLResult realloc_path_to_add(BLPathCore* self, size_t new_size, size_t new_conic_weight_size, uint8_t** cmd_out, BLPoint** vtx_out, double** conic_weight_out) noexcept {
   BLObjectImplSize impl_size = expand_impl_size(impl_size_from_capacity(new_size));
 
   BLPathCore newO;
-  BL_PROPAGATE(alloc_impl(&newO, new_size, impl_size));
+  BL_PROPAGATE(alloc_impl(&newO, new_size, new_conic_weight_size, impl_size));
 
   BLPathPrivateImpl* old_impl = get_impl(self);
   BLPathPrivateImpl* new_impl = get_impl(&newO);
 
   size_t old_size = old_impl->size;
+  size_t old_conic_weight_size = old_impl->conic_weight_size;
   copy_content(new_impl->command_data, new_impl->vertex_data, old_impl->command_data, old_impl->vertex_data, old_size);
+  copy_weights(new_impl->conic_weight_data, old_impl->conic_weight_data, old_conic_weight_size);
 
   *cmd_out = new_impl->command_data + old_size;
   *vtx_out = new_impl->vertex_data + old_size;
+  *conic_weight_out = new_impl->conic_weight_data + old_conic_weight_size;
   return replace_instance(self, &newO);
 }
 
@@ -144,25 +163,34 @@ static BL_NOINLINE BLResult realloc_path_to_add(BLPathCore* self, size_t new_siz
 //
 // which would be always smaller than SIZE_MAX / 2 so we can assume that apending two paths would never overflow
 // the maximum theoretical Path capacity represented by `size_t` type.
-static BL_INLINE BLResult prepare_add(BLPathCore* self, size_t n, uint8_t** cmd_out, BLPoint** vtx_out) noexcept {
+static BL_INLINE BLResult prepare_add(BLPathCore* self, size_t n, size_t conic_weight_n, uint8_t** cmd_out, BLPoint** vtx_out, double** conic_weight_out) noexcept {
   BLPathPrivateImpl* self_impl = get_impl(self);
 
   size_t size = self_impl->size;
   size_t size_after = size + n;
-  size_t immutable_msk = IntOps::bool_as_mask<size_t>(!is_impl_mutable(self_impl));
+  size_t conic_weight_size = self_impl->conic_weight_size;
+  size_t conic_weight_size_after = conic_weight_size + conic_weight_n;
+  bool immutable = !is_impl_mutable(self_impl);
 
-  if ((size_after | immutable_msk) > self_impl->capacity)
-    return realloc_path_to_add(self, size_after, cmd_out, vtx_out);
+  if (immutable || size_after > self_impl->capacity || conic_weight_size_after > self_impl->capacity)
+    return realloc_path_to_add(self, size_after, conic_weight_size_after, cmd_out, vtx_out, conic_weight_out);
 
   // Likely case, appending to a path that is not shared and has the required capacity. We have to clear FLAGS
   // in addition to set the new size as flags can contain bits regarding BLPathInfo that will no longer hold.
   self_impl->flags = BL_PATH_FLAG_DIRTY;
   self_impl->size = size_after;
+  self_impl->conic_weight_size = conic_weight_size_after;
 
   *cmd_out = self_impl->command_data + size;
   *vtx_out = self_impl->vertex_data + size;
+  *conic_weight_out = self_impl->conic_weight_data + conic_weight_size;
 
   return BL_SUCCESS;
+}
+
+static BL_INLINE BLResult prepare_add(BLPathCore* self, size_t n, uint8_t** cmd_out, BLPoint** vtx_out) noexcept {
+  double* conic_weight_out;
+  return prepare_add(self, n, 0, cmd_out, vtx_out, &conic_weight_out);
 }
 
 static BL_INLINE BLResult make_mutable(BLPathCore* self) noexcept {
@@ -343,6 +371,22 @@ BL_API_IMPL const BLPoint* bl_path_get_vertex_data(const BLPathCore* self) BL_NO
   return self_impl->vertex_data;
 }
 
+BL_API_IMPL const double* bl_path_get_conic_weight_data(const BLPathCore* self) BL_NOEXCEPT_C {
+  using namespace bl::PathInternal;
+  BL_ASSERT(self->_d.is_path());
+
+  BLPathPrivateImpl* self_impl = get_impl(self);
+  return self_impl->conic_weight_data;
+}
+
+BL_API_IMPL size_t bl_path_get_conic_weight_size(const BLPathCore* self) BL_NOEXCEPT_C {
+  using namespace bl::PathInternal;
+  BL_ASSERT(self->_d.is_path());
+
+  BLPathPrivateImpl* self_impl = get_impl(self);
+  return self_impl->conic_weight_size;
+}
+
 BL_API_IMPL BLResult bl_path_clear(BLPathCore* self) noexcept {
   using namespace bl::PathInternal;
   BL_ASSERT(self->_d.is_path());
@@ -352,6 +396,7 @@ BL_API_IMPL BLResult bl_path_clear(BLPathCore* self) noexcept {
     return replace_instance(self, static_cast<BLPathCore*>(&bl_object_defaults[BL_OBJECT_TYPE_PATH]));
 
   self_impl->size = 0;
+  self_impl->conic_weight_size = 0;
   self_impl->flags = 0;
   return BL_SUCCESS;
 }
@@ -391,35 +436,42 @@ BL_API_IMPL BLResult bl_path_reserve(BLPathCore* self, size_t n) noexcept {
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult bl_path_modify_op(BLPathCore* self, BLModifyOp op, size_t n, uint8_t** cmd_data_out, BLPoint** vtx_data_out) noexcept {
+BL_API_IMPL BLResult bl_path_modify_op_ex(BLPathCore* self, BLModifyOp op, size_t n, size_t conic_weight_n, uint8_t** cmd_data_out, BLPoint** vtx_data_out, double** conic_weight_data_out) noexcept {
   using namespace bl::PathInternal;
   BL_ASSERT(self->_d.is_path());
 
   BLPathPrivateImpl* self_impl = get_impl(self);
   size_t index = bl_modify_op_is_append(op) ? self_impl->size : size_t(0);
-  size_t immutable_msk = bl::IntOps::bool_as_mask<size_t>(!is_impl_mutable(self_impl));
+  size_t conic_index = bl_modify_op_is_append(op) ? self_impl->conic_weight_size : size_t(0);
+  bool immutable = !is_impl_mutable(self_impl);
 
   size_t remaining = self_impl->capacity - index;
+  size_t conic_remaining = self_impl->capacity - conic_index;
   size_t size_after = index + n;
+  size_t conic_size_after = conic_index + conic_weight_n;
 
-  if ((n | immutable_msk) > remaining) {
+  if (immutable || n > remaining || conic_weight_n > conic_remaining) {
     *cmd_data_out = nullptr;
     *vtx_data_out = nullptr;
+    *conic_weight_data_out = nullptr;
 
     BLPathCore newO;
     BLObjectImplSize impl_size = expand_impl_size_with_modify_op(impl_size_from_capacity(size_after), op);
-    BL_PROPAGATE(alloc_impl(&newO, size_after, impl_size));
+    BL_PROPAGATE(alloc_impl(&newO, size_after, conic_size_after, impl_size));
 
     BLPathPrivateImpl* new_impl = get_impl(&newO);
     *cmd_data_out = new_impl->command_data + index;
     *vtx_data_out = new_impl->vertex_data + index;
+    *conic_weight_data_out = new_impl->conic_weight_data + conic_index;
 
     copy_content(new_impl->command_data, new_impl->vertex_data, self_impl->command_data, self_impl->vertex_data, index);
+    copy_weights(new_impl->conic_weight_data, self_impl->conic_weight_data, conic_index);
     return replace_instance(self, &newO);
   }
 
-  if (n) {
+  if (n || conic_weight_n) {
     self_impl->size = size_after;
+    self_impl->conic_weight_size = conic_size_after;
   }
   else if (!index) {
     bl_path_clear(self);
@@ -429,6 +481,7 @@ BL_API_IMPL BLResult bl_path_modify_op(BLPathCore* self, BLModifyOp op, size_t n
   self_impl->flags = BL_PATH_FLAG_DIRTY;
   *vtx_data_out = self_impl->vertex_data + index;
   *cmd_data_out = self_impl->command_data + index;
+  *conic_weight_data_out = self_impl->conic_weight_data + conic_index;
 
   return BL_SUCCESS;
 }
@@ -473,17 +526,20 @@ BL_API_IMPL BLResult bl_path_assign_deep(BLPathCore* self, const BLPathCore* oth
   size_t immutable_msk = bl::IntOps::bool_as_mask<size_t>(!is_impl_mutable(self_impl));
   if ((size | immutable_msk) > self_impl->capacity) {
     BLPathCore newO;
-    BL_PROPAGATE(alloc_impl(&newO, size, impl_size_from_capacity(size)));
+    BL_PROPAGATE(alloc_impl(&newO, size, other_impl->conic_weight_size, impl_size_from_capacity(size)));
 
     BLPathPrivateImpl* new_impl = get_impl(&newO);
     copy_content(new_impl->command_data, new_impl->vertex_data, other_impl->command_data, other_impl->vertex_data, size);
+    copy_weights(new_impl->conic_weight_data, other_impl->conic_weight_data, other_impl->conic_weight_size);
     return replace_instance(self, &newO);
   }
 
   self_impl->flags = BL_PATH_FLAG_DIRTY;
   self_impl->size = size;
+  self_impl->conic_weight_size = other_impl->conic_weight_size;
 
   copy_content(self_impl->command_data, self_impl->vertex_data, other_impl->command_data, other_impl->vertex_data, size);
+  copy_weights(self_impl->conic_weight_data, other_impl->conic_weight_data, other_impl->conic_weight_size);
   return BL_SUCCESS;
 }
 
@@ -586,6 +642,7 @@ public:
     const uint8_t* cmd_data = view.command_data;
     const uint8_t* cmd_end = view.command_data + view.size;
     const BLPoint* vtx_data = view.vertex_data;
+    const double* conic_weight_data = view.conic_weight_data;
 
     // Iterate over the whole path.
     while (cmd_data != cmd_end) {
@@ -636,8 +693,8 @@ public:
         }
 
         case BL_PATH_CMD_CONIC: {
-          cmd_data += 3;
-          vtx_data += 3;
+          cmd_data += 2;
+          vtx_data += 2;
 
           if (cmd_data > cmd_end || !has_prev_vertex)
             return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
@@ -647,15 +704,17 @@ public:
           Geometry::bound(bounding_box, vtx_data[-1]);
 
           // Calculate tight bounding-box only when control points are outside the current one.
-          const BLPoint& ctrl = vtx_data[-3];
+          const BLPoint& ctrl = vtx_data[-2];
 
           if (!(ctrl.x >= bounding_box.x0 && ctrl.y >= bounding_box.y0 && ctrl.x <= bounding_box.x1 && ctrl.y <= bounding_box.y1)) {
+            BLPoint conic[4] { vtx_data[-3], vtx_data[-2], BLPoint(conic_weight_data[0], Math::nan<double>()), vtx_data[-1] };
             BLPoint extrema[2];
-            Geometry::get_conic_extrema_points(vtx_data - 4, extrema);
+            Geometry::get_conic_extrema_points(conic, extrema);
             Geometry::bound(bounding_box, extrema[0]);
             Geometry::bound(bounding_box, extrema[1]);
             Geometry::bound(control_box, vtx_data[-2]);
           }
+          conic_weight_data++;
           break;
         }
 
@@ -800,7 +859,7 @@ static BLResult copy_content_reversed(PathAppender& dst, PathIterator src, BLPat
 
       size_t figure_size = (size_t)(p - src.cmd);
 
-      next.reset(src.cmd + figure_size, src.vtx + figure_size, src.remaining_forward() - figure_size);
+      next.reset(src.cmd + figure_size, src.vtx + figure_size, src.conic_weight_data + count_conics(src.cmd, figure_size), src.remaining_forward() - figure_size);
       src.end = src.cmd + figure_size;
     }
 
@@ -845,7 +904,10 @@ static BLResult copy_content_reversed(PathAppender& dst, PathIterator src, BLPat
         if (cmd == BL_PATH_CMD_CLOSE)
           break;
 
-        dst.add_vertex(src.cmd[0], src.vtx[0]);
+        if (src.cmd[0] == BL_PATH_CMD_CONIC)
+          dst.add_conic_control(src.vtx[0], src.conic_weight_data[0]);
+        else
+          dst.add_vertex(src.cmd[0], src.vtx[0]);
         src--;
       }
 
@@ -872,12 +934,15 @@ static BLResult append_transformed_path_with_type(BLPathCore* self, const BLPath
 
   uint8_t* cmd_data;
   BLPoint* vtx_data;
+  double* conic_weight_data;
+  size_t conic_count = count_conics(other_impl->command_data + start, n);
 
   // Maybe `self` and `other` were the same, so get the `other` impl again.
-  BL_PROPAGATE(prepare_add(self, n, &cmd_data, &vtx_data));
+  BL_PROPAGATE(prepare_add(self, n, conic_count, &cmd_data, &vtx_data, &conic_weight_data));
   other_impl = get_impl(other);
 
   memcpy(cmd_data, other_impl->command_data + start, n);
+  copy_weights(conic_weight_data, other_impl->conic_weight_data + count_conics(other_impl->command_data, start), conic_count);
   return TransformInternal::map_pointd_array_funcs[transform_type](transform, vtx_data, other_impl->vertex_data + start, n);
 }
 
@@ -899,6 +964,9 @@ BL_API_IMPL BLResult bl_path_set_vertex_at(BLPathCore* self, size_t index, uint3
 
   uint32_t old_cmd = self_impl->command_data[index];
   if (cmd == BL_PATH_CMD_PRESERVE) cmd = old_cmd;
+
+  if (BL_UNLIKELY((old_cmd == BL_PATH_CMD_CONIC || cmd == BL_PATH_CMD_CONIC) && cmd != old_cmd))
+    return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   // NOTE: We don't check `cmd` as we don't care of the value. Invalid commands
   // must always be handled by all Blend2D functions anyway so let it fail at
@@ -976,15 +1044,15 @@ BL_API_IMPL BLResult bl_path_conic_to(BLPathCore* self, double x1, double y1, do
 
   uint8_t* cmd_data;
   BLPoint* vtx_data;
-  BL_PROPAGATE(prepare_add(self, 3, &cmd_data, &vtx_data));
+  double* conic_weight_data;
+  BL_PROPAGATE(prepare_add(self, 2, 1, &cmd_data, &vtx_data, &conic_weight_data));
 
   vtx_data[0].reset(x1, y1);
-  vtx_data[1].reset(w, bl::Math::nan<double>());
-  vtx_data[2].reset(x2, y2);
+  vtx_data[1].reset(x2, y2);
+  conic_weight_data[0] = w;
 
   cmd_data[0] = BL_PATH_CMD_CONIC;
-  cmd_data[1] = BL_PATH_CMD_WEIGHT;
-  cmd_data[2] = BL_PATH_CMD_ON;
+  cmd_data[1] = BL_PATH_CMD_ON;
 
   return BL_SUCCESS;
 }
@@ -1090,7 +1158,7 @@ BL_API_IMPL BLResult bl_path_arc_to(BLPathCore* self, double x, double y, double
     }
   }
 
-  BL_PROPAGATE(dst.begin_append(self, 13));
+  BL_PROPAGATE(dst.begin_append(self, 13, 1));
   arc_to_cubic_spline(dst, BLPoint(x, y), BLPoint(rx, ry), start, sweep, initial_cmd, maybe_redundant_line_to);
 
   dst.done(self);
@@ -1109,19 +1177,15 @@ BL_API_IMPL BLResult bl_path_arc_quadrant_to(BLPathCore* self, double x1, double
 
   uint8_t* cmd_data;
   BLPoint* vtx_data;
-  BL_PROPAGATE(prepare_add(self, 3, &cmd_data, &vtx_data));
+  double* conic_weight_data;
+  BL_PROPAGATE(prepare_add(self, 2, 1, &cmd_data, &vtx_data, &conic_weight_data));
 
-  BLPoint p0 = vtx_data[-1];
-  BLPoint p1(x1, y1);
-  BLPoint p2(x2, y2);
+  vtx_data[0].reset(x1, y1);
+  vtx_data[1].reset(x2, y2);
+  conic_weight_data[0] = bl::Math::kSQRT_0p5;
 
-  vtx_data[0].reset(p0 + (p1 - p0) * bl::Math::kKAPPA);
-  vtx_data[1].reset(p2 + (p1 - p2) * bl::Math::kKAPPA);
-  vtx_data[2].reset(p2);
-
-  cmd_data[0] = BL_PATH_CMD_CUBIC;
-  cmd_data[1] = BL_PATH_CMD_CUBIC;
-  cmd_data[2] = BL_PATH_CMD_ON;
+  cmd_data[0] = BL_PATH_CMD_CONIC;
+  cmd_data[1] = BL_PATH_CMD_ON;
 
   return BL_SUCCESS;
 }
@@ -1249,7 +1313,7 @@ BL_API_IMPL BLResult bl_path_elliptic_arc_to(BLPathCore* self, double rx, double
   if (sweep_angle < bl::Math::kPI_DIV_2   + bl::Math::kANGLE_EPSILON) i = 0;
 
   bl::PathAppender appender;
-  BL_PROPAGATE(appender.begin(self, BL_MODIFY_OP_APPEND_GROW, (i + 1) * 3));
+  BL_PROPAGATE(appender.begin(self, BL_MODIFY_OP_APPEND_GROW, (i + 1) * 2, i + 1));
 
   // Process 90 degree segments.
   while (i) {
@@ -1396,9 +1460,13 @@ BL_API_IMPL BLResult bl_path_add_geometry(BLPathCore* self, BLGeometryType geome
   // Should never be zero if we went here.
   BL_ASSERT(n != 0);
   size_t initial_size = get_size(self);
+  size_t initial_conic_weight_size = get_impl(self)->conic_weight_size;
+  size_t conic_n = geometry_type == BL_GEOMETRY_TYPE_PATH && dir != BL_GEOMETRY_DIRECTION_CW
+    ? static_cast<const BLPath*>(geometry_data)->conic_weight_size()
+    : 0;
 
   bl::PathAppender appender;
-  BL_PROPAGATE(appender.begin_append(self, n));
+  BL_PROPAGATE(appender.begin_append(self, n, conic_n));
 
   // For adding 'BLBox', 'BLBoxI', 'BLRect', 'BLRectI', and `BLRoundRect`.
   double x0, y0;
@@ -1767,6 +1835,7 @@ AddBoxD:
 
       if (result != BL_SUCCESS) {
         set_size(self, initial_size);
+        get_impl(self)->conic_weight_size = initial_conic_weight_size;
         return result;
       }
       break;
@@ -1800,12 +1869,15 @@ BL_API_IMPL BLResult bl_path_add_path(BLPathCore* self, const BLPathCore* other,
 
   uint8_t* cmd_data;
   BLPoint* vtx_data;
+  double* conic_weight_data;
+  size_t conic_count = count_conics(other_impl->command_data + start, n);
 
   // Maybe `self` and `other` are the same, so get the `other` impl.
-  BL_PROPAGATE(prepare_add(self, n, &cmd_data, &vtx_data));
+  BL_PROPAGATE(prepare_add(self, n, conic_count, &cmd_data, &vtx_data, &conic_weight_data));
   other_impl = get_impl(other);
 
   copy_content(cmd_data, vtx_data, other_impl->command_data + start, other_impl->vertex_data + start, n);
+  copy_weights(conic_weight_data, other_impl->conic_weight_data + count_conics(other_impl->command_data, start), conic_count);
   return BL_SUCCESS;
 }
 
@@ -1833,15 +1905,18 @@ BL_API_IMPL BLResult bl_path_add_transformed_path(BLPathCore* self, const BLPath
 
   uint8_t* cmd_data;
   BLPoint* vtx_data;
+  double* conic_weight_data;
+  size_t conic_count = count_conics(other_impl->command_data + start, n);
 
   // Maybe `self` and `other` were the same, so get the `other` impl again.
-  BL_PROPAGATE(prepare_add(self, n, &cmd_data, &vtx_data));
+  BL_PROPAGATE(prepare_add(self, n, conic_count, &cmd_data, &vtx_data, &conic_weight_data));
   other_impl = get_impl(other);
 
   // Only check the transform type if we reach the limit as the check costs some cycles.
   BLTransformType transform_type = (n >= BL_MATRIX_TYPE_MINIMUM_SIZE) ? transform->type() : BL_TRANSFORM_TYPE_AFFINE;
 
   memcpy(cmd_data, other_impl->command_data + start, n);
+  copy_weights(conic_weight_data, other_impl->conic_weight_data + count_conics(other_impl->command_data, start), conic_count);
   return bl::TransformInternal::map_pointd_array_funcs[transform_type](transform, vtx_data, other_impl->vertex_data + start, n);
 }
 
@@ -1862,18 +1937,21 @@ BL_API_IMPL BLResult bl_path_add_reversed_path(BLPathCore* self, const BLPathCor
 
   size_t initial_size = get_size(self);
   bl::PathAppender dst;
-  BL_PROPAGATE(dst.begin_append(self, n));
+  size_t initial_conic_weight_size = get_impl(self)->conic_weight_size;
+  BL_PROPAGATE(dst.begin_append(self, n, count_conics(other_impl->command_data + start, n)));
 
   // Maybe `self` and `other` were the same, so get the `other` impl again.
   other_impl = get_impl(other);
-  bl::PathIterator src(other_impl->command_data + start, other_impl->vertex_data + start, n);
+  bl::PathIterator src(other_impl->command_data + start, other_impl->vertex_data + start, other_impl->conic_weight_data + count_conics(other_impl->command_data, start), n);
 
   BLResult result = copy_content_reversed(dst, src, reverse_mode);
   dst.done(self);
 
   // Don't keep anything if reversal failed.
-  if (result != BL_SUCCESS)
+  if (result != BL_SUCCESS) {
     set_size(self, initial_size);
+    get_impl(self)->conic_weight_size = initial_conic_weight_size;
+  }
   return result;
 }
 
@@ -1896,8 +1974,12 @@ static BLResult join_figure(PathAppender& dst, PathIterator src) noexcept {
     dst.add_vertex(initial_cmd, src.vtx[0]);
 
   // Iterate the figure.
-  while (!(++src).at_end())
-    dst.add_vertex(src.cmd[0], src.vtx[0]);
+  while (!(++src).at_end()) {
+    if (src.cmd[0] == BL_PATH_CMD_CONIC)
+      dst.add_conic_control(src.vtx[0], src.conic_weight_data[0]);
+    else
+      dst.add_vertex(src.cmd[0], src.vtx[0]);
+  }
 
   return BL_SUCCESS;
 }
@@ -1943,7 +2025,10 @@ static BLResult join_reversed_figure(PathAppender& dst, PathIterator src) noexce
   // Iterate the figure.
   if (!src.at_end()) {
     do {
-      dst.add_vertex(src.cmd[0], src.vtx[0]);
+      if (src.cmd[0] == BL_PATH_CMD_CONIC)
+        dst.add_conic_control(src.vtx[0], src.conic_weight_data[0]);
+      else
+        dst.add_vertex(src.cmd[0], src.vtx[0]);
       src--;
     } while (!src.at_end());
     // Fix the last vertex to not be MOVE.
@@ -1964,7 +2049,7 @@ static BLResult append_stroked_path_sink(BLPathCore* a, BLPathCore* b, BLPathCor
   bl_unused(figure_start, figure_end, user_data);
 
   PathAppender dst;
-  BL_PROPAGATE(dst.begin(a, BL_MODIFY_OP_APPEND_GROW, b->dcast().size() + c->dcast().size() + 1u));
+  BL_PROPAGATE(dst.begin(a, BL_MODIFY_OP_APPEND_GROW, b->dcast().size() + c->dcast().size() + 1u, b->dcast().conic_weight_size() + c->dcast().conic_weight_size()));
 
   BLResult result = join_reversed_figure(dst, PathIterator(b->dcast().view()));
   result |= join_figure(dst, PathIterator(c->dcast().view()));
@@ -1994,7 +2079,7 @@ BL_API_IMPL BLResult bl_path_add_stroked_path(BLPathCore* self, const BLPathCore
   if (!approx)
     approx = &bl_default_approximation_options;
 
-  BLPathView input { other_impl->command_data + start, other_impl->vertex_data + start, n };
+  BLPathView input = make_view(other_impl, start, n);
   BLPath b_path;
   BLPath c_path;
 
@@ -2034,7 +2119,7 @@ BL_API_IMPL BLResult BL_CDECL bl_path_stroke_to_sink(
   if (!approximation_options)
     approximation_options = &bl_default_approximation_options;
 
-  BLPathView input { self_impl->command_data + start, self_impl->vertex_data + start, n };
+  BLPathView input = make_view(self_impl, start, n);
 
   if (a == self || b == self || c == self) {
     BLPath tmp(self->dcast());
@@ -2066,21 +2151,30 @@ BL_API_IMPL BLResult bl_path_remove_range(BLPathCore* self, const BLRange* range
 
   BLPoint* vtx_data = self_impl->vertex_data;
   uint8_t* cmd_data = self_impl->command_data;
+  double* conic_weight_data = self_impl->conic_weight_data;
+  size_t conic_start = count_conics(cmd_data, start);
+  size_t conic_end = count_conics(cmd_data, end);
+  size_t conic_count = conic_end - conic_start;
 
   size_t size_after = size - n;
+  size_t conic_size_after = self_impl->conic_weight_size - conic_count;
   if (!is_impl_mutable(self_impl)) {
     BLPathCore newO;
-    BL_PROPAGATE(alloc_impl(&newO, size_after, impl_size_from_capacity(size_after)));
+    BL_PROPAGATE(alloc_impl(&newO, size_after, conic_size_after, impl_size_from_capacity(size_after)));
 
     BLPathPrivateImpl* new_impl = get_impl(&newO);
     copy_content(new_impl->command_data, new_impl->vertex_data, cmd_data, vtx_data, start);
     copy_content(new_impl->command_data + start, new_impl->vertex_data + start, cmd_data + end, vtx_data + end, size - end);
+    copy_weights(new_impl->conic_weight_data, conic_weight_data, conic_start);
+    copy_weights(new_impl->conic_weight_data + conic_start, conic_weight_data + conic_end, self_impl->conic_weight_size - conic_end);
 
     return replace_instance(self, &newO);
   }
   else {
     copy_content(cmd_data + start, vtx_data + start, cmd_data + end, vtx_data + end, size - end);
+    copy_weights(conic_weight_data + conic_start, conic_weight_data + conic_end, self_impl->conic_weight_size - conic_end);
     self_impl->size = size_after;
+    self_impl->conic_weight_size = conic_size_after;
     self_impl->flags = BL_PATH_FLAG_DIRTY;
     return BL_SUCCESS;
   }
@@ -2153,7 +2247,7 @@ BL_API_IMPL BLResult bl_path_fit_to(BLPathCore* self, const BLRange* range, cons
     return bl_make_error(BL_ERROR_INVALID_VALUE);
 
   PathInfoUpdater updater;
-  BL_PROPAGATE(updater.update(BLPathView { self_impl->command_data + start, self_impl->vertex_data + start, n }, true));
+  BL_PROPAGATE(updater.update(make_view(self_impl, start, n), true));
 
   // TODO: Honor `fit_flags`.
   bl_unused(fit_flags);
@@ -2193,11 +2287,13 @@ BL_API_IMPL bool bl_path_equals(const BLPathCore* a, const BLPathCore* b) noexce
     return true;
 
   size_t size = a_impl->size;
-  if (size != b_impl->size)
+  size_t conic_weight_size = a_impl->conic_weight_size;
+  if (size != b_impl->size || conic_weight_size != b_impl->conic_weight_size)
     return false;
 
   return memcmp(a_impl->command_data, b_impl->command_data, size * sizeof(uint8_t)) == 0 &&
-         memcmp(a_impl->vertex_data , b_impl->vertex_data , size * sizeof(BLPoint)) == 0;
+         memcmp(a_impl->vertex_data , b_impl->vertex_data , size * sizeof(BLPoint)) == 0 &&
+         memcmp(a_impl->conic_weight_data, b_impl->conic_weight_data, conic_weight_size * sizeof(double)) == 0;
 }
 
 // bl::Path - API Path Info
@@ -2213,7 +2309,7 @@ static BL_NOINLINE BLResult update_info(BLPathPrivateImpl* self_impl) noexcept {
     return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
 
   PathInfoUpdater updater;
-  BLResult result = updater.update(self_impl->view);
+  BLResult result = updater.update(make_view(self_impl, 0, self_impl->size));
 
   // Path is invalid.
   if (result != BL_SUCCESS) {
@@ -2447,6 +2543,7 @@ BL_API_IMPL BLHitTest bl_path_hit_test(const BLPathCore* self, const BLPoint* p_
 
   const uint8_t* cmd_data = self_impl->command_data;
   const BLPoint* vtx_data = self_impl->vertex_data;
+  const double* conic_weight_data = self_impl->conic_weight_data;
 
   bool has_move_to = false;
   BLPoint start {};
@@ -2582,6 +2679,62 @@ OnLine:
             }
           } while ((spline_ptr += 2) != spline_end);
         }
+        break;
+      }
+
+      case BL_PATH_CMD_CONIC: {
+        if (BL_UNLIKELY(!has_move_to || i < 2))
+          return BL_HIT_TEST_INVALID;
+
+        const BLPoint* p = vtx_data - 1;
+        double w = conic_weight_data[0];
+        double min_y = bl_min(p[0].y, p[1].y, p[2].y);
+        double max_y = bl_max(p[0].y, p[1].y, p[2].y);
+
+        cmd_data += 2;
+        vtx_data += 2;
+        conic_weight_data++;
+        i -= 2;
+
+        if (pt.y >= min_y && pt.y <= max_y) {
+          BLPoint prev = p[0];
+
+          for (uint32_t step = 1; step <= 8; step++) {
+            double t = double(step) * (1.0 / 8.0);
+            double u = 1.0 - t;
+            double a = u * u;
+            double b = 2.0 * w * u * t;
+            double c = t * t;
+            double d = 1.0 / (a + b + c);
+            BLPoint next = (a * p[0] + b * p[1] + c * p[2]) * d;
+
+            x0 = prev.x;
+            y0 = prev.y;
+            x1 = next.x;
+            y1 = next.y;
+
+            {
+              double dx = x1 - x0;
+              double dy = y1 - y0;
+
+              if (dy > 0.0) {
+                if (pt.y >= y0 && pt.y < y1) {
+                  double ix = x0 + (pt.y - y0) * dx / dy;
+                  winding_number += (pt.x >= ix);
+                }
+              }
+              else if (dy < 0.0) {
+                if (pt.y >= y1 && pt.y < y0) {
+                  double ix = x0 + (pt.y - y0) * dx / dy;
+                  winding_number -= (pt.x >= ix);
+                }
+              }
+            }
+
+            prev = next;
+          }
+        }
+
         break;
       }
 

@@ -497,10 +497,12 @@ static void bl_debug_gradient_(const BLGradientCore* obj, const char* name, int 
 
 static void bl_debug_path_(const BLPathCore* obj, const char* name, int indent) {
   size_t i = 0;
+  size_t j = 0;
   size_t size = bl_path_get_size(obj);
 
   const uint8_t* cmd = bl_path_get_command_data(obj);
   const BLPoint* vtx = bl_path_get_vertex_data(obj);
+  const double* conic_weight_data = bl_path_get_conic_weight_data(obj);
 
   BL_DEBUG_FMT("%s: {\n", name);
   indent++;
@@ -520,6 +522,13 @@ static void bl_debug_path_(const BLPathCore* obj, const char* name, int indent) 
           break;
         BL_DEBUG_FMT("p.quad_to(%g, %g, %g, %g);\n", vtx[i].x, vtx[i].y, vtx[i+1].x, vtx[i+1].y);
         i += 2;
+        continue;
+      case BL_PATH_CMD_CONIC:
+        if ((size - i) < 2)
+          break;
+        BL_DEBUG_FMT("p.conic_to(%g, %g, %g, %g, %g);\n", vtx[i].x, vtx[i].y, vtx[i+1].x, vtx[i+1].y, conic_weight_data[j]);
+        i += 2;
+        j++;
         continue;
       case BL_PATH_CMD_CUBIC:
         if ((size - i) < 3)

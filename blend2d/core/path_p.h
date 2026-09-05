@@ -33,11 +33,11 @@ namespace PathInternal {
 //! \{
 
 static BL_INLINE constexpr size_t capacity_from_impl_size(BLObjectImplSize impl_size) noexcept {
-  return (impl_size.value() - sizeof(BLPathPrivateImpl)) / (sizeof(BLPoint) + 1);
+  return (impl_size.value() - sizeof(BLPathPrivateImpl)) / (sizeof(BLPoint) + sizeof(double) + 1);
 }
 
 static BL_INLINE constexpr BLObjectImplSize impl_size_from_capacity(size_t capacity) noexcept {
-  return BLObjectImplSize(sizeof(BLPathPrivateImpl) + capacity * (sizeof(BLPoint) + 1));
+  return BLObjectImplSize(sizeof(BLPathPrivateImpl) + capacity * (sizeof(BLPoint) + sizeof(double) + 1));
 }
 
 //! \}
@@ -97,6 +97,13 @@ static BL_INLINE constexpr BLApproximationOptions make_default_approximation_opt
   };
 }
 
+static BL_INLINE size_t count_conics(const uint8_t* cmd_data, size_t n) noexcept {
+  size_t count = 0;
+  for (size_t i = 0; i < n; i++)
+    count += size_t(cmd_data[i] == BL_PATH_CMD_CONIC);
+  return count;
+}
+
 //! \}
 
 } // {PathPrivate}
@@ -109,19 +116,40 @@ struct PathIterator {
   const uint8_t* cmd;
   const uint8_t* end;
   const BLPoint* vtx;
+  const double* conic_weight_data;
 
   BL_INLINE PathIterator() noexcept = default;
   BL_INLINE PathIterator(const BLPathView& view) noexcept { reset(view); }
-  BL_INLINE PathIterator(const uint8_t* cmd_, const BLPoint* vtx_, size_t n) noexcept { reset(cmd_, vtx_, n); }
+  BL_INLINE PathIterator(const uint8_t* cmd_, const BLPoint* vtx_, const double* conic_weight_, size_t n) noexcept { reset(cmd_, vtx_, conic_weight_, n); }
 
-  BL_INLINE PathIterator operator++(int) noexcept { PathIterator out(*this); cmd++; vtx++; return out; }
-  BL_INLINE PathIterator operator--(int) noexcept { PathIterator out(*this); cmd--; vtx--; return out; }
+  BL_INLINE PathIterator operator++(int) noexcept { PathIterator out(*this); ++(*this); return out; }
+  BL_INLINE PathIterator operator--(int) noexcept { PathIterator out(*this); --(*this); return out; }
 
-  BL_INLINE PathIterator& operator++() noexcept { cmd++; vtx++; return *this; }
-  BL_INLINE PathIterator& operator--() noexcept { cmd--; vtx--; return *this; }
+  BL_INLINE PathIterator& operator++() noexcept {
+    conic_weight_data += size_t(cmd[0] == BL_PATH_CMD_CONIC);
+    cmd++;
+    vtx++;
+    return *this;
+  }
+  BL_INLINE PathIterator& operator--() noexcept {
+    cmd--;
+    vtx--;
+    conic_weight_data -= size_t(cmd[0] == BL_PATH_CMD_CONIC);
+    return *this;
+  }
 
-  BL_INLINE PathIterator& operator+=(size_t n) noexcept { cmd += n; vtx += n; return *this; }
-  BL_INLINE PathIterator& operator-=(size_t n) noexcept { cmd -= n; vtx -= n; return *this; }
+  BL_INLINE PathIterator& operator+=(size_t n) noexcept {
+    conic_weight_data += PathInternal::count_conics(cmd, n);
+    cmd += n;
+    vtx += n;
+    return *this;
+  }
+  BL_INLINE PathIterator& operator-=(size_t n) noexcept {
+    cmd -= n;
+    vtx -= n;
+    conic_weight_data -= PathInternal::count_conics(cmd, n);
+    return *this;
+  }
 
   BL_INLINE bool at_end() const noexcept { return cmd == end; }
   BL_INLINE bool after_end() const noexcept { return cmd > end; }
@@ -131,21 +159,25 @@ struct PathIterator {
   BL_INLINE size_t remaining_backward() const noexcept { return (size_t)(cmd - end); }
 
   BL_INLINE void reset(const BLPathView& view) noexcept {
-    reset(view.command_data, view.vertex_data, view.size);
+    reset(view.command_data, view.vertex_data, view.conic_weight_data, view.size);
   }
 
-  BL_INLINE void reset(const uint8_t* cmd_, const BLPoint* vtx_, size_t n) noexcept {
+  BL_INLINE void reset(const uint8_t* cmd_, const BLPoint* vtx_, const double* conic_weight_, size_t n) noexcept {
     cmd = cmd_;
     end = cmd_ + n;
     vtx = vtx_;
+    conic_weight_data = conic_weight_;
   }
 
   BL_INLINE void reverse() noexcept {
     intptr_t n = intptr_t(remaining_forward()) - 1;
+    const uint8_t* begin = cmd;
+    size_t conic_index = PathInternal::count_conics(begin, size_t(n + 1));
 
     end = cmd - 1;
     cmd += n;
     vtx += n;
+    conic_weight_data += conic_index - size_t(cmd[0] == BL_PATH_CMD_CONIC);
   }
 };
 
@@ -177,6 +209,7 @@ struct PathIterator {
 //!       case BL_PATH_CMD_MOVE : appender.move_to(iter[0]); break;
 //!       case BL_PATH_CMD_ON   : appender.line_to(iter[0]); break;
 //!       case BL_PATH_CMD_QUAD : appender.quad_to(iter[0], iter[1]); break;
+//!       case BL_PATH_CMD_CONIC: appender.conic_to(iter[0], iter[1], *iter.conic_weight_data); break;
 //!       case BL_PATH_CMD_CUBIC: appender.cubic_to(iter[0], iter[1], iter[2]); break;
 //!       case BL_PATH_CMD_CLOSE: appender.close(); break;
 //!     }
@@ -196,13 +229,16 @@ public:
   Cmd* cmd;
   Cmd* end;
   BLPoint* vtx;
+  double* conic_weight_data;
+  double* conic_weight_data_end;
 
   BL_INLINE PathAppender() noexcept
     : cmd(nullptr) {}
 
-  BL_INLINE void reset() noexcept { cmd = nullptr; }
+  BL_INLINE void reset() noexcept { cmd = nullptr; conic_weight_data = nullptr; conic_weight_data_end = nullptr; }
   BL_INLINE bool is_empty() const noexcept { return cmd == nullptr; }
   BL_INLINE size_t remaining_size() const noexcept { return (size_t)(end - cmd); }
+  BL_INLINE size_t remaining_conic_weight_size() const noexcept { return (size_t)(conic_weight_data_end - conic_weight_data); }
 
   BL_INLINE size_t current_index(const BLPath& dst) const noexcept {
     return (size_t)(cmd - reinterpret_cast<Cmd*>(PathInternal::get_impl(&dst)->command_data));
@@ -215,46 +251,56 @@ public:
     vtx += n;
   }
 
-  BL_INLINE BLResult begin(BLPathCore* dst, BLModifyOp op, size_t n) noexcept {
+  BL_INLINE BLResult begin(BLPathCore* dst, BLModifyOp op, size_t n, size_t conic_n = 0) noexcept {
     BLPoint* vtx_ptr_local;
     uint8_t* cmd_ptr_local;
-    BL_PROPAGATE(bl_path_modify_op(dst, op, n, &cmd_ptr_local, &vtx_ptr_local));
+    double* conic_weight_ptr_local;
+    BL_PROPAGATE(bl_path_modify_op_ex(dst, op, n, conic_n, &cmd_ptr_local, &vtx_ptr_local, &conic_weight_ptr_local));
 
     BLPathImpl* dst_impl = PathInternal::get_impl(dst);
     vtx = vtx_ptr_local;
     cmd = reinterpret_cast<Cmd*>(cmd_ptr_local);
     end = reinterpret_cast<Cmd*>(dst_impl->command_data + dst_impl->capacity);
+    conic_weight_data = conic_weight_ptr_local;
+    conic_weight_data_end = dst_impl->conic_weight_data + dst_impl->capacity;
 
     BL_ASSERT(remaining_size() >= n);
+    BL_ASSERT(remaining_conic_weight_size() >= conic_n);
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult begin_assign(BLPathCore* dst, size_t n) noexcept { return begin(dst, BL_MODIFY_OP_ASSIGN_GROW, n); }
-  BL_INLINE BLResult begin_append(BLPathCore* dst, size_t n) noexcept { return begin(dst, BL_MODIFY_OP_APPEND_GROW, n); }
+  BL_INLINE BLResult begin_assign(BLPathCore* dst, size_t n, size_t conic_n = 0) noexcept { return begin(dst, BL_MODIFY_OP_ASSIGN_GROW, n, conic_n); }
+  BL_INLINE BLResult begin_append(BLPathCore* dst, size_t n, size_t conic_n = 0) noexcept { return begin(dst, BL_MODIFY_OP_APPEND_GROW, n, conic_n); }
 
-  BL_INLINE BLResult ensure(BLPathCore* dst, size_t n) noexcept {
-    if (BL_LIKELY(remaining_size() >= n))
+  BL_INLINE BLResult ensure(BLPathCore* dst, size_t n, size_t conic_n = 0) noexcept {
+    if (BL_LIKELY(remaining_size() >= n && remaining_conic_weight_size() >= conic_n))
       return BL_SUCCESS;
 
     BLPathImpl* dst_impl = PathInternal::get_impl(dst);
 
     dst_impl->size = (size_t)(reinterpret_cast<uint8_t*>(cmd) - dst_impl->command_data);
+    dst_impl->conic_weight_size = (size_t)(conic_weight_data - dst_impl->conic_weight_data);
     BL_ASSERT(dst_impl->size <= dst_impl->capacity);
 
     uint8_t* cmd_ptr_local;
     BLPoint* vtx_ptr_local;
-    BL_PROPAGATE(bl_path_modify_op(dst, BL_MODIFY_OP_APPEND_GROW, n, &cmd_ptr_local, &vtx_ptr_local));
+    double* conic_weight_ptr_local;
+    BL_PROPAGATE(bl_path_modify_op_ex(dst, BL_MODIFY_OP_APPEND_GROW, n, conic_n, &cmd_ptr_local, &vtx_ptr_local, &conic_weight_ptr_local));
 
     dst_impl = PathInternal::get_impl(dst);
     vtx = vtx_ptr_local;
     cmd = reinterpret_cast<Cmd*>(cmd_ptr_local);
     end = reinterpret_cast<Cmd*>(dst_impl->command_data + dst_impl->capacity);
+    conic_weight_data = conic_weight_ptr_local;
+    conic_weight_data_end = dst_impl->conic_weight_data + dst_impl->capacity;
 
     BL_ASSERT(remaining_size() >= n);
+    BL_ASSERT(remaining_conic_weight_size() >= conic_n);
     return BL_SUCCESS;
   }
 
   BL_INLINE void back(size_t n = 1) noexcept {
+    conic_weight_data -= PathInternal::count_conics(reinterpret_cast<const uint8_t*>(cmd - n), n);
     cmd -= n;
     vtx -= n;
   }
@@ -267,6 +313,7 @@ public:
     BL_ASSERT(new_size <= dst_impl->capacity);
 
     dst_impl->size = new_size;
+    dst_impl->conic_weight_size = (size_t)(conic_weight_data - dst_impl->conic_weight_data);
   }
 
   BL_INLINE void done(BLPathCore* dst) noexcept {
@@ -316,6 +363,8 @@ public:
     vtx += 2;
   }
 
+  // Cubic approximation
+  /*
   BL_INLINE void conic_to(const BLPoint& p1, const BLPoint& p2, double w) noexcept {
     BL_ASSERT(remaining_size() >= 3);
     double k = 4.0 * w / (3.0 * (1.0 + w));
@@ -332,27 +381,27 @@ public:
     cmd += 3;
     vtx += 3;
   }
+  */
 
-/*
-  // TODO [Conic]: Use this instead of cubic approximation
   BL_INLINE void conic_to(const BLPoint& p1, const BLPoint& p2, double w) noexcept {
-    quad_to(p1.x, p1.y, p2.x, p2.y);
+    conic_to(p1.x, p1.y, p2.x, p2.y, w);
   }
 
   BL_INLINE void conic_to(double x1, double y1, double x2, double y2, double w) noexcept {
-    BL_ASSERT(remaining_size() >= 3);
+    BL_ASSERT(remaining_size() >= 2);
+    BL_ASSERT(remaining_conic_weight_size() >= 1);
 
     cmd[0].value = BL_PATH_CMD_CONIC;
-    cmd[1].value = BL_PATH_CMD_WEIGHT;
-    cmd[2].value = BL_PATH_CMD_ON;
+    cmd[1].value = BL_PATH_CMD_ON;
     vtx[0].reset(x1, y1);
-    vtx[1].reset(w, bl::Math::nan<double>());
-    vtx[2].reset(x2, y2);
+    vtx[1].reset(x2, y2);
+    conic_weight_data[0] = w;
 
-    cmd += 3;
-    vtx += 3;
+    cmd += 2;
+    vtx += 2;
+    conic_weight_data += 1;
   }
-*/
+
   BL_INLINE void cubic_to(const BLPoint& p1, const BLPoint& p2, const BLPoint& p3) noexcept {
     return cubic_to(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
   }
@@ -372,19 +421,7 @@ public:
   }
 
   BL_INLINE void arc_quadrant_to(const BLPoint& p1, const BLPoint& p2) noexcept {
-    BL_ASSERT(remaining_size() >= 3);
-
-    cmd[0].value = BL_PATH_CMD_CUBIC;
-    cmd[1].value = BL_PATH_CMD_CUBIC;
-    cmd[2].value = BL_PATH_CMD_ON;
-
-    BLPoint p0 = vtx[-1];
-    vtx[0] = p0 + (p1 - p0) * Math::kKAPPA;
-    vtx[1] = p2 + (p1 - p2) * Math::kKAPPA;
-    vtx[2] = p2;
-
-    cmd += 3;
-    vtx += 3;
+    conic_to(p1, p2, Math::kSQRT_0p5);
   }
 
   BL_INLINE void add_vertex(uint8_t cmd_, const BLPoint& p) noexcept {
@@ -395,6 +432,19 @@ public:
 
     cmd++;
     vtx++;
+  }
+
+  BL_INLINE void add_conic_control(const BLPoint& p, double w) noexcept {
+    BL_ASSERT(remaining_size() >= 1);
+    BL_ASSERT(remaining_conic_weight_size() >= 1);
+
+    cmd[0].value = BL_PATH_CMD_CONIC;
+    vtx[0] = p;
+    conic_weight_data[0] = w;
+
+    cmd++;
+    vtx++;
+    conic_weight_data++;
   }
 
   BL_INLINE void add_vertex(uint8_t cmd_, double x, double y) noexcept {

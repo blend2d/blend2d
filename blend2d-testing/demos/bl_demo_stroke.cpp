@@ -191,19 +191,31 @@ public:
 
     auto rx = [&]() { return _prng.next_double() * (max_x - min_x) + min_x; };
     auto ry = [&]() { return _prng.next_double() * (max_y - min_y) + min_y; };
+    auto rw = [&]() {
+      double w = _prng.next_double();
+      if (w > 0.5) {
+        return 0.5 / (w - 0.5);
+      } else {
+        return (0.5 - w) / 0.5;
+      }
+    };
 
     _path.clear();
     _path.move_to(rx(), ry());
 
     double cmd = _prng.next_double();
-    if (cmd < 0.33) {
+    if (cmd < 0.25) {
       _path.line_to(rx(), ry());
       _path.line_to(rx(), ry());
       _path.line_to(rx(), ry());
     }
-    else if (cmd < 0.66) {
+    else if (cmd < 0.5) {
       _path.quad_to(rx(), ry(), rx(), ry());
       _path.quad_to(rx(), ry(), rx(), ry());
+    }
+    else if (cmd < 0.75) {
+      _path.conic_to(rx(), ry(), rx(), ry(), rw());
+      _path.conic_to(rx(), ry(), rx(), ry(), rw());
     }
     else {
       _path.cubic_to(rx(), ry(), rx(), ry(), rx(), ry());
@@ -286,9 +298,11 @@ public:
   Q_SLOT void onDumpPath() {
     size_t count = _path.size();
     const BLPoint* vtx = _path.vertex_data();
+    const double *conic_weight = _path.conic_weight_data();
     const uint8_t* cmd = _path.command_data();
 
     size_t i = 0;
+    size_t j = 0;
     while (i < count) {
       switch (cmd[i]) {
         case BL_PATH_CMD_MOVE:
@@ -302,6 +316,11 @@ public:
         case BL_PATH_CMD_QUAD:
           printf("p.quadTo(%g, %g, %g, %g);\n", vtx[i].x, vtx[i].y, vtx[i+1].x, vtx[i+1].y);
           i += 2;
+          break;
+        case BL_PATH_CMD_CONIC:
+          printf("p.conicTo(%g, %g, %g, %g, %g);\n", vtx[i].x, vtx[i].y, vtx[i+1].x, vtx[i+1].y, conic_weight[j]);
+          i += 2;
+          j++;
           break;
         case BL_PATH_CMD_CUBIC:
           printf("p.cubicTo(%g, %g, %g, %g, %g, %g);\n", vtx[i].x, vtx[i].y, vtx[i+1].x, vtx[i+1].y, vtx[i+2].x, vtx[i+2].y);

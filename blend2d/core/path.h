@@ -31,15 +31,8 @@ BL_DEFINE_ENUM(BLPathCmd) {
   //! Close path.
   BL_PATH_CMD_CLOSE = 5,
 
-  //! Conic weight.
-  //!
-  //! \note This is not a point. This is a pair of values from which only the first (x) is used to represent weight
-  //! as used by conic curve. The other value (y) is always set to NaN by Blend2D, but can be arbitrary as it has
-  //! no meaning.
-  BL_PATH_CMD_WEIGHT = 6,
-
   //! Maximum value of `BLPathCmd`.
-  BL_PATH_CMD_MAX_VALUE = 6
+  BL_PATH_CMD_MAX_VALUE = 5
 
   BL_FORCE_ENUM_UINT32(BL_PATH_CMD)
 };
@@ -218,15 +211,19 @@ struct BLApproximationOptions {
 struct BLPathView {
   const uint8_t* command_data;
   const BLPoint* vertex_data;
+  const double* conic_weight_data;
   size_t size;
+  size_t conic_weight_size;
 
 #ifdef __cplusplus
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLPathView{}; }
 
-  BL_INLINE_NODEBUG void reset(const uint8_t* command_data_in, const BLPoint* vertex_data_in, size_t size_in) noexcept {
+  BL_INLINE_NODEBUG void reset(const uint8_t* command_data_in, const BLPoint* vertex_data_in, const double* conic_weight_data_in, size_t size_in, size_t conic_weight_size_in) noexcept {
     command_data = command_data_in;
     vertex_data = vertex_data_in;
+    conic_weight_data = conic_weight_data_in;
     size = size_in;
+    conic_weight_size = conic_weight_size_in;
   }
 #endif
 };
@@ -287,10 +284,12 @@ BL_API size_t BL_CDECL bl_path_get_size(const BLPathCore* self) BL_NOEXCEPT_C BL
 BL_API size_t BL_CDECL bl_path_get_capacity(const BLPathCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API const uint8_t* BL_CDECL bl_path_get_command_data(const BLPathCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API const BLPoint* BL_CDECL bl_path_get_vertex_data(const BLPathCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API const double* BL_CDECL bl_path_get_conic_weight_data(const BLPathCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API size_t BL_CDECL bl_path_get_conic_weight_size(const BLPathCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API BLResult BL_CDECL bl_path_clear(BLPathCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_path_shrink(BLPathCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_path_reserve(BLPathCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_path_modify_op(BLPathCore* self, BLModifyOp op, size_t n, uint8_t** cmd_data_out, BLPoint** vtx_data_out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_path_modify_op_ex(BLPathCore* self, BLModifyOp op, size_t n, size_t conic_weight_n, uint8_t** cmd_data_out, BLPoint** vtx_data_out, double** conic_weight_data_out) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_path_assign_move(BLPathCore* self, BLPathCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_path_assign_weak(BLPathCore* self, const BLPathCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_path_assign_deep(BLPathCore* self, const BLPathCore* other) BL_NOEXCEPT_C;
@@ -416,8 +415,12 @@ struct BLPathImpl BL_CLASS_INHERITS(BLObjectImpl) {
       uint8_t* command_data;
       //! Vertex data.
       BLPoint* vertex_data;
+      //! Conic weight data.
+      double* conic_weight_data;
       //! Vertex/command count.
       size_t size;
+      //! Conic weight count.
+      size_t conic_weight_size;
     };
     //! Path data as view.
     BLPathView view;
@@ -478,8 +481,14 @@ static BL_INLINE size_t path_segment_count(const T&) noexcept { return T::kVerte
 template<typename T, typename... Args>
 static BL_INLINE size_t path_segment_count(const T&, Args&&... args) noexcept { return T::kVertexCount + path_segment_count(BLInternal::forward<Args>(args)...); }
 
+template<typename T>
+static BL_INLINE size_t path_segment_conic_count(const T&) noexcept { return T::kConicCount; }
+template<typename T, typename... Args>
+static BL_INLINE size_t path_segment_conic_count(const T&, Args&&... args) noexcept { return T::kConicCount + path_segment_conic_count(BLInternal::forward<Args>(args)...); }
+
 template<typename T> void store_path_segment_cmd(uint8_t* cmd, const T& segment) noexcept = delete;
 template<typename T> void store_path_segment_vtx(BLPoint* vtx, const T& segment) noexcept = delete;
+template<typename T> void store_path_segment_w(double* w, const T& segment) noexcept = delete;
 
 template<typename T>
 static BL_INLINE void store_path_segments_cmd(uint8_t* cmd, const T& segment) noexcept { store_path_segment_cmd<T>(cmd, segment); }
@@ -497,6 +506,15 @@ template<typename T, typename... Args>
 static BL_INLINE void store_path_segments_vtx(BLPoint* vtx, const T& segment, Args&&... args) noexcept {
   store_path_segment_vtx<T>(vtx, segment);
   store_path_segments_vtx(vtx + T::kVertexCount, BLInternal::forward<Args>(args)...);
+}
+
+template<typename T>
+static BL_INLINE void store_path_segments_w(double* w, const T& segment) noexcept { store_path_segment_w<T>(w, segment); }
+
+template<typename T, typename... Args>
+static BL_INLINE void store_path_segments_w(double* w, const T& segment, Args&&... args) noexcept {
+  store_path_segment_w<T>(w, segment);
+  store_path_segments_w(w + T::kConicCount, BLInternal::forward<Args>(args)...);
 }
 
 } // {BLInternal}
@@ -601,6 +619,18 @@ public:
   [[nodiscard]]
   BL_INLINE_NODEBUG const BLPoint* vertex_data_end() const noexcept { return _impl()->vertex_data + _impl()->size; }
 
+  //! Returns path's conic weight data (read-only).
+  [[nodiscard]]
+  BL_INLINE_NODEBUG const double* conic_weight_data() const noexcept { return _impl()->conic_weight_data; }
+
+  //! Returns the number of stored conic weights.
+  [[nodiscard]]
+  BL_INLINE_NODEBUG size_t conic_weight_size() const noexcept { return _impl()->conic_weight_size; }
+
+  //! Returns the end of path's conic weight data (read-only).
+  [[nodiscard]]
+  BL_INLINE_NODEBUG const double* conic_weight_data_end() const noexcept { return _impl()->conic_weight_data + _impl()->conic_weight_size; }
+
   //! Returns path's command data (read-only).
   [[nodiscard]]
   BL_INLINE_NODEBUG const uint8_t* command_data() const noexcept { return _impl()->command_data; }
@@ -633,8 +663,8 @@ public:
     return bl_path_reserve(this, n);
   }
 
-  BL_INLINE_NODEBUG BLResult modify_op(BLModifyOp op, size_t n, uint8_t** cmd_data_out, BLPoint** vtx_data_out) noexcept {
-    return bl_path_modify_op(this, op, n, cmd_data_out, vtx_data_out);
+  BL_INLINE_NODEBUG BLResult modify_op_ex(BLModifyOp op, size_t n, size_t conic_weight_n, uint8_t** cmd_data_out, BLPoint** vtx_data_out, double** conic_weight_data_out) noexcept {
+    return bl_path_modify_op_ex(this, op, n, conic_weight_n, cmd_data_out, vtx_data_out, conic_weight_data_out);
   }
 
   BL_INLINE_NODEBUG BLResult assign(BLPathCore&& other) noexcept {
@@ -863,24 +893,35 @@ public:
 
   struct MoveTo {
     static inline constexpr uint32_t kVertexCount = 1;
+    static inline constexpr uint32_t kConicCount = 0;
 
     double x, y;
   };
 
   struct LineTo {
     static inline constexpr uint32_t kVertexCount = 1;
+    static inline constexpr uint32_t kConicCount = 0;
 
     double x, y;
   };
 
   struct QuadTo {
     static inline constexpr uint32_t kVertexCount = 2;
+    static inline constexpr uint32_t kConicCount = 0;
 
     double x0, y0, x1, y1;
   };
 
+  struct ConicTo {
+    static inline constexpr uint32_t kVertexCount = 2;
+    static inline constexpr uint32_t kConicCount = 1;
+
+    double x0, y0, x1, y1, w;
+  };
+
   struct CubicTo {
     static inline constexpr uint32_t kVertexCount = 3;
+    static inline constexpr uint32_t kConicCount = 0;
 
     double x0, y0, x1, y1, x2, y2;
   };
@@ -889,12 +930,15 @@ public:
   BL_INLINE BLResult add_segments(Args&&... args) noexcept {
     uint8_t* cmd_ptr;
     BLPoint* vtx_ptr;
+    double* conic_weight_ptr;
 
     size_t kVertexCount = BLInternal::path_segment_count(BLInternal::forward<Args>(args)...);
-    BL_PROPAGATE(modify_op(BL_MODIFY_OP_APPEND_GROW, kVertexCount, &cmd_ptr, &vtx_ptr));
+    size_t kConicCount = BLInternal::path_segment_conic_count(BLInternal::forward<Args>(args)...);
+    BL_PROPAGATE(modify_op_ex(BL_MODIFY_OP_APPEND_GROW, kVertexCount, kConicCount, &cmd_ptr, &vtx_ptr, &conic_weight_ptr));
 
     BLInternal::store_path_segments_cmd(cmd_ptr, BLInternal::forward<Args>(args)...);
     BLInternal::store_path_segments_vtx(vtx_ptr, BLInternal::forward<Args>(args)...);
+    BLInternal::store_path_segments_w(conic_weight_ptr, BLInternal::forward<Args>(args)...);
 
     return BL_SUCCESS;
   }
@@ -1364,6 +1408,9 @@ BL_INLINE void store_path_segment_cmd(uint8_t* cmd, const BLPath::MoveTo&) noexc
 }
 
 template<>
+BL_INLINE void store_path_segment_w(double*, const BLPath::MoveTo&) noexcept {}
+
+template<>
 BL_INLINE void store_path_segment_vtx(BLPoint* vtx, const BLPath::MoveTo& segment) noexcept {
   vtx[0] = BLPoint(segment.x, segment.y);
 }
@@ -1372,6 +1419,9 @@ template<>
 BL_INLINE void store_path_segment_cmd(uint8_t* cmd, const BLPath::LineTo&) noexcept {
   cmd[0] = uint8_t(BL_PATH_CMD_ON);
 }
+
+template<>
+BL_INLINE void store_path_segment_w(double*, const BLPath::LineTo&) noexcept {}
 
 template<>
 BL_INLINE void store_path_segment_vtx(BLPoint* vtx, const BLPath::LineTo& segment) noexcept {
@@ -1385,7 +1435,27 @@ BL_INLINE void store_path_segment_cmd(uint8_t* cmd, const BLPath::QuadTo&) noexc
 }
 
 template<>
+BL_INLINE void store_path_segment_w(double*, const BLPath::QuadTo&) noexcept {}
+
+template<>
 BL_INLINE void store_path_segment_vtx(BLPoint* vtx, const BLPath::QuadTo& segment) noexcept {
+  vtx[0] = BLPoint(segment.x0, segment.y0);
+  vtx[1] = BLPoint(segment.x1, segment.y1);
+}
+
+template<>
+BL_INLINE void store_path_segment_cmd(uint8_t* cmd, const BLPath::ConicTo&) noexcept {
+  cmd[0] = uint8_t(BL_PATH_CMD_CONIC);
+  cmd[1] = uint8_t(BL_PATH_CMD_ON);
+}
+
+template<>
+BL_INLINE void store_path_segment_w(double* w, const BLPath::ConicTo& segment) noexcept {
+  w[0] = segment.w;
+}
+
+template<>
+BL_INLINE void store_path_segment_vtx(BLPoint* vtx, const BLPath::ConicTo& segment) noexcept {
   vtx[0] = BLPoint(segment.x0, segment.y0);
   vtx[1] = BLPoint(segment.x1, segment.y1);
 }
@@ -1396,6 +1466,9 @@ BL_INLINE void store_path_segment_cmd(uint8_t* cmd, const BLPath::CubicTo&) noex
   cmd[1] = uint8_t(BL_PATH_CMD_CUBIC);
   cmd[2] = uint8_t(BL_PATH_CMD_ON);
 }
+
+template<>
+BL_INLINE void store_path_segment_w(double*, const BLPath::CubicTo&) noexcept {}
 
 template<>
 BL_INLINE void store_path_segment_vtx(BLPoint* vtx, const BLPath::CubicTo& segment) noexcept {

@@ -11,40 +11,29 @@
 #include <blend2d/support/lookuptable_p.h>
 #include <blend2d/support/math_p.h>
 
+#include <limits>
+
 namespace bl {
 namespace PathInternal {
 
 // bl::Path - Stroke - Constants
 // =============================
 
-// Default minimum miter-join length that always bypasses any other join-type. The reason behind this is to
-// prevent emitting very small line segments in case that normals of joining segments are almost equal.
-static constexpr double kStrokeMiterMinimum = 1e-10;
-static constexpr double kStrokeMiterMinimumSq = Math::square(kStrokeMiterMinimum);
-
-// Minimum length for a line/curve the stroker will accept. If the segment is smaller than this it would be skipped.
 static constexpr double kStrokeLengthEpsilon = 1e-10;
 static constexpr double kStrokeLengthEpsilonSq = Math::square(kStrokeLengthEpsilon);
 
-static constexpr double kStrokeCollinearityEpsilon = 1e-10;
+static constexpr double kStrokeJoinEpsilon = 1e-10;
+static constexpr double kStrokeOneOverSqrt2 = 0.70710678118654752440;
 
-static constexpr double kStrokeCuspTThreshold = 1e-10;
-static constexpr double kStrokeDegenerateFlatness = 1e-6;
+static constexpr uint32_t kStrokeTangentRecursiveLimit = 15u;
+static constexpr uint32_t kStrokeCubicRecursiveLimit = 24u;
+static constexpr uint32_t kStrokeConicRecursiveLimit = 33u;
+static constexpr uint32_t kStrokeQuadRecursiveLimit = 33u;
 
-// Epsilon used to split quadratic bezier curves during offsetting.
-static constexpr double kOffsetQuadEpsilonT = 1e-5;
-
-// Minimum vertices that would be required for any join + additional line.
-//
-// Calculated from:
-//   JOIN:
-//     bevel: 1 vertex
-//     miter: 3 vertices
-//     round: 7 vertices (2 cubics at most)
-//   ADDITIONAL:
-//     end-point: 1 vertex
-//     line-to  : 1 vertex
 static constexpr size_t kStrokeMaxJoinVertices = 9;
+static constexpr size_t kStrokeMaxJoinConics = 2;
+static constexpr size_t kStrokeCircleVertices = 10;
+static constexpr size_t kStrokeCircleConics = 4;
 
 // bl::Path - Stroke - Tables
 // ==========================
@@ -52,917 +41,1647 @@ static constexpr size_t kStrokeMaxJoinVertices = 9;
 struct CapVertexCountGen {
   static constexpr uint8_t value(size_t cap) noexcept {
     return BLStrokeCap(cap) == BL_STROKE_CAP_SQUARE       ? 3 :
-           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND        ? 6 :
-           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND_REV    ? 8 :
+           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND        ? 4 :
+           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND_REV    ? 6 :
            BLStrokeCap(cap) == BL_STROKE_CAP_TRIANGLE     ? 2 :
            BLStrokeCap(cap) == BL_STROKE_CAP_TRIANGLE_REV ? 4 :
            BLStrokeCap(cap) == BL_STROKE_CAP_BUTT         ? 1 : 0;
   }
 };
 
+struct CapConicCountGen {
+  static constexpr uint8_t value(size_t cap) noexcept {
+    return BLStrokeCap(cap) == BL_STROKE_CAP_ROUND     ? 2 :
+           BLStrokeCap(cap) == BL_STROKE_CAP_ROUND_REV ? 2 : 0;
+  }
+};
+
 static constexpr auto cap_vertex_count_table =
   make_lookup_table<uint8_t, BL_STROKE_CAP_MAX_VALUE + 1, CapVertexCountGen>();
+
+static constexpr auto cap_conic_count_table =
+  make_lookup_table<uint8_t, BL_STROKE_CAP_MAX_VALUE + 1, CapConicCountGen>();
 
 // bl::Path - Stroke - Utilities
 // =============================
 
-enum class Side : size_t {
-  kA = 0,
-  kB = 1
+enum class StrokeType : int {
+  kOuter = 1,
+  kInner = -1
 };
 
-static BL_INLINE Side opposite_side(Side side) noexcept { return Side(size_t(1) - size_t(side)); }
+enum class AngleType : uint32_t {
+  kNearly180,
+  kSharp,
+  kShallow,
+  kNearlyLine
+};
 
-static BL_INLINE Side side_from_normals(const BLPoint& n0, const BLPoint& n1) noexcept {
-  return Side(size_t(Geometry::cross(n0, n1) >= 0));
+enum class ReductionType : uint32_t {
+  kPoint,
+  kLine,
+  kQuad,
+  kDegenerate,
+  kDegenerate2,
+  kDegenerate3
+};
+
+enum class ResultType : uint32_t {
+  kSplit,
+  kDegenerate,
+  kQuad
+};
+
+enum class IntersectRayType : uint32_t {
+  kCtrlPt,
+  kResultType
+};
+
+struct QuadConstruct {
+  BLPoint quad[3];
+  BLPoint tangent_start;
+  BLPoint tangent_end;
+  double start_t;
+  double mid_t;
+  double end_t;
+  bool start_set;
+  bool end_set;
+  bool opposite_tangents;
+
+  BL_INLINE bool init(double start, double end) noexcept {
+    start_t = start;
+    mid_t = (start + end) * 0.5;
+    end_t = end;
+    start_set = false;
+    end_set = false;
+    opposite_tangents = false;
+    return start_t < mid_t && mid_t < end_t;
+  }
+
+  BL_INLINE bool init_with_start(const QuadConstruct& parent) noexcept {
+    if (!init(parent.start_t, parent.mid_t))
+      return false;
+
+    quad[0] = parent.quad[0];
+    tangent_start = parent.tangent_start;
+    start_set = true;
+    return true;
+  }
+
+  BL_INLINE bool init_with_end(const QuadConstruct& parent) noexcept {
+    if (!init(parent.mid_t, parent.end_t))
+      return false;
+
+    quad[2] = parent.quad[2];
+    tangent_end = parent.tangent_end;
+    end_set = true;
+    return true;
+  }
+};
+
+static BL_INLINE bool is_nearly_zero(double v) noexcept { return bl_abs(v) <= kStrokeJoinEpsilon; }
+
+static BL_INLINE bool is_clockwise(const BLPoint& before, const BLPoint& after) noexcept {
+  return before.x * after.y > before.y * after.x;
 }
 
-static BL_INLINE uint32_t sanity_stroke_cap(uint32_t cap) noexcept {
+static BL_INLINE AngleType dot_to_angle_type(double dot) noexcept {
+  if (dot >= 0.0)
+    return is_nearly_zero(1.0 - dot) ? AngleType::kNearlyLine : AngleType::kShallow;
+  else
+    return is_nearly_zero(1.0 + dot) ? AngleType::kNearly180 : AngleType::kSharp;
+}
+
+static BL_INLINE uint32_t sanitize_stroke_cap(uint32_t cap) noexcept {
   return cap <= BL_STROKE_CAP_MAX_VALUE ? cap : BL_STROKE_CAP_BUTT;
 }
 
-static BL_INLINE bool is_miter_join_category(uint32_t join_type) noexcept {
-  return join_type == BL_STROKE_JOIN_MITER_CLIP  ||
-         join_type == BL_STROKE_JOIN_MITER_BEVEL ||
-         join_type == BL_STROKE_JOIN_MITER_ROUND ;
+static BL_INLINE uint32_t sanitize_stroke_join(uint32_t join) noexcept {
+  return join <= BL_STROKE_JOIN_MAX_VALUE ? join : BL_STROKE_JOIN_MITER_CLIP;
 }
 
-static BL_INLINE uint32_t miter_join_to_simple_join(uint32_t join_type) {
-  if (join_type == BL_STROKE_JOIN_MITER_BEVEL)
-    return BL_STROKE_JOIN_BEVEL;
-  else if (join_type == BL_STROKE_JOIN_MITER_ROUND)
-    return BL_STROKE_JOIN_ROUND;
-  else
-    return join_type;
+static BL_INLINE bool is_round_join(uint32_t join) noexcept {
+  return join == BL_STROKE_JOIN_ROUND || join == BL_STROKE_JOIN_MITER_ROUND;
 }
 
-static BL_INLINE bool test_inner_join_intersecion(const BLPoint& a0, const BLPoint& a1, const BLPoint& b0, const BLPoint& b1, const BLPoint& join) noexcept {
-  BLPoint min = bl_max(bl_min(a0, a1), bl_min(b0, b1));
-  BLPoint max = bl_min(bl_max(a0, a1), bl_max(b0, b1));
-
-  return (join.x >= min.x) & (join.y >= min.y) &
-         (join.x <= max.x) & (join.y <= max.y) ;
+static BL_INLINE bool is_bevel_join(uint32_t join) noexcept {
+  return join == BL_STROKE_JOIN_BEVEL || join == BL_STROKE_JOIN_MITER_BEVEL;
 }
 
-static BL_INLINE void dull_angle_arc_to(PathAppender& appender, const BLPoint& p0, const BLPoint& pa, const BLPoint& pb, const BLPoint& intersection) noexcept {
+static BL_INLINE BLPoint set_length(const BLPoint& v, double len) noexcept {
+  double v_len = Geometry::magnitude(v);
+  if (!(v_len > 0.0))
+    return BLPoint(0.0, 0.0);
+  return v * (len / v_len);
+}
+
+static BL_INLINE bool degenerate_vector(const BLPoint& v) noexcept {
+  return Geometry::magnitude_squared(v) <= kStrokeLengthEpsilonSq;
+}
+
+static BL_INLINE bool set_normal_unitnormal(const BLPoint& before, const BLPoint& after, double scale, double radius, BLPoint* normal, BLPoint* unit_normal) noexcept {
+  BLPoint tangent = (after - before) * scale;
+  double tangent_len_sq = Geometry::magnitude_squared(tangent);
+  if (!(tangent_len_sq > kStrokeLengthEpsilonSq))
+    return false;
+
+  BLPoint unit_tangent = tangent / Math::sqrt(tangent_len_sq);
+  *unit_normal = Geometry::normal(unit_tangent);
+  *normal = *unit_normal * radius;
+  return true;
+}
+
+static BL_INLINE bool set_normal_unitnormal(const BLPoint& tangent, double radius, BLPoint* normal, BLPoint* unit_normal) noexcept {
+  double tangent_len_sq = Geometry::magnitude_squared(tangent);
+  if (!(tangent_len_sq > kStrokeLengthEpsilonSq))
+    return false;
+
+  BLPoint unit_tangent = tangent / Math::sqrt(tangent_len_sq);
+  *unit_normal = Geometry::normal(unit_tangent);
+  *normal = *unit_normal * radius;
+  return true;
+}
+
+static BL_INLINE bool has_non_butt_caps(const BLStrokeOptions& options) noexcept {
+  return sanitize_stroke_cap(options.start_cap) != BL_STROKE_CAP_BUTT ||
+         sanitize_stroke_cap(options.end_cap) != BL_STROKE_CAP_BUTT;
+}
+
+static BL_INLINE bool is_zero_length_since_point(const BLPath& path, size_t start_point) noexcept {
+  size_t point_count = path.size();
+  if (point_count - start_point < 2)
+    return true;
+
+  const BLPoint* pts = path.vertex_data() + start_point;
+  const BLPoint first = pts[0];
+  for (size_t i = 1; i < point_count - start_point; i++) {
+    if (pts[i] != first)
+      return false;
+  }
+  return true;
+}
+
+static BL_INLINE double point_to_line_distance_sq(const BLPoint& pt, const BLPoint& line_start, const BLPoint& line_end) noexcept {
+  BLPoint dxy = line_end - line_start;
+  BLPoint ab0 = pt - line_start;
+
+  double numer = Geometry::dot(dxy, ab0);
+  double denom = Geometry::dot(dxy, dxy);
+  double t = numer / denom;
+
+  if (t >= 0.0 && t <= 1.0) {
+    BLPoint hit = line_start + dxy * t;
+    return Geometry::magnitude_squared(hit - pt);
+  }
+  else {
+    return Geometry::magnitude_squared(pt - line_start);
+  }
+}
+
+static BL_INLINE double point_to_tangent_line_distance_sq(const BLPoint& pt, const BLPoint& line_start, const BLPoint& tangent) noexcept {
+  BLPoint ab0 = pt - line_start;
+
+  double numer = Geometry::dot(tangent, ab0);
+  double denom = Geometry::dot(tangent, tangent);
+  double t = numer / denom;
+
+  if (t >= 0.0 && t <= 1.0) {
+    BLPoint hit = line_start + tangent * t;
+    return Geometry::magnitude_squared(hit - pt);
+  }
+  else {
+    return Geometry::magnitude_squared(pt - line_start);
+  }
+}
+
+static BL_INLINE bool points_within_dist(const BLPoint& a, const BLPoint& b, double limit) noexcept {
+  return Geometry::magnitude_squared(a - b) <= limit * limit;
+}
+
+static BL_INLINE bool quad_in_line(const BLPoint quad[3]) noexcept {
+  double pt_max = -1.0;
+  int outer1 = 0;
+  int outer2 = 1;
+
+  for (int i = 0; i < 2; i++) {
+    for (int j = i + 1; j < 3; j++) {
+      BLPoint diff = quad[j] - quad[i];
+      double test_max = bl_max(bl_abs(diff.x), bl_abs(diff.y));
+      if (pt_max < test_max) {
+        outer1 = i;
+        outer2 = j;
+        pt_max = test_max;
+      }
+    }
+  }
+
+  int mid = outer1 ^ outer2 ^ 3;
+  double line_slop = pt_max * pt_max * 0.000005;
+  return point_to_line_distance_sq(quad[mid], quad[outer1], quad[outer2]) <= line_slop;
+}
+
+static BL_INLINE bool conic_in_line(const BLPoint conic[4]) noexcept {
+  return quad_in_line(conic);
+}
+
+static BL_INLINE bool cubic_in_line(const BLPoint cubic[4]) noexcept {
+  double pt_max = -1.0;
+  int outer1 = 0;
+  int outer2 = 1;
+
+  for (int i = 0; i < 3; i++) {
+    for (int j = i + 1; j < 4; j++) {
+      BLPoint diff = cubic[j] - cubic[i];
+      double test_max = bl_max(bl_abs(diff.x), bl_abs(diff.y));
+      if (pt_max < test_max) {
+        outer1 = i;
+        outer2 = j;
+        pt_max = test_max;
+      }
+    }
+  }
+
+  int mid1 = (1 + (2 >> outer2)) >> outer1;
+  int mid2 = outer1 ^ outer2 ^ mid1;
+  double line_slop = pt_max * pt_max * 0.00001;
+  return point_to_line_distance_sq(cubic[mid1], cubic[outer1], cubic[outer2]) <= line_slop &&
+         point_to_line_distance_sq(cubic[mid2], cubic[outer1], cubic[outer2]) <= line_slop;
+}
+
+static BL_INLINE double find_quad_max_curvature(const BLPoint quad[3]) noexcept {
+  double ax = quad[1].x - quad[0].x;
+  double ay = quad[1].y - quad[0].y;
+  double bx = quad[0].x - quad[1].x - quad[1].x + quad[2].x;
+  double by = quad[0].y - quad[1].y - quad[1].y + quad[2].y;
+
+  double numer = -(ax * bx + ay * by);
+  double denom = bx * bx + by * by;
+
+  if (denom < 0.0) {
+    numer = -numer;
+    denom = -denom;
+  }
+
+  if (numer <= 0.0)
+    return 0.0;
+
+  if (numer >= denom)
+    return 1.0;
+
+  return numer / denom;
+}
+
+static BL_INLINE size_t find_cubic_inflections(const BLPoint cubic[4], double t_values[2]) noexcept {
+  double ax = cubic[1].x - cubic[0].x;
+  double ay = cubic[1].y - cubic[0].y;
+  double bx = cubic[2].x - 2.0 * cubic[1].x + cubic[0].x;
+  double by = cubic[2].y - 2.0 * cubic[1].y + cubic[0].y;
+  double cx = cubic[3].x + 3.0 * (cubic[1].x - cubic[2].x) - cubic[0].x;
+  double cy = cubic[3].y + 3.0 * (cubic[1].y - cubic[2].y) - cubic[0].y;
+
+  return Math::quad_roots(t_values,
+    bx * cy - by * cx,
+    ax * cy - ay * cx,
+    ax * by - ay * bx,
+    Math::kAfter0,
+    Math::kBefore1);
+}
+
+static BL_INLINE void formulate_f1_dot_f2(const BLPoint cubic[4], double coeff_x[4], double coeff_y[4]) noexcept {
+  auto formulate = [](const double* src, double coeff[4]) noexcept {
+    double a = src[2] - src[0];
+    double b = src[4] - 2.0 * src[2] + src[0];
+    double c = src[6] + 3.0 * (src[2] - src[4]) - src[0];
+
+    coeff[0] = c * c;
+    coeff[1] = 3.0 * b * c;
+    coeff[2] = 2.0 * b * b + c * a;
+    coeff[3] = a * b;
+  };
+
+  formulate(&cubic[0].x, coeff_x);
+  formulate(&cubic[0].y, coeff_y);
+}
+
+static BL_INLINE size_t find_cubic_max_curvature(const BLPoint cubic[4], double t_values[3]) noexcept {
+  double coeff_x[4];
+  double coeff_y[4];
+  formulate_f1_dot_f2(cubic, coeff_x, coeff_y);
+
+  for (uint32_t i = 0; i < 4; i++)
+    coeff_x[i] += coeff_y[i];
+
+  return Math::cubic_roots(t_values, coeff_x, Math::kAfter0, Math::kBefore1);
+}
+
+static BL_INLINE double calc_cubic_precision(const BLPoint cubic[4]) noexcept {
+  return (Geometry::magnitude_squared(cubic[1] - cubic[0]) +
+          Geometry::magnitude_squared(cubic[2] - cubic[1]) +
+          Geometry::magnitude_squared(cubic[3] - cubic[2])) * 1e-8;
+}
+
+static BL_INLINE bool on_same_side(const BLPoint cubic[4], int test_index, int line_index) noexcept {
+  BLPoint origin = cubic[line_index];
+  BLPoint line = cubic[line_index + 1] - origin;
+  double crosses[2];
+
+  for (int i = 0; i < 2; i++) {
+    BLPoint test_line = cubic[test_index + i] - origin;
+    crosses[i] = Geometry::cross(line, test_line);
+  }
+
+  return crosses[0] * crosses[1] >= 0.0;
+}
+
+static BL_INLINE double find_cubic_cusp(const BLPoint cubic[4]) noexcept {
+  if (cubic[0] == cubic[1] || cubic[2] == cubic[3])
+    return -1.0;
+
+  if (on_same_side(cubic, 0, 2) || on_same_side(cubic, 2, 0))
+    return -1.0;
+
+  double max_curvature[3];
+  size_t roots = find_cubic_max_curvature(cubic, max_curvature);
+  for (size_t i = 0; i < roots; i++) {
+    double t = max_curvature[i];
+    if (!(t > 0.0 && t < 1.0))
+      continue;
+
+    BLPoint dpt = Geometry::derivative_at(Geometry::cubic_ref(cubic), t);
+    if (Geometry::magnitude_squared(dpt) < calc_cubic_precision(cubic))
+      return t;
+  }
+
+  return -1.0;
+}
+
+static BL_INLINE void angle_arc_to(PathAppender& appender, const BLPoint& pivot, const BLPoint& pa, const BLPoint& pb, const BLPoint& intersection) noexcept {
   BLPoint pm = (pa + pb) * 0.5;
 
-  double w = Math::sqrt(Geometry::magnitude(p0 - pm) / Geometry::magnitude(p0 - intersection));
-  double a = 4 * w / (3.0 * (1.0 + w));
+  double denominator = Geometry::magnitude(pivot - intersection);
+  if (!(denominator > 0.0)) {
+    appender.line_to(pb);
+    return;
+  }
 
-  BLPoint c0 = pa + a * (intersection - pa);
-  BLPoint c1 = pb + a * (intersection - pb);
+  double w = Math::sqrt(Geometry::magnitude(pivot - pm) / denominator);
+  if (!(w > 0.0) || !Math::is_finite(w)) {
+    appender.line_to(pb);
+    return;
+  }
 
-  appender.cubic_to(c0, c1, pb);
-};
+  appender.conic_to(intersection, pb, w);
+}
+
+static BL_INLINE BLResult add_cap(PathAppender& out, BLPoint pivot, BLPoint p1, uint32_t cap_type) noexcept {
+  BLPoint p0 = out.vtx[-1];
+  BLPoint q = Geometry::normal(p1 - p0) * 0.5;
+
+  switch (cap_type) {
+    case BL_STROKE_CAP_BUTT:
+    default:
+      out.line_to(p1);
+      break;
+
+    case BL_STROKE_CAP_SQUARE:
+      out.line_to(p0 + q);
+      out.line_to(p1 + q);
+      out.line_to(p1);
+      break;
+
+    case BL_STROKE_CAP_ROUND:
+      out.arc_quadrant_to(p0 + q, pivot + q);
+      out.arc_quadrant_to(p1 + q, p1);
+      break;
+
+    case BL_STROKE_CAP_ROUND_REV:
+      out.line_to(p0 + q);
+      out.arc_quadrant_to(p0, pivot);
+      out.arc_quadrant_to(p1, p1 + q);
+      out.line_to(p1);
+      break;
+
+    case BL_STROKE_CAP_TRIANGLE:
+      out.line_to(pivot + q);
+      out.line_to(p1);
+      break;
+
+    case BL_STROKE_CAP_TRIANGLE_REV:
+      out.line_to(p0 + q);
+      out.line_to(pivot);
+      out.line_to(p1 + q);
+      out.line_to(p1);
+      break;
+  }
+
+  return BL_SUCCESS;
+}
 
 // bl::Path - Stroke - Implementation
 // ==================================
 
 class PathStroker {
 public:
-  enum Flags : uint32_t {
-    kFlagIsOpen   = 0x01,
-    kFlagIsClosed = 0x02
-  };
-
-  // Stroke input.
   PathIterator _iter;
-
-  // Stroke options.
   const BLStrokeOptions& _options;
   const BLApproximationOptions& _approx;
 
-  struct SideData {
-    BLPath* path;            // Output path (outer/inner, per side).
-    size_t figure_offset;     // Start of the figure offset in output path (only A path).
-    PathAppender appender; // Output path appended (outer/inner, per side).
-    double d;                // Distance (StrokeWidth / 2).
-    double d2;               // Distance multiplied by 2.
-  };
+  BLPath* _a_path;
+  BLPath* _b_path;
+  BLPath* _c_path;
+  BLPath _cusp_path;
 
-  double _miter_limit;        // Miter limit possibly clamped to a safe range.
-  double _miter_limit_sq;      // Miter limit squared.
-  uint32_t _join_type;        // Simplified join type.
-  SideData _side_data[2];     // A and B data (outer/inner side).
+  PathAppender _a_out;
+  PathAppender _b_out;
 
-  // Stroke output.
-  BLPath* _cPath;            // Output C path.
+  double _radius;
+  double _miter_limit;
+  double _inv_miter_limit;
+  double _inv_res_scale;
+  double _inv_res_scale_sq;
 
-  // Global state.
-  BLPoint _p0;               // Current point.
-  BLPoint _n0;               // Unit normal of `_p0`.
-  BLPoint _pInitial;         // Initial point (MoveTo).
-  BLPoint _nInitial;         // Unit normal of `_pInitial`.
-  uint32_t _flags;           // Work flags.
+  BLPoint _first_normal;
+  BLPoint _prev_normal;
+  BLPoint _first_unit_normal;
+  BLPoint _prev_unit_normal;
+  BLPoint _first_pt;
+  BLPoint _prev_pt;
+  BLPoint _first_outer_pt;
+
+  size_t _a_figure_offset;
+  size_t _b_figure_offset;
+
+  int _segment_count;
+  bool _first_is_line;
+  bool _prev_is_line;
+  bool _join_completed;
+  uint32_t _recursion_depth;
+  bool _found_tangents;
+  StrokeType _stroke_type;
+  uint32_t _join_override;
 
   BL_INLINE PathStroker(const BLPathView& input, const BLStrokeOptions& options, const BLApproximationOptions& approx, BLPath* a, BLPath* b, BLPath* c) noexcept
     : _iter(input),
       _options(options),
       _approx(approx),
-      _join_type(options.join),
-      _cPath(c) {
+      _a_path(a),
+      _b_path(b),
+      _c_path(c),
+      _radius(options.width * 0.5),
+      _miter_limit(options.miter_limit),
+      _inv_miter_limit(options.miter_limit > 0.0 ? 1.0 / options.miter_limit : std::numeric_limits<double>::infinity()),
+      _inv_res_scale(4.0 * approx.simplify_tolerance),
+      _inv_res_scale_sq(Math::square(_inv_res_scale)),
+      _a_figure_offset(0),
+      _b_figure_offset(0),
+      _segment_count(-1),
+      _first_is_line(false),
+      _prev_is_line(false),
+      _join_completed(false),
+      _recursion_depth(0),
+      _found_tangents(false),
+      _stroke_type(StrokeType::kOuter),
+      _join_override(UINT32_MAX) {}
 
-    _side_data[0].path = a;
-    _side_data[0].figure_offset = 0;
-    _side_data[0].d = options.width * 0.5;
-    _side_data[0].d2 = options.width;
-    _side_data[1].path = b;
-    _side_data[1].figure_offset = 0;
-    _side_data[1].d = -_side_data[0].d;
-    _side_data[1].d2 = -_side_data[0].d2;
+  BL_INLINE bool has_only_move_to() const noexcept { return _segment_count == 0; }
+  BL_INLINE BLPoint move_to_pt() const noexcept { return _first_pt; }
 
-    // Initialize miter calculation options. What we do here is to change `_join_type` to a value that would be easier
-    // for us to use during joining. We always honor `_miter_limit_sq` even when the `_join_type` is not miter to prevent
-    // emitting very small line segments next to next other, which saves vertices and also prevents border cases in
-    // additional processing.
-    if (is_miter_join_category(_join_type)) {
-      // Simplify miter-join type to non-miter join, if possible.
-      _join_type = miter_join_to_simple_join(_join_type);
-
-      // Final miter limit is `0.5 * width * miter_limit`.
-      _miter_limit = d() * options.miter_limit;
-      _miter_limit_sq = Math::square(_miter_limit);
-    }
-    else {
-      _miter_limit = kStrokeMiterMinimum;
-      _miter_limit_sq = kStrokeMiterMinimumSq;
-    }
+  BL_INLINE bool is_current_contour_empty() const noexcept {
+    return is_zero_length_since_point(*_b_path, _b_figure_offset) &&
+           is_zero_length_since_point(*_a_path, _a_figure_offset);
   }
 
-  BL_INLINE bool is_open() const noexcept { return (_flags & kFlagIsOpen) != 0; }
-  BL_INLINE bool is_closed() const noexcept { return (_flags & kFlagIsClosed) != 0; }
-
-  BL_INLINE SideData& side_data(Side side) noexcept { return _side_data[size_t(side)]; }
-
-  BL_INLINE double d() const noexcept { return _side_data[0].d; }
-  BL_INLINE double d(Side side) const noexcept { return _side_data[size_t(side)].d; }
-
-  BL_INLINE double d2() const noexcept { return _side_data[0].d2; }
-  BL_INLINE double d2(Side side) const noexcept { return _side_data[size_t(side)].d2; }
-
-  BL_INLINE BLPath* a_path() const noexcept { return _side_data[size_t(Side::kA)].path; }
-  BL_INLINE BLPath* b_path() const noexcept { return _side_data[size_t(Side::kB)].path; }
-  BL_INLINE BLPath* c_path() const noexcept { return _cPath; }
-
-  BL_INLINE BLPath* outer_path(Side side) const noexcept { return _side_data[size_t(side)].path; }
-  BL_INLINE BLPath* inner_path(Side side) const noexcept { return _side_data[size_t(opposite_side(side))].path; }
-
-  BL_INLINE PathAppender& a_out() noexcept { return _side_data[size_t(Side::kA)].appender; }
-  BL_INLINE PathAppender& b_out() noexcept { return _side_data[size_t(Side::kB)].appender; }
-
-  BL_INLINE PathAppender& outer_appender(Side side) noexcept { return _side_data[size_t(side)].appender; }
-  BL_INLINE PathAppender& inner_appender(Side side) noexcept { return _side_data[size_t(opposite_side(side))].appender; }
-
-  BL_INLINE BLResult ensure_appenders_capacity(size_t a_required, size_t b_required) noexcept {
-    uint32_t ok = uint32_t(a_out().remaining_size() >= a_required) &
-                  uint32_t(b_out().remaining_size() >= b_required) ;
+  BL_INLINE BLResult ensure_appenders_capacity(size_t a_required, size_t b_required, size_t a_conic_required = 0, size_t b_conic_required = 0) noexcept {
+    uint32_t ok = uint32_t(_a_out.remaining_size() >= a_required) &
+                  uint32_t(_b_out.remaining_size() >= b_required) &
+                  uint32_t(_a_out.remaining_conic_weight_size() >= a_conic_required) &
+                  uint32_t(_b_out.remaining_conic_weight_size() >= b_conic_required);
 
     if (BL_LIKELY(ok))
       return BL_SUCCESS;
 
-    return a_out().ensure(a_path(), a_required) |
-           b_out().ensure(b_path(), b_required) ;
+    return _a_out.ensure(_a_path, a_required, a_conic_required) |
+           _b_out.ensure(_b_path, b_required, b_conic_required);
   }
 
-  BL_INLINE_IF_NOT_DEBUG BLResult stroke(BLPathStrokeSinkFunc sink, void* user_data) noexcept {
-    size_t figure_start_idx = 0;
-    size_t estimated_size = _iter.remaining_forward() * 2u;
+  BL_INLINE BLResult ensure_active_side_capacity(size_t required, size_t conic_required = 0) noexcept {
+    if (_stroke_type == StrokeType::kOuter)
+      return ensure_appenders_capacity(required, 0, conic_required, 0);
+    else
+      return ensure_appenders_capacity(0, required, 0, conic_required);
+  }
 
-    BL_PROPAGATE(a_path()->reserve(a_path()->size() + estimated_size));
+  BL_INLINE PathAppender& active_side() noexcept {
+    return _stroke_type == StrokeType::kOuter ? _a_out : _b_out;
+  }
+
+  BL_INLINE void set_last_point(PathAppender& out, const BLPoint& p) noexcept {
+    out.vtx[-1] = p;
+  }
+
+  BL_INLINE uint32_t current_join() const noexcept {
+    return _join_override <= BL_STROKE_JOIN_MAX_VALUE ? _join_override : sanitize_stroke_join(_options.join);
+  }
+
+  BL_INLINE void move_to(const BLPoint& pt) noexcept {
+    _segment_count = 0;
+    _first_pt = pt;
+    _prev_pt = pt;
+    _first_is_line = false;
+    _join_completed = false;
+    _prev_is_line = false;
+  }
+
+  BL_INLINE bool has_valid_tangent(PathIterator iter) const noexcept {
+    while (!iter.at_end()) {
+      uint8_t cmd = iter.cmd[0];
+      if (cmd == BL_PATH_CMD_MOVE)
+        return false;
+
+      if (cmd == BL_PATH_CMD_ON) {
+        if (iter.vtx[0] != _prev_pt)
+          return true;
+        iter++;
+        continue;
+      }
+
+      if (cmd == BL_PATH_CMD_QUAD || cmd == BL_PATH_CMD_CONIC) {
+        if (iter.remaining_forward() < 2)
+          return false;
+        if (!(iter.vtx[0] == _prev_pt && iter.vtx[1] == _prev_pt))
+          return true;
+        iter += 2;
+        continue;
+      }
+
+      if (cmd == BL_PATH_CMD_CUBIC) {
+        if (iter.remaining_forward() < 3)
+          return false;
+        if (!(iter.vtx[0] == _prev_pt && iter.vtx[1] == _prev_pt && iter.vtx[2] == _prev_pt))
+          return true;
+        iter += 3;
+        continue;
+      }
+
+      return false;
+    }
+
+    return false;
+  }
+
+  BL_INLINE bool pre_join_to(const BLPoint& curr_pt, BLPoint* normal, BLPoint* unit_normal, bool curr_is_line) noexcept {
+    if (!set_normal_unitnormal(_prev_pt, curr_pt, 1.0, _radius, normal, unit_normal)) {
+      if (_segment_count != 0 || !has_non_butt_caps(_options))
+        return false;
+
+      normal->reset(_radius, 0.0);
+      unit_normal->reset(1.0, 0.0);
+    }
+
+    if (_segment_count == 0) {
+      _first_is_line = curr_is_line;
+      _first_normal = *normal;
+      _first_unit_normal = *unit_normal;
+      _first_outer_pt = _prev_pt + *normal;
+
+      _a_out.move_to(_first_outer_pt);
+      _b_out.move_to(_prev_pt - *normal);
+    }
+    else {
+      join_to(_prev_unit_normal, _prev_pt, *unit_normal, _prev_is_line, curr_is_line);
+    }
+
+    _prev_is_line = curr_is_line;
+    return true;
+  }
+
+  BL_INLINE void post_join_to(const BLPoint& curr_pt, const BLPoint& normal, const BLPoint& unit_normal) noexcept {
+    _join_completed = true;
+    _prev_pt = curr_pt;
+    _prev_normal = normal;
+    _prev_unit_normal = unit_normal;
+    _segment_count++;
+  }
+
+  BL_INLINE void line_to_current_segment_end(const BLPoint& curr_pt, const BLPoint& normal) noexcept {
+    _a_out.line_to(curr_pt + normal);
+    _b_out.line_to(curr_pt - normal);
+  }
+
+  BL_INLINE void handle_inner_join(PathAppender& inner, const BLPoint& pivot, const BLPoint& after) noexcept {
+    inner.line_to(pivot);
+    inner.line_to(pivot - after);
+  }
+
+  struct JoinSideSelection {
+    PathAppender* outer;
+    PathAppender* inner;
+    BLPoint before;
+    BLPoint after;
+    BLPoint before_tangent;
+    BLPoint after_tangent;
+  };
+
+  BL_INLINE JoinSideSelection select_join_sides(PathAppender& a_ref, PathAppender& b_ref, const BLPoint& pivot, const BLPoint& before_unit, const BLPoint& after_unit) noexcept {
+    JoinSideSelection selection {
+      &a_ref,
+      &b_ref,
+      before_unit,
+      after_unit,
+      BLPoint(before_unit.y, -before_unit.x),
+      BLPoint(after_unit.y, -after_unit.x)
+    };
+    double outer_sign = is_clockwise(before_unit, after_unit) ? -1.0 : 1.0;
+    double a_sign = Geometry::dot(a_ref.vtx[-1] - pivot, before_unit) < 0.0 ? -1.0 : 1.0;
+
+    if (a_sign != outer_sign) {
+      bl::swap(selection.outer, selection.inner);
+    }
+
+    selection.before *= outer_sign;
+    selection.after *= outer_sign;
+    return selection;
+  }
+
+  BL_INLINE void blunt_join(PathAppender& outer, PathAppender& inner, const BLPoint&, const BLPoint& pivot, const BLPoint& after_unit) noexcept {
+    BLPoint after = after_unit * _radius;
+    outer.line_to(pivot + after);
+    handle_inner_join(inner, pivot, after);
+  }
+
+  BL_INLINE void round_join(PathAppender& outer, PathAppender& inner, const BLPoint& before_unit, const BLPoint& pivot, const BLPoint& after_unit) noexcept {
+    double dot_prod = Geometry::dot(before_unit, after_unit);
+    if (dot_to_angle_type(dot_prod) == AngleType::kNearlyLine)
+      return;
+
+    BLPoint pa = outer.vtx[-1];
+    BLPoint pb = pivot + after_unit * _radius;
+
+    if (Geometry::dot(pivot - pa, pivot - pb) < 0.0) {
+      BLPoint n2 = Geometry::normal(Geometry::unit_vector(pb - pa));
+      if (Math::is_finite(n2.x)) {
+        BLPoint incoming = pa - outer.vtx[-2];
+        if (!degenerate_vector(incoming) && Geometry::dot(pivot + n2 * _radius - pa, incoming) < 0.0)
+          n2 = -n2;
+
+        BLPoint m = before_unit + n2;
+        BLPoint k = m * (_radius + _radius) / Geometry::magnitude_squared(m);
+        BLPoint q = n2 * _radius;
+
+        BLPoint pc1 = pivot + k;
+        BLPoint pp1 = pivot + q;
+        BLPoint pc2 = Math::lerp(pc1, pp1, 2.0);
+
+        angle_arc_to(outer, pivot, pa, pp1, pc1);
+        angle_arc_to(outer, pivot, pp1, pb, pc2);
+      }
+      else {
+        outer.line_to(pb);
+      }
+    }
+    else {
+      BLPoint m = before_unit + after_unit;
+      BLPoint k = m * (_radius + _radius) / Geometry::magnitude_squared(m);
+      angle_arc_to(outer, pivot, pa, pb, pivot + k);
+    }
+
+    handle_inner_join(inner, pivot, after_unit * _radius);
+  }
+
+  BL_INLINE void miter_clip_join(PathAppender& outer, PathAppender& inner, const BLPoint& before_unit, const BLPoint& pivot, const BLPoint& after_unit, const BLPoint& before_tangent, const BLPoint& after_tangent, bool prev_is_line) noexcept {
+    BLPoint m = before_unit + after_unit;
+    BLPoint k = m * (_radius + _radius) / Geometry::magnitude_squared(m);
+    BLPoint after = after_unit * _radius;
+
+    if (Geometry::magnitude_squared(k) <= Math::square(_radius * _miter_limit)) {
+      BLPoint mid = pivot + k;
+      if (prev_is_line)
+        set_last_point(outer, mid);
+      else
+        outer.line_to(mid);
+      outer.line_to(pivot + after);
+      handle_inner_join(inner, pivot, after);
+      return;
+    }
+
+    double b2 = bl_abs(Geometry::cross(k, before_unit));
+    if (b2 > 0.0)
+      b2 = b2 * (_radius * _miter_limit) / Geometry::magnitude(k);
+    else
+      b2 = _radius * _miter_limit;
+
+    BLPoint t0 = pivot + _radius * before_unit + b2 * before_tangent;
+    BLPoint t1 = pivot + after - b2 * after_tangent;
+
+    if (prev_is_line)
+      set_last_point(outer, t0);
+    else
+      outer.line_to(t0);
+
+    outer.line_to(t1);
+    outer.line_to(pivot + after);
+    handle_inner_join(inner, pivot, after);
+  }
+
+  BL_INLINE void miter_join(PathAppender& outer, PathAppender& inner, const BLPoint& before_unit, const BLPoint& pivot, const BLPoint& after_unit, const BLPoint& before_tangent, const BLPoint& after_tangent, bool prev_is_line, bool curr_is_line, uint32_t join_type) noexcept {
+    double dot_prod = Geometry::dot(before_unit, after_unit);
+    AngleType angle_type = dot_to_angle_type(dot_prod);
+
+    if (angle_type == AngleType::kNearlyLine)
+      return;
+
+    if (join_type == BL_STROKE_JOIN_MITER_CLIP) {
+      miter_clip_join(outer, inner, before_unit, pivot, after_unit, before_tangent, after_tangent, prev_is_line);
+      return;
+    }
+
+    if (angle_type == AngleType::kNearly180) {
+      blunt_join(outer, inner, before_unit, pivot, after_unit);
+      return;
+    }
+
+    double sin_half_angle = Math::sqrt(0.5 * (1.0 + dot_prod));
+    if (!(dot_prod == 0.0 && _inv_miter_limit <= kStrokeOneOverSqrt2) && sin_half_angle < _inv_miter_limit) {
+      if (join_type == BL_STROKE_JOIN_MITER_ROUND)
+        round_join(outer, inner, before_unit, pivot, after_unit);
+      else
+        blunt_join(outer, inner, before_unit, pivot, after_unit);
+      return;
+    }
+
+    BLPoint mid = before_unit + after_unit;
+    double mid_scale = (_radius + _radius) / Geometry::magnitude_squared(mid);
+    if (!Math::is_finite(mid_scale)) {
+      blunt_join(outer, inner, before_unit, pivot, after_unit);
+      return;
+    }
+
+    mid *= mid_scale;
+
+    if (prev_is_line)
+      set_last_point(outer, pivot + mid);
+    else
+      outer.line_to(pivot + mid);
+
+    BLPoint after_scaled = after_unit * _radius;
+    if (!curr_is_line)
+      outer.line_to(pivot + after_scaled);
+
+    handle_inner_join(inner, pivot, after_scaled);
+  }
+
+  BL_INLINE void emit_join(const JoinSideSelection& selection, const BLPoint& pivot, bool prev_is_line, bool curr_is_line) noexcept {
+    uint32_t join = current_join();
+
+    if (join == BL_STROKE_JOIN_ROUND || join == BL_STROKE_JOIN_BEVEL)
+      prev_is_line = false;
+
+    if (join == BL_STROKE_JOIN_ROUND)
+      round_join(*selection.outer, *selection.inner, selection.before, pivot, selection.after);
+    else if (join == BL_STROKE_JOIN_BEVEL)
+      blunt_join(*selection.outer, *selection.inner, selection.before, pivot, selection.after);
+    else
+      miter_join(*selection.outer, *selection.inner, selection.before, pivot, selection.after, selection.before_tangent, selection.after_tangent, prev_is_line, curr_is_line, join);
+  }
+
+  BL_INLINE void join_to(const BLPoint& before_unit_normal, const BLPoint& pivot, const BLPoint& after_unit_normal, bool prev_is_line, bool curr_is_line) noexcept {
+    if (before_unit_normal == after_unit_normal)
+      return;
+
+    JoinSideSelection selection = select_join_sides(_a_out, _b_out, pivot, before_unit_normal, after_unit_normal);
+    emit_join(selection, pivot, prev_is_line, curr_is_line);
+  }
+
+  BL_INLINE void line_to_selected_segment_end(const JoinSideSelection& selection, const BLPoint& curr_pt) noexcept {
+    selection.outer->line_to(curr_pt + selection.after * _radius);
+    selection.inner->line_to(curr_pt - selection.after * _radius);
+  }
+
+  BL_INLINE BLResult line_to(const BLPoint& curr_pt, const PathIterator* iter = nullptr) noexcept {
+    double tolerance = kStrokeLengthEpsilon * bl_max(_inv_res_scale, 1.0);
+    bool teeny_line = Geometry::magnitude_squared(curr_pt - _prev_pt) <= tolerance * tolerance;
+
+    if (!has_non_butt_caps(_options) && teeny_line)
+      return BL_SUCCESS;
+
+    if (teeny_line && (_join_completed || (iter && has_valid_tangent(*iter))))
+      return BL_SUCCESS;
+
+    BLPoint normal;
+    BLPoint unit_normal;
+
+    if (!pre_join_to(curr_pt, &normal, &unit_normal, true))
+      return BL_SUCCESS;
+
+    BL_PROPAGATE(ensure_appenders_capacity(1, 1));
+    line_to_current_segment_end(curr_pt, normal);
+    post_join_to(curr_pt, normal, unit_normal);
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE void init(StrokeType stroke_type, QuadConstruct* quad_pts, double start_t, double end_t) noexcept {
+    _stroke_type = stroke_type;
+    _found_tangents = false;
+    _recursion_depth = 0;
+    quad_pts->init(start_t, end_t);
+  }
+
+  BL_INLINE void set_quad_end_normal(const BLPoint quad[3], const BLPoint& normal_ab, const BLPoint& unit_ab, BLPoint* normal_bc, BLPoint* unit_bc) const noexcept {
+    if (!set_normal_unitnormal(quad[1], quad[2], 1.0, _radius, normal_bc, unit_bc)) {
+      *normal_bc = normal_ab;
+      *unit_bc = unit_ab;
+    }
+  }
+
+  BL_INLINE void set_conic_end_normal(const BLPoint conic[4], const BLPoint& normal_ab, const BLPoint& unit_ab, BLPoint* normal_bc, BLPoint* unit_bc) const noexcept {
+    BLPoint quad[3] { conic[0], conic[1], conic[3] };
+    set_quad_end_normal(quad, normal_ab, unit_ab, normal_bc, unit_bc);
+  }
+
+  BL_INLINE void set_cubic_end_normal(const BLPoint cubic[4], const BLPoint& normal_ab, const BLPoint& unit_ab, BLPoint* normal_cd, BLPoint* unit_cd) const noexcept {
+    BLPoint ab = cubic[1] - cubic[0];
+    BLPoint cd = cubic[3] - cubic[2];
+    bool degenerate_ab = degenerate_vector(ab);
+    bool degenerate_cd = degenerate_vector(cd);
+
+    if (degenerate_ab && degenerate_cd) {
+      *normal_cd = normal_ab;
+      *unit_cd = unit_ab;
+      return;
+    }
+
+    if (degenerate_ab) {
+      ab = cubic[2] - cubic[0];
+      degenerate_ab = degenerate_vector(ab);
+    }
+    if (degenerate_cd) {
+      cd = cubic[3] - cubic[1];
+      degenerate_cd = degenerate_vector(cd);
+    }
+
+    if (degenerate_ab || degenerate_cd || !set_normal_unitnormal(cd, _radius, normal_cd, unit_cd)) {
+      *normal_cd = normal_ab;
+      *unit_cd = unit_ab;
+    }
+  }
+
+  BL_INLINE void set_ray_pts(const BLPoint& t_pt, BLPoint* dxy, BLPoint* on_pt, BLPoint* tangent) const noexcept {
+    *dxy = set_length(*dxy, _radius);
+    if (dxy->x == 0.0 && dxy->y == 0.0)
+      dxy->reset(_radius, 0.0);
+
+    BLPoint offset = Geometry::normal(*dxy) * double(int(_stroke_type));
+    *on_pt = t_pt + offset;
+
+    if (tangent)
+      *tangent = *dxy;
+  }
+
+  BL_INLINE void quad_perp_ray(const BLPoint quad[3], double t, BLPoint* t_pt, BLPoint* on_pt, BLPoint* tangent) const noexcept {
+    Geometry::QuadDerivativeCoefficients dc = Geometry::derivative_coefficients_of(Geometry::quad_ref(quad));
+    BLPoint dxy = dc.a * t + dc.b;
+    *t_pt = Geometry::evaluate_precise(Geometry::quad_ref(quad), t);
+
+    if (degenerate_vector(dxy))
+      dxy = quad[2] - quad[0];
+
+    set_ray_pts(*t_pt, &dxy, on_pt, tangent);
+  }
+
+  BL_INLINE void conic_perp_ray(const BLPoint conic[4], double t, BLPoint* t_pt, BLPoint* on_pt, BLPoint* tangent) const noexcept {
+    BLPoint a, b, c;
+    Geometry::get_conic_derivative_coefficients(conic, a, b, c);
+    BLPoint dxy = (a * t + b) * t + c;
+    *t_pt = Geometry::eval_conic_precise(conic, BLPoint(t, t));
+
+    if (degenerate_vector(dxy))
+      dxy = conic[3] - conic[0];
+
+    set_ray_pts(*t_pt, &dxy, on_pt, tangent);
+  }
+
+  BL_INLINE void cubic_perp_ray(const BLPoint cubic[4], double t, BLPoint* t_pt, BLPoint* on_pt, BLPoint* tangent) const noexcept {
+    BLPoint dxy = Geometry::derivative_at(Geometry::cubic_ref(cubic), t);
+    *t_pt = Geometry::evaluate_precise(Geometry::cubic_ref(cubic), t);
+
+    if (degenerate_vector(dxy)) {
+      if (t <= kStrokeJoinEpsilon) {
+        dxy = cubic[2] - cubic[0];
+      }
+      else if (1.0 - t <= kStrokeJoinEpsilon) {
+        dxy = cubic[3] - cubic[1];
+      }
+      else {
+        BLPoint chopped[8];
+        Geometry::split(Geometry::cubic_ref(cubic), Geometry::cubic_out(chopped), Geometry::cubic_out(chopped + 4), t);
+        dxy = chopped[4] - chopped[3];
+        if (degenerate_vector(dxy))
+          dxy = chopped[4] - chopped[2];
+      }
+
+      if (degenerate_vector(dxy))
+        dxy = cubic[3] - cubic[0];
+    }
+
+    set_ray_pts(*t_pt, &dxy, on_pt, tangent);
+  }
+
+  BL_INLINE void quad_ends(const BLPoint quad[3], QuadConstruct* quad_pts) const noexcept {
+    if (!quad_pts->start_set) {
+      BLPoint quad_start_pt;
+      quad_perp_ray(quad, quad_pts->start_t, &quad_start_pt, &quad_pts->quad[0], &quad_pts->tangent_start);
+      quad_pts->start_set = true;
+    }
+
+    if (!quad_pts->end_set) {
+      BLPoint quad_end_pt;
+      quad_perp_ray(quad, quad_pts->end_t, &quad_end_pt, &quad_pts->quad[2], &quad_pts->tangent_end);
+      quad_pts->end_set = true;
+    }
+  }
+
+  BL_INLINE void conic_ends(const BLPoint conic[4], QuadConstruct* quad_pts) const noexcept {
+    if (!quad_pts->start_set) {
+      BLPoint conic_start_pt;
+      conic_perp_ray(conic, quad_pts->start_t, &conic_start_pt, &quad_pts->quad[0], &quad_pts->tangent_start);
+      quad_pts->start_set = true;
+    }
+
+    if (!quad_pts->end_set) {
+      BLPoint conic_end_pt;
+      conic_perp_ray(conic, quad_pts->end_t, &conic_end_pt, &quad_pts->quad[2], &quad_pts->tangent_end);
+      quad_pts->end_set = true;
+    }
+  }
+
+  BL_INLINE void cubic_ends(const BLPoint cubic[4], QuadConstruct* quad_pts) const noexcept {
+    if (!quad_pts->start_set) {
+      BLPoint cubic_start_pt;
+      cubic_perp_ray(cubic, quad_pts->start_t, &cubic_start_pt, &quad_pts->quad[0], &quad_pts->tangent_start);
+      quad_pts->start_set = true;
+    }
+
+    if (!quad_pts->end_set) {
+      BLPoint cubic_end_pt;
+      cubic_perp_ray(cubic, quad_pts->end_t, &cubic_end_pt, &quad_pts->quad[2], &quad_pts->tangent_end);
+      quad_pts->end_set = true;
+    }
+  }
+
+  BL_INLINE ResultType intersect_ray(QuadConstruct* quad_pts, IntersectRayType intersect_ray_type) const noexcept {
+    const BLPoint& start = quad_pts->quad[0];
+    const BLPoint& end = quad_pts->quad[2];
+    BLPoint a_len = quad_pts->tangent_start;
+    BLPoint b_len = quad_pts->tangent_end;
+
+    double denom = Geometry::cross(a_len, b_len);
+    if (denom == 0.0 || !Math::is_finite(denom)) {
+      quad_pts->opposite_tangents = Geometry::dot(a_len, b_len) < 0.0;
+      return ResultType::kDegenerate;
+    }
+
+    quad_pts->opposite_tangents = false;
+    BLPoint ab0 = start - end;
+    double numer_a = Geometry::cross(b_len, ab0);
+    double numer_b = Geometry::cross(a_len, ab0);
+
+    if ((numer_a >= 0.0) == (numer_b >= 0.0)) {
+      double dist1 = point_to_tangent_line_distance_sq(start, end, quad_pts->tangent_end);
+      double dist2 = point_to_tangent_line_distance_sq(end, start, quad_pts->tangent_start);
+      if (bl_max(dist1, dist2) <= _inv_res_scale_sq)
+        return ResultType::kDegenerate;
+      return ResultType::kSplit;
+    }
+
+    numer_a /= denom;
+    if (numer_a > numer_a - 1.0) {
+      if (intersect_ray_type == IntersectRayType::kCtrlPt)
+        quad_pts->quad[1] = start + quad_pts->tangent_start * numer_a;
+      return ResultType::kQuad;
+    }
+
+    quad_pts->opposite_tangents = Geometry::dot(a_len, b_len) < 0.0;
+    return ResultType::kDegenerate;
+  }
+
+  static BL_INLINE int intersect_quad_ray(const BLPoint line[2], const BLPoint quad[3], double roots[2]) noexcept {
+    BLPoint vec = line[1] - line[0];
+    double r[3];
+
+    for (uint32_t i = 0; i < 3; i++)
+      r[i] = Geometry::cross(vec, quad[i] - line[0]);
+
+    double a = r[2] + r[0] - 2.0 * r[1];
+    double b = r[1] - r[0];
+    double c = r[0];
+
+    return int(Math::quad_roots(roots, a, 2.0 * b, c, 0.0, 1.0));
+  }
+
+  BL_INLINE bool point_in_quad_bounds(const BLPoint quad[3], const BLPoint& pt) const noexcept {
+    double x_min = bl_min(bl_min(quad[0].x, quad[1].x), quad[2].x);
+    double x_max = bl_max(bl_max(quad[0].x, quad[1].x), quad[2].x);
+    double y_min = bl_min(bl_min(quad[0].y, quad[1].y), quad[2].y);
+    double y_max = bl_max(bl_max(quad[0].y, quad[1].y), quad[2].y);
+
+    return pt.x + _inv_res_scale >= x_min &&
+           pt.x - _inv_res_scale <= x_max &&
+           pt.y + _inv_res_scale >= y_min &&
+           pt.y - _inv_res_scale <= y_max;
+  }
+
+  static BL_INLINE bool sharp_angle(const BLPoint quad[3]) noexcept {
+    BLPoint smaller = quad[1] - quad[0];
+    BLPoint larger = quad[1] - quad[2];
+    double smaller_len = Geometry::magnitude_squared(smaller);
+    double larger_len = Geometry::magnitude_squared(larger);
+
+    if (smaller_len > larger_len) {
+      using std::swap;
+      swap(smaller, larger);
+      larger_len = smaller_len;
+    }
+
+    smaller = set_length(smaller, larger_len);
+    if (smaller.x == 0.0 && smaller.y == 0.0)
+      return false;
+
+    return Geometry::dot(smaller, larger) > 0.0;
+  }
+
+  BL_INLINE ResultType stroke_close_enough(const BLPoint stroke[3], const BLPoint ray[2], QuadConstruct* quad_pts) const noexcept {
+    BLPoint stroke_mid = Geometry::evaluate_precise(Geometry::quad_ref(stroke), 0.5);
+    if (points_within_dist(ray[0], stroke_mid, _inv_res_scale)) {
+      if (sharp_angle(quad_pts->quad))
+        return ResultType::kSplit;
+      return ResultType::kQuad;
+    }
+
+    if (!point_in_quad_bounds(stroke, ray[0]))
+      return ResultType::kSplit;
+
+    double roots[2];
+    if (intersect_quad_ray(ray, stroke, roots) != 1)
+      return ResultType::kSplit;
+
+    BLPoint quad_pt = Geometry::evaluate_precise(Geometry::quad_ref(stroke), roots[0]);
+    double error = _inv_res_scale * (1.0 - bl_abs(roots[0] - 0.5) * 2.0);
+    if (points_within_dist(ray[0], quad_pt, error)) {
+      if (sharp_angle(quad_pts->quad))
+        return ResultType::kSplit;
+      return ResultType::kQuad;
+    }
+
+    return ResultType::kSplit;
+  }
+
+  BL_INLINE ResultType compare_quad_quad(const BLPoint quad[3], QuadConstruct* quad_pts) const noexcept {
+    quad_ends(quad, quad_pts);
+
+    ResultType result_type = intersect_ray(quad_pts, IntersectRayType::kCtrlPt);
+    if (result_type != ResultType::kQuad)
+      return result_type;
+
+    BLPoint ray[2];
+    quad_perp_ray(quad, quad_pts->mid_t, &ray[1], &ray[0], nullptr);
+    return stroke_close_enough(quad_pts->quad, ray, quad_pts);
+  }
+
+  BL_INLINE ResultType compare_quad_conic(const BLPoint conic[4], QuadConstruct* quad_pts) const noexcept {
+    conic_ends(conic, quad_pts);
+
+    ResultType result_type = intersect_ray(quad_pts, IntersectRayType::kCtrlPt);
+    if (result_type != ResultType::kQuad)
+      return result_type;
+
+    BLPoint ray[2];
+    conic_perp_ray(conic, quad_pts->mid_t, &ray[1], &ray[0], nullptr);
+    return stroke_close_enough(quad_pts->quad, ray, quad_pts);
+  }
+
+  BL_INLINE ResultType tangents_meet(const BLPoint cubic[4], QuadConstruct* quad_pts) noexcept {
+    cubic_ends(cubic, quad_pts);
+    return intersect_ray(quad_pts, IntersectRayType::kResultType);
+  }
+
+  BL_INLINE BLResult add_degenerate_line(const QuadConstruct* quad_pts) noexcept {
+    BL_PROPAGATE(ensure_active_side_capacity(1));
+    active_side().line_to(quad_pts->quad[2]);
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE void cubic_quad_mid(const BLPoint cubic[4], const QuadConstruct* quad_pts, BLPoint* mid) const noexcept {
+    BLPoint cubic_mid_pt;
+    cubic_perp_ray(cubic, quad_pts->mid_t, &cubic_mid_pt, mid, nullptr);
+  }
+
+  BL_INLINE bool cubic_mid_on_line(const BLPoint cubic[4], const QuadConstruct* quad_pts) const noexcept {
+    BLPoint stroke_mid;
+    cubic_quad_mid(cubic, quad_pts, &stroke_mid);
+    double dist = point_to_line_distance_sq(stroke_mid, quad_pts->quad[0], quad_pts->quad[2]);
+    return dist < _inv_res_scale_sq;
+  }
+
+  BL_INLINE ResultType compare_quad_cubic(const BLPoint cubic[4], QuadConstruct* quad_pts) const noexcept {
+    cubic_ends(cubic, quad_pts);
+
+    ResultType result_type = intersect_ray(quad_pts, IntersectRayType::kCtrlPt);
+    if (result_type != ResultType::kQuad)
+      return result_type;
+
+    BLPoint ray[2];
+    cubic_perp_ray(cubic, quad_pts->mid_t, &ray[1], &ray[0], nullptr);
+    return stroke_close_enough(quad_pts->quad, ray, quad_pts);
+  }
+
+  BL_INLINE BLResult quad_stroke(const BLPoint quad[3], QuadConstruct* quad_pts) noexcept {
+    ResultType result_type = compare_quad_quad(quad, quad_pts);
+    if (result_type == ResultType::kQuad) {
+      BL_PROPAGATE(ensure_active_side_capacity(2, 0));
+      active_side().quad_to(quad_pts->quad[1], quad_pts->quad[2]);
+      return BL_SUCCESS;
+    }
+
+    if (result_type == ResultType::kDegenerate)
+      return add_degenerate_line(quad_pts);
+
+    if (++_recursion_depth > kStrokeQuadRecursiveLimit)
+      return add_degenerate_line(quad_pts);
+
+    QuadConstruct half;
+    if (!half.init_with_start(*quad_pts))
+      return add_degenerate_line(quad_pts);
+    BL_PROPAGATE(quad_stroke(quad, &half));
+
+    if (!half.init_with_end(*quad_pts))
+      return add_degenerate_line(quad_pts);
+    BL_PROPAGATE(quad_stroke(quad, &half));
+
+    _recursion_depth--;
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE BLResult conic_stroke(const BLPoint conic[4], QuadConstruct* quad_pts) noexcept {
+    ResultType result_type = compare_quad_conic(conic, quad_pts);
+    if (result_type == ResultType::kQuad) {
+      BL_PROPAGATE(ensure_active_side_capacity(2));
+      active_side().quad_to(quad_pts->quad[1], quad_pts->quad[2]);
+      return BL_SUCCESS;
+    }
+
+    if (result_type == ResultType::kDegenerate)
+      return add_degenerate_line(quad_pts);
+
+    if (++_recursion_depth > kStrokeConicRecursiveLimit)
+      return add_degenerate_line(quad_pts);
+
+    QuadConstruct half;
+    if (!half.init_with_start(*quad_pts))
+      return add_degenerate_line(quad_pts);
+    BL_PROPAGATE(conic_stroke(conic, &half));
+
+    if (!half.init_with_end(*quad_pts))
+      return add_degenerate_line(quad_pts);
+    BL_PROPAGATE(conic_stroke(conic, &half));
+
+    _recursion_depth--;
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE BLResult cubic_stroke(const BLPoint cubic[4], QuadConstruct* quad_pts) noexcept {
+    if (!_found_tangents) {
+      ResultType result_type = tangents_meet(cubic, quad_pts);
+      if (result_type != ResultType::kQuad) {
+        if ((result_type == ResultType::kDegenerate || points_within_dist(quad_pts->quad[0], quad_pts->quad[2], _inv_res_scale)) &&
+            cubic_mid_on_line(cubic, quad_pts)) {
+          return add_degenerate_line(quad_pts);
+        }
+      }
+      else {
+        _found_tangents = true;
+      }
+    }
+
+    if (_found_tangents) {
+      ResultType result_type = compare_quad_cubic(cubic, quad_pts);
+      if (result_type == ResultType::kQuad) {
+        BL_PROPAGATE(ensure_active_side_capacity(2));
+        active_side().quad_to(quad_pts->quad[1], quad_pts->quad[2]);
+        return BL_SUCCESS;
+      }
+
+      if (result_type == ResultType::kDegenerate && !quad_pts->opposite_tangents)
+        return add_degenerate_line(quad_pts);
+    }
+
+    if (!Math::is_finite(quad_pts->quad[2].x) || !Math::is_finite(quad_pts->quad[2].y))
+      return BL_SUCCESS;
+
+    if (++_recursion_depth > (_found_tangents ? kStrokeCubicRecursiveLimit : kStrokeTangentRecursiveLimit))
+      return add_degenerate_line(quad_pts);
+
+    QuadConstruct half;
+    if (!half.init_with_start(*quad_pts))
+      return add_degenerate_line(quad_pts);
+    BL_PROPAGATE(cubic_stroke(cubic, &half));
+
+    if (!half.init_with_end(*quad_pts))
+      return add_degenerate_line(quad_pts);
+    BL_PROPAGATE(cubic_stroke(cubic, &half));
+
+    _recursion_depth--;
+    return BL_SUCCESS;
+  }
+
+  static BL_INLINE ReductionType check_quad_linear(const BLPoint quad[3], BLPoint* reduction) noexcept {
+    bool degenerate_ab = degenerate_vector(quad[1] - quad[0]);
+    bool degenerate_bc = degenerate_vector(quad[2] - quad[1]);
+
+    if (degenerate_ab && degenerate_bc)
+      return ReductionType::kPoint;
+
+    if (degenerate_ab || degenerate_bc)
+      return ReductionType::kLine;
+
+    if (!quad_in_line(quad))
+      return ReductionType::kQuad;
+
+    double t = find_quad_max_curvature(quad);
+    if (t == 0.0 || t == 1.0 || !Math::is_finite(t))
+      return ReductionType::kLine;
+
+    *reduction = Geometry::evaluate_precise(Geometry::quad_ref(quad), t);
+    return ReductionType::kDegenerate;
+  }
+
+  static BL_INLINE ReductionType check_conic_linear(const BLPoint conic[4], BLPoint* reduction) noexcept {
+    bool degenerate_ab = degenerate_vector(conic[1] - conic[0]);
+    bool degenerate_bc = degenerate_vector(conic[3] - conic[1]);
+
+    if (degenerate_ab && degenerate_bc)
+      return ReductionType::kPoint;
+
+    if (degenerate_ab || degenerate_bc)
+      return ReductionType::kLine;
+
+    if (!conic_in_line(conic))
+      return ReductionType::kQuad;
+
+    double t = find_quad_max_curvature(conic);
+    if (t == 0.0 || !Math::is_finite(t))
+      return ReductionType::kLine;
+
+    *reduction = Geometry::eval_conic_precise(conic, BLPoint(t, t));
+    return ReductionType::kDegenerate;
+  }
+
+  static BL_INLINE ReductionType check_cubic_linear(const BLPoint cubic[4], BLPoint reduction[3], const BLPoint** tangent_pt_ptr) noexcept {
+    bool degenerate_ab = degenerate_vector(cubic[1] - cubic[0]);
+    bool degenerate_bc = degenerate_vector(cubic[2] - cubic[1]);
+    bool degenerate_cd = degenerate_vector(cubic[3] - cubic[2]);
+
+    if (degenerate_ab && degenerate_bc && degenerate_cd)
+      return ReductionType::kPoint;
+
+    if (uint32_t(degenerate_ab) + uint32_t(degenerate_bc) + uint32_t(degenerate_cd) == 2u)
+      return ReductionType::kLine;
+
+    if (!cubic_in_line(cubic)) {
+      *tangent_pt_ptr = degenerate_ab ? &cubic[2] : &cubic[1];
+      return ReductionType::kQuad;
+    }
+
+    double t_values[3];
+    size_t count = find_cubic_max_curvature(cubic, t_values);
+    size_t reduction_count = 0;
+
+    for (size_t i = 0; i < count; i++) {
+      double t = t_values[i];
+      if (!(t > 0.0 && t < 1.0))
+        continue;
+
+      reduction[reduction_count] = Geometry::evaluate_precise(Geometry::cubic_ref(cubic), t);
+      if (reduction[reduction_count] != cubic[0] && reduction[reduction_count] != cubic[3])
+        reduction_count++;
+    }
+
+    if (reduction_count == 0)
+      return ReductionType::kLine;
+    if (reduction_count == 1)
+      return ReductionType::kDegenerate;
+    if (reduction_count == 2)
+      return ReductionType::kDegenerate2;
+    return ReductionType::kDegenerate3;
+  }
+
+  BL_INLINE BLResult append_cusp_circle(const BLPoint& center) noexcept {
+    PathAppender cusp_out;
+    BL_PROPAGATE(cusp_out.begin_append(&_cusp_path, kStrokeCircleVertices, kStrokeCircleConics));
+
+    BLPoint p0(center.x + _radius, center.y);
+    BLPoint p1(center.x, center.y + _radius);
+    BLPoint p2(center.x - _radius, center.y);
+    BLPoint p3(center.x, center.y - _radius);
+
+    cusp_out.move_to(p0);
+    cusp_out.arc_quadrant_to(BLPoint(center.x + _radius, center.y + _radius), p1);
+    cusp_out.arc_quadrant_to(BLPoint(center.x - _radius, center.y + _radius), p2);
+    cusp_out.arc_quadrant_to(BLPoint(center.x - _radius, center.y - _radius), p3);
+    cusp_out.arc_quadrant_to(BLPoint(center.x + _radius, center.y - _radius), p0);
+    cusp_out.close();
+    cusp_out.done(&_cusp_path);
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE BLResult quad_to(const BLPoint& pt1, const BLPoint& pt2) noexcept {
+    BLPoint quad[3] { _prev_pt, pt1, pt2 };
+    BLPoint reduction;
+
+    ReductionType reduction_type = check_quad_linear(quad, &reduction);
+    if (reduction_type == ReductionType::kPoint || reduction_type == ReductionType::kLine)
+      return line_to(pt2);
+
+    if (reduction_type == ReductionType::kDegenerate) {
+      BL_PROPAGATE(line_to(reduction));
+      _join_override = BL_STROKE_JOIN_ROUND;
+      BLResult result = line_to(pt2);
+      _join_override = UINT32_MAX;
+      return result;
+    }
+
+    BLPoint normal_ab;
+    BLPoint unit_ab;
+    BLPoint normal_bc;
+    BLPoint unit_bc;
+
+    if (!pre_join_to(pt1, &normal_ab, &unit_ab, false))
+      return line_to(pt2);
+
+    QuadConstruct quad_pts;
+    init(StrokeType::kOuter, &quad_pts, 0.0, 1.0);
+    BL_PROPAGATE(quad_stroke(quad, &quad_pts));
+
+    init(StrokeType::kInner, &quad_pts, 0.0, 1.0);
+    BL_PROPAGATE(quad_stroke(quad, &quad_pts));
+
+    set_quad_end_normal(quad, normal_ab, unit_ab, &normal_bc, &unit_bc);
+
+    post_join_to(pt2, normal_bc, unit_bc);
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE BLResult conic_to(const BLPoint& pt1, const BLPoint& pt2, double weight) noexcept {
+    BLPoint conic[4];
+    conic[0] = _prev_pt;
+    conic[1] = pt1;
+    conic[2].reset(weight, Math::nan<double>());
+    conic[3] = pt2;
+
+    BLPoint reduction;
+    ReductionType reduction_type = check_conic_linear(conic, &reduction);
+    if (reduction_type == ReductionType::kPoint || reduction_type == ReductionType::kLine)
+      return line_to(pt2);
+
+    if (reduction_type == ReductionType::kDegenerate) {
+      BL_PROPAGATE(line_to(reduction));
+      _join_override = BL_STROKE_JOIN_ROUND;
+      BLResult result = line_to(pt2);
+      _join_override = UINT32_MAX;
+      return result;
+    }
+
+    BLPoint normal_ab;
+    BLPoint unit_ab;
+    BLPoint normal_bc;
+    BLPoint unit_bc;
+
+    if (!pre_join_to(pt1, &normal_ab, &unit_ab, false))
+      return line_to(pt2);
+
+    QuadConstruct quad_pts;
+    init(StrokeType::kOuter, &quad_pts, 0.0, 1.0);
+    BL_PROPAGATE(conic_stroke(conic, &quad_pts));
+
+    init(StrokeType::kInner, &quad_pts, 0.0, 1.0);
+    BL_PROPAGATE(conic_stroke(conic, &quad_pts));
+
+    set_conic_end_normal(conic, normal_ab, unit_ab, &normal_bc, &unit_bc);
+
+    post_join_to(pt2, normal_bc, unit_bc);
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE BLResult cubic_to(const BLPoint& pt1, const BLPoint& pt2, const BLPoint& pt3) noexcept {
+    BLPoint cubic[4] { _prev_pt, pt1, pt2, pt3 };
+    BLPoint reduction[3];
+    const BLPoint* tangent_pt = nullptr;
+
+    ReductionType reduction_type = check_cubic_linear(cubic, reduction, &tangent_pt);
+    if (reduction_type == ReductionType::kPoint || reduction_type == ReductionType::kLine)
+      return line_to(pt3);
+
+    if (reduction_type == ReductionType::kDegenerate ||
+        reduction_type == ReductionType::kDegenerate2 ||
+        reduction_type == ReductionType::kDegenerate3) {
+      BL_PROPAGATE(line_to(reduction[0]));
+      _join_override = BL_STROKE_JOIN_ROUND;
+
+      BLResult result = BL_SUCCESS;
+      if (reduction_type >= ReductionType::kDegenerate2)
+        result |= line_to(reduction[1]);
+      if (reduction_type == ReductionType::kDegenerate3)
+        result |= line_to(reduction[2]);
+      result |= line_to(pt3);
+
+      _join_override = UINT32_MAX;
+      return result;
+    }
+
+    BLPoint normal_ab;
+    BLPoint unit_ab;
+    BLPoint normal_cd;
+    BLPoint unit_cd;
+
+    if (!pre_join_to(*tangent_pt, &normal_ab, &unit_ab, false))
+      return line_to(pt3);
+
+    double t_values[2];
+    size_t count = find_cubic_inflections(cubic, t_values);
+    double last_t = 0.0;
+
+    for (size_t i = 0; i <= count; i++) {
+      double next_t = i < count ? t_values[i] : 1.0;
+      QuadConstruct quad_pts;
+
+      init(StrokeType::kOuter, &quad_pts, last_t, next_t);
+      BL_PROPAGATE(cubic_stroke(cubic, &quad_pts));
+
+      init(StrokeType::kInner, &quad_pts, last_t, next_t);
+      BL_PROPAGATE(cubic_stroke(cubic, &quad_pts));
+
+      last_t = next_t;
+    }
+
+    double cusp_t = find_cubic_cusp(cubic);
+    if (cusp_t > 0.0) {
+      BLPoint cusp_loc = Geometry::evaluate_precise(Geometry::cubic_ref(cubic), cusp_t);
+      BL_PROPAGATE(append_cusp_circle(cusp_loc));
+    }
+
+    set_cubic_end_normal(cubic, normal_ab, unit_ab, &normal_cd, &unit_cd);
+
+    post_join_to(pt3, normal_cd, unit_cd);
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE BLResult finish_contour(bool close) noexcept {
+    _c_path->clear();
+
+    if (_segment_count <= 0)
+      return BL_SUCCESS;
+
+    if (close) {
+      BLPoint close_normal;
+      BLPoint close_unit_normal;
+
+      if (set_normal_unitnormal(_prev_pt, _first_pt, 1.0, _radius, &close_normal, &close_unit_normal)) {
+        BL_PROPAGATE(ensure_appenders_capacity(2 * kStrokeMaxJoinVertices + 1,
+                                               2 * kStrokeMaxJoinVertices + 1,
+                                               2 * kStrokeMaxJoinConics,
+                                               2 * kStrokeMaxJoinConics));
+
+        JoinSideSelection close_selection = select_join_sides(_a_out, _b_out, _prev_pt, _prev_unit_normal, close_unit_normal);
+        emit_join(close_selection, _prev_pt, _prev_is_line, true);
+        line_to_selected_segment_end(close_selection, _first_pt);
+        join_to(close_unit_normal, _first_pt, _first_unit_normal, true, _first_is_line);
+      }
+      else {
+        BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices,
+                                               kStrokeMaxJoinVertices,
+                                               kStrokeMaxJoinConics,
+                                               kStrokeMaxJoinConics));
+        join_to(_prev_unit_normal, _prev_pt, _first_unit_normal, _prev_is_line, _first_is_line);
+      }
+
+      _a_out.close();
+      _b_out.close();
+      return BL_SUCCESS;
+    }
+
+    uint32_t start_cap = sanitize_stroke_cap(_options.start_cap);
+    uint32_t end_cap = sanitize_stroke_cap(_options.end_cap);
+
+    BL_PROPAGATE(_a_out.ensure(_a_path, cap_vertex_count_table[end_cap], cap_conic_count_table[end_cap]));
+    BL_PROPAGATE(add_cap(_a_out, _prev_pt, _b_out.vtx[-1], end_cap));
+
+    PathAppender c_out;
+    BL_PROPAGATE(c_out.begin(_c_path, BL_MODIFY_OP_ASSIGN_GROW, cap_vertex_count_table[start_cap] + 1, cap_conic_count_table[start_cap]));
+    c_out.move_to(_b_path->vertex_data()[_b_figure_offset]);
+    BL_PROPAGATE(add_cap(c_out, _first_pt, _a_path->vertex_data()[_a_figure_offset], start_cap));
+    c_out.done(_c_path);
+
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE BLResult stroke(BLPathStrokeSinkFunc sink, void* user_data) noexcept {
+    size_t figure_start_idx = 0;
+    size_t estimated_size = _iter.remaining_forward() * 3u;
+
+    BL_PROPAGATE(_a_path->reserve(_a_path->size() + estimated_size));
 
     while (!_iter.at_end()) {
-      // Start of the figure.
       const uint8_t* figure_start_cmd = _iter.cmd;
       if (BL_UNLIKELY(_iter.cmd[0] != BL_PATH_CMD_MOVE)) {
         if (_iter.cmd[0] != BL_PATH_CMD_CLOSE)
           return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
 
         _iter++;
+        figure_start_idx++;
         continue;
       }
 
-      figure_start_idx += (size_t)(_iter.cmd - figure_start_cmd);
-      figure_start_cmd = _iter.cmd;
+      _a_figure_offset = _a_path->size();
+      _b_figure_offset = 0;
+      _cusp_path.clear();
 
-      side_data(Side::kA).figure_offset = side_data(Side::kA).path->size();
-      BL_PROPAGATE(a_out().begin(a_path(), BL_MODIFY_OP_APPEND_GROW, _iter.remaining_forward()));
-      BL_PROPAGATE(b_out().begin(b_path(), BL_MODIFY_OP_ASSIGN_GROW, 48));
+      BL_PROPAGATE(_a_out.begin(_a_path, BL_MODIFY_OP_APPEND_GROW, _iter.remaining_forward() * 2u, _iter.remaining_forward()));
+      BL_PROPAGATE(_b_out.begin(_b_path, BL_MODIFY_OP_ASSIGN_GROW, _iter.remaining_forward() * 2u, _iter.remaining_forward()));
 
-      BLPoint poly_pts[4];
-      size_t poly_size;
-
-      _p0 = *_iter.vtx;
-      _pInitial = _p0;
-      _flags = 0;
-
-      // Content of the figure.
+      move_to(*_iter.vtx);
       _iter++;
+
+      bool contour_closed = false;
       while (!_iter.at_end()) {
-        BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices));
+        BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices, kStrokeMaxJoinConics, kStrokeMaxJoinConics));
 
-        uint8_t cmd = _iter.cmd[0]; // Next command.
-        BLPoint p1 = _iter.vtx[0];  // Next line-to or control point.
-        BLPoint v1;                 // Vector of `p1 - _p0`.
-        BLPoint n1;                 // Unit normal of `v1`.
-
+        uint8_t cmd = _iter.cmd[0];
         if (cmd == BL_PATH_CMD_ON) {
-          // Line command, collinear curve converted to line or close of the figure.
+          BLPoint p1 = _iter.vtx[0];
           _iter++;
-LineTo:
-          v1 = p1 - _p0;
-          if (Geometry::magnitude_squared(v1) < kStrokeLengthEpsilonSq)
-            continue;
-
-          n1 = Geometry::normal(Geometry::unit_vector(v1));
-          if (!is_open()) {
-            BL_PROPAGATE(open_line_to(p1, n1));
-            continue;
-          }
-
-          for (;;) {
-            BL_PROPAGATE(join_line_to(p1, n1));
-
-            if (_iter.at_end())
-              break;
-
-            BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices));
-
-            cmd = _iter.cmd[0];
-            p1 = _iter.vtx[0];
-
-            if (cmd != BL_PATH_CMD_ON)
-              break;
-
-            _iter++;
-            v1 = p1 - _p0;
-            if (Geometry::magnitude_squared(v1) < kStrokeLengthEpsilonSq)
-              break;
-
-            n1 = Geometry::normal(Geometry::unit_vector(v1));
-          }
-          continue;
-
-          // This is again to minimize inline expansion of `smooth_poly_to()`.
-SmoothPolyTo:
-          BL_PROPAGATE(smooth_poly_to(poly_pts, poly_size));
+          BL_PROPAGATE(line_to(p1, &_iter));
           continue;
         }
-        else if (cmd == BL_PATH_CMD_QUAD) {
-          // Quadratic curve segment.
+
+        if (cmd == BL_PATH_CMD_QUAD) {
+          if (_iter.remaining_forward() < 2)
+            return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
+
+          BLPoint p1 = _iter.vtx[0];
+          BLPoint p2 = _iter.vtx[1];
           _iter += 2;
-          if (BL_UNLIKELY(_iter.after_end()))
-            return BL_ERROR_INVALID_GEOMETRY;
-
-          const BLPoint* quad = _iter.vtx - 3;
-          BLPoint p2 = quad[2];
-          BLPoint v2 = p2 - p1;
-
-          v1 = p1 - _p0;
-          n1 = Geometry::normal(Geometry::unit_vector(v1));
-
-          double cm = Geometry::cross(v2, v1);
-          if (bl_abs(cm) <= kStrokeCollinearityEpsilon) {
-            // All points are [almost] collinear (degenerate case).
-            double dot = Geometry::dot(-v1, v2);
-
-            // Check if control point lies outside of the start/end points.
-            if (dot > 0.0) {
-              // Rotate all points to x-axis.
-              double r1 = Geometry::dot(p1 - _p0, v1);
-              double r2 = Geometry::dot(p2 - _p0, v1);
-
-              // Parameter of the cusp if it's within (0, 1).
-              double t = r1 / (2.0 * r1 - r2);
-              if (t > 0.0 && t < 1.0) {
-                poly_pts[0] = Geometry::evaluate(Geometry::quad_ref(quad), t);
-                poly_pts[1] = p2;
-                poly_size = 2;
-                goto SmoothPolyTo;
-              }
-            }
-
-            // Collinear without cusp => straight line.
-            p1 = p2;
-            goto LineTo;
-          }
-
-          // Very small curve segment => straight line.
-          if (Geometry::magnitude_squared(v1) < kStrokeLengthEpsilonSq || Geometry::magnitude_squared(v2) < kStrokeLengthEpsilonSq) {
-            p1 = p2;
-            goto LineTo;
-          }
-
-          if (!is_open())
-            BL_PROPAGATE(open_curve(n1));
-          else
-            BL_PROPAGATE(join_curve(n1));
-
-          BL_PROPAGATE(offset_quad(_iter.vtx - 3));
+          BL_PROPAGATE(quad_to(p1, p2));
+          continue;
         }
-        else if (cmd == BL_PATH_CMD_CUBIC) {
-          // Cubic curve segment.
+
+        if (cmd == BL_PATH_CMD_CONIC) {
+          if (_iter.remaining_forward() < 2)
+            return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
+
+          BLPoint p1 = _iter.vtx[0];
+          BLPoint p2 = _iter.vtx[1];
+          double w = _iter.conic_weight_data[0];
+          _iter += 2;
+          BL_PROPAGATE(conic_to(p1, p2, w));
+          continue;
+        }
+
+        if (cmd == BL_PATH_CMD_CUBIC) {
+          if (_iter.remaining_forward() < 3)
+            return bl_make_error(BL_ERROR_INVALID_GEOMETRY);
+
+          BLPoint p1 = _iter.vtx[0];
+          BLPoint p2 = _iter.vtx[1];
+          BLPoint p3 = _iter.vtx[2];
           _iter += 3;
-          if (BL_UNLIKELY(_iter.after_end()))
-            return BL_ERROR_INVALID_GEOMETRY;
+          BL_PROPAGATE(cubic_to(p1, p2, p3));
+          continue;
+        }
 
-          BLPoint p[7];
-
-          int cusp = 0;
-          double tCusp = 0;
-
-          p[0] = _p0;
-          p[1] = _iter.vtx[-3];
-          p[2] = _iter.vtx[-2];
-          p[3] = _iter.vtx[-1];
-
-          // Check if the curve is flat enough to be potentially degenerate.
-          if (Geometry::is_cubic_flat(Geometry::cubic_ref(p), kStrokeDegenerateFlatness)) {
-            double dot1 = Geometry::dot(p[0] - p[1], p[3] - p[1]);
-            double dot2 = Geometry::dot(p[0] - p[2], p[3] - p[2]);
-
-            if (!(dot1 < 0.0) || !(dot2 < 0.0)) {
-              // Rotate all points to x-axis.
-              const BLPoint r = Geometry::cubic_start_tangent(Geometry::cubic_ref(p));
-
-              double r1 = Geometry::dot(p[1] - p[0], r);
-              double r2 = Geometry::dot(p[2] - p[0], r);
-              double r3 = Geometry::dot(p[3] - p[0], r);
-
-              double a = 1.0 / (3.0 * r1 - 3.0 * r2 + r3);
-              double b = 2.0 * r1 - r2;
-              double s = Math::sqrt(r2 * (r2 - r1) - r1 * (r3 - r1));
-
-              // Parameters of the cusps.
-              double t1 = a * (b - s);
-              double t2 = a * (b + s);
-
-              // Offset the first and second cusps (if they exist).
-              poly_size = 0;
-              if (t1 > kStrokeCuspTThreshold && t1 < 1.0 - kStrokeCuspTThreshold)
-                poly_pts[poly_size++] = Geometry::evaluate(Geometry::cubic_ref(p), t1);
-
-              if (t2 > kStrokeCuspTThreshold && t2 < 1.0 - kStrokeCuspTThreshold)
-                poly_pts[poly_size++] = Geometry::evaluate(Geometry::cubic_ref(p), t2);
-
-              if (poly_size == 0) {
-                p1 = p[3];
-                goto LineTo;
-              }
-
-              poly_pts[poly_size++] = p[3];
-              goto SmoothPolyTo;
-            }
-            else {
-              p1 = p[3];
-              goto LineTo;
-            }
+        if (cmd == BL_PATH_CMD_CLOSE) {
+          _iter++;
+          if (has_non_butt_caps(_options) && (has_only_move_to() || is_current_contour_empty())) {
+            BL_PROPAGATE(line_to(move_to_pt()));
           }
           else {
-            double tl;
-            Geometry::get_cubic_inflection_parameter(Geometry::cubic_ref(p), tCusp, tl);
-
-            if (tl == 0.0 && tCusp > 0.0 && tCusp < 1.0) {
-              Geometry::split(Geometry::cubic_ref(p), Geometry::cubic_out(p), Geometry::cubic_out(p + 3));
-              cusp = 1;
-            }
+            contour_closed = true;
           }
-
-          for (;;) {
-            v1 = p[1] - _p0;
-            if (Geometry::is_zero(v1))
-              v1 = p[2] - _p0;
-            n1 = Geometry::normal(Geometry::unit_vector(v1));
-
-            if (!is_open())
-              BL_PROPAGATE(open_curve(n1));
-            else if (cusp >= 0)
-              BL_PROPAGATE(join_curve(n1));
-            else
-              BL_PROPAGATE(join_cusp(n1));
-
-            BL_PROPAGATE(offset_cubic(p));
-            if (cusp <= 0)
-              break;
-
-            BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices));
-
-            // Second part of the cubic after the cusp. We assign `-1` to `cusp` so we can call `join_cusp()` later.
-            // This is a special join that we need in this case.
-            cusp = -1;
-            p[0] = p[3];
-            p[1] = p[4];
-            p[2] = p[5];
-            p[3] = p[6];
-          }
-        }
-        else {
-          // Either invalid command or close of the figure. If the figure is already closed it means that we have
-          // already jumped to `LineTo` and we should terminate now. Otherwise we just encountered close or
-          // something else which is not part of the current figure.
-          if (is_closed())
-            break;
-
-          if (cmd != BL_PATH_CMD_CLOSE)
-            break;
-
-          // The figure is closed. We just jump to `LineTo` to minimize inlining expansion and mark the figure as
-          // closed. Next time we terminate on `is_closed()` condition above.
-          _flags |= kFlagIsClosed;
-          p1 = _pInitial;
-          goto LineTo;
-        }
-      }
-
-      // Don't emit anything if the figure has no points (and thus no direction).
-      _iter += size_t(is_closed());
-      if (!is_open()) {
-        a_out().done(a_path());
-        b_out().done(b_path());
-        continue;
-      }
-
-      if (is_closed()) {
-        // The figure is closed => the end result is two closed figures without caps. In this case only paths
-        // A and B have a content, path C will be empty and should be thus ignored by the sink.
-
-        // Allocate space for the end join and close command.
-        BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices + 1, kStrokeMaxJoinVertices + 1));
-
-        BL_PROPAGATE(join_end_point(_nInitial));
-        a_out().close();
-        b_out().close();
-        c_path()->clear();
-      }
-      else {
-        // The figure is open => the end result is a single figure with caps. The paths contain the following:
-        //   A - Offset of the figure and end cap.
-        //   B - Offset of the figure that MUST BE reversed.
-        //   C - Start cap (not reversed).
-        uint32_t start_cap = sanity_stroke_cap(_options.start_cap);
-        uint32_t end_cap = sanity_stroke_cap(_options.end_cap);
-
-        BL_PROPAGATE(a_out().ensure(a_path(), cap_vertex_count_table[end_cap]));
-        BL_PROPAGATE(add_cap(a_out(), _p0, b_out().vtx[-1], end_cap));
-
-        PathAppender c_out;
-        BL_PROPAGATE(c_out.begin(c_path(), BL_MODIFY_OP_ASSIGN_GROW, cap_vertex_count_table[start_cap] + 1));
-        c_out.move_to(b_path()->vertex_data()[0]);
-        BL_PROPAGATE(add_cap(c_out, _pInitial, a_path()->vertex_data()[side_data(Side::kA).figure_offset], start_cap));
-        c_out.done(c_path());
-      }
-
-      a_out().done(a_path());
-      b_out().done(b_path());
-
-      // Call the path to the provided sink with resulting paths.
-      size_t figure_end_idx = figure_start_idx + (size_t)(_iter.cmd - figure_start_cmd);
-      BL_PROPAGATE(sink(a_path(), b_path(), c_path(), figure_start_idx, figure_end_idx,  user_data));
-
-      figure_start_idx = figure_end_idx;
-    }
-
-    return BL_SUCCESS;
-  }
-
-  // Opens a new figure with a line segment starting from the current point and ending at `p1`. The `n1` is a
-  // normal calculated from a unit vector of `p1 - _p0`.
-  //
-  // This function can only be called after we have at least two vertices that form the line. These vertices
-  // cannot be a single point as that would mean that we cannot calculate unit vector and then normal for the
-  // offset. This must be handled before calling `open_line_to()`.
-  //
-  // NOTE: Path cannot be open when calling this function.
-  BL_INLINE_IF_NOT_DEBUG BLResult open_line_to(const BLPoint& p1, const BLPoint& n1) noexcept {
-    BL_ASSERT(!is_open());
-    BLPoint w = n1 * d();
-
-    a_out().move_to(_p0 + w);
-    b_out().move_to(_p0 - w);
-
-    _p0 = p1;
-    _n0 = n1;
-    _nInitial = n1;
-
-    a_out().line_to(_p0 + w);
-    b_out().line_to(_p0 - w);
-
-    _flags |= kFlagIsOpen;
-    return BL_SUCCESS;
-  }
-
-  // Joins line-to segment described by `p1` point and `n1` normal.
-  BL_INLINE_IF_NOT_DEBUG BLResult join_line_to(const BLPoint& p1, const BLPoint& n1) noexcept {
-    if (_n0 == n1) {
-      // Collinear case - patch the previous point(s) if they connect lines.
-      a_out().back(a_out().cmd[-2].value <= BL_PATH_CMD_ON);
-      b_out().back(b_out().cmd[-2].value <= BL_PATH_CMD_ON);
-
-      BLPoint w1 = n1 * d();
-      a_out().line_to(p1 + w1);
-      b_out().line_to(p1 - w1);
-    }
-    else {
-      Side side = side_from_normals(_n0, n1);
-      BLPoint m = _n0 + n1;
-      BLPoint k = m * d2(side) / Geometry::magnitude_squared(m);
-      BLPoint w1 = n1 * d(side);
-
-      size_t miter_flag = 0;
-
-      if (side == Side::kA) {
-        PathAppender& outer = a_out();
-        outer_join(outer, n1, w1, k, d(side), d2(side), miter_flag);
-        outer.back(miter_flag);
-        outer.line_to(p1 + w1);
-
-        PathAppender& inner = b_out();
-        inner_join_line_to(inner, _p0 - w1, p1 - w1, _p0 - k);
-        inner.line_to(p1 - w1);
-      }
-      else {
-        PathAppender& outer = b_out();
-        outer_join(outer, n1, w1, k, d(side), d2(side), miter_flag);
-        outer.back(miter_flag);
-        outer.line_to(p1 + w1);
-
-        PathAppender& inner = a_out();
-        inner_join_line_to(inner, _p0 - w1, p1 - w1, _p0 - k);
-        inner.line_to(p1 - w1);
-      }
-    }
-
-    _p0 = p1;
-    _n0 = n1;
-    return BL_SUCCESS;
-  }
-
-  // Opens a new figure at the current point `_p0`. The first vertex (MOVE) is calculated by offsetting `_p0`
-  // by the given unit normal `n0`.
-  //
-  // NOTE: Path cannot be open when calling this function.
-  BL_INLINE_IF_NOT_DEBUG BLResult open_curve(const BLPoint& n0) noexcept {
-    BL_ASSERT(!is_open());
-    BLPoint w = n0 * d();
-
-    a_out().move_to(_p0 + w);
-    b_out().move_to(_p0 - w);
-
-    _n0 = n0;
-    _nInitial = n0;
-
-    _flags |= kFlagIsOpen;
-    return BL_SUCCESS;
-  }
-
-  // Joins curve-to segment.
-  BL_INLINE_IF_NOT_DEBUG BLResult join_curve(const BLPoint& n1) noexcept {
-    // Collinear case - do nothing.
-    if (_n0 == n1)
-      return BL_SUCCESS;
-
-    Side side = side_from_normals(_n0, n1);
-    BLPoint m = _n0 + n1;
-    BLPoint k = m * d2(side) / Geometry::magnitude_squared(m);
-    BLPoint w1 = n1 * d(side);
-    size_t dummy_miter_flag;
-
-    outer_join(outer_appender(side), n1, w1, k, d(side), d2(side), dummy_miter_flag);
-    inner_join_curve_to(inner_appender(side), _p0 - w1);
-
-    _n0 = n1;
-    return BL_SUCCESS;
-  }
-
-  BL_INLINE_IF_NOT_DEBUG BLResult join_cusp(const BLPoint& n1) noexcept {
-    Side side = side_from_normals(_n0, n1);
-    BLPoint w1 = n1 * d(side);
-
-    dull_round_join(outer_appender(side), d(side), d2(side), w1);
-    inner_appender(side).line_to(_p0 - w1);
-
-    _n0 = n1;
-    return BL_SUCCESS;
-  }
-
-  BL_INLINE_IF_NOT_DEBUG BLResult join_cusp_and_line_to(const BLPoint& n1, const BLPoint& p1) noexcept {
-    Side side = side_from_normals(_n0, n1);
-    BLPoint w1 = n1 * d(side);
-
-    PathAppender& outer = outer_appender(side);
-    dull_round_join(outer, d(side), d2(side), w1);
-    outer.line_to(p1 + w1);
-
-    PathAppender& inner = inner_appender(side);
-    inner.line_to(_p0 - w1);
-    inner.line_to(p1 - w1);
-
-    _n0 = n1;
-    _p0 = p1;
-    return BL_SUCCESS;
-  }
-
-  BL_INLINE_IF_NOT_DEBUG BLResult smooth_poly_to(const BLPoint* poly, size_t count) noexcept {
-    BL_ASSERT(count >= 2);
-
-    BLPoint p1 = poly[0];
-    BLPoint v1 = p1 - _p0;
-    if (Geometry::magnitude_squared(v1) < kStrokeLengthEpsilonSq)
-      return BL_SUCCESS;
-
-    BLPoint n1 = Geometry::normal(Geometry::unit_vector(v1));
-    if (!is_open())
-      BL_PROPAGATE(open_line_to(p1, n1));
-    else
-      BL_PROPAGATE(join_line_to(p1, n1));
-
-    // We have already ensured vertices for `open_line_to()` and `join_line_to()`,
-    // however, we need more vertices for consecutive joins and line segments.
-    size_t required_capacity = (count - 1) * kStrokeMaxJoinVertices;
-    BL_PROPAGATE(ensure_appenders_capacity(required_capacity, required_capacity));
-
-    for (size_t i = 1; i < count; i++) {
-      p1 = poly[i];
-      v1 = p1 - _p0;
-      if (Geometry::magnitude_squared(v1) < kStrokeLengthEpsilonSq)
-        continue;
-
-      n1 = Geometry::normal(Geometry::unit_vector(v1));
-      BL_PROPAGATE(join_cusp_and_line_to(n1, p1));
-    }
-
-    return BL_SUCCESS;
-  }
-
-  // Joins end point that is only applied to closed figures.
-  BL_INLINE_IF_NOT_DEBUG BLResult join_end_point(const BLPoint& n1) noexcept {
-    if (_n0 == n1) {
-      // Collinear case - patch the previous point(s) if they connect lines.
-      a_out().back(a_out().cmd[-2].value <= BL_PATH_CMD_ON);
-      b_out().back(b_out().cmd[-2].value <= BL_PATH_CMD_ON);
-      return BL_SUCCESS;
-    }
-
-    Side side = side_from_normals(_n0, n1);
-    BLPoint m = _n0 + n1;
-    BLPoint w1 = n1 * d(side);
-    BLPoint k = m * d2(side) / Geometry::magnitude_squared(m);
-
-    size_t miter_flag = 0;
-
-    BLPathPrivateImpl* outer_impl = get_impl(outer_path(side));
-    size_t outer_start = side_data(side).figure_offset;
-
-    PathAppender& outer = outer_appender(side);
-    outer_join(outer, n1, w1, k, d(side), d2(side), miter_flag);
-
-    // Shift the start point to be at the miter intersection and remove the
-    // Line from the intersection to the start of the path if miter was applied.
-    if (miter_flag) {
-      if (outer_impl->command_data[outer_start + 1] == BL_PATH_CMD_ON) {
-        outer.back();
-        outer_impl->vertex_data[outer_start] = outer.vtx[-1];
-        outer.back(outer.cmd[-2].value <= BL_PATH_CMD_ON);
-      }
-    }
-
-    BLPathPrivateImpl* inner_impl = get_impl(inner_path(side));
-    size_t inner_start = side_data(opposite_side(side)).figure_offset;
-
-    if (inner_impl->command_data[inner_start + 1] <= BL_PATH_CMD_ON) {
-      inner_join_end_point(inner_appender(side), inner_impl->vertex_data[inner_start], inner_impl->vertex_data[inner_start + 1], _p0 - k);
-    }
-
-    return BL_SUCCESS;
-  }
-
-  BL_INLINE_IF_NOT_DEBUG void inner_join_curve_to(PathAppender& out, const BLPoint& p1) noexcept {
-    out.line_to(_p0);
-    out.line_to(p1);
-  }
-
-  BL_INLINE_IF_NOT_DEBUG void inner_join_line_to(PathAppender& out, const BLPoint& lineP0, const BLPoint& lineP1, const BLPoint& inner_pt) noexcept {
-    if (out.cmd[-2].value <= BL_PATH_CMD_ON && test_inner_join_intersecion(out.vtx[-2], out.vtx[-1], lineP0, lineP1, inner_pt)) {
-      out.vtx[-1] = inner_pt;
-    }
-    else {
-      out.line_to(_p0);
-      out.line_to(lineP0);
-    }
-  }
-
-  BL_INLINE_IF_NOT_DEBUG void inner_join_end_point(PathAppender& out, BLPoint& lineP0, const BLPoint& lineP1, const BLPoint& inner_pt) noexcept {
-    if (out.cmd[-2].value <= BL_PATH_CMD_ON && test_inner_join_intersecion(out.vtx[-2], out.vtx[-1], lineP0, lineP1, inner_pt)) {
-      lineP0 = inner_pt;
-      out.back(1);
-    }
-    else {
-      out.line_to(_p0);
-      out.line_to(lineP0);
-    }
-  }
-
-  // Calculates outer join to `pb`.
-  BL_INLINE_IF_NOT_DEBUG BLResult outer_join(PathAppender& appender, const BLPoint& n1, const BLPoint& w1, const BLPoint& k, double d, double d2, size_t& miter_flag) noexcept {
-    BLPoint pb = _p0 + w1;
-
-    if (Geometry::magnitude_squared(k) <= _miter_limit_sq) {
-      // Miter condition is met.
-      appender.back(appender.cmd[-2].value <= BL_PATH_CMD_ON);
-      appender.line_to(_p0 + k);
-      appender.line_to(pb);
-
-      miter_flag = 1;
-      return BL_SUCCESS;
-    }
-
-    if (_join_type == BL_STROKE_JOIN_MITER_CLIP) {
-      double b2 = bl_abs(Geometry::cross(k, _n0));
-
-      // Avoid degenerate cases and NaN.
-      if (b2 > 0)
-        b2 = b2 * _miter_limit / Geometry::magnitude(k);
-      else
-        b2 = _miter_limit;
-
-      appender.back(appender.cmd[-2].value <= BL_PATH_CMD_ON);
-      appender.line_to(_p0 + d * _n0 - b2 * Geometry::normal(_n0));
-      appender.line_to(_p0 + d *  n1 + b2 * Geometry::normal(n1));
-
-      miter_flag = 1;
-      appender.line_to(pb);
-      return BL_SUCCESS;
-    }
-
-    if (_join_type == BL_STROKE_JOIN_ROUND) {
-      BLPoint pa = appender.vtx[-1];
-      if (Geometry::dot(_p0 - pa, _p0 - pb) < 0.0) {
-        // Dull angle.
-        BLPoint n2 = Geometry::normal(Geometry::unit_vector(pb - pa));
-        BLPoint m = _n0 + n2;
-        BLPoint k0 = d2 * m / Geometry::magnitude_squared(m);
-        BLPoint q = d * n2;
-
-        BLPoint pc1 = _p0 + k0;
-        BLPoint pp1 = _p0 + q;
-        BLPoint pc2 = Math::lerp(pc1, pp1, 2.0);
-
-        dull_angle_arc_to(appender, _p0, pa, pp1, pc1);
-        dull_angle_arc_to(appender, _p0, pp1, pb, pc2);
-      }
-      else {
-        // Acute angle.
-        BLPoint pm = Math::lerp(pa, pb);
-        BLPoint pi = _p0 + k;
-
-        double w = Math::sqrt(Geometry::length(_p0, pm) / Geometry::length(_p0, pi));
-        double a = 4.0 * w / (3.0 * (1.0 + w));
-
-        BLPoint c0 = pa + a * (pi - pa);
-        BLPoint c1 = pb + a * (pi - pb);
-
-        appender.cubic_to(c0, c1, pb);
-      }
-      return BL_SUCCESS;
-    }
-
-    // Bevel or unknown `_join_type`.
-    appender.line_to(pb);
-    return BL_SUCCESS;
-  }
-
-  // Calculates round join to `pb` (dull angle), only used by offsetting cusps.
-  BL_INLINE_IF_NOT_DEBUG BLResult dull_round_join(PathAppender& out, double d, double d2, const BLPoint& w1) noexcept {
-    BLPoint pa = out.vtx[-1];
-    BLPoint pb = _p0 + w1;
-    BLPoint n2 = Geometry::normal(Geometry::unit_vector(pb - pa));
-
-    if (!Math::is_finite(n2.x))
-      return BL_SUCCESS;
-
-    BLPoint m = _n0 + n2;
-    BLPoint k = m * d2 / Geometry::magnitude_squared(m);
-    BLPoint q = n2 * d;
-
-    BLPoint pc1 = _p0 + k;
-    BLPoint pp1 = _p0 + q;
-    BLPoint pc2 = Math::lerp(pc1, pp1, 2.0);
-
-    dull_angle_arc_to(out, _p0, pa, pp1, pc1);
-    dull_angle_arc_to(out, _p0, pp1, pb, pc2);
-    return BL_SUCCESS;
-  }
-
-  BL_INLINE_IF_NOT_DEBUG BLResult offset_quad(const BLPoint bez[3]) noexcept {
-    double ts[3];
-    size_t tn = Geometry::quad_offset_cusp_ts(Geometry::quad_ref(bez), d(), ts);
-    ts[tn++] = 1.0;
-
-    Geometry::QuadCurveTsIter iter(Geometry::quad_ref(bez), Span<double>(ts, tn));
-    double m = _approx.offset_parameter;
-
-    do {
-      for (;;) {
-        BL_PROPAGATE(ensure_appenders_capacity(2, 2));
-
-        double t = Geometry::quad_parameter_at_angle(iter.part, m);
-        if (!(t > kOffsetQuadEpsilonT && t < 1.0 - kOffsetQuadEpsilonT))
-          t = 1.0;
-
-        BLPoint part[3];
-        Geometry::split(Geometry::quad_ref(iter.part), Geometry::quad_out(part), Geometry::quad_out(iter.part), t);
-        offset_quad_simple(part[0], part[1], part[2]);
-
-        if (t == 1.0)
           break;
-      }
-    } while (iter.next());
+        }
 
-    return BL_SUCCESS;
-  }
-
-  BL_INLINE_IF_NOT_DEBUG void offset_quad_simple(const BLPoint& p0, const BLPoint& p1, const BLPoint& p2) noexcept {
-    if (p0 == p2)
-      return;
-
-    BLPoint v0 = p1 - p0;
-    BLPoint v1 = p2 - p1;
-
-    BLPoint m0 = Geometry::normal(Geometry::unit_vector(p0 != p1 ? v0 : v1));
-    BLPoint m2 = Geometry::normal(Geometry::unit_vector(p1 != p2 ? v1 : v0));
-
-    _p0 = p2;
-    _n0 = m2;
-
-    BLPoint m = m0 + m2;
-    BLPoint k1 = m * d2() / Geometry::magnitude_squared(m);
-    BLPoint k2 = m2 * d();
-
-    a_out().quad_to(p1 + k1, p2 + k2);
-    b_out().quad_to(p1 - k1, p2 - k2);
-  }
-
-  struct CubicApproximateSink {
-    PathStroker& _stroker;
-
-    BL_INLINE CubicApproximateSink(PathStroker& stroker) noexcept
-      : _stroker(stroker) {}
-
-    BL_INLINE BLResult operator()(BLPoint quad[3]) const noexcept {
-      return _stroker.offset_quad(quad);
-    }
-  };
-
-  BL_INLINE_IF_NOT_DEBUG BLResult offset_cubic(const BLPoint bez[4]) noexcept {
-    CubicApproximateSink sink(*this);
-    return Geometry::approximate_cubic_with_quads(Geometry::cubic_ref(bez), _approx.simplify_tolerance, sink);
-  }
-
-  BL_INLINE_IF_NOT_DEBUG BLResult add_cap(PathAppender& out, BLPoint pivot, BLPoint p1, uint32_t cap_type) noexcept {
-    BLPoint p0 = out.vtx[-1];
-    BLPoint q = Geometry::normal(p1 - p0) * 0.5;
-
-    switch (cap_type) {
-      case BL_STROKE_CAP_BUTT:
-      default: {
-        out.line_to(p1);
         break;
       }
 
-      case BL_STROKE_CAP_SQUARE: {
-        out.line_to(p0 + q);
-        out.line_to(p1 + q);
-        out.line_to(p1);
-        break;
-      }
+      BL_PROPAGATE(finish_contour(contour_closed));
 
-      case BL_STROKE_CAP_ROUND: {
-        out.arc_quadrant_to(p0 + q, pivot + q);
-        out.arc_quadrant_to(p1 + q, p1);
-        break;
-      }
+      _a_out.done(_a_path);
+      _b_out.done(_b_path);
 
-      case BL_STROKE_CAP_ROUND_REV: {
-        out.line_to(p0 + q);
-        out.arc_quadrant_to(p0, pivot);
-        out.arc_quadrant_to(p1, p1 + q);
-        out.line_to(p1);
-        break;
-      }
+      if (!_cusp_path.is_empty())
+        BL_PROPAGATE(_a_path->add_path(_cusp_path));
 
-      case BL_STROKE_CAP_TRIANGLE: {
-        out.line_to(pivot + q);
-        out.line_to(p1);
-        break;
-      }
-
-      case BL_STROKE_CAP_TRIANGLE_REV: {
-        out.line_to(p0 + q);
-        out.line_to(pivot);
-        out.line_to(p1 + q);
-        out.line_to(p1);
-        break;
-      }
+      size_t figure_end_idx = figure_start_idx + size_t(_iter.cmd - figure_start_cmd);
+      BL_PROPAGATE(sink(_a_path, _b_path, _c_path, figure_start_idx, figure_end_idx, user_data));
+      figure_start_idx = figure_end_idx;
     }
 
     return BL_SUCCESS;
