@@ -158,9 +158,12 @@ void bl_compression_rt_init(BLRuntimeContext* rt) noexcept {
     ft.adler32 = bl::Compression::Checksum::adler32_update_sse2;
   }
 
+#if defined(BL_BUILD_OPT_SSE4_2)
   if (bl_runtime_has_sse4_2(rt)) {
     ft.crc32 = bl::Compression::Checksum::crc32_update_sse4_2;
   }
+#endif // BL_BUILD_OPT_SSE4_2
+
 #endif // BL_TARGET_ARCH_X86
 
 #if defined(BL_BUILD_OPT_ASIMD)
