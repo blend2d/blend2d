@@ -700,8 +700,8 @@
 
     <Expand HideRawView="true">
       <ExpandedItem Condition="get_type() == __BL_OBJECT_TYPE_RGBA()">(BLRgba*)this</ExpandedItem>
-      <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_RGBA32">{_d.u32_data[0]}</DisplayString>
-      <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_RGBA64">{_d.u64_data[1]}</DisplayString>
+      <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_RGBA32">{_d.u32_data[0]}</ExpandedItem>
+      <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_RGBA64">{_d.u64_data[1]}</ExpandedItem>
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_PATTERN">(BLPatternCore*)this</ExpandedItem>
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_GRADIENT">(BLGradientCore*)this</ExpandedItem>
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_IMAGE">(BLImageCore*)this</ExpandedItem>
