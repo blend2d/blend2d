@@ -587,12 +587,56 @@ static void test_context_blit_fill_clip(BLContext& ctx) {
   }
 }
 
+static void test_context_steep_edge_crossing(bool right_to_left) {
+  // A steep edge from (0, 15871/256) to (2, 64) starts on the last subpixel of scanline 61 and crosses
+  // into the next cell exactly where scanline 62 ends, as far as the rasterizer's y DDA can tell. The
+  // x DDA puts the crossing inside scanline 62, so pixel (0, 62) is about half covered.
+  constexpr int kWidth = 200;
+  constexpr int kHeight = 150;
+
+  BLImage img(kWidth, kHeight, BL_FORMAT_PRGB32);
+  BLContext ctx(img);
+  ctx.fill_all(BLRgba32(0xFF000000u));
+
+  double xs[] = { 0.0, 0.0, 2.0, 10.0, 10.0 };
+  double ys[] = { 40.0, 15871.0 / 256.0, 64.0, 64.0, 40.0 };
+
+  BLPath path;
+  for (size_t i = 0; i < 5; i++) {
+    double x = right_to_left ? double(kWidth) - xs[i] : xs[i];
+    if (i == 0)
+      path.move_to(x, ys[i]);
+    else
+      path.line_to(x, ys[i]);
+  }
+  path.close();
+
+  ctx.fill_path(path, BLRgba32(0xFFFFFFFFu));
+  ctx.end();
+
+  BLImageData data;
+  EXPECT_SUCCESS(img.get_data(&data));
+
+  int x = right_to_left ? kWidth - 1 : 0;
+  const uint32_t* row = reinterpret_cast<const uint32_t*>(static_cast<const uint8_t*>(data.pixel_data) + intptr_t(62) * data.stride);
+  uint32_t coverage = row[x] & 0xFFu;
+
+  EXPECT_GE(coverage, 110u)
+    .message("Pixel [%d, 62] covered %u/255, expected about half (%s)", x, coverage, right_to_left ? "right to left" : "left to right");
+  EXPECT_LE(coverage, 145u)
+    .message("Pixel [%d, 62] covered %u/255, expected about half (%s)", x, coverage, right_to_left ? "right to left" : "left to right");
+}
+
 UNIT(context, BL_TEST_GROUP_RENDERING_CONTEXT) {
   BLImage img(256, 256, BL_FORMAT_PRGB32);
   BLContext ctx(img);
 
   test_context_state(ctx);
   test_context_blit_fill_clip(ctx);
+
+  INFO("Testing steep edges whose cell crossing falls on a scanline boundary");
+  test_context_steep_edge_crossing(false);
+  test_context_steep_edge_crossing(true);
 }
 
 } // {Tests}

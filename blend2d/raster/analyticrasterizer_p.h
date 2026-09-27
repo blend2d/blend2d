@@ -463,6 +463,19 @@ struct AnalyticRasterizer : public AnalyticState {
   //! \name Rasterize
   //! \{
 
+  //! Places a cell crossing of a steep line that `_yDlt & kMask` put on a scanline boundary.
+  //!
+  //! The x and y DDAs round independently, so the y DDA can put a crossing exactly on the boundary between two
+  //! scanlines when the x DDA has already put it within the current one. Masking then reads the bottom of the
+  //! scanline as its top, which moves the scanline's whole cover into the next cell. `overshoot` is how far the
+  //! x DDA went past the cell boundary in this scanline: little when the crossing is at the bottom, most of a
+  //! step when it is at the top. The first scanline starts at `_fy0`, so a crossing on its top boundary is only
+  //! possible when `_fy0` is zero.
+  BL_INLINE void fix_crossing_on_boundary(int overshoot) noexcept {
+    if (_yDlt == 0 && (_fy0 != 0 || overshoot * 2 < _xDlt))
+      _yDlt = int(A8Info::kScale);
+  }
+
   template<uint32_t OPTIONS>
   BL_INLINE bool rasterize() noexcept {
     BL_ASSERT(uint32_t(_ey0) >= _band_offset);
@@ -601,6 +614,7 @@ struct AnalyticRasterizer : public AnalyticState {
               goto VertRightToLeftSingleFirstOrLast;
             }
 
+            fix_crossing_on_boundary(int(A8Info::kScale) - _fx0);
             bit_set<OPTIONS>(bit_ptr, unsigned(_ex0 + 0) / BL_PIPE_PIXELS_PER_ONE_BIT);
             bit_set<OPTIONS>(bit_ptr, unsigned(_ex0 + 1) / BL_PIPE_PIXELS_PER_ONE_BIT);
             cov0 = apply_sign_mask(uint32_t(_yDlt - _fy0));
@@ -661,6 +675,7 @@ VertRightToLeftSingleFirstOrLast:
                 goto VertRightToLeftSingleInLoop;
               }
 
+              fix_crossing_on_boundary(int(A8Info::kScale) - _fx0);
               bit_set<OPTIONS>(bit_ptr, unsigned(_ex0 + 0) / BL_PIPE_PIXELS_PER_ONE_BIT);
               bit_set<OPTIONS>(bit_ptr, unsigned(_ex0 + 1) / BL_PIPE_PIXELS_PER_ONE_BIT);
               bit_ptr = PtrOps::offset(bit_ptr, bit_stride<OPTIONS>());
@@ -756,6 +771,7 @@ VertRightToLeftSingleInLoop:
             _ex0++;
             _fx0 &= A8Info::kMask;
             _yDlt &= A8Info::kMask;
+            fix_crossing_on_boundary(_fx0);
             bit_set<OPTIONS>(bit_ptr, unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT);
 
             cov0 = apply_sign_mask(uint32_t(_yDlt - _fy0));
@@ -815,6 +831,7 @@ VertRightToLeftSingleInLoop:
             else {
               _fx0 &= A8Info::kMask;
               _yDlt &= A8Info::kMask;
+              fix_crossing_on_boundary(_fx0);
 
               cov0 = apply_sign_mask(uint32_t(_yDlt));
               cov1 = cov0 * (area + A8Info::kScale);
