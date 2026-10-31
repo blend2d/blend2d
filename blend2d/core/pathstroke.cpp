@@ -34,6 +34,10 @@ static constexpr double kStrokeDegenerateFlatness = 1e-6;
 // Epsilon used to split quadratic bezier curves during offsetting.
 static constexpr double kOffsetQuadEpsilonT = 1e-5;
 
+// Cosine of the angle between the normals of consecutive offset parts above which they are considered continuous
+// (about 0.08 degrees).
+static constexpr double kOffsetQuadJoinCosThreshold = 1.0 - 1e-6;
+
 // Minimum vertices that would be required for any join + additional line.
 //
 // Calculated from:
@@ -389,13 +393,20 @@ SmoothPolyTo:
               double r2 = Geometry::dot(p[2] - p[0], r);
               double r3 = Geometry::dot(p[3] - p[0], r);
 
-              double a = 1.0 / (3.0 * r1 - 3.0 * r2 + r3);
+              // Parameters of the cusps are the roots of `a * t^2 - 2 * b * t + r1` (the derivative along the line).
+              // Use the stable form of the quadratic formula - `a` is zero when the derivative is linear, for example
+              // P -> Q -> Q -> P, which would make both roots NaN or infinite and lose the cusp. A negative discriminant
+              // still yields NaN (no cusps). Sort the roots so the cusps are visited in order.
+              double a = 3.0 * r1 - 3.0 * r2 + r3;
               double b = 2.0 * r1 - r2;
               double s = Math::sqrt(r2 * (r2 - r1) - r1 * (r3 - r1));
+              double q = b + Math::copy_sign(s, b);
 
-              // Parameters of the cusps.
-              double t1 = a * (b - s);
-              double t2 = a * (b + s);
+              double t1 = q / a;
+              double t2 = r1 / q;
+
+              if (t2 < t1)
+                BLInternal::swap(t1, t2);
 
               // Offset the first and second cusps (if they exist).
               poly_size = 0;
@@ -634,6 +645,20 @@ SmoothPolyTo:
     return BL_SUCCESS;
   }
 
+  // Joins two parts of the same curve whose offsets don't meet (see `offset_quad_simple()`). The join is always round,
+  // like `join_cusp()`, as the offset of a curve sweeps through the angle between both normals.
+  BL_INLINE_IF_NOT_DEBUG void join_curve_round(const BLPoint& n1) noexcept {
+    Side side = side_from_normals(_n0, n1);
+    BLPoint m = _n0 + n1;
+    BLPoint k = m * d2(side) / Geometry::magnitude_squared(m);
+    BLPoint w1 = n1 * d(side);
+
+    round_join(outer_appender(side), _p0 + w1, k, d(side), d2(side));
+    inner_join_curve_to(inner_appender(side), _p0 - w1);
+
+    _n0 = n1;
+  }
+
   BL_INLINE_IF_NOT_DEBUG BLResult join_cusp(const BLPoint& n1) noexcept {
     Side side = side_from_normals(_n0, n1);
     BLPoint w1 = n1 * d(side);
@@ -795,40 +820,45 @@ SmoothPolyTo:
     }
 
     if (_join_type == BL_STROKE_JOIN_ROUND) {
-      BLPoint pa = appender.vtx[-1];
-      if (Geometry::dot(_p0 - pa, _p0 - pb) < 0.0) {
-        // Dull angle.
-        BLPoint n2 = Geometry::normal(Geometry::unit_vector(pb - pa));
-        BLPoint m = _n0 + n2;
-        BLPoint k0 = d2 * m / Geometry::magnitude_squared(m);
-        BLPoint q = d * n2;
-
-        BLPoint pc1 = _p0 + k0;
-        BLPoint pp1 = _p0 + q;
-        BLPoint pc2 = Math::lerp(pc1, pp1, 2.0);
-
-        dull_angle_arc_to(appender, _p0, pa, pp1, pc1);
-        dull_angle_arc_to(appender, _p0, pp1, pb, pc2);
-      }
-      else {
-        // Acute angle.
-        BLPoint pm = Math::lerp(pa, pb);
-        BLPoint pi = _p0 + k;
-
-        double w = Math::sqrt(Geometry::length(_p0, pm) / Geometry::length(_p0, pi));
-        double a = 4.0 * w / (3.0 * (1.0 + w));
-
-        BLPoint c0 = pa + a * (pi - pa);
-        BLPoint c1 = pb + a * (pi - pb);
-
-        appender.cubic_to(c0, c1, pb);
-      }
+      round_join(appender, pb, k, d, d2);
       return BL_SUCCESS;
     }
 
     // Bevel or unknown `_join_type`.
     appender.line_to(pb);
     return BL_SUCCESS;
+  }
+
+  // Calculates round join to `pb`.
+  BL_INLINE_IF_NOT_DEBUG void round_join(PathAppender& appender, const BLPoint& pb, const BLPoint& k, double d, double d2) noexcept {
+    BLPoint pa = appender.vtx[-1];
+    if (Geometry::dot(_p0 - pa, _p0 - pb) < 0.0) {
+      // Dull angle.
+      BLPoint n2 = Geometry::normal(Geometry::unit_vector(pb - pa));
+      BLPoint m = _n0 + n2;
+      BLPoint k0 = d2 * m / Geometry::magnitude_squared(m);
+      BLPoint q = d * n2;
+
+      BLPoint pc1 = _p0 + k0;
+      BLPoint pp1 = _p0 + q;
+      BLPoint pc2 = Math::lerp(pc1, pp1, 2.0);
+
+      dull_angle_arc_to(appender, _p0, pa, pp1, pc1);
+      dull_angle_arc_to(appender, _p0, pp1, pb, pc2);
+    }
+    else {
+      // Acute angle.
+      BLPoint pm = Math::lerp(pa, pb);
+      BLPoint pi = _p0 + k;
+
+      double w = Math::sqrt(Geometry::length(_p0, pm) / Geometry::length(_p0, pi));
+      double a = 4.0 * w / (3.0 * (1.0 + w));
+
+      BLPoint c0 = pa + a * (pi - pa);
+      BLPoint c1 = pb + a * (pi - pb);
+
+      appender.cubic_to(c0, c1, pb);
+    }
   }
 
   // Calculates round join to `pb` (dull angle), only used by offsetting cusps.
@@ -863,14 +893,26 @@ SmoothPolyTo:
 
     do {
       for (;;) {
-        BL_PROPAGATE(ensure_appenders_capacity(2, 2));
+        // A part may start with a cusp join, see `offset_quad_simple()`.
+        BL_PROPAGATE(ensure_appenders_capacity(kStrokeMaxJoinVertices + 2, kStrokeMaxJoinVertices + 2));
 
         double t = Geometry::quad_parameter_at_angle(iter.part, m);
         if (!(t > kOffsetQuadEpsilonT && t < 1.0 - kOffsetQuadEpsilonT))
           t = 1.0;
 
+        BLPoint p1 = iter.part[1];
         BLPoint part[3];
         Geometry::split(Geometry::quad_ref(iter.part), Geometry::quad_out(part), Geometry::quad_out(iter.part), t);
+
+        // If the split returned the same curve, `t` passed the epsilon check, but the step it represents is below
+        // the precision of the coordinates and this loop would never terminate. This happens when a part starts at
+        // the turning point of a nearly collinear quad - the derivative there is only rounding noise, and so is `t`.
+        // The control point of such a part is noise as well, so offset the rest of it as its chord.
+        if (part[0] == part[2] && iter.part[1] == p1) {
+          offset_quad_simple(iter.part[0], Math::lerp(iter.part[0], iter.part[2]), iter.part[2]);
+          break;
+        }
+
         offset_quad_simple(part[0], part[1], part[2]);
 
         if (t == 1.0)
@@ -888,8 +930,28 @@ SmoothPolyTo:
     BLPoint v0 = p1 - p0;
     BLPoint v1 = p2 - p1;
 
-    BLPoint m0 = Geometry::normal(Geometry::unit_vector(p0 != p1 ? v0 : v1));
-    BLPoint m2 = Geometry::normal(Geometry::unit_vector(p1 != p2 ? v1 : v0));
+    // A leg shorter than `kStrokeLengthEpsilon` has no usable direction. It's not necessarily zero - when a quad is
+    // split at the turning point of a nearly collinear curve, the leg at the split is a few ULPs of rounding noise
+    // that can point anywhere. If such a leg pointed against the other one, `m0` and `m2` would be nearly opposite
+    // and `k1` would place the offset control point arbitrarily far away. Use the direction of the other leg instead,
+    // or keep the current normal if the whole quad is that small.
+    bool v0_degenerate = Geometry::magnitude_squared(v0) < kStrokeLengthEpsilonSq;
+    bool v1_degenerate = Geometry::magnitude_squared(v1) < kStrokeLengthEpsilonSq;
+
+    BLPoint m0 = _n0;
+    BLPoint m2 = _n0;
+
+    if (!(v0_degenerate & v1_degenerate)) {
+      m0 = Geometry::normal(Geometry::unit_vector(v0_degenerate ? v1 : v0));
+      m2 = Geometry::normal(Geometry::unit_vector(v1_degenerate ? v0 : v1));
+    }
+
+    // Consecutive parts of a curve share their tangent, so their offsets meet - except where a part starts at a
+    // turning point (the tangent turns back) or next to a leg replaced above. Connect both offsets with a round join
+    // there; otherwise the outline would cut across the stroke. Differences caused by rounding are far below the
+    // threshold, so smooth curves are not affected.
+    if (Geometry::dot(_n0, m0) < kOffsetQuadJoinCosThreshold)
+      join_curve_round(m0);
 
     _p0 = p2;
     _n0 = m2;
