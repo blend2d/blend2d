@@ -13,7 +13,26 @@ including the 0.21.3 AsmJit API migration from upstream master.
 | [#271](https://github.com/blend2d/blend2d/pull/271) | `3ed5b6c6a38799e509011a1c4885df7e3b166746` | Handle degenerate offset directions and join curve offsets |
 | [#273](https://github.com/blend2d/blend2d/pull/273) | `86c847930adb84bf8c7d213ddb5272a07d7b6cc9` | Preserve flat-cubic cusps using stable quadratic roots |
 
-Original author: Jeff Witt <1848307+wittjeff@users.noreply.github.com>.
+### Docling fixes not yet upstream
+
+Upstream 0.21.3 still contains this defect; submit it upstream and drop it here once merged.
+
+| Fix | Files |
+| --- | --- |
+| Preserve the two LSB bits of `dst` when aligning the 4-byte-granularity memset/memcpy span loops | `blend2d/pipeline/jit/fetchutilsinlineloops.cpp`, `blend2d/core/context_test.cpp` |
+
+The analytic filler composites with a pixel granularity of 4. For an opaque solid `SrcCopy` span on targets with
+16-byte vectors (AArch64, and x86 without AVX2) the JIT emits `inline_fill_span_loop()`, which aligned `dst` down to
+16 bytes. For A8 (and 16-bit) pixels that also cleared the two LSB bits, so whenever a row did not start 4-byte
+aligned (any A8 image whose stride is not a multiple of 4) the remaining count stopped being a multiple of 4 and the
+final 4-byte store overran the span by 1-3 bytes. `dst` drifted by that amount on every fully covered scanline, so a
+21 x 63 A8 image with stride 21 received 183 bytes past its end. The `vec_size >= 32` path already kept these bits.
+The alignment mask now clears only the bits above the granularity, which is unchanged for 32-bit pixels; stores
+after the alignment step are unaligned unless `item_size == 4`. `inline_copy_span_loop()` had the same alignment step
+and is fixed the same way, although no public API call was found that reaches its 4-byte path.
+`context_a8_unaligned_rows` compares JIT and reference output for guarded A8 buffers with unaligned rows.
+
+Original author of the upstream backports: Jeff Witt <1848307+wittjeff@users.noreply.github.com>.
 The original commits for #270/#271/#273 also credit Claude Opus 5.5
 <noreply@anthropic.com>. Upstream regression tests are included with the fixes.
 Preserve this provenance when committing the consolidated changes.
