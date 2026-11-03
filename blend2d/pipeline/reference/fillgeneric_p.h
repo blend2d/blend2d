@@ -257,6 +257,9 @@ L_BitScan_Next:
       if (bit_word)
         goto L_BitScan_Match;
 
+      // The span covers this whole BitWord. If it was the last one, `L_BitScan_End` must see `i == kNumBits`. This
+      // loop is also entered from the BitGap section, where `i` still holds the length of the previous span.
+      i = BitOps::kNumBits;
       if (bit_ptr == bit_ptr_end)
         goto L_BitScan_End;
     }

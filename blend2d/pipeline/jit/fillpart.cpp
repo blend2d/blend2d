@@ -742,6 +742,10 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
   pc->add(x_off, x_off, pixels_per_bit_word);                    //   x_off += pixels_per_bit_word;
   pc->add(bit_ptr, bit_ptr, bw_size);                            //   bit_ptr += bw_size;
   pc->j(L_BitScan_Match, xor_nz(bit_word, -1));                  //   if ((bit_word ^= -1) != 0) goto L_BitScan_Match;
+  // The span covers this whole BitWord. If it was the last one, `L_BitScan_End` must see `i == bw_size_in_bits`.
+  // This loop is also entered from the BitGap section, where `i` holds the length of the span that was just
+  // composited (and the CMask loop may have counted it down to zero), so it has to be reset here.
+  pc->mov(i, bw_size_in_bits);                                   //   i = bw_size_in_bits;
   pc->j(L_BitScan_End, cmp_eq(bit_ptr, bit_ptr_end));            //   if (bit_ptr == bit_ptr_end) goto L_BitScan_End;
   pc->j(L_BitScan_Iter);                                         //   goto L_BitScan_Iter;
 

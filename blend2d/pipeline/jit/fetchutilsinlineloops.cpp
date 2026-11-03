@@ -147,7 +147,13 @@ void inline_fill_span_loop(
     BL_ASSERT(item_size <= 4u);
 
     uint32_t size_shift = IntOps::ctz(item_size);
-    uint32_t align_pattern = ((vec_size - 1u) * item_size) & (vec_size - 1u);
+
+    // The alignment step must preserve the two LSB bits of `dst`, otherwise the remaining byte count stops being a
+    // multiple of `granularity_in_bytes` when `dst` is not 4-byte aligned (e.g. an A8 image with an odd stride) and
+    // the 4-byte tail store writes past the end of the span. This is what the `vec_size >= 32` path already does.
+    // The alignment is unfixable in that case, so stores after the alignment step must not assume `vec_size`
+    // alignment unless `item_size == 4` (pixels of 32-bit formats are always 4-byte aligned).
+    uint32_t align_pattern = (vec_size - 1u) & ~(granularity_in_bytes - 1u);
 
     uint32_t one_step_in_items = 4u >> size_shift;
     uint32_t tail_step_in_items = 16u >> size_shift;
@@ -311,7 +317,10 @@ void inline_fill_span_loop(
         pc->j(L_TailSkip, sub_c(i, tail_step_in_items));
 
         pc->bind(L_TailIter);
-        pc->v_storeavec(mem_ptr(dst), src);
+        if (item_size == 4u)
+          pc->v_storeavec(mem_ptr(dst), src);
+        else
+          pc->v_storeuvec(mem_ptr(dst), src);
         pc->add(dst, dst, vec_size);
         pc->j(L_TailIter, sub_nc(i, tail_step_in_items));
 
@@ -321,7 +330,10 @@ void inline_fill_span_loop(
       else if (main_loop_size >= vec_size * 2u) {
         pc->j(L_Finalize, ucmp_lt(i, tail_step_in_items));
 
-        pc->v_storeavec(mem_ptr(dst), src);
+        if (item_size == 4u)
+          pc->v_storeavec(mem_ptr(dst), src);
+        else
+          pc->v_storeuvec(mem_ptr(dst), src);
         pc->add(dst, dst, vec_size);
         pc->j(L_End, sub_z(i, tail_step_in_items));
       }
@@ -340,7 +352,7 @@ void inline_fill_span_loop(
         pc->j(L_End, sub_z(i, 8u / item_size));
 
         pc->bind(L_Store1);
-        pc->v_storea32(mem_ptr(dst), src);
+        pc->v_storeu32(mem_ptr(dst), src);
         pc->add(dst, dst, 4);
       }
 
@@ -1189,7 +1201,11 @@ void inline_copy_span_loop(
   if (granularity_in_bytes == 4u) {
     BL_ASSERT(item_size <= 4u);
     uint32_t size_shift = IntOps::ctz(item_size);
-    uint32_t align_pattern = (15u * item_size) & 15u;
+
+    // Preserve the two LSB bits of `dst` in the alignment step - see `inline_fill_span_loop()` for the details. The
+    // destination is only guaranteed to be 16-byte aligned after the alignment step if `item_size == 4`.
+    uint32_t align_pattern = 15u & ~(granularity_in_bytes - 1u);
+    bool dst_aligned = item_size == 4u;
 
     uint32_t one_step_in_items = 4u >> size_shift;
     uint32_t tail_step_in_items = 16u >> size_shift;
@@ -1234,7 +1250,7 @@ void inline_copy_span_loop(
       pc->j(L_MainSkip, sub_c(i, main_step_in_items));
 
       pc->bind(L_MainIter);
-      emit_mem_copy_sequence(pc, mem_ptr(dst), true, mem_ptr(src), false, main_loop_size, fill_mask, AdvanceMode::kAdvance);
+      emit_mem_copy_sequence(pc, mem_ptr(dst), dst_aligned, mem_ptr(src), false, main_loop_size, fill_mask, AdvanceMode::kAdvance);
       pc->j(L_MainIter, sub_nc(i, main_step_in_items));
 
       pc->bind(L_MainSkip);
@@ -1251,7 +1267,7 @@ void inline_copy_span_loop(
       pc->j(L_TailSkip, sub_c(i, tail_step_in_items));
 
       pc->bind(L_TailIter);
-      emit_mem_copy_sequence(pc, mem_ptr(dst), true, mem_ptr(src), false, 16, fill_mask, AdvanceMode::kAdvance);
+      emit_mem_copy_sequence(pc, mem_ptr(dst), dst_aligned, mem_ptr(src), false, 16, fill_mask, AdvanceMode::kAdvance);
       pc->j(L_TailIter, sub_nc(i, tail_step_in_items));
 
       pc->bind(L_TailSkip);
@@ -1260,7 +1276,7 @@ void inline_copy_span_loop(
     else if (main_loop_size >= 32) {
       pc->j(L_Finalize, ucmp_lt(i, tail_step_in_items));
 
-      emit_mem_copy_sequence(pc, mem_ptr(dst), true, mem_ptr(src), false, 16, fill_mask, AdvanceMode::kAdvance);
+      emit_mem_copy_sequence(pc, mem_ptr(dst), dst_aligned, mem_ptr(src), false, 16, fill_mask, AdvanceMode::kAdvance);
       pc->j(L_End, sub_z(i, tail_step_in_items));
     }
 
@@ -1280,9 +1296,9 @@ void inline_copy_span_loop(
       pc->j(L_End, sub_z(i, 8u / item_size));
 
       pc->bind(L_Store1);
-      pc->v_loada32(t0, mem_ptr(src));
+      pc->v_loadu32(t0, mem_ptr(src));
       pc->add(src, src, 4);
-      pc->v_storea32(mem_ptr(dst), t0);
+      pc->v_storeu32(mem_ptr(dst), t0);
       pc->add(dst, dst, 4);
     }
 

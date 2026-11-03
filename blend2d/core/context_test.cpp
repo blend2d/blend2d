@@ -595,6 +595,83 @@ UNIT(context, BL_TEST_GROUP_RENDERING_CONTEXT) {
   test_context_blit_fill_clip(ctx);
 }
 
+// Fills a rectangle with fractional edges into a tightly packed A8 image that is surrounded by guard bytes. The
+// analytic filler uses a pixel granularity of 4, so the opaque span inside each scanline is filled by a memset loop
+// that must not assume that `dst` is 4-byte aligned - with an odd stride the rows start at arbitrary addresses.
+static uint32_t render_a8_guarded(uint8_t* storage, uint32_t storage_size, uint32_t offset, int w, int h, int stride, double fx, double fy, uint32_t flags) noexcept {
+  constexpr uint8_t kGuard = 0xCD;
+  uint32_t pixel_bytes = uint32_t(stride) * uint32_t(h);
+
+  memset(storage, kGuard, storage_size);
+  memset(storage + offset, 0, pixel_bytes);
+
+  {
+    BLImage img;
+    if (img.create_from_data(w, h, BL_FORMAT_A8, storage + offset, stride) != BL_SUCCESS)
+      return 0xFFFFFFFFu;
+
+    BLContextCreateInfo create_info {};
+    create_info.flags = flags;
+
+    BLContext ctx(img, create_info);
+    ctx.clear_all();
+
+    BLPath path;
+    path.move_to(fx, fy);
+    path.line_to(double(w) - fx, fy);
+    path.line_to(double(w) - fx, double(h) - fy);
+    path.line_to(fx, double(h) - fy);
+    path.close();
+
+    ctx.fill_path(path, BLRgba32(0xFFFFFFFFu));
+    ctx.end();
+  }
+
+  uint32_t damaged = 0;
+  for (uint32_t i = 0; i < offset; i++)
+    damaged += uint32_t(storage[i] != kGuard);
+  for (uint32_t i = offset + pixel_bytes; i < storage_size; i++)
+    damaged += uint32_t(storage[i] != kGuard);
+  return damaged;
+}
+
+UNIT(context_a8_unaligned_rows, BL_TEST_GROUP_RENDERING_CONTEXT) {
+  INFO("Testing that filling A8 images with unaligned rows neither writes out of bounds nor differs from the reference pipeline");
+
+  constexpr int kMaxW = 40;
+  constexpr int kH = 5;
+  constexpr uint32_t kStorageSize = 4u + uint32_t(kMaxW + 3) * uint32_t(kH) + 64u;
+
+  static const double fractions[][2] = {{0.0, 0.0}, {0.02, 0.2}, {0.5, 0.5}, {1.3, 0.9}};
+
+  uint8_t jit_storage[kStorageSize];
+  uint8_t ref_storage[kStorageSize];
+
+  for (int w = 1; w <= kMaxW; w++) {
+    for (int pad = 0; pad < 4; pad++) {
+      for (uint32_t offset = 0; offset < 4; offset++) {
+        for (const auto& f : fractions) {
+          int stride = w + pad;
+          uint32_t jit_damaged = render_a8_guarded(jit_storage, kStorageSize, offset, w, kH, stride, f[0], f[1], 0);
+          uint32_t ref_damaged = render_a8_guarded(ref_storage, kStorageSize, offset, w, kH, stride, f[0], f[1], BL_CONTEXT_CREATE_FLAG_DISABLE_JIT);
+
+          EXPECT_EQ(jit_damaged, 0u)
+            .message("Out of bounds write of %u bytes [w=%d stride=%d offset=%u f=(%g, %g)]", jit_damaged, w, stride, offset, f[0], f[1]);
+          EXPECT_EQ(ref_damaged, 0u)
+            .message("Out of bounds write of %u bytes (reference) [w=%d stride=%d offset=%u f=(%g, %g)]", ref_damaged, w, stride, offset, f[0], f[1]);
+
+          for (int y = 0; y < kH; y++) {
+            const uint8_t* jit_row = jit_storage + offset + uint32_t(y * stride);
+            const uint8_t* ref_row = ref_storage + offset + uint32_t(y * stride);
+            EXPECT_EQ(memcmp(jit_row, ref_row, size_t(w)), 0)
+              .message("JIT and reference pipelines differ [w=%d stride=%d offset=%u f=(%g, %g) y=%d]", w, stride, offset, f[0], f[1], y);
+          }
+        }
+      }
+    }
+  }
+}
+
 } // {Tests}
 } // {bl}
 

@@ -175,6 +175,7 @@ set(BLEND2D_SRC_LIST
   blend2d/core/path.h
   blend2d/core/path_p.h
   blend2d/core/pathstroke.cpp
+  blend2d/core/pathstroke_test.cpp
   blend2d/core/pathstroke_p.h
   blend2d/core/pattern.cpp
   blend2d/core/pattern.h
