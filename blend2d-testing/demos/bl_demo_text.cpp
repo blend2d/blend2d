@@ -126,14 +126,14 @@ public:
     _ot_debug = new QCheckBox();
     _ot_debug->setText(QLatin1String("OpenType Dbg"));
 
-    connect(_renderer_select, SIGNAL(activated(int)), SLOT(onRendererChanged(int)));
-    connect(_style_select, SIGNAL(activated(int)), SLOT(onStyleChanged(int)));
-    connect(_ot_debug, SIGNAL(stateChanged(int)), SLOT(valueChanged(int)));
-    connect(_file_selected_button, SIGNAL(clicked()), SLOT(selectFile()));
-    connect(_file_selected, SIGNAL(textChanged(const QString&)), SLOT(fileChanged(const QString&)));
-    connect(_slider, SIGNAL(valueChanged(int)), SLOT(valueChanged(int)));
-    connect(_text, SIGNAL(textChanged(const QString&)), SLOT(textChanged(const QString&)));
-    connect(_features_select, SIGNAL(textChanged(const QString&)), SLOT(textChanged(const QString&)));
+    connect(_renderer_select, SIGNAL(activated(int)), SLOT(on_renderer_changed(int)));
+    connect(_style_select, SIGNAL(activated(int)), SLOT(on_style_changed(int)));
+    connect(_ot_debug, SIGNAL(stateChanged(int)), SLOT(value_changed(int)));
+    connect(_file_selected_button, SIGNAL(clicked()), SLOT(select_file()));
+    connect(_file_selected, SIGNAL(textChanged(const QString&)), SLOT(file_changed(const QString&)));
+    connect(_slider, SIGNAL(valueChanged(int)), SLOT(value_changed(int)));
+    connect(_text, SIGNAL(textChanged(const QString&)), SLOT(text_changed(const QString&)));
+    connect(_features_select, SIGNAL(textChanged(const QString&)), SLOT(text_changed(const QString&)));
 
     _canvas->on_render_blend2d = std::bind(&MainWindow::on_render_blend2d, this, std::placeholders::_1);
     _canvas->on_render_qt = std::bind(&MainWindow::on_render_qt, this, std::placeholders::_1);
@@ -172,7 +172,7 @@ public:
   void mouseReleaseEvent(QMouseEvent* event) override {}
   void mouseMoveEvent(QMouseEvent* event) override {}
 
-  void reloadFont(const char* file_name) {
+  void reload_font(const char* file_name) {
     _bl_face.reset();
     if (_qt_application_font_id != -1) {
       QFontDatabase::removeApplicationFont(_qt_application_font_id);
@@ -180,9 +180,9 @@ public:
 
     BLArray<uint8_t> data_buffer;
     if (BLFileSystem::read_file(file_name, data_buffer) == BL_SUCCESS) {
-      BLFontData fontData;
-      if (fontData.create_from_data(data_buffer) == BL_SUCCESS) {
-        _bl_face.create_from_data(fontData, 0);
+      BLFontData font_data;
+      if (font_data.create_from_data(data_buffer) == BL_SUCCESS) {
+        _bl_face.create_from_data(font_data, 0);
 
         BLArray<BLTag> tags;
         _bl_face.get_feature_tags(&tags);
@@ -212,10 +212,10 @@ public:
   }
 
 private Q_SLOTS:
-  Q_SLOT void onStyleChanged(int index) { _canvas->update_canvas(); }
-  Q_SLOT void onRendererChanged(int index) { _canvas->set_renderer_type(_renderer_select->itemData(index).toInt()); }
+  Q_SLOT void on_style_changed(int index) { _canvas->update_canvas(); }
+  Q_SLOT void on_renderer_changed(int index) { _canvas->set_renderer_type(_renderer_select->itemData(index).toInt()); }
 
-  void selectFile() {
+  void select_file() {
     QString file_name = _file_selected->text();
     QFileDialog dialog(this);
 
@@ -233,19 +233,19 @@ private Q_SLOTS:
     }
   }
 
-  void fileChanged(const QString&) {
+  void file_changed(const QString&) {
     QByteArray file_name_utf8 = _file_selected->text().toUtf8();
     file_name_utf8.append('\0');
 
-    reloadFont(file_name_utf8.constData());
+    reload_font(file_name_utf8.constData());
     _canvas->update_canvas();
   }
 
-  void valueChanged(int value) {
+  void value_changed(int value) {
     _canvas->update_canvas();
   }
 
-  void textChanged(const QString&) {
+  void text_changed(const QString&) {
     _canvas->update_canvas();
   }
 
@@ -342,7 +342,7 @@ public:
       }
     }
 
-    _updateTitle(timer.duration());
+    _update_window_title(timer.duration());
   }
 
   void on_render_qt(QPainter& ctx) noexcept {
@@ -416,12 +416,12 @@ public:
     timer.start();
     ctx.drawText(QPointF(10, 10 + font.pixelSize()), _text->text());
     timer.stop();
-    _updateTitle(timer.duration());
+    _update_window_title(timer.duration());
   }
 
-  void _updateTitle(double duration) {
+  void _update_window_title(double duration) {
     char buf[256];
-    snprintf(buf, 256, "Text Sample [Size %dpx TextRenderTime %0.3fms]", int(_slider->value()), duration);
+    snprintf(buf, 256, "bl_demo_text [Size=%dpx] [TextRenderTime=%0.3fms]", int(_slider->value()), duration);
 
     QString title = QString::fromUtf8(buf);
     if (title != windowTitle())

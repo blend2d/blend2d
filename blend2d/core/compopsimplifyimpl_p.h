@@ -3,10 +3,10 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_COMPOPSIMPLIFYIMPL_P_H_INCLUDED
-#define BLEND2D_COMPOPSIMPLIFYIMPL_P_H_INCLUDED
+#ifndef BLEND2D_CORE_COMPOPSIMPLIFYIMPL_P_H_INCLUDED
+#define BLEND2D_CORE_COMPOPSIMPLIFYIMPL_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/core/api_internal_p.h>
 #include <blend2d/core/compopinfo_p.h>
 
 //! \cond INTERNAL
@@ -122,11 +122,9 @@ struct CompOpSimplifyInfoImpl {
   // [DstCopy ANYxANY]
   //   Dca' = Dca
   //   Da   = Da
-  BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
-  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dst_copy(Fmt d, Fmt s) noexcept {
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dst_copy([[maybe_unused]] Fmt d, [[maybe_unused]] Fmt s) noexcept {
     return CompOpSimplifyInfo::dst_copy();
   }
-  BL_DIAGNOSTIC_POP
 
   // SrcOver
   // -------
@@ -1141,4 +1139,4 @@ struct CompOpSimplifyInfoImpl {
 //! \}
 //! \endcond
 
-#endif // BLEND2D_COMPOPSIMPLIFYIMPL_P_H_INCLUDED
+#endif // BLEND2D_CORE_COMPOPSIMPLIFYIMPL_P_H_INCLUDED

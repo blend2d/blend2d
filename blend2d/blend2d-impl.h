@@ -21,6 +21,6 @@
 #endif
 
 #include <blend2d/blend2d.h>
-#include <blend2d/core/api-impl.h>
+#include <blend2d/core/api_impl.h>
 
 #endif // BLEND2D_IMPL_H_INCLUDED

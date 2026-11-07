@@ -3,13 +3,13 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_CONTEXT_P_H_INCLUDED
-#define BLEND2D_CONTEXT_P_H_INCLUDED
+#ifndef BLEND2D_CORE_CONTEXT_P_H_INCLUDED
+#define BLEND2D_CORE_CONTEXT_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/core/api_internal_p.h>
 #include <blend2d/core/array_p.h>
 #include <blend2d/core/context.h>
-#include <blend2d/core/object_p.h>
+#include <blend2d/core/object_layer_p.h>
 #include <blend2d/core/path_p.h>
 #include <blend2d/threading/atomic_p.h>
 
@@ -17,20 +17,24 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace bl::ContextInternal {
+namespace bl {
 
-//! \name BLContext - Private - Constants
-//! \{
+template<>
+struct ObjectDispatchInfo<BLContextCore> {
+  using ImplType = BLContextImpl;
 
-static constexpr const double kMinimumTolerance = 0.01;
-static constexpr const double kMaximumTolerance = 0.50;
+  static constexpr bool kHasInitSSO = false;
 
-//! \}
+  static BL_INLINE BLResult free_object(BLContextCore* self, ImplType* impl, ObjectLayer::MetaByte meta_byte) noexcept {
+    axl::maybe_unused(impl, meta_byte);
+    return self->_virt()->base.destroy(self);
+  }
+};
 
-//! \name BLContext - Private - State Construction & Destruction
-//! \{
+static constexpr const float context_min_tolerance = 0.01f;
+static constexpr const float context_max_tolerance = 0.50f;
 
-static BL_INLINE void init_state(BLContextState* self) noexcept {
+static BL_INLINE void context_init_state(BLContextState* self) noexcept {
   self->target_image = nullptr;
   self->target_size.reset();
   self->hints.reset();
@@ -45,21 +49,23 @@ static BL_INLINE void init_state(BLContextState* self) noexcept {
   self->style_alpha[BL_CONTEXT_STYLE_SLOT_STROKE] = 1.0;
 
   bl_stroke_options_init(&self->stroke_options);
-  self->approximation_options = PathInternal::make_default_approximation_options();
+  self->approximation_options = PathDetail::make_default_approximation_options();
 
   self->meta_transform.reset();
   self->user_transform.reset();
 }
 
-static BL_INLINE void destroy_state(BLContextState* self) noexcept {
-  bl_array_reset(&self->stroke_options.dash_array);
+static BL_INLINE void context_destroy_state(BLContextState* self) noexcept {
+  bl_stroke_options_destroy(&self->stroke_options);
 }
 
-//! \}
+static BL_INLINE_NODEBUG const BLContextState* context_get_state(const BLContextCore* self) noexcept {
+  return static_cast<const BLContextState*>(self->_d.dyn.extra_ptr);
+}
 
-} // {bl::ContextInternal}
+} // {bl}
 
 //! \}
 //! \endcond
 
-#endif // BLEND2D_CONTEXT_P_H_INCLUDED
+#endif // BLEND2D_CORE_CONTEXT_P_H_INCLUDED

@@ -9,7 +9,7 @@
 #define BLEND2D_TEST_CONTEXT_BASEAPP_H_INCLUDED
 
 #include <blend2d/blend2d.h>
-#include <blend2d-testing/commons/cmdline.h>
+#include <blend2d-testing/commons/zero_lib.h>
 #include <blend2d-testing/tests/bl_test_context_utilities.h>
 
 #include <vector>
@@ -61,7 +61,7 @@ public:
   ~BaseTestApp();
 
   static TestOptions make_default_options();
-  bool parse_common_options(const CmdLine& cmd_line);
+  bool parse_common_options(const ZeroLib::CmdLine& cmd_line);
 
   template<typename RunFunc>
   void dispatch_runs(RunFunc&& run) {
@@ -86,7 +86,7 @@ public:
     }
   }
 
-  void print_app_info(const char* title, bool quiet) const;
+  void print_app_info(const char* title) const;
   void print_common_options(const TestOptions& test_options) const;
   void print_formats() const;
   void print_comp_ops() const;

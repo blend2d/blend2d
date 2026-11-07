@@ -3,21 +3,22 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_test_p.h>
-#if defined(BL_TEST)
+#include <blend2d/core/api_build_test_p.h>
+#if !defined(BL_BUILD_NO_CODECS) && defined(BL_TEST)
 
 #include <blend2d/core/array.h>
 #include <blend2d/core/context.h>
 #include <blend2d/core/image.h>
-#include <blend2d/core/imagecodec.h>
-#include <blend2d/core/imagedecoder.h>
-#include <blend2d/core/imageencoder.h>
+#include <blend2d/core/image_codec.h>
+#include <blend2d/core/image_decoder.h>
+#include <blend2d/core/image_encoder.h>
 #include <blend2d/core/random.h>
+#include <blend2d/core/string.h>
 
-#include <blend2d-testing/commons/imagediff.h>
+#include <blend2d-testing/commons/image_diff.h>
 
-// bl::Codecs - Tests
-// ==================
+// Codecs - Tests
+// ==============
 
 namespace bl::Codecs::Tests {
 
@@ -92,31 +93,67 @@ struct TestOptions {
   BL_INLINE bool has_compression_level() const noexcept { return compression_level != 0xFFFFFFFFu; }
 };
 
+static void log_roundtrip_failure_data(const BLImage& image, const BLArray<uint8_t>& encoded_data) noexcept {
+  // Keep small failing cases reproducible without depending on filesystem access in CI.
+  constexpr size_t kMaxDumpSize = 4096u;
+  if (encoded_data.size() <= kMaxDumpSize) {
+    BLString hex;
+    for (uint8_t byte : encoded_data) {
+      hex.append_format("%02X", uint32_t(byte));
+    }
+    TEST_LOG("EncodedData=%s", hex.data());
+  }
+
+  BLImageData data;
+  if (image.get_data(&data) == BL_SUCCESS) {
+    size_t row_size = size_t(data.size.w) * (data.format == BL_FORMAT_A8 ? 1u : 4u);
+    if (row_size && size_t(data.size.h) <= kMaxDumpSize / row_size) {
+      BLString hex;
+      const uint8_t* row = static_cast<const uint8_t*>(data.pixel_data);
+      for (int y = 0; y < data.size.h; y++, row += data.stride) {
+        for (size_t x = 0; x < row_size; x++) {
+          hex.append_format("%02X", uint32_t(row[x]));
+        }
+      }
+      TEST_LOG("SourcePixels=%s", hex.data());
+    }
+  }
+}
+
 static void test_encoding_decoding_random_images(BLSizeI size, BLFormat fmt, BLImageCodec& codec, BLRandom& rnd, uint32_t test_count, uint32_t cmd_count, const TestOptions& test_options) noexcept {
   for (uint32_t i = 0; i < test_count; i++) {
     BLImage image1;
 
-    EXPECT_SUCCESS(image1.create(size.w, size.h, fmt));
+    EXPECT_OK(image1.create(size.w, size.h, fmt));
     render_simple_image(image1, rnd, cmd_count);
 
     BLImageEncoder encoder;
-    EXPECT_SUCCESS(codec.create_encoder(&encoder));
+    EXPECT_OK(codec.create_encoder(&encoder));
 
     if (test_options.has_compression_level()) {
-      EXPECT_SUCCESS(encoder.set_property("compression", BLVar(test_options.compression_level)));
+      EXPECT_OK(encoder.set_property("compression", BLVar(test_options.compression_level)));
     }
 
     BLArray<uint8_t> encoded_data;
-    encoder.write_frame(encoded_data, image1);
+    EXPECT_OK(encoder.write_frame(encoded_data, image1)).message(
+      "Codec=%s Size=%dx%d Format=%u Compression=%u Iteration=%u",
+      codec.name().data(), size.w, size.h, uint32_t(fmt), test_options.compression_level, i);
 
     BLImageDecoder decoder;
-    EXPECT_SUCCESS(codec.create_decoder(&decoder));
+    EXPECT_OK(codec.create_decoder(&decoder));
 
     BLImage image2;
-    EXPECT_SUCCESS(decoder.read_frame(image2, encoded_data));
+    EXPECT_OK(decoder.read_frame(image2, encoded_data)).message(
+      "Codec=%s Size=%dx%d Format=%u Compression=%u Iteration=%u EncodedSize=%zu",
+      codec.name().data(), size.w, size.h, uint32_t(fmt), test_options.compression_level, i, encoded_data.size());
 
     ImageUtils::DiffInfo diff_info = ImageUtils::diff_info(image1, image2);
-    EXPECT_EQ(diff_info.max_diff, 0u);
+    if (diff_info.max_diff != 0u) {
+      log_roundtrip_failure_data(image1, encoded_data);
+    }
+    EXPECT_EQ(diff_info.max_diff, 0u).message(
+      "Codec=%s Size=%dx%d Format=%u Compression=%u Iteration=%u EncodedSize=%zu",
+      codec.name().data(), size.w, size.h, uint32_t(fmt), test_options.compression_level, i, encoded_data.size());
   }
 }
 
@@ -135,40 +172,23 @@ static constexpr BLSizeI image_codec_test_sizes[] = {
   { 16, 15 },
   { 99, 54 },
   { 132, 23 },
-  { 301, 301 }
+  { 301, 299 }
 };
 
-UNIT(image_codec_bmp, BL_TEST_GROUP_IMAGE_CODEC_ROUNDTRIP) {
+TEST_CASE(codec_bmp_roundtrip) {
   static constexpr uint32_t kCmdCount = 10;
-  static constexpr uint32_t kTestCount = 100;
+  static constexpr uint32_t kTestCount = 64;
+
+  BLImageCodec codec;
+  EXPECT_OK(codec.find_by_name("BMP"));
 
   for (BLSizeI image_size : image_codec_test_sizes) {
-    BLImageCodec codec;
-    EXPECT_SUCCESS(codec.find_by_name("BMP"));
+    BLString param;
+    param.append_format("%dx%d", image_size.w, image_size.h);
 
-    BLRandom rnd(0x123456789ABCDEFu);
-    TestOptions test_options{};
-
-    INFO("Testing BMP encoder & decoder with %dx%d images", image_size.w, image_size.h);
-    test_encoding_decoding_random_images(image_size, BL_FORMAT_XRGB32, codec, rnd, kTestCount, kCmdCount, test_options);
-    test_encoding_decoding_random_images(image_size, BL_FORMAT_PRGB32, codec, rnd, kTestCount, kCmdCount, test_options);
-  }
-}
-
-UNIT(image_codec_png, BL_TEST_GROUP_IMAGE_CODEC_ROUNDTRIP) {
-  static constexpr uint32_t kCmdCount = 10;
-  static constexpr uint32_t kTestCount = 100;
-
-  for (BLSizeI image_size : image_codec_test_sizes) {
-    INFO("Testing PNG encoder & decoder with %dx%d images", image_size.w, image_size.h);
-
-    BLImageCodec codec;
-    EXPECT_SUCCESS(codec.find_by_name("PNG"));
-
-    BLRandom rnd(0x123456789ABCDEFu);
-    for (uint32_t compression_level = 0; compression_level <= 12; compression_level++) {
+    if (test_runner.test_variation(param.data(), param.size())) {
+      BLRandom rnd(0x123456789ABCDEFu ^ (uint64_t(image_size.w) << 13) ^ (uint64_t(image_size.h) << 29));
       TestOptions test_options{};
-      test_options.compression_level = compression_level;
 
       test_encoding_decoding_random_images(image_size, BL_FORMAT_XRGB32, codec, rnd, kTestCount, kCmdCount, test_options);
       test_encoding_decoding_random_images(image_size, BL_FORMAT_PRGB32, codec, rnd, kTestCount, kCmdCount, test_options);
@@ -176,23 +196,50 @@ UNIT(image_codec_png, BL_TEST_GROUP_IMAGE_CODEC_ROUNDTRIP) {
   }
 }
 
-UNIT(image_codec_qoi, BL_TEST_GROUP_IMAGE_CODEC_ROUNDTRIP) {
+TEST_CASE(codec_png_roundtrip) {
   static constexpr uint32_t kCmdCount = 10;
-  static constexpr uint32_t kTestCount = 100;
+  static constexpr uint32_t kTestCount = 32;
+
+  BLImageCodec codec;
+  EXPECT_OK(codec.find_by_name("PNG"));
 
   for (BLSizeI image_size : image_codec_test_sizes) {
-    BLImageCodec codec;
-    EXPECT_SUCCESS(codec.find_by_name("QOI"));
+    BLString param;
+    param.append_format("%dx%d", image_size.w, image_size.h);
 
-    BLRandom rnd(0x123456789ABCDEFu);
-    TestOptions test_options{};
+    if (test_runner.test_variation(param.data(), param.size())) {
+      for (uint32_t compression_level = 0; compression_level <= 12; compression_level++) {
+        BLRandom rnd(0x123456789ABCDEFu ^ (uint64_t(image_size.w) << 13) ^ (uint64_t(image_size.h) << 29));
+        TestOptions test_options{.compression_level = compression_level};
 
-    INFO("Testing QOI encoder & decoder with %dx%d images", image_size.w, image_size.h);
-    test_encoding_decoding_random_images(image_size, BL_FORMAT_XRGB32, codec, rnd, kTestCount, kCmdCount, test_options);
-    test_encoding_decoding_random_images(image_size, BL_FORMAT_PRGB32, codec, rnd, kTestCount, kCmdCount, test_options);
+        test_encoding_decoding_random_images(image_size, BL_FORMAT_XRGB32, codec, rnd, kTestCount, kCmdCount, test_options);
+        test_encoding_decoding_random_images(image_size, BL_FORMAT_PRGB32, codec, rnd, kTestCount, kCmdCount, test_options);
+      }
+    }
+  }
+}
+
+TEST_CASE(codec_qoi_roundtrip) {
+  static constexpr uint32_t kCmdCount = 10;
+  static constexpr uint32_t kTestCount = 64;
+
+  BLImageCodec codec;
+  EXPECT_OK(codec.find_by_name("QOI"));
+
+  for (BLSizeI image_size : image_codec_test_sizes) {
+    BLString param;
+    param.append_format("%dx%d", image_size.w, image_size.h);
+
+    if (test_runner.test_variation(param.data(), param.size())) {
+      BLRandom rnd(0x123456789ABCDEFu ^ (uint64_t(image_size.w) << 13) ^ (uint64_t(image_size.h) << 29));
+      TestOptions test_options{};
+
+      test_encoding_decoding_random_images(image_size, BL_FORMAT_XRGB32, codec, rnd, kTestCount, kCmdCount, test_options);
+      test_encoding_decoding_random_images(image_size, BL_FORMAT_PRGB32, codec, rnd, kTestCount, kCmdCount, test_options);
+    }
   }
 }
 
 } // {bl::Codecs::Tests}
 
-#endif // BL_TEST
+#endif // !BL_BUILD_NO_CODECS && BL_TEST

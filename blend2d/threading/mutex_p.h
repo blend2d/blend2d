@@ -6,12 +6,14 @@
 #ifndef BLEND2D_THREADING_MUTEX_P_H_INCLUDED
 #define BLEND2D_THREADING_MUTEX_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
-#include <utility>
+#include <blend2d/axl/commons.h>
+#include <blend2d/core/api_internal_p.h>
 
 #if !defined(_WIN32)
   #include <pthread.h>
 #endif
+
+namespace bl {
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -24,27 +26,27 @@
 //!
 //! Locks the given mutex at construction time and unlocks it when destroyed.
 template<typename MutexType>
-class BLLockGuard {
+class LockGuard {
 public:
-  BL_NONCOPYABLE(BLLockGuard)
+  BL_NONCOPYABLE(LockGuard)
 
   //! Pointer to the mutex in use.
   MutexType* _mutex;
 
-  //! Creates an instance of `BLLockGuard` and locks the given `mutex`.
-  BL_INLINE explicit BLLockGuard(MutexType& mutex) noexcept : _mutex(&mutex) {
+  //! Creates an instance of `LockGuard` and locks the given `mutex`.
+  BL_INLINE explicit LockGuard(MutexType& mutex) noexcept : _mutex(&mutex) {
     BL_ASSUME(_mutex != nullptr);
     _mutex->lock();
   }
 
-  //! Creates an instance of `BLLockGuard` and locks the given `mutex`.
-  BL_INLINE explicit BLLockGuard(MutexType* mutex) noexcept : _mutex(mutex) {
+  //! Creates an instance of `LockGuard` and locks the given `mutex`.
+  BL_INLINE explicit LockGuard(MutexType* mutex) noexcept : _mutex(mutex) {
     BL_ASSUME(_mutex != nullptr);
     _mutex->lock();
   }
 
-  //! Destroys `BLSharedLockGuard` and unlocks the `mutex`.
-  BL_INLINE ~BLLockGuard() noexcept {
+  //! Destroys `SharedLockGuard` and unlocks the `mutex`.
+  BL_INLINE ~LockGuard() noexcept {
     if (_mutex)
       _mutex->unlock();
   }
@@ -56,27 +58,27 @@ public:
 };
 
 template<typename MutexType>
-class BLSharedLockGuard {
+class SharedLockGuard {
 public:
-  BL_NONCOPYABLE(BLSharedLockGuard)
+  BL_NONCOPYABLE(SharedLockGuard)
 
   //! Pointer to the mutex in use.
   MutexType* _mutex;
 
-  //! Creates an instance of `BLSharedLockGuard` and locks the given `mutex`.
-  BL_INLINE explicit BLSharedLockGuard(MutexType& mutex) noexcept : _mutex(&mutex) {
+  //! Creates an instance of `SharedLockGuard` and locks the given `mutex`.
+  BL_INLINE explicit SharedLockGuard(MutexType& mutex) noexcept : _mutex(&mutex) {
     BL_ASSUME(_mutex != nullptr);
     _mutex->lock_shared();
   }
 
-  //! Creates an instance of `BLSharedLockGuard` and locks the given `mutex`.
-  BL_INLINE explicit BLSharedLockGuard(MutexType* mutex) noexcept : _mutex(mutex) {
+  //! Creates an instance of `SharedLockGuard` and locks the given `mutex`.
+  BL_INLINE explicit SharedLockGuard(MutexType* mutex) noexcept : _mutex(mutex) {
     BL_ASSUME(_mutex != nullptr);
     _mutex->lock_shared();
   }
 
-  //! Destroys `BLSharedLockGuard` and unlocks the `mutex`.
-  BL_INLINE ~BLSharedLockGuard() noexcept {
+  //! Destroys `SharedLockGuard` and unlocks the `mutex`.
+  BL_INLINE ~SharedLockGuard() noexcept {
     if (_mutex)
       _mutex->unlock_shared();
   }
@@ -102,14 +104,14 @@ public:
 //!     is not recursive by design, which is what we expect from mutex in Blend2D.
 //!
 //! \note The API should be similar to `std::mutex`, however, member functions never throw an exception.
-class BLMutex {
+class Mutex {
 public:
-  BL_NONCOPYABLE(BLMutex)
+  BL_NONCOPYABLE(Mutex)
 
 #ifdef _WIN32
   SRWLOCK handle;
 
-  BL_INLINE BLMutex() noexcept : handle(SRWLOCK_INIT) {}
+  BL_INLINE Mutex() noexcept : handle(SRWLOCK_INIT) {}
 
   BL_INLINE void lock() noexcept { AcquireSRWLockExclusive(&handle); }
   BL_INLINE bool try_lock() noexcept { return TryAcquireSRWLockExclusive(&handle) != 0; }
@@ -118,34 +120,34 @@ public:
   pthread_mutex_t handle;
 
   #ifdef PTHREAD_MUTEX_INITIALIZER
-  BL_INLINE BLMutex() noexcept : handle(PTHREAD_MUTEX_INITIALIZER) {}
+  BL_INLINE Mutex() noexcept : handle(PTHREAD_MUTEX_INITIALIZER) {}
   #else
-  BL_INLINE BLMutex() noexcept { pthread_mutex_init(&handle, nullptr); }
+  BL_INLINE Mutex() noexcept { pthread_mutex_init(&handle, nullptr); }
   #endif
-  BL_INLINE ~BLMutex() noexcept { pthread_mutex_destroy(&handle); }
+  BL_INLINE ~Mutex() noexcept { pthread_mutex_destroy(&handle); }
 
   BL_INLINE void lock() noexcept { pthread_mutex_lock(&handle); }
   BL_INLINE bool try_lock() noexcept { return pthread_mutex_trylock(&handle) == 0; }
   BL_INLINE void unlock() noexcept { pthread_mutex_unlock(&handle); }
 #endif
 
-  //! Protects the execution of the given function with `BLLockGuard` making the execution exclusive.
+  //! Protects the execution of the given function with `LockGuard` making the execution exclusive.
   template<typename Fn>
-  BL_INLINE decltype(std::declval<Fn>()()) protect(Fn&& fn) noexcept {
-    BLLockGuard<BLMutex> guard(this);
-    return BLInternal::forward<Fn>(fn)();
+  BL_INLINE auto protect(Fn&& fn) noexcept {
+    LockGuard<Mutex> guard(this);
+    return axl::forward<Fn>(fn)();
   }
 };
 
-//! Similar to `BLMutex`, but extends the functionality by allowing shared and exclusive access levels.
-class BLSharedMutex {
+//! Similar to `Mutex`, but extends the functionality by allowing shared and exclusive access levels.
+class SharedMutex {
 public:
-  BL_NONCOPYABLE(BLSharedMutex)
+  BL_NONCOPYABLE(SharedMutex)
 
 #ifdef _WIN32
   SRWLOCK handle;
 
-  BL_INLINE BLSharedMutex() noexcept : handle(SRWLOCK_INIT) {}
+  BL_INLINE SharedMutex() noexcept : handle(SRWLOCK_INIT) {}
 
   BL_INLINE void lock() noexcept { AcquireSRWLockExclusive(&handle); }
   BL_INLINE void try_lock() noexcept { TryAcquireSRWLockExclusive(&handle); }
@@ -158,11 +160,11 @@ public:
   pthread_rwlock_t handle;
 
   #ifdef PTHREAD_RWLOCK_INITIALIZER
-  BL_INLINE BLSharedMutex() noexcept : handle(PTHREAD_RWLOCK_INITIALIZER) {}
+  BL_INLINE SharedMutex() noexcept : handle(PTHREAD_RWLOCK_INITIALIZER) {}
   #else
-  BL_INLINE BLSharedMutex() noexcept { pthread_rwlock_init(&handle, nullptr); }
+  BL_INLINE SharedMutex() noexcept { pthread_rwlock_init(&handle, nullptr); }
   #endif
-  BL_INLINE ~BLSharedMutex() noexcept { pthread_rwlock_destroy(&handle); }
+  BL_INLINE ~SharedMutex() noexcept { pthread_rwlock_destroy(&handle); }
 
   BL_INLINE void lock() noexcept { pthread_rwlock_wrlock(&handle); }
   BL_INLINE bool try_lock() noexcept { return pthread_rwlock_trywrlock(&handle) == 0; }
@@ -173,18 +175,18 @@ public:
   BL_INLINE void unlock_shared() noexcept { pthread_rwlock_unlock(&handle); }
 #endif
 
-  //! Protects the execution of the given function with `BLLockGuard` making the execution exclusive.
+  //! Protects the execution of the given function with `LockGuard` making the execution exclusive.
   template<typename Fn>
-  BL_INLINE decltype(std::declval<Fn>()()) protect(Fn&& fn) noexcept {
-    BLLockGuard<BLSharedMutex> guard(this);
-    return BLInternal::forward<Fn>(fn)();
+  BL_INLINE auto protect(Fn&& fn) noexcept {
+    LockGuard<SharedMutex> guard(this);
+    return axl::forward<Fn>(fn)();
   }
 
-  //! Protects the execution of the given function with `BLSharedLockGuard` making the execution shared.
+  //! Protects the execution of the given function with `SharedLockGuard` making the execution shared.
   template<typename Fn>
-  BL_INLINE decltype(std::declval<Fn>()()) protect_shared(Fn&& fn) noexcept {
-    BLSharedLockGuard<BLSharedMutex> guard(this);
-    return BLInternal::forward<Fn>(fn)();
+  BL_INLINE auto protect_shared(Fn&& fn) noexcept {
+    SharedLockGuard<SharedMutex> guard(this);
+    return axl::forward<Fn>(fn)();
   }
 };
 
@@ -192,5 +194,7 @@ public:
 
 //! \}
 //! \endcond
+
+} // {bl}
 
 #endif // BLEND2D_THREADING_MUTEX_P_H_INCLUDED

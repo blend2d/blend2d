@@ -3,10 +3,10 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_RUNTIME_P_H_INCLUDED
-#define BLEND2D_RUNTIME_P_H_INCLUDED
+#ifndef BLEND2D_CORE_RUNTIME_P_H_INCLUDED
+#define BLEND2D_CORE_RUNTIME_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/core/api_internal_p.h>
 #include <blend2d/core/runtime.h>
 #include <blend2d/threading/atomic_p.h>
 
@@ -33,14 +33,14 @@ struct BLRuntimeHandlers {
   template<typename... Args>
   BL_INLINE void call(Args&&... args) noexcept {
     for (size_t i = 0; i < size; i++)
-      data[i](BLInternal::forward<Args>(args)...);
+      data[i](bl::Internal::forward<Args>(args)...);
   }
 
   template<typename... Args>
   BL_INLINE void call_in_reverse_order(Args&&... args) noexcept {
     size_t i = size;
     while (i)
-      data[--i](BLInternal::forward<Args>(args)...);
+      data[--i](bl::Internal::forward<Args>(args)...);
   }
 };
 
@@ -62,7 +62,7 @@ struct BLRuntimeOptimizationInfo {
   uint32_t cpu_hints;
 
   BL_INLINE bool has_cpu_hint(uint32_t hint) const noexcept { return (cpu_hints & hint) != 0; }
-  BL_INLINE bool hasFastAvx256() const noexcept { return has_cpu_hint(BL_RUNTIME_CPU_HINT_FAST_AVX256); }
+  BL_INLINE bool has_fast_avx256() const noexcept { return has_cpu_hint(BL_RUNTIME_CPU_HINT_FAST_AVX256); }
   BL_INLINE bool has_fast_pshufb() const noexcept { return has_cpu_hint(BL_RUNTIME_CPU_HINT_FAST_PSHUFB); }
   BL_INLINE bool has_fast_pmulld() const noexcept { return has_cpu_hint(BL_RUNTIME_CPU_HINT_FAST_PMULLD); }
 };
@@ -118,82 +118,84 @@ BL_HIDDEN extern BLRuntimeContext bl_runtime_context;
 
 // NOTE: Must be in anonymous namespace. When the compilation unit uses certain optimizations we constexpr the
 // check and return `true` without checking CPU features as the compilation unit uses them anyway [at that point].
-BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
+namespace {
 
 //! Returns true if the target architecture is 32-bit.
 static constexpr bool bl_runtime_is_32bit() noexcept { return BL_TARGET_ARCH_BITS < 64; }
 
-namespace {
-
 #if defined(BL_TARGET_OPT_SSE2)
-constexpr bool bl_runtime_has_sse2(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool bl_runtime_has_sse2([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
 #else
 BL_INLINE bool bl_runtime_has_sse2(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_X86_SSE2) != 0; }
 #endif
 
 #if defined(BL_TARGET_OPT_SSE3)
-constexpr bool bl_runtime_has_sse3(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool bl_runtime_has_sse3([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
 #else
 BL_INLINE bool bl_runtime_has_sse3(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_X86_SSE3) != 0; }
 #endif
 
 #if defined(BL_TARGET_OPT_SSSE3)
-constexpr bool bl_runtime_has_ssse3(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool bl_runtime_has_ssse3([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
 #else
 BL_INLINE bool bl_runtime_has_ssse3(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_X86_SSSE3) != 0; }
 #endif
 
 #if defined(BL_TARGET_OPT_SSE4_1)
-constexpr bool bl_runtime_has_sse4_1(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool bl_runtime_has_sse4_1([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
 #else
 BL_INLINE bool bl_runtime_has_sse4_1(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_X86_SSE4_1) != 0; }
 #endif
 
 #if defined(BL_TARGET_OPT_SSE4_2)
-constexpr bool bl_runtime_has_sse4_2(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool bl_runtime_has_sse4_2([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
 #else
 BL_INLINE bool bl_runtime_has_sse4_2(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_X86_SSE4_2) != 0; }
 #endif
 
 #if defined(BL_TARGET_OPT_AVX)
-constexpr bool bl_runtime_has_avx(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool bl_runtime_has_avx([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
 #else
 BL_INLINE bool bl_runtime_has_avx(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_X86_AVX) != 0; }
 #endif
 
 #if defined(BL_TARGET_OPT_AVX2)
-constexpr bool bl_runtime_has_avx2(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool bl_runtime_has_avx2([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
 #else
 BL_INLINE bool bl_runtime_has_avx2(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_X86_AVX2) != 0; }
 #endif
 
 #if defined(BL_TARGET_OPT_AVX512)
-constexpr bool bl_runtime_has_avx512(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool bl_runtime_has_avx512([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
 #else
 BL_INLINE bool bl_runtime_has_avx512(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_X86_AVX512) != 0; }
 #endif
 
+#if defined(BL_TARGET_OPT_AVX512_V2)
+constexpr bool bl_runtime_has_avx512_v2([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
+#else
+BL_INLINE bool bl_runtime_has_avx512_v2(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_X86_AVX512_V2) != 0; }
+#endif
+
 #if defined(BL_TARGET_OPT_ASIMD)
-constexpr bool bl_runtime_has_asimd(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool bl_runtime_has_asimd([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
 #else
 constexpr bool bl_runtime_has_asimd(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_ARM_ASIMD) != 0; }
 #endif
 
 #if defined(BL_TARGET_OPT_ASIMD_CRYPTO)
-constexpr bool bl_runtime_has_crc32(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool bl_runtime_has_crc32([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
 #else
 constexpr bool bl_runtime_has_crc32(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_ARM_CRC32) != 0; }
 #endif
 
 #if defined(BL_TARGET_OPT_ASIMD_CRYPTO)
-constexpr bool bl_runtime_has_pmull(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool bl_runtime_has_pmull([[maybe_unused]] BLRuntimeContext* rt) noexcept { return true; }
 #else
 constexpr bool bl_runtime_has_pmull(BLRuntimeContext* rt) noexcept { return (rt->system_info.cpu_features & BL_RUNTIME_CPU_FEATURE_ARM_PMULL) != 0; }
 #endif
 
 } // {anonymous}
-
-BL_DIAGNOSTIC_POP
 
 [[noreturn]]
 BL_HIDDEN void bl_runtime_failure(const char* fmt, ...) noexcept;
@@ -206,15 +208,21 @@ BL_HIDDEN void bl_zero_allocator_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_compression_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_pixel_ops_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_bit_array_rt_init(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void bl_bit_set_rt_init(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void bl_coverage_set_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_array_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_string_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_transform_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_path_rt_init(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void bl_stroke_options_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_image_rt_init(BLRuntimeContext* rt) noexcept;
+
+#if !defined(BL_BUILD_NO_CODECS)
 BL_HIDDEN void bl_image_codec_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_image_decoder_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_image_encoder_rt_init(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void bl_register_built_in_codecs(BLRuntimeContext* rt) noexcept;
+#endif // !BL_BUILD_NO_CODECS
+
 BL_HIDDEN void bl_image_scale_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_pattern_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_gradient_rt_init(BLRuntimeContext* rt) noexcept;
@@ -232,9 +240,7 @@ BL_HIDDEN void bl_static_pipeline_rt_init(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_dynamic_pipeline_rt_init(BLRuntimeContext* rt) noexcept;
 #endif
 
-BL_HIDDEN void bl_register_built_in_codecs(BLRuntimeContext* rt) noexcept;
-
 //! \}
 //! \endcond
 
-#endif // BLEND2D_RUNTIME_P_H_INCLUDED
+#endif // BLEND2D_CORE_RUNTIME_P_H_INCLUDED

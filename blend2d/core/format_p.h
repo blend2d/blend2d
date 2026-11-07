@@ -3,12 +3,12 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_FORMAT_P_H_INCLUDED
-#define BLEND2D_FORMAT_P_H_INCLUDED
+#ifndef BLEND2D_CORE_FORMAT_P_H_INCLUDED
+#define BLEND2D_CORE_FORMAT_P_H_INCLUDED
 
+#include <blend2d/axl/commons.h>
+#include <blend2d/axl/lookuptable_p.h>
 #include <blend2d/core/format.h>
-#include <blend2d/support/intops_p.h>
-#include <blend2d/support/lookuptable_p.h>
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -134,9 +134,9 @@ static void assign_absolute_masks(BLFormatInfo& info, const T* masks, size_t n =
       continue;
     }
 
-    uint32_t shift = IntOps::ctz(m);
+    uint32_t shift = axl::ctz(m);
     m >>= shift;
-    uint32_t size = m >= 0xFFFFFFFFu ? uint32_t(32) : IntOps::ctz(~uint32_t(m));
+    uint32_t size = m >= 0xFFFFFFFFu ? uint32_t(32) : axl::ctz(~uint32_t(m));
 
     info.sizes[i] = uint8_t(size);
     info.shifts[i] = uint8_t(shift);
@@ -149,4 +149,4 @@ static void assign_absolute_masks(BLFormatInfo& info, const T* masks, size_t n =
 //! \}
 //! \endcond
 
-#endif // BLEND2D_FORMAT_P_H_INCLUDED
+#endif // BLEND2D_CORE_FORMAT_P_H_INCLUDED

@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include <blend2d/blend2d.h>
-#include <blend2d-testing/commons/imagediff.h>
+#include <blend2d-testing/commons/image_diff.h>
 #include <blend2d-testing/resources/abeezee_regular_ttf.h>
 #include <blend2d-testing/tests/bl_test_context_baseapp.h>
 
@@ -36,25 +36,25 @@ TestOptions BaseTestApp::make_default_options() {
   return opt;
 }
 
-bool BaseTestApp::parse_common_options(const CmdLine& cmd_line) {
+bool BaseTestApp::parse_common_options(const ZeroLib::CmdLine& cmd_line) {
   using namespace StringUtils;
 
   options.width = cmd_line.value_as_uint("--width", default_options.width);
   options.height = cmd_line.value_as_uint("--height", default_options.height);
   options.count = cmd_line.value_as_uint("--count", default_options.count);
   options.seed = cmd_line.value_as_uint("--seed", default_options.seed);
-  options.style_id = parse_style_id(cmd_line.value_of("--style", style_id_to_string(default_options.style_id)));
-  options.style_op = parse_style_op(cmd_line.value_of("--style-op", style_op_to_string(default_options.style_op)));
-  options.comp_op = parse_comp_op(cmd_line.value_of("--comp-op", comp_op_to_string(default_options.comp_op)));
-  options.opacity_op = parse_opacity_op(cmd_line.value_of("--opacity-op", opacity_op_to_string(default_options.opacity_op)));
-  options.command = parse_command_id(cmd_line.value_of("--command", command_id_to_string(default_options.command)));
-  options.font = cmd_line.value_of("--font", "built-in");
+  options.style_id = parse_style_id(cmd_line.get_arg("--style", style_id_to_string(default_options.style_id)));
+  options.style_op = parse_style_op(cmd_line.get_arg("--style-op", style_op_to_string(default_options.style_op)));
+  options.comp_op = parse_comp_op(cmd_line.get_arg("--comp-op", comp_op_to_string(default_options.comp_op)));
+  options.opacity_op = parse_opacity_op(cmd_line.get_arg("--opacity-op", opacity_op_to_string(default_options.opacity_op)));
+  options.command = parse_command_id(cmd_line.get_arg("--command", command_id_to_string(default_options.command)));
+  options.font = cmd_line.get_arg("--font", "built-in");
   options.font_size = cmd_line.value_as_uint("--font-size", default_options.font_size);
   options.face_index = cmd_line.value_as_uint("--face-index", default_options.face_index);
   options.quiet = cmd_line.has_arg("--quiet") || default_options.quiet;
   options.store_images = cmd_line.has_arg("--store") || default_options.store_images;
 
-  const char* format_string = cmd_line.value_of("--format", "all");
+  const char* format_string = cmd_line.get_arg("--format", "all");
   options.format = parse_format(format_string);
 
   bool format_valid = options.format != BL_FORMAT_NONE;
@@ -72,22 +72,22 @@ bool BaseTestApp::parse_common_options(const CmdLine& cmd_line) {
     printf("Failed to process command line arguments:\n");
 
     if (!format_valid)
-      printf("  Unknown format '%s' - please use --help to list all available pixel formats\n", cmd_line.value_of("--format", ""));
+      printf("  Unknown format '%s' - please use --help to list all available pixel formats\n", cmd_line.get_arg("--format", ""));
 
     if (options.comp_op == CompOp::kUnknown)
-      printf("  Unknown comp_op '%s' - please use --help to list all available operators\n", cmd_line.value_of("--comp-op", ""));
+      printf("  Unknown comp_op '%s' - please use --help to list all available operators\n", cmd_line.get_arg("--comp-op", ""));
 
     if (options.opacity_op == OpacityOp::kUnknown)
-      printf("  Unknown opacity_op '%s' - please use --help to list all available options\n", cmd_line.value_of("--opacity-op", ""));
+      printf("  Unknown opacity_op '%s' - please use --help to list all available options\n", cmd_line.get_arg("--opacity-op", ""));
 
     if (options.style_id == StyleId::kUnknown)
-      printf("  Unknown style '%s' - please use --help to list all available styles\n", cmd_line.value_of("--style", ""));
+      printf("  Unknown style '%s' - please use --help to list all available styles\n", cmd_line.get_arg("--style", ""));
 
     if (options.style_op == StyleOp::kUnknown)
-      printf("  Unknown style-op '%s' - please use --help to list all available style options\n", cmd_line.value_of("--style-op", ""));
+      printf("  Unknown style-op '%s' - please use --help to list all available style options\n", cmd_line.get_arg("--style-op", ""));
 
     if (options.command == CommandId::kUnknown)
-      printf("  Unknown command '%s' - please use --help to list all available commands\n", cmd_line.value_of("--command", ""));
+      printf("  Unknown command '%s' - please use --help to list all available commands\n", cmd_line.get_arg("--command", ""));
 
     return false;
   }
@@ -187,22 +187,18 @@ bool BaseTestApp::parse_common_options(const CmdLine& cmd_line) {
   return true;
 }
 
-void BaseTestApp::print_app_info(const char* title, bool quiet) const {
-  printf("%s [use --help for command line options]\n", title);
+void BaseTestApp::print_app_info(const char* title) const {
+  BLRuntimeBuildInfo build_info;
+  BLRuntime::query_build_info(&build_info);
 
-  if (!quiet) {
-    BLRuntimeBuildInfo build_info;
-    BLRuntime::query_build_info(&build_info);
-    printf("  Version    : %u.%u.%u\n"
-           "  Build Type : %s\n"
-           "  Compiled By: %s\n\n",
-           build_info.major_version,
-           build_info.minor_version,
-           build_info.patch_version,
-           build_info.build_type == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
-           build_info.compiler_info);
-  }
-
+  printf(
+    "%s v%u.%u.%u %s/%s [--help for options]\n\n",
+    title,
+    build_info.major_version,
+    build_info.minor_version,
+    build_info.patch_version,
+    build_info.build_type == BL_RUNTIME_BUILD_TYPE_DEBUG ? "debug" : "release",
+    build_info.compiler_info);
   fflush(stdout);
 }
 
@@ -417,6 +413,7 @@ bool BaseTestApp::check_output(const char* test_id, const ContextTester& a_teste
 }
 
 void BaseTestApp::store_image(const BLImage& image, const char* name, const char* suffix) const {
+#if !defined(BL_BUILD_NO_CODECS) && !defined(BL_BUILD_NO_FILESYSTEM)
   BLString s;
   if (suffix)
     s.assign_format("%s-%s.png", name, suffix);
@@ -427,6 +424,7 @@ void BaseTestApp::store_image(const BLImage& image, const char* name, const char
     printf("  Storing %s\n", s.data());
 
   image.write_to_file(s.data());
+#endif // !BL_BUILD_NO_CODECS && !BL_BUILD_NO_FILESYSTEM
 }
 
 } // {ContextTests}

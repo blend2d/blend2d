@@ -6,10 +6,10 @@
 #ifndef BLEND2D_TABLES_TABLES_P_H_INCLUDED
 #define BLEND2D_TABLES_TABLES_P_H_INCLUDED
 
-#include <blend2d/support/lookuptable_p.h>
+#include <blend2d/axl/lookuptable_p.h>
 
 #if !defined(BL_BUILD_NO_JIT)
-#include <asmjit/ujit/vecconsttable.h>
+#include <asmjit/ujit/vec_const_table.h>
 #endif // !BL_BUILD_NO_JIT
 
 //! \cond INTERNAL

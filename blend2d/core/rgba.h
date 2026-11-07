@@ -3,8 +3,8 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_RGBA_H_INCLUDED
-#define BLEND2D_RGBA_H_INCLUDED
+#ifndef BLEND2D_CORE_RGBA_H_INCLUDED
+#define BLEND2D_CORE_RGBA_H_INCLUDED
 
 #include <blend2d/core/api.h>
 
@@ -23,7 +23,6 @@ struct BLRgba32 {
   BL_INLINE_NODEBUG BLRgba32() noexcept = default;
 
   BL_INLINE_CONSTEXPR BLRgba32(const BLRgba32&) noexcept = default;
-
   BL_INLINE_CONSTEXPR explicit BLRgba32(uint32_t rgba32) noexcept : value(rgba32) {}
 
   BL_INLINE_NODEBUG explicit BLRgba32(const BLRgba64& rgba64) noexcept { reset(rgba64); }
@@ -39,33 +38,23 @@ struct BLRgba32 {
 
   BL_INLINE_NODEBUG BLRgba32& operator=(const BLRgba32& other) noexcept = default;
 
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool operator==(const BLRgba32& other) const noexcept { return  equals(other); }
-
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool operator!=(const BLRgba32& other) const noexcept { return !equals(other); }
+  [[nodiscard]] BL_INLINE_CONSTEXPR bool operator==(const BLRgba32& other) const noexcept { return  equals(other); }
+  [[nodiscard]] BL_INLINE_CONSTEXPR bool operator!=(const BLRgba32& other) const noexcept { return !equals(other); }
 
   //! \}
 
   //! \name Accessors
   //! \{
 
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR uint32_t r() const noexcept { return (value >> 16) & 0xFFu; }
+  [[nodiscard]] BL_INLINE_CONSTEXPR uint32_t r() const noexcept { return (value >> 16) & 0xFFu; }
+  [[nodiscard]] BL_INLINE_CONSTEXPR uint32_t g() const noexcept { return (value >>  8) & 0xFFu; }
+  [[nodiscard]] BL_INLINE_CONSTEXPR uint32_t b() const noexcept { return (value >>  0) & 0xFFu; }
+  [[nodiscard]] BL_INLINE_CONSTEXPR uint32_t a() const noexcept { return (value >> 24); }
 
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR uint32_t g() const noexcept { return (value >>  8) & 0xFFu; }
-
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR uint32_t b() const noexcept { return (value >>  0) & 0xFFu; }
-
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR uint32_t a() const noexcept { return (value >> 24); }
-
-  BL_INLINE_NODEBUG void setR(uint32_t r) noexcept { value = (value & 0xFF00FFFFu) | (r << 16); }
-  BL_INLINE_NODEBUG void setG(uint32_t g) noexcept { value = (value & 0xFFFF00FFu) | (g <<  8); }
-  BL_INLINE_NODEBUG void setB(uint32_t b) noexcept { value = (value & 0xFFFFFF00u) | (b <<  0); }
-  BL_INLINE_NODEBUG void setA(uint32_t a) noexcept { value = (value & 0x00FFFFFFu) | (a << 24); }
+  BL_INLINE_NODEBUG void set_r(uint32_t r) noexcept { value = (value & 0xFF00FFFFu) | (r << 16); }
+  BL_INLINE_NODEBUG void set_g(uint32_t g) noexcept { value = (value & 0xFFFF00FFu) | (g <<  8); }
+  BL_INLINE_NODEBUG void set_b(uint32_t b) noexcept { value = (value & 0xFFFFFF00u) | (b <<  0); }
+  BL_INLINE_NODEBUG void set_a(uint32_t a) noexcept { value = (value & 0x00FFFFFFu) | (a << 24); }
 
   //! \}
 
@@ -94,12 +83,10 @@ struct BLRgba32 {
   //! \{
 
   //! Tests whether the color is fully-opaque (alpha equals 0xFFFF).
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool is_opaque() const noexcept { return value >= 0xFF000000u; }
+  [[nodiscard]] BL_INLINE_CONSTEXPR bool is_opaque() const noexcept { return value >= 0xFF000000u; }
 
   //! Tests whether the color is fully-transparent (alpha equals 0).
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool is_transparent() const noexcept { return value <= 0x00FFFFFFu; }
+  [[nodiscard]] BL_INLINE_CONSTEXPR bool is_transparent() const noexcept { return value <= 0x00FFFFFFu; }
 
   //! \}
 #endif
@@ -117,7 +104,6 @@ struct BLRgba64 {
   BL_INLINE_NODEBUG BLRgba64() noexcept = default;
 
   BL_INLINE_CONSTEXPR BLRgba64(const BLRgba64&) noexcept = default;
-
   BL_INLINE_CONSTEXPR explicit BLRgba64(uint64_t rgba64) noexcept : value(rgba64) {}
 
   BL_INLINE_CONSTEXPR BLRgba64(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFFFu) noexcept
@@ -141,33 +127,23 @@ struct BLRgba64 {
 
   BL_INLINE_NODEBUG BLRgba64& operator=(const BLRgba64& other) noexcept = default;
 
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool operator==(const BLRgba64& other) const noexcept { return  equals(other); }
-
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool operator!=(const BLRgba64& other) const noexcept { return !equals(other); }
+  [[nodiscard]] BL_INLINE_CONSTEXPR bool operator==(const BLRgba64& other) const noexcept { return  equals(other); }
+  [[nodiscard]] BL_INLINE_CONSTEXPR bool operator!=(const BLRgba64& other) const noexcept { return !equals(other); }
 
   //! \}
 
   //! \name Accessors
   //! \{
 
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR uint32_t r() const noexcept { return uint32_t((value >> 32) & 0xFFFFu); }
+  [[nodiscard]] BL_INLINE_CONSTEXPR uint32_t r() const noexcept { return uint32_t((value >> 32) & 0xFFFFu); }
+  [[nodiscard]] BL_INLINE_CONSTEXPR uint32_t g() const noexcept { return uint32_t((value >> 16) & 0xFFFFu); }
+  [[nodiscard]] BL_INLINE_CONSTEXPR uint32_t b() const noexcept { return uint32_t((value >>  0) & 0xFFFFu); }
+  [[nodiscard]] BL_INLINE_CONSTEXPR uint32_t a() const noexcept { return uint32_t((value >> 48)); }
 
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR uint32_t g() const noexcept { return uint32_t((value >> 16) & 0xFFFFu); }
-
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR uint32_t b() const noexcept { return uint32_t((value >>  0) & 0xFFFFu); }
-
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR uint32_t a() const noexcept { return uint32_t((value >> 48)); }
-
-  BL_INLINE_NODEBUG void setR(uint32_t r) noexcept { value = (value & 0xFFFF0000FFFFFFFFu) | (uint64_t(r) << 32); }
-  BL_INLINE_NODEBUG void setG(uint32_t g) noexcept { value = (value & 0xFFFFFFFF0000FFFFu) | (uint64_t(g) << 16); }
-  BL_INLINE_NODEBUG void setB(uint32_t b) noexcept { value = (value & 0xFFFFFFFFFFFF0000u) | (uint64_t(b) <<  0); }
-  BL_INLINE_NODEBUG void setA(uint32_t a) noexcept { value = (value & 0x0000FFFFFFFFFFFFu) | (uint64_t(a) << 48); }
+  BL_INLINE_NODEBUG void set_r(uint32_t r) noexcept { value = (value & 0xFFFF0000FFFFFFFFu) | (uint64_t(r) << 32); }
+  BL_INLINE_NODEBUG void set_g(uint32_t g) noexcept { value = (value & 0xFFFFFFFF0000FFFFu) | (uint64_t(g) << 16); }
+  BL_INLINE_NODEBUG void set_b(uint32_t b) noexcept { value = (value & 0xFFFFFFFFFFFF0000u) | (uint64_t(b) <<  0); }
+  BL_INLINE_NODEBUG void set_a(uint32_t a) noexcept { value = (value & 0x0000FFFFFFFFFFFFu) | (uint64_t(a) << 48); }
 
   //! \}
 
@@ -204,12 +180,10 @@ struct BLRgba64 {
   //! \{
 
   //! Tests whether the color is fully-opaque (alpha equals 0xFFFF).
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool is_opaque() const noexcept { return value >= 0xFFFF000000000000u; }
+  [[nodiscard]] BL_INLINE_CONSTEXPR bool is_opaque() const noexcept { return value >= 0xFFFF000000000000u; }
 
   //! Tests whether the color is fully-transparent (alpha equals 0).
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool is_transparent() const noexcept { return value <= 0x0000FFFFFFFFFFFFu; }
+  [[nodiscard]] BL_INLINE_CONSTEXPR bool is_transparent() const noexcept { return value <= 0x0000FFFFFFFFFFFFu; }
 
   //! \}
 #endif
@@ -234,9 +208,9 @@ struct BLRgba {
 
   BL_INLINE_CONSTEXPR BLRgba(const BLRgba&) noexcept = default;
 
-  BL_INLINE_CONSTEXPR BLRgba(float r_value, float gValue, float b_value, float a_value = 1.0f) noexcept
+  BL_INLINE_CONSTEXPR BLRgba(float r_value, float g_value, float b_value, float a_value = 1.0f) noexcept
     : r(r_value),
-      g(gValue),
+      g(g_value),
       b(b_value),
       a(a_value) {}
 
@@ -290,9 +264,9 @@ struct BLRgba {
     reset(other.r, other.g, other.b, other.a);
   }
 
-  BL_INLINE_NODEBUG void reset(float r_value, float gValue, float b_value, float a_value = 1.0f) noexcept {
+  BL_INLINE_NODEBUG void reset(float r_value, float g_value, float b_value, float a_value = 1.0f) noexcept {
     r = r_value;
-    g = gValue;
+    g = g_value;
     b = b_value;
     a = a_value;
   }
@@ -309,18 +283,22 @@ struct BLRgba {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRgba& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(r, other.r),
-                                bl_equals(g, other.g),
-                                bl_equals(b, other.b),
-                                bl_equals(a, other.a));
+    return bl::Internal::bool_and(
+      bl_equals(r, other.r),
+      bl_equals(g, other.g),
+      bl_equals(b, other.b),
+      bl_equals(a, other.a)
+    );
   }
 
   [[nodiscard]]
-  BL_INLINE_NODEBUG bool equals(float r_value, float gValue, float b_value, float a_value = 1.0f) const noexcept {
-    return BLInternal::bool_and(bl_equals(r, r_value),
-                                bl_equals(g, gValue),
-                                bl_equals(b, b_value),
-                                bl_equals(a, a_value));
+  BL_INLINE_NODEBUG bool equals(float r_value, float g_value, float b_value, float a_value = 1.0f) const noexcept {
+    return bl::Internal::bool_and(
+      bl_equals(r, r_value),
+      bl_equals(g, g_value),
+      bl_equals(b, b_value),
+      bl_equals(a, a_value)
+    );
   }
 
   //! \}
@@ -350,12 +328,10 @@ struct BLRgba {
   //! \{
 
   //! Tests whether the color is fully-opaque (alpha equals 1.0).
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool is_opaque() const noexcept { return a >= 1.0f; }
+  [[nodiscard]] BL_INLINE_CONSTEXPR bool is_opaque() const noexcept { return a >= 1.0f; }
 
   //! Tests whether the color is fully-transparent (alpha equals 0.0).
-  [[nodiscard]]
-  BL_INLINE_CONSTEXPR bool is_transparent() const noexcept { return a <= 0.0f; }
+  [[nodiscard]] BL_INLINE_CONSTEXPR bool is_transparent() const noexcept { return a <= 0.0f; }
 
   //! \}
 #endif
@@ -408,4 +384,4 @@ static_assert(sizeof(BLRgba64) == 8, "'BLRgba64' struct must be exactly 8 bytes 
 
 //! \}
 
-#endif // BLEND2D_RGBA_H_INCLUDED
+#endif // BLEND2D_CORE_RGBA_H_INCLUDED

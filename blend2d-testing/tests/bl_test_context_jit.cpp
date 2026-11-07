@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include <blend2d/blend2d.h>
-#include <blend2d-testing/commons/imagediff.h>
+#include <blend2d-testing/commons/image_diff.h>
 #include <blend2d-testing/tests/bl_test_context_baseapp.h>
 #include <blend2d-testing/tests/bl_test_context_utilities.h>
 
@@ -107,8 +107,8 @@ public:
     mismatch_count = 0;
   }
 
-  bool parse_jit_options(CmdLine cmd_line) {
-    const char* max_diff_value = cmd_line.value_of("--max-diff", "auto");
+  bool parse_jit_options(ZeroLib::CmdLine cmd_line) {
+    const char* max_diff_value = cmd_line.get_arg("--max-diff", "auto");
     if (strcmp(max_diff_value, "auto") == 0) {
       maximum_pixel_difference = 0xFFFFFFFFu;
     }
@@ -116,7 +116,7 @@ public:
       maximum_pixel_difference = cmd_line.value_as_uint("--max-diff", 0);
     }
 
-    const char* simd_level = cmd_line.value_of("--simd-level", "all");
+    const char* simd_level = cmd_line.get_arg("--simd-level", "all");
     if (simd_level) {
       if (StringUtils::strieq(simd_level, "native")) {
         // Nothing to do if configured to auto-detect.
@@ -148,6 +148,9 @@ public:
       }
       else if (StringUtils::strieq(simd_level, "avx512")) {
         selected_cpu_features = BL_RUNTIME_CPU_FEATURE_X86_AVX512;
+      }
+      else if (StringUtils::strieq(simd_level, "avx512_v2")) {
+        selected_cpu_features = BL_RUNTIME_CPU_FEATURE_X86_AVX512_V2;
       }
 #elif defined(BL_JIT_ARCH_A64)
       else if (strcmp(simd_level, "asimd") == 0) {
@@ -259,8 +262,8 @@ public:
     return !mismatch_count;
   }
 
-  int run(CmdLine cmd_line) {
-    print_app_info("Blend2D JIT Rendering Context Tester", cmd_line.has_arg("--quiet"));
+  int run(ZeroLib::CmdLine cmd_line) {
+    print_app_info("Blend2D JIT Rendering Context Tests");
 
     if (cmd_line.has_arg("--help"))
       return help();
@@ -278,7 +281,8 @@ public:
         BL_RUNTIME_CPU_FEATURE_X86_SSE4_2,
         BL_RUNTIME_CPU_FEATURE_X86_AVX,
         BL_RUNTIME_CPU_FEATURE_X86_AVX2,
-        BL_RUNTIME_CPU_FEATURE_X86_AVX512
+        BL_RUNTIME_CPU_FEATURE_X86_AVX512,
+        BL_RUNTIME_CPU_FEATURE_X86_AVX512_V2
       };
 
       BLRuntimeSystemInfo system_info {};
@@ -327,5 +331,5 @@ int main(int argc, char* argv[]) {
   BLRuntimeScope rt_scope;
   ContextTests::JITTestApp app;
 
-  return app.run(CmdLine(argc, argv));
+  return app.run(ZeroLib::CmdLine(argc, argv));
 }

@@ -3,8 +3,8 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_RUNTIME_H_INCLUDED
-#define BLEND2D_RUNTIME_H_INCLUDED
+#ifndef BLEND2D_CORE_RUNTIME_H_INCLUDED
+#define BLEND2D_CORE_RUNTIME_H_INCLUDED
 
 #include <blend2d/core/api.h>
 
@@ -74,6 +74,7 @@ BL_DEFINE_ENUM(BLRuntimeCpuFeatures) {
   BL_RUNTIME_CPU_FEATURE_X86_AVX = 0x00000020u,
   BL_RUNTIME_CPU_FEATURE_X86_AVX2 = 0x00000040u,
   BL_RUNTIME_CPU_FEATURE_X86_AVX512 = 0x00000080u,
+  BL_RUNTIME_CPU_FEATURE_X86_AVX512_V2 = 0x00000100u,
 
   BL_RUNTIME_CPU_FEATURE_ARM_ASIMD = 0x00000001u,
   BL_RUNTIME_CPU_FEATURE_ARM_CRC32 = 0x00000002u,
@@ -217,7 +218,7 @@ struct BLRuntimeResourceInfo {
 //! \name BLRuntime - C API
 //! \{
 
-BL_BEGIN_C_DECLS
+BL_EXTERN_C_BEGIN
 
 //! Initialized Blend2D runtime
 BL_API BLResult BL_CDECL bl_runtime_init() BL_NOEXCEPT_C;
@@ -230,13 +231,15 @@ BL_API BLResult BL_CDECL bl_runtime_message_out(const char* msg) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_runtime_message_fmt(const char* fmt, ...) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_runtime_message_vfmt(const char* fmt, va_list ap) BL_NOEXCEPT_C;
 
+BL_API const char* BL_CDECL bl_result_as_string(BLResult result) BL_NOEXCEPT_C;
+
 #ifdef _WIN32
 BL_API BLResult BL_CDECL bl_result_from_win_error(uint32_t e) BL_NOEXCEPT_C;
 #else
 BL_API BLResult BL_CDECL bl_result_from_posix_error(int e) BL_NOEXCEPT_C;
 #endif
 
-BL_END_C_DECLS
+BL_EXTERN_C_END
 
 //! \}
 //! \}
@@ -298,7 +301,7 @@ static BL_INLINE_NODEBUG BLResult message(const char* msg) noexcept {
 
 template<typename... Args>
 static BL_INLINE_NODEBUG BLResult message(const char* fmt, Args&&... args) noexcept {
-  return bl_runtime_message_fmt(fmt, BLInternal::forward<Args>(args)...);
+  return bl_runtime_message_fmt(fmt, bl::Internal::forward<Args>(args)...);
 }
 
 } // {BLRuntime}
@@ -308,4 +311,4 @@ static BL_INLINE_NODEBUG BLResult message(const char* fmt, Args&&... args) noexc
 
 //! \}
 
-#endif // BLEND2D_RUNTIME_H_INCLUDED
+#endif // BLEND2D_CORE_RUNTIME_H_INCLUDED

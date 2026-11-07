@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: Zlib
 
 #include <blend2d/blend2d.h>
-#include <blend2d-testing/commons/cmdline.h>
-#include <blend2d-testing/commons/imagediff.h>
+#include <blend2d-testing/commons/image_diff.h>
 #include <blend2d-testing/commons/performance_timer.h>
+#include <blend2d-testing/commons/zero_lib.h>
 
 #include <string.h>
 
@@ -82,18 +82,18 @@ public:
 
   int help();
 
-  void print_app_info(const char* title, bool quiet) const;
+  void print_app_info(const char* title) const;
   void print_options() const;
   void print_built_in_codecs() const;
 
-  bool parse_options(CmdLine cmd_line);
+  bool parse_options(ZeroLib::CmdLine cmd_line);
 
   LoadedImage load_image(const char* base_dir, const char* file_name);
 
   bool test_single_file(const char* base_dir, const char* file_name);
   bool compare_files(const char* base_dir, const char* fileName1, const char* fileName2);
 
-  int run(CmdLine cmd_line);
+  int run(ZeroLib::CmdLine cmd_line);
 };
 
 TestApp::TestApp()
@@ -122,13 +122,13 @@ int TestApp::help() {
   return 0;
 }
 
-bool TestApp::parse_options(CmdLine cmd_line) {
-  options.base_dir = cmd_line.value_of("--base-dir", nullptr);
+bool TestApp::parse_options(ZeroLib::CmdLine cmd_line) {
+  options.base_dir = cmd_line.get_arg("--base-dir", nullptr);
   options.quiet = cmd_line.has_arg("--quiet") || default_options.quiet;
 
   TestKind kind = TestKind::kNone;
 
-  if (cmd_line.value_of("--file", nullptr)) {
+  if (cmd_line.get_arg("--file", nullptr)) {
     kind = TestKind::kSingleImage;
   }
   else if (cmd_line.has_arg("--compare")) {
@@ -137,7 +137,7 @@ bool TestApp::parse_options(CmdLine cmd_line) {
 
   switch (kind) {
     case TestKind::kSingleImage: {
-      options.file1 = cmd_line.value_of("--file", nullptr);
+      options.file1 = cmd_line.get_arg("--file", nullptr);
       break;
     }
 
@@ -162,22 +162,18 @@ bool TestApp::parse_options(CmdLine cmd_line) {
   return true;
 }
 
-void TestApp::print_app_info(const char* title, bool quiet) const {
-  printf("%s [use --help for command line options]\n", title);
+void TestApp::print_app_info(const char* title) const {
+  BLRuntimeBuildInfo build_info;
+  BLRuntime::query_build_info(&build_info);
 
-  if (!quiet) {
-    BLRuntimeBuildInfo build_info;
-    BLRuntime::query_build_info(&build_info);
-    printf("  Version    : %u.%u.%u\n"
-           "  Build Type : %s\n"
-           "  Compiled By: %s\n\n",
-           build_info.major_version,
-           build_info.minor_version,
-           build_info.patch_version,
-           build_info.build_type == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
-           build_info.compiler_info);
-  }
-
+  printf(
+    "%s v%u.%u.%u %s/%s [--help for options]\n\n",
+    title,
+    build_info.major_version,
+    build_info.minor_version,
+    build_info.patch_version,
+    build_info.build_type == BL_RUNTIME_BUILD_TYPE_DEBUG ? "debug" : "release",
+    build_info.compiler_info);
   fflush(stdout);
 }
 
@@ -303,8 +299,8 @@ bool TestApp::compare_files(const char* base_dir, const char* fileName1, const c
   return true;
 }
 
-int TestApp::run(CmdLine cmd_line) {
-  print_app_info("Blend2D Image Codecs Tester", cmd_line.has_arg("--quiet"));
+int TestApp::run(ZeroLib::CmdLine cmd_line) {
+  print_app_info("Blend2D Image Codecs Tests");
 
   if (cmd_line.has_arg("--help")) {
     return help();
@@ -344,5 +340,5 @@ int main(int argc, char* argv[]) {
   BLRuntimeScope rt_scope;
   CodecTests::TestApp app;
 
-  return app.run(CmdLine(argc, argv));
+  return app.run(ZeroLib::CmdLine(argc, argv));
 }

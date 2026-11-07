@@ -68,30 +68,31 @@
   </Type>
 
   <Type Name="BLArrayCore">
-    <Intrinsic Name="get_raw_type" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_TYPE_MASK) &gt;&gt; BL_OBJECT_INFO_TYPE_SHIFT)"/>
-    <Intrinsic Name="sso" Expression="(_d.info.bits &amp; BL_OBJECT_INFO_D_FLAG) == 0"/>
+    <Intrinsic Name="get_type" Expression="(_d._sso_data[30])"/>
+    <Intrinsic Name="is_sso" Expression="(_d._sso_data[31] &amp; 0x80) == 0"/>
+
     <Intrinsic Name="sso_a_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_A_MASK) &gt;&gt; BL_OBJECT_INFO_A_SHIFT)"/>
     <Intrinsic Name="sso_b_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_B_MASK) &gt;&gt; BL_OBJECT_INFO_B_SHIFT)"/>
     <Intrinsic Name="sso_size" Expression="size_t(sso_a_field())"/>
     <Intrinsic Name="sso_capacity" Expression="size_t(sso_b_field())"/>
 
     <Intrinsic Name="get_impl" Expression="((BLArrayImpl*)(_d.impl))"/>
-    <Intrinsic Name="get_data" Expression="(sso() ? (void*)_d.u8_data : get_impl()-&gt;data)"/>
-    <Intrinsic Name="get_size" Expression="(sso() ? sso_size() : get_impl()-&gt;size)"/>
-    <Intrinsic Name="get_capacity" Expression="(sso() ? sso_size() : get_impl()-&gt;capacity)"/>
+    <Intrinsic Name="get_data" Expression="(is_sso() ? (void*)_d.u8_data : get_impl()-&gt;data)"/>
+    <Intrinsic Name="get_size" Expression="(is_sso() ? sso_size() : get_impl()-&gt;size)"/>
+    <Intrinsic Name="get_capacity" Expression="(is_sso() ? sso_size() : get_impl()-&gt;capacity)"/>
 
-    <DisplayString Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_OBJECT">BLArray&lt;BLObject&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
-    <DisplayString Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_INT8">BLArray&lt;int8_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
-    <DisplayString Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_UINT8">BLArray&lt;uint8_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
-    <DisplayString Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_INT16">BLArray&lt;int16_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
-    <DisplayString Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_UINT16">BLArray&lt;uint16_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
-    <DisplayString Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_INT32">BLArray&lt;int32_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
-    <DisplayString Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_UINT32">BLArray&lt;uint32_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
-    <DisplayString Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_INT64">BLArray&lt;int64_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
-    <DisplayString Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_UINT64">BLArray&lt;uint64_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
-    <DisplayString Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_FLOAT32">BLArray&lt;float&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
-    <DisplayString Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_FLOAT64">BLArray&lt;double&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
-    <DisplayString Condition="get_raw_type() > BL_OBJECT_TYPE_ARRAY_FLOAT64">BLArray&lt;struct&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_ARRAY_OBJECT">BLArray&lt;BLObject&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_ARRAY_INT8">BLArray&lt;int8_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_ARRAY_UINT8">BLArray&lt;uint8_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_ARRAY_INT16">BLArray&lt;int16_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_ARRAY_UINT16">BLArray&lt;uint16_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_ARRAY_INT32">BLArray&lt;int32_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_ARRAY_UINT32">BLArray&lt;uint32_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_ARRAY_INT64">BLArray&lt;int64_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_ARRAY_UINT64">BLArray&lt;uint64_t&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_ARRAY_FLOAT32">BLArray&lt;float&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_ARRAY_FLOAT64">BLArray&lt;double&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
+    <DisplayString Condition="get_type() > BL_OBJECT_TYPE_ARRAY_FLOAT64">BLArray&lt;struct&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
 
     <Expand HideRawView="true">
       <Item Name="[detail]" ExcludeView="simple">_d</Item>
@@ -99,23 +100,23 @@
       <Item Name="[capacity]" ExcludeView="simple">get_capacity(), d</Item>
       <ArrayItems>
         <Size>get_size()</Size>
-        <ValuePointer Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_OBJECT">(BLObjectCore*)get_data()</ValuePointer>
-        <ValuePointer Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_INT8">(int8_t*)get_data()</ValuePointer>
-        <ValuePointer Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_UINT8">(uint8_t*)get_data()</ValuePointer>
-        <ValuePointer Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_INT16">(int16_t*)get_data()</ValuePointer>
-        <ValuePointer Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_UINT16">(uint16_t*)get_data()</ValuePointer>
-        <ValuePointer Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_INT32">(int32_t*)get_data()</ValuePointer>
-        <ValuePointer Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_UINT32">(uint32_t*)get_data()</ValuePointer>
-        <ValuePointer Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_INT64">(int64_t*)get_data()</ValuePointer>
-        <ValuePointer Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_UINT64">(uint64_t*)get_data()</ValuePointer>
-        <ValuePointer Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_FLOAT32">(float*)get_data()</ValuePointer>
-        <ValuePointer Condition="get_raw_type() == BL_OBJECT_TYPE_ARRAY_FLOAT64">(double*)get_data()</ValuePointer>
+        <ValuePointer Condition="get_type() == BL_OBJECT_TYPE_ARRAY_OBJECT">(BLObjectCore*)get_data()</ValuePointer>
+        <ValuePointer Condition="get_type() == BL_OBJECT_TYPE_ARRAY_INT8">(int8_t*)get_data()</ValuePointer>
+        <ValuePointer Condition="get_type() == BL_OBJECT_TYPE_ARRAY_UINT8">(uint8_t*)get_data()</ValuePointer>
+        <ValuePointer Condition="get_type() == BL_OBJECT_TYPE_ARRAY_INT16">(int16_t*)get_data()</ValuePointer>
+        <ValuePointer Condition="get_type() == BL_OBJECT_TYPE_ARRAY_UINT16">(uint16_t*)get_data()</ValuePointer>
+        <ValuePointer Condition="get_type() == BL_OBJECT_TYPE_ARRAY_INT32">(int32_t*)get_data()</ValuePointer>
+        <ValuePointer Condition="get_type() == BL_OBJECT_TYPE_ARRAY_UINT32">(uint32_t*)get_data()</ValuePointer>
+        <ValuePointer Condition="get_type() == BL_OBJECT_TYPE_ARRAY_INT64">(int64_t*)get_data()</ValuePointer>
+        <ValuePointer Condition="get_type() == BL_OBJECT_TYPE_ARRAY_UINT64">(uint64_t*)get_data()</ValuePointer>
+        <ValuePointer Condition="get_type() == BL_OBJECT_TYPE_ARRAY_FLOAT32">(float*)get_data()</ValuePointer>
+        <ValuePointer Condition="get_type() == BL_OBJECT_TYPE_ARRAY_FLOAT64">(double*)get_data()</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
 
   <Type Name="BLArray&lt;*&gt;">
-    <Intrinsic Name="get_raw_type" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_TYPE_MASK) &gt;&gt; BL_OBJECT_INFO_TYPE_SHIFT)"/>
+    <Intrinsic Name="get_type" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_T_MASK) &gt;&gt; BL_OBJECT_INFO_T_SHIFT)"/>
     <Intrinsic Name="sso" Expression="(_d.info.bits &amp; BL_OBJECT_INFO_D_FLAG) == 0"/>
     <Intrinsic Name="sso_a_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_A_MASK) &gt;&gt; BL_OBJECT_INFO_A_SHIFT)"/>
     <Intrinsic Name="sso_b_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_B_MASK) &gt;&gt; BL_OBJECT_INFO_B_SHIFT)"/>
@@ -123,9 +124,9 @@
     <Intrinsic Name="sso_capacity" Expression="size_t(sso_b_field())"/>
 
     <Intrinsic Name="get_impl" Expression="((BLArrayImpl*)(_d.impl))"/>
-    <Intrinsic Name="get_data" Expression="(sso() ? (void*)_d.u8_data : get_impl()-&gt;data)"/>
-    <Intrinsic Name="get_size" Expression="(sso() ? sso_size() : get_impl()-&gt;size)"/>
-    <Intrinsic Name="get_capacity" Expression="(sso() ? sso_size() : get_impl()-&gt;capacity)"/>
+    <Intrinsic Name="get_data" Expression="(is_sso() ? (void*)_d.u8_data : get_impl()-&gt;data)"/>
+    <Intrinsic Name="get_size" Expression="(is_sso() ? sso_size() : get_impl()-&gt;size)"/>
+    <Intrinsic Name="get_capacity" Expression="(is_sso() ? sso_size() : get_impl()-&gt;capacity)"/>
 
     <DisplayString>BLArray&lt;&gt; {{ size={get_size(), d} capacity={get_capacity(), d} }}</DisplayString>
 
@@ -157,13 +158,13 @@
 
     <Intrinsic Name="sso" Expression="(_d.info.bits &amp; BL_OBJECT_INFO_D_FLAG) == 0"/>
     <Intrinsic Name="sso_a_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_A_MASK) &gt;&gt; BL_OBJECT_INFO_A_SHIFT)"/>
-    <Intrinsic Name="sso_size" Expression="size_t(BLString::kSSOCapacity) ^ sso_a_field()"/>
-    <Intrinsic Name="sso_capacity" Expression="size_t(BLString::kSSOCapacity)"/>
+    <Intrinsic Name="sso_size" Expression="size_t(BLString::Info::kSSOCapacity) ^ sso_a_field()"/>
+    <Intrinsic Name="sso_capacity" Expression="size_t(BLString::Info::kSSOCapacity)"/>
 
     <Intrinsic Name="get_impl" Expression="((BLStringImpl*)(_d.impl))"/>
-    <Intrinsic Name="get_data" Expression="(sso() ? _d.char_data : ((char*)(get_impl() + 1)))"/>
-    <Intrinsic Name="get_size" Expression="(sso() ? sso_size() : get_impl()-&gt;size)"/>
-    <Intrinsic Name="get_capacity" Expression="(sso() ? sso_size() : get_impl()-&gt;capacity)"/>
+    <Intrinsic Name="get_data" Expression="(is_sso() ? _d.char_data : ((char*)(get_impl() + 1)))"/>
+    <Intrinsic Name="get_size" Expression="(is_sso() ? sso_size() : get_impl()-&gt;size)"/>
+    <Intrinsic Name="get_capacity" Expression="(is_sso() ? sso_size() : get_impl()-&gt;capacity)"/>
 
     <DisplayString>{get_data(), s8}</DisplayString>
 
@@ -405,8 +406,8 @@
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
       <Item Name="[gradient_type]" ExcludeView="simple">(BLGradientType)sso_a_field()</Item>
       <Item Name="[extend_mode]" ExcludeView="simple">(BLExtendMode)sso_b_field()</Item>
-      <Item Name="[transform_type]" ExcludeView="simple">(BLTransformType)sso_c_field()</Item>
       <Item Name="[transform]" ExcludeView="simple">get_impl()-&gt;transform</Item>
+      <Item Name="[transform_type]" ExcludeView="simple">(BLTransformType)sso_c_field()</Item>
       <Item Name="[values]" ExcludeView="simple">get_impl()-&gt;values</Item>
       <Item Name="[linear]" ExcludeView="simple" Condition="get_impl()-&gt;gradient_type == BL_GRADIENT_TYPE_LINEAR">get_impl()-&gt;linear</Item>
       <Item Name="[radial]" ExcludeView="simple" Condition="get_impl()-&gt;gradient_type == BL_GRADIENT_TYPE_RADIAL">get_impl()-&gt;radial</Item>
@@ -672,7 +673,7 @@
     <AlternativeType Name="BLVar" />
     <AlternativeType Name="BLVarCore" />
 
-    <Intrinsic Name="get_type" Expression="(_d.info.bits &amp; 0x80000000) != 0 ? (((_d.info.bits &amp; BL_OBJECT_INFO_TYPE_MASK) &gt;&gt; BL_OBJECT_INFO_TYPE_SHIFT) &lt;= 128 ? ((_d.info.bits &amp; BL_OBJECT_INFO_TYPE_MASK) &gt;&gt; BL_OBJECT_INFO_TYPE_SHIFT) : 128) : 0"/>
+    <Intrinsic Name="get_type" Expression="(_d.info.bits &amp; 0x80000000) != 0 ? (((_d.info.bits &amp; BL_OBJECT_INFO_T_MASK) &gt;&gt; BL_OBJECT_INFO_T_SHIFT) &lt;= 128 ? ((_d.info.bits &amp; BL_OBJECT_INFO_T_MASK) &gt;&gt; BL_OBJECT_INFO_T_SHIFT) : 128) : 0"/>
 
     <DisplayString Condition="get_type() == __BL_OBJECT_TYPE_RGBA()">{(BLRgba*)this}</DisplayString>
     <DisplayString Condition="get_type() == BL_OBJECT_TYPE_RGBA32">{_d.u32_data[0]}</DisplayString>
@@ -686,7 +687,7 @@
     <DisplayString Condition="get_type() == BL_OBJECT_TYPE_BOOL">{(bool)_d.u64_data[0]}</DisplayString>
     <DisplayString Condition="get_type() == BL_OBJECT_TYPE_INT64">{_d.i64_data[0]}</DisplayString>
     <DisplayString Condition="get_type() == BL_OBJECT_TYPE_UINT64">{_d.u64_data[0]}</DisplayString>
-    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_DOUBLE">{_d.f64_data[0]}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_FLOAT64">{_d.f64_data[0]}</DisplayString>
     <DisplayString Condition="get_type() == BL_OBJECT_TYPE_STRING">{(BLStringCore*)this}</DisplayString>
     <DisplayString Condition="get_type() &gt;= BL_OBJECT_TYPE_ARRAY_OBJECT &amp;&amp; get_type() &lt;= BL_OBJECT_TYPE_ARRAY_STRUCT_32">{(BLArrayCore*)this}</DisplayString>
     <DisplayString Condition="get_type() == BL_OBJECT_TYPE_CONTEXT">{(BLContextCore*)this}</DisplayString>
@@ -696,7 +697,6 @@
     <DisplayString Condition="get_type() == BL_OBJECT_TYPE_FONT_FACE">{(BLFontFaceCore*)this}</DisplayString>
     <DisplayString Condition="get_type() == BL_OBJECT_TYPE_FONT_DATA">{(BLFontDataCore*)this}</DisplayString>
     <!-- <DisplayString Condition="get_type() == BL_OBJECT_TYPE_FONT_MANAGER">{(BLFontManagerCore*)this}</DisplayString> -->
-    <!-- <DisplayString Condition="get_type() == BL_OBJECT_TYPE_BIT_SET">{(BLBitSetCore*)this}</DisplayString> -->
 
     <Expand HideRawView="true">
       <ExpandedItem Condition="get_type() == __BL_OBJECT_TYPE_RGBA()">(BLRgba*)this</ExpandedItem>
@@ -710,7 +710,7 @@
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_BOOL">(bool)_d.u64_data[0]</ExpandedItem>
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_INT64">_d.i64_data[0]</ExpandedItem>
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_UINT64">_d.u64_data[0]</ExpandedItem>
-      <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_DOUBLE">_d.f64_data[0]</ExpandedItem>
+      <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_FLOAT64">_d.f64_data[0]</ExpandedItem>
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_STRING">(BLStringCore*)this</ExpandedItem>
       <ExpandedItem Condition="get_type() &gt;= BL_OBJECT_TYPE_ARRAY_OBJECT &amp;&amp; get_type() &lt;= BL_OBJECT_TYPE_ARRAY_STRUCT_32">(BLArrayCore*)this</ExpandedItem>
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_CONTEXT">(BLContextCore*)this</ExpandedItem>
@@ -720,7 +720,6 @@
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_FONT_FACE">(BLFontFaceCore*)this</ExpandedItem>
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_FONT_DATA">(BLFontDataCore*)this</ExpandedItem>
       <!-- <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_FONT_MANAGER">(BLFontManagerCore*)this</ExpandedItem> -->
-      <!-- <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_BIT_SET">(BLBitSetCore*)this</ExpandedItem> -->
     </Expand>
   </Type>
 

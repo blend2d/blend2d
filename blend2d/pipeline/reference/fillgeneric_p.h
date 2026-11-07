@@ -6,11 +6,10 @@
 #ifndef BLEND2D_PIPELINE_REFERENCE_FILLGENERIC_P_H_INCLUDED
 #define BLEND2D_PIPELINE_REFERENCE_FILLGENERIC_P_H_INCLUDED
 
-#include <blend2d/pipeline/pipedefs_p.h>
+#include <blend2d/axl/bitops_p.h>
+#include <blend2d/axl/commons.h>
+#include <blend2d/pipeline/pipe_defs_p.h>
 #include <blend2d/pipeline/reference/pixelbufferptr_p.h>
-#include <blend2d/support/bitops_p.h>
-#include <blend2d/support/intops_p.h>
-#include <blend2d/support/ptrops_p.h>
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_pipeline_reference
@@ -45,8 +44,8 @@ struct FillBoxA_Base {
     BL_ASSUME(h > 0);
     if (CompOp::kOptimizeOpaque && msk == 255) {
       while (h) {
-        comp_op.rectStartX(x0);
-        dst_ptr = comp_op.compositeCSpanOpaque(dst_ptr, w);
+        comp_op.rect_start_x(x0);
+        dst_ptr = comp_op.composite_cspan_opaque(dst_ptr, w);
         dst_ptr += dst_stride;
         comp_op.advance_y();
         h--;
@@ -54,8 +53,8 @@ struct FillBoxA_Base {
     }
     else {
       while (h) {
-        comp_op.rectStartX(x0);
-        dst_ptr = comp_op.compositeCSpanMasked(dst_ptr, w, msk);
+        comp_op.rect_start_x(x0);
+        dst_ptr = comp_op.composite_cspan_masked(dst_ptr, w, msk);
         dst_ptr += dst_stride;
         comp_op.advance_y();
         h--;
@@ -76,7 +75,7 @@ struct FillMask_Base {
     dst_ptr += intptr_t(y0) * dst_stride;
 
     CompOp comp_op;
-    comp_op.spanInitY(ctx_data, fetch_data_, y0);
+    comp_op.span_init_y(ctx_data, fetch_data_, y0);
 
     uint32_t alpha = fill_data->alpha.u;
     MaskCommand* cmd_ptr = fill_data->mask_command_data;
@@ -92,7 +91,7 @@ struct FillMask_Base {
       // This is not really common to not be true, however, it's possible to skip entire scanlines
       // with kEndOrRepeat command, which is zero.
       if (BL_LIKELY((x1_and_type & MaskCommand::kTypeMask) != 0u)) {
-        comp_op.spanStartX(x);
+        comp_op.span_start_x(x);
         dst_ptr += size_t(x) * CompOp::kDstBPP;
 
         uint32_t i = x1_and_type >> MaskCommand::kTypeBits;
@@ -107,16 +106,16 @@ struct FillMask_Base {
         for (;;) {
           if (cmd_type == MaskCommandType::kCMask) {
             BL_ASSUME(mask_value <= 255);
-            dst_ptr = comp_op.compositeCSpan(dst_ptr, i, uint32_t(mask_value));
+            dst_ptr = comp_op.composite_cspan(dst_ptr, i, uint32_t(mask_value));
           }
           else {
             // Increments the advance in the mask command in case it would be repeated.
             cmd_ptr[-1]._value.data = mask_value + uintptr_t(cmd_ptr[-1].mask_advance());
             if (cmd_type == MaskCommandType::kVMaskA8WithoutGA) {
-              dst_ptr = comp_op.compositeVSpanWithoutGA(dst_ptr, reinterpret_cast<const uint8_t*>(mask_value), alpha, i);
+              dst_ptr = comp_op.composite_vspan_without_ga(dst_ptr, reinterpret_cast<const uint8_t*>(mask_value), alpha, i);
             }
             else {
-              dst_ptr = comp_op.compositeVSpanWithGA(dst_ptr, reinterpret_cast<const uint8_t*>(mask_value), i);
+              dst_ptr = comp_op.composite_vspan_with_ga(dst_ptr, reinterpret_cast<const uint8_t*>(mask_value), i);
             }
           }
 
@@ -128,7 +127,7 @@ struct FillMask_Base {
 
           uint32_t x0 = cmd_ptr->x0();
           if (x != x0) {
-            comp_op.spanAdvanceX(x0, x0 - x);
+            comp_op.span_advance_x(x0, x0 - x);
             x = x0;
           }
 
@@ -140,7 +139,7 @@ struct FillMask_Base {
           cmd_ptr++;
         }
 
-        comp_op.spanEndX(x);
+        comp_op.span_end_x(x);
         dst_ptr -= size_t(x) * CompOp::kDstBPP;
       }
 
@@ -166,7 +165,7 @@ struct FillAnalytic_Base {
   enum : uint32_t {
     kDstBPP = CompOp::kDstBPP,
     kPixelsPerOneBit = 4,
-    kPixelsPerBitWord = kPixelsPerOneBit * IntOps::bit_size_of<BLBitWord>()
+    kPixelsPerBitWord = kPixelsPerOneBit * axl::bit_size_of<BLBitWord>
   };
 
   typedef PrivateBitWordOps BitOps;
@@ -189,7 +188,7 @@ struct FillAnalytic_Base {
     uint32_t fill_rule_mask = fill_data->fill_rule_mask;
 
     CompOp comp_op;
-    comp_op.spanInitY(ctx_data, fetch_data_, y);
+    comp_op.span_init_y(ctx_data, fetch_data_, y);
 
     y = uint32_t(fill_data->box.y1) - y;
 
@@ -223,7 +222,7 @@ L_BitScan_Init:
     // of the raster there is still one cell that is non-zero. This makes sure it's cleared.
     dst_ptr += x0 * kDstBPP;
     cell_ptr += x0;
-    comp_op.spanStartX(uint32_t(x0));
+    comp_op.span_start_x(uint32_t(x0));
 
     // Rare case - line rasterized at the end of the raster boundary. In 99% cases this is a clipped line that was
     // rasterized as vertical-only line at the end of the render box. This is a completely valid case that produces
@@ -329,10 +328,10 @@ VLoop_CalcMsk:
 
     if (!msk) {
       dst_ptr += i * kDstBPP;
-      comp_op.spanAdvanceX(uint32_t(x0), uint32_t(i));
+      comp_op.span_advance_x(uint32_t(x0), uint32_t(i));
     }
     else {
-      dst_ptr = comp_op.compositeCSpan(dst_ptr, i, msk);
+      dst_ptr = comp_op.composite_cspan(dst_ptr, i, msk);
     }
 
     if (bit_word)
@@ -352,7 +351,7 @@ L_Scanline_Done0:
 L_Scanline_Done1:
     dst_ptr -= x0 * kDstBPP;
     cell_ptr -= x0;
-    comp_op.spanEndX(uint32_t(x0));
+    comp_op.span_end_x(uint32_t(x0));
 
     if (--y == 0)
       return;
@@ -360,13 +359,13 @@ L_Scanline_Done1:
     bit_ptr = bit_ptr_end;
     do {
       dst_ptr += dst_stride;
-      cell_ptr = PtrOps::offset(cell_ptr, cell_stride);
+      cell_ptr = axl::offset_ptr(cell_ptr, cell_stride);
       comp_op.advance_y();
 
 L_Scanline_Init:
       x_off = 0;
       bit_word = 0;
-      bit_ptr_end = PtrOps::offset(bit_ptr, bit_stride);
+      bit_ptr_end = axl::offset_ptr(bit_ptr, bit_stride);
 
       do {
         bit_word |= *bit_ptr++;
@@ -380,7 +379,7 @@ L_Scanline_Init:
 
   static BL_INLINE uint32_t calc_mask(uint32_t cov, uint32_t fill_rule_mask, uint32_t global_alpha) noexcept {
     uint32_t c = A8Info::kScale;
-    uint32_t m = (IntOps::sar(cov, A8Info::kShift + 1u) & fill_rule_mask) - c;
+    uint32_t m = (axl::sar(cov, A8Info::kShift + 1u) & fill_rule_mask) - c;
     m = bl_min<uint32_t>(uint32_t(bl_abs(int32_t(m))), c);
 
     return (m * global_alpha) >> 8;

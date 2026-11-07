@@ -23,6 +23,12 @@
 
 #include <stdio.h>
 
+#if defined(__GNUC__)
+  #define BL_MAYBE_UNUSED __attribute__((__unused__))
+#else
+  #define BL_MAYBE_UNUSED
+#endif
+
 //! \cond INTERNAL
 
 // Forward Declarations
@@ -39,6 +45,7 @@ static void bl_debug_object_(const void* obj, const char* name, int indent);
 // BLDebug - Utilities
 // ===================
 
+BL_MAYBE_UNUSED
 static const char* bl_debug_get_enum_as_string(uint32_t value, const char* enum_data) {
   uint32_t i = 0;
   const char* p = enum_data;
@@ -62,6 +69,7 @@ static const char* bl_debug_get_enum_as_string(uint32_t value, const char* enum_
 // BLDebug - Runtime
 // =================
 
+BL_MAYBE_UNUSED
 static void bl_debug_runtime_cpu_features(char* buf, size_t buf_size, uint32_t arch, uint32_t features) {
   if (!arch) {
     #if defined(_M_X64) || defined(__x86_64__) || defined(_M_IX86) || defined(__X86__) || defined(__i386__)
@@ -79,15 +87,16 @@ static void bl_debug_runtime_cpu_features(char* buf, size_t buf_size, uint32_t a
 
   switch (arch) {
     case BL_RUNTIME_CPU_ARCH_X86:
-      snprintf(buf, buf_size, "%s%s%s%s%s%s%s%s",
-        (features & BL_RUNTIME_CPU_FEATURE_X86_SSE2  ) ? "SSE2 "   : "",
-        (features & BL_RUNTIME_CPU_FEATURE_X86_SSE3  ) ? "SSE3 "   : "",
-        (features & BL_RUNTIME_CPU_FEATURE_X86_SSSE3 ) ? "SSSE3 "  : "",
-        (features & BL_RUNTIME_CPU_FEATURE_X86_SSE4_1) ? "SSE4.1 " : "",
-        (features & BL_RUNTIME_CPU_FEATURE_X86_SSE4_2) ? "SSE4.2 " : "",
-        (features & BL_RUNTIME_CPU_FEATURE_X86_AVX   ) ? "AVX "    : "",
-        (features & BL_RUNTIME_CPU_FEATURE_X86_AVX2  ) ? "AVX2 "   : "",
-        (features & BL_RUNTIME_CPU_FEATURE_X86_AVX512) ? "AVX512 " : "");
+      snprintf(buf, buf_size, "%s%s%s%s%s%s%s%s%s",
+        (features & BL_RUNTIME_CPU_FEATURE_X86_SSE2     ) ? "SSE2 "      : "",
+        (features & BL_RUNTIME_CPU_FEATURE_X86_SSE3     ) ? "SSE3 "      : "",
+        (features & BL_RUNTIME_CPU_FEATURE_X86_SSSE3    ) ? "SSSE3 "     : "",
+        (features & BL_RUNTIME_CPU_FEATURE_X86_SSE4_1   ) ? "SSE4.1 "    : "",
+        (features & BL_RUNTIME_CPU_FEATURE_X86_SSE4_2   ) ? "SSE4.2 "    : "",
+        (features & BL_RUNTIME_CPU_FEATURE_X86_AVX      ) ? "AVX "       : "",
+        (features & BL_RUNTIME_CPU_FEATURE_X86_AVX2     ) ? "AVX2+FMA "  : "",
+        (features & BL_RUNTIME_CPU_FEATURE_X86_AVX512   ) ? "AVX512 "    : "",
+        (features & BL_RUNTIME_CPU_FEATURE_X86_AVX512_V2) ? "AVX512_V2 " : "");
       break;
 
     default:
@@ -97,6 +106,7 @@ static void bl_debug_runtime_cpu_features(char* buf, size_t buf_size, uint32_t a
 }
 
 //! Dumps `BLRuntimeBuildInfo` queried through `bl_runtime_query_info()`.
+BL_MAYBE_UNUSED
 static void bl_debug_runtime_build_info(void) {
   const char* build_mode = "";
   char baseline_cpu_features[128];
@@ -128,7 +138,7 @@ static void bl_debug_runtime_build_info(void) {
     info.major_version,
     info.minor_version,
     info.patch_version,
-    info.build_type == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
+    info.build_type == BL_RUNTIME_BUILD_TYPE_DEBUG ? "debug" : "release",
     build_mode,
     baseline_cpu_features,
     supported_cpu_features,
@@ -138,6 +148,7 @@ static void bl_debug_runtime_build_info(void) {
 }
 
 //! Dumps `BLRuntimeSystemInfo` queried through `bl_runtime_query_info()`.
+BL_MAYBE_UNUSED
 static void bl_debug_runtime_system_info(void) {
   static const char cpu_arch_enum[] =
     "NONE\0"
@@ -192,6 +203,7 @@ static void bl_debug_runtime_system_info(void) {
 // BLDebug - Matrix
 // ================
 
+BL_MAYBE_UNUSED
 static void bl_debug_matrix2d_(const BLMatrix2D* obj, const char* name, int indent) {
   static const char matrix_type_enum[] =
     "IDENTITY\0"
@@ -211,11 +223,8 @@ static void bl_debug_matrix2d_(const BLMatrix2D* obj, const char* name, int inde
 // BLDebug - StrokeOptions
 // =======================
 
+BL_MAYBE_UNUSED
 static void bl_debug_stroke_options_(const BLStrokeOptionsCore* obj, const char* name, int indent) {
-  static const char stroke_cap_position_enum[] =
-    "StartCap\0"
-    "EndCap\0";
-
   static const char stroke_cap_enum[] =
     "BUTT\0"
     "SQUARE\0"
@@ -234,28 +243,38 @@ static void bl_debug_stroke_options_(const BLStrokeOptionsCore* obj, const char*
     "AFTER\0"
     "BEFORE\0";
 
-  uint32_t i;
-
   BL_DEBUG_FMT("%s: {\n", name);
   indent++;
 
-  for (i = 0; i <= BL_STROKE_CAP_POSITION_MAX_VALUE; i++)
-    BL_DEBUG_FMT("%s: %s\n", bl_debug_get_enum_as_string(i, stroke_cap_position_enum), bl_debug_get_enum_as_string(obj->caps[i], stroke_cap_enum));
-  BL_DEBUG_FMT("Join: %s\n", bl_debug_get_enum_as_string(obj->join, stroke_join_enum));
-  BL_DEBUG_FMT("TransformOrder: %s\n", bl_debug_get_enum_as_string(obj->transform_order, stroke_transform_order_enum));
-  BL_DEBUG_FMT("Width: %g\n", obj->width);
-  BL_DEBUG_FMT("MiterLimit: %g\n", obj->miter_limit);
-  BL_DEBUG_FMT("DashOffset: %g\n", obj->dash_offset);
-  bl_debug_object_(&obj->dash_array, "DashArray", indent);
+  BL_DEBUG_FMT("StartCap: %s\n", bl_debug_get_enum_as_string(bl_stroke_options_get_start_cap(obj), stroke_cap_enum));
+  BL_DEBUG_FMT("EndCap: %s\n", bl_debug_get_enum_as_string(bl_stroke_options_get_end_cap(obj), stroke_cap_enum));
+
+  BL_DEBUG_FMT("Join: %s\n", bl_debug_get_enum_as_string(bl_stroke_options_get_join(obj), stroke_join_enum));
+  BL_DEBUG_FMT("TransformOrder: %s\n", bl_debug_get_enum_as_string(bl_stroke_options_get_transform_order(obj), stroke_transform_order_enum));
+  BL_DEBUG_FMT("Width: %g\n", (double)bl_stroke_options_get_width(obj));
+  BL_DEBUG_FMT("MiterLimit: %g\n", (double)bl_stroke_options_get_miter_limit(obj));
+  BL_DEBUG_FMT("DashOffset: %g\n", (double)bl_stroke_options_get_dash_offset(obj));
+
+  const float* dash_array = bl_stroke_options_get_dash_array(obj);
+  size_t dash_array_size = bl_stroke_options_get_dash_count(obj);
+
+  BL_DEBUG_OUT("DashArray: [");
+  for (size_t i = 0; i < dash_array_size; i++) {
+    bl_runtime_message_fmt(i == 0 ? "%f" : ", %f", (double)dash_array[i]);
+  }
+  bl_runtime_message_fmt("]\n");
 
   indent--;
   BL_DEBUG_OUT("}\n");
 }
+
+BL_MAYBE_UNUSED
 static void bl_debug_stroke_options(const BLStrokeOptionsCore* obj) { bl_debug_stroke_options_(obj, "BLStrokeOptions", 0); }
 
 // BLDebug - Array
 // ===============
 
+BL_MAYBE_UNUSED
 static void bl_debug_array_(const BLArrayCore* obj, const char* name, int indent) {
   BLObjectType object_type = bl_var_get_type(obj);
   const void* void_data = bl_array_get_data(obj);
@@ -332,7 +351,7 @@ static void bl_debug_array_(const BLArrayCore* obj, const char* name, int indent
     case BL_OBJECT_TYPE_ARRAY_FLOAT32: {
       const float* data = (const float*)void_data;
       for (i = 0; i < size; i++)
-        BL_DEBUG_FMT("[%zu] %g", i, data[i]);
+        BL_DEBUG_FMT("[%zu] %g", i, (double)data[i]);
       break;
     }
     case BL_OBJECT_TYPE_ARRAY_FLOAT64: {
@@ -352,6 +371,7 @@ static void bl_debug_array_(const BLArrayCore* obj, const char* name, int indent
 // BLDebug - Image
 // ===============
 
+BL_MAYBE_UNUSED
 static void bl_debug_image_(const BLImageCore* obj, const char* name, int indent) {
   static const char format_enum[] =
     "NONE\0"
@@ -371,6 +391,7 @@ static void bl_debug_image_(const BLImageCore* obj, const char* name, int indent
 // BLDebug - Pattern
 // =================
 
+BL_MAYBE_UNUSED
 static void bl_debug_pattern_(const BLPatternCore* obj, const char* name, int indent) {
   static const char extend_mode_enum[] =
     "PAD\0"
@@ -408,6 +429,7 @@ static void bl_debug_pattern_(const BLPatternCore* obj, const char* name, int in
 // BLDebug - Gradient
 // ==================
 
+BL_MAYBE_UNUSED
 static void bl_debug_gradient_(const BLGradientCore* obj, const char* name, int indent) {
   static const char gradient_type_enum[] =
     "LINEAR\0"
@@ -495,46 +517,62 @@ static void bl_debug_gradient_(const BLGradientCore* obj, const char* name, int 
 // BLDebug - Path
 // ==============
 
+BL_MAYBE_UNUSED
 static void bl_debug_path_(const BLPathCore* obj, const char* name, int indent) {
-  size_t i = 0;
-  size_t size = bl_path_get_size(obj);
+  const BLPoint* vertex_ptr = bl_path_get_vertex_data(obj);
+  const uint8_t* control_ptr = bl_path_get_control_data_rev(obj);
 
-  const uint8_t* cmd = bl_path_get_command_data(obj);
-  const BLPoint* vtx = bl_path_get_vertex_data(obj);
+  size_t control_data_size = bl_path_get_control_data_size(obj);
+  const uint8_t* control_stop = control_ptr - control_data_size;
+
+  double w;
 
   BL_DEBUG_FMT("%s: {\n", name);
   indent++;
 
-  while (i < size) {
-    switch (cmd[i]) {
+  while (control_ptr > control_stop) {
+    switch (control_ptr[-1]) {
       case BL_PATH_CMD_MOVE:
-        BL_DEBUG_FMT("p.move_to(%g, %g);\n", vtx[i].x, vtx[i].y);
-        i++;
+        BL_DEBUG_FMT("p.move_to(%g, %g);\n", vertex_ptr[0].x, vertex_ptr[0].y);
+        vertex_ptr++;
+        control_ptr--;
         continue;
-      case BL_PATH_CMD_ON:
-        BL_DEBUG_FMT("p.line_to(%g, %g);\n", vtx[i].x, vtx[i].y);
-        i++;
+      case BL_PATH_CMD_LINE:
+        BL_DEBUG_FMT("p.line_to(%g, %g);\n", vertex_ptr[0].x, vertex_ptr[0].y);
+        vertex_ptr++;
+        control_ptr--;
         continue;
       case BL_PATH_CMD_QUAD:
-        if ((size - i) < 2)
-          break;
-        BL_DEBUG_FMT("p.quad_to(%g, %g, %g, %g);\n", vtx[i].x, vtx[i].y, vtx[i+1].x, vtx[i+1].y);
-        i += 2;
+        BL_DEBUG_FMT("p.quad_to(%g, %g, %g, %g);\n",
+          vertex_ptr[0].x, vertex_ptr[0].y,
+          vertex_ptr[1].x, vertex_ptr[1].y);
+        vertex_ptr += 2;
+        control_ptr--;
+        continue;
+      case BL_PATH_CMD_CONIC:
+        memcpy(&w, control_ptr - 9, sizeof(double));
+        BL_DEBUG_FMT("p.conic_to(%g, %g, %g, %g, %g);\n",
+          vertex_ptr[0].x, vertex_ptr[0].y,
+          vertex_ptr[1].x, vertex_ptr[1].y, w);
+        vertex_ptr += 2;
+        control_ptr -= 10;
         continue;
       case BL_PATH_CMD_CUBIC:
-        if ((size - i) < 3)
-          break;
-        BL_DEBUG_FMT("p.cubic_to(%g, %g, %g, %g, %g, %g);\n", vtx[i].x, vtx[i].y, vtx[i+1].x, vtx[i+1].y, vtx[i+2].x, vtx[i+2].y);
-        i += 3;
+        BL_DEBUG_FMT("p.cubic_to(%g, %g, %g, %g, %g, %g);\n",
+          vertex_ptr[0].x, vertex_ptr[0].y,
+          vertex_ptr[1].x, vertex_ptr[1].y,
+          vertex_ptr[2].x, vertex_ptr[2].y);
+        vertex_ptr += 3;
+        control_ptr--;
         continue;
       case BL_PATH_CMD_CLOSE:
         BL_DEBUG_OUT("p.close();\n");
-        i++;
+        control_ptr--;
         continue;
     }
 
-    BL_DEBUG_FMT("p.unknown_command(%u, %g, %g);\n", cmd[i], vtx[i].x, vtx[i].y);
-    i++;
+    BL_DEBUG_FMT("/* p.unknown_command_terminating_here(%u); */\n", control_ptr[-1]);
+    break;
   }
 
   indent--;
@@ -544,6 +582,7 @@ static void bl_debug_path_(const BLPathCore* obj, const char* name, int indent) 
 // BLDebug - FontFeatureSettings
 // =============================
 
+BL_MAYBE_UNUSED
 static void bl_debug_font_feature_settings_(const BLFontFeatureSettingsCore* obj, const char* name, int indent) {
   size_t i;
   BLFontFeatureSettingsView view;
@@ -576,6 +615,7 @@ static void bl_debug_font_feature_settings_(const BLFontFeatureSettingsCore* obj
 // BLDebug - FontVariationSettings
 // ==============================
 
+BL_MAYBE_UNUSED
 static void bl_debug_font_variation_settings_(const BLFontVariationSettingsCore* obj, const char* name, int indent) {
   size_t i;
   BLFontVariationSettingsView view;
@@ -597,7 +637,7 @@ static void bl_debug_font_variation_settings_(const BLFontVariationSettingsCore*
         (tag >> 16) & 0xFF,
         (tag >>  8) & 0xFF,
         (tag >>  0) & 0xFF,
-        value);
+        (double)value);
     }
 
     indent--;
@@ -608,6 +648,7 @@ static void bl_debug_font_variation_settings_(const BLFontVariationSettingsCore*
 // BLDebug - Font
 // ==============
 
+BL_MAYBE_UNUSED
 static void bl_debug_font_(const BLFontCore* obj, const char* name, int indent) {
   float size = bl_font_get_size(obj);
 
@@ -630,7 +671,7 @@ static void bl_debug_font_(const BLFontCore* obj, const char* name, int indent) 
     indent++;
     bl_font_face_get_family_name(&face, &str);
     BL_DEBUG_FMT("Face: %s\n", bl_string_get_data(&str));
-    BL_DEBUG_FMT("Size: %f\n", size);
+    BL_DEBUG_FMT("Size: %f\n", (double)size);
     bl_debug_font_feature_settings_(&features, "FeatureSettings", indent);
     bl_debug_font_variation_settings_(&variations, "VariationSettings", indent);
     indent--;
@@ -646,6 +687,7 @@ static void bl_debug_font_(const BLFontCore* obj, const char* name, int indent) 
 // BLDebug - Context
 // =================
 
+BL_MAYBE_UNUSED
 static void bl_debug_context_(const BLContextCore* obj, const char* name, int indent) {
   static const char context_type_enum[] =
     "NONE\0"
@@ -657,7 +699,7 @@ static void bl_debug_context_(const BLContextCore* obj, const char* name, int in
     "NON_ZERO\0"
     "EVEN_ODD\0";
 
-  const BLContextState* state = ((BLContextImpl*)obj->_d.impl)->state;
+  const BLContextState* state = (const BLContextState*)(obj->_d.dyn.extra_ptr);
 
   BLVarCore fill_style;
   BLVarCore stroke_style;
@@ -697,24 +739,25 @@ static void bl_debug_context_(const BLContextCore* obj, const char* name, int in
 // BLDebug - Object
 // ================
 
+BL_MAYBE_UNUSED
 static void bl_debug_object_(const void* obj, const char* name, int indent) {
-  BLObjectType type = bl_var_get_type(obj);
+  BLObjectType type = bl_var_get_type((BLObjectCore*)obj);
   switch (type) {
     case BL_OBJECT_TYPE_RGBA: {
       BLRgba rgba;
-      bl_var_to_rgba(obj, &rgba);
+      bl_var_to_rgba((BLObjectCore*)obj, &rgba);
       BL_DEBUG_FMT("%s: Rgba(R=%f, G=%f, B=%f, A=%f)\n",
         name,
-        rgba.r,
-        rgba.g,
-        rgba.b,
-        rgba.a);
+        (double)rgba.r,
+        (double)rgba.g,
+        (double)rgba.b,
+        (double)rgba.a);
       break;
     }
 
     case BL_OBJECT_TYPE_RGBA32: {
       uint32_t rgba32;
-      bl_var_to_rgba32(obj, &rgba32);
+      bl_var_to_rgba32((BLObjectCore*)obj, &rgba32);
       BL_DEBUG_FMT("%s: BLRgba32(R=%d, G=%d, B=%d, A=%d)\n",
         name,
         (rgba32 >> 16) & 0xFF,
@@ -726,7 +769,7 @@ static void bl_debug_object_(const void* obj, const char* name, int indent) {
 
     case BL_OBJECT_TYPE_RGBA64: {
       uint64_t rgba64;
-      bl_var_to_rgba64(obj, &rgba64);
+      bl_var_to_rgba64((BLObjectCore*)obj, &rgba64);
       BL_DEBUG_FMT("%s: BLRgba64(R=%d, G=%d, B=%d, A=%d)\n",
         name,
         (rgba64 >> 32) & 0xFFFF,
@@ -778,28 +821,28 @@ static void bl_debug_object_(const void* obj, const char* name, int indent) {
 
     case BL_OBJECT_TYPE_BOOL: {
       bool val;
-      bl_var_to_bool(obj, &val);
+      bl_var_to_bool((BLObjectCore*)obj, &val);
       BL_DEBUG_FMT("%s: Bool(%s)\n", name, val ? "true" : "false");
       break;
     }
 
     case BL_OBJECT_TYPE_INT64: {
       int64_t val;
-      bl_var_to_int64(obj, &val);
+      bl_var_to_int64((BLObjectCore*)obj, &val);
       BL_DEBUG_FMT("%s: Int64(%lld)\n", name, (long long)val);
       break;
     }
 
     case BL_OBJECT_TYPE_UINT64: {
       uint64_t val;
-      bl_var_to_uint64(obj, &val);
+      bl_var_to_uint64((BLObjectCore*)obj, &val);
       BL_DEBUG_FMT("%s: UInt64(%llu)\n", name, (unsigned long long)val);
       break;
     }
 
-    case BL_OBJECT_TYPE_DOUBLE: {
+    case BL_OBJECT_TYPE_FLOAT64: {
       double val;
-      bl_var_to_double(obj, &val);
+      bl_var_to_double((BLObjectCore*)obj, &val);
       BL_DEBUG_FMT("%s: Double(%f)\n", name, val);
       break;
     }
@@ -846,46 +889,55 @@ static void bl_debug_object_(const void* obj, const char* name, int indent) {
 //! Dumps both `BLRuntimeBuildInfo` and `BLRuntimeSystemInfo`.
 //!
 //! This function should be used to retrieve information for Blend2D bug reports.
+BL_MAYBE_UNUSED
 static void bl_debug_runtime(void) {
   bl_debug_runtime_build_info();
   bl_debug_runtime_system_info();
 }
 
 //! Dumps BLArrayCore or BLArray<T>.
+BL_MAYBE_UNUSED
 static void bl_debug_array(const BLArrayCore* obj) {
   bl_debug_array_(obj, "BLArray", 0);
 }
 
 //! Dumps BLContextCore or BLContext.
+BL_MAYBE_UNUSED
 static void bl_debug_context(const BLContextCore* obj) {
   bl_debug_context_(obj, "BLContext", 0);
 }
 
 //! Dumps BLFontCore or BLFont.
+BL_MAYBE_UNUSED
 static void bl_debug_font(const BLFontCore* obj) {
   bl_debug_font_(obj, "BLFont", 0);
 }
 
 //! Dumps BLFontFeatureSettingsCore or BLFontFeatureSettings.
+BL_MAYBE_UNUSED
 static void bl_debug_font_feature_settings(const BLFontFeatureSettingsCore* obj) {
   bl_debug_font_feature_settings_(obj, "BLFontFeatureSettings", 0);
 }
 
 //! Dumps BLFontVariationSettingsCore or BLFontVariationSettings.
+BL_MAYBE_UNUSED
 static void bl_debug_font_variation_settings(const BLFontVariationSettingsCore* obj) {
   bl_debug_font_variation_settings_(obj, "BLFontVariationSettings", 0);
 }
 
 //! Dumps BLGradientCore or BLGradient.
+BL_MAYBE_UNUSED
 static void bl_debug_gradient(const BLGradientCore* obj) {
   bl_debug_gradient_(obj, "BLGradient", 0);
 }
 
 //! Dumps BLImageCore or BLImage.
+BL_MAYBE_UNUSED
 static void bl_debug_image(const BLImageCore* obj) {
   bl_debug_image_(obj, "BLImage", 0);
 }
 
+BL_MAYBE_UNUSED
 static void bl_debug_matrix2d(const BLMatrix2D* obj) {
   bl_debug_matrix2d_(obj, "BLMatrix", 0);
 }
@@ -893,16 +945,19 @@ static void bl_debug_matrix2d(const BLMatrix2D* obj) {
 //! Dumps BLObjectCore or BLObject.
 //!
 //! You can use this function with any object that implements `BLObject` interface.
+BL_MAYBE_UNUSED
 static void bl_debug_object(const void* obj) {
   bl_debug_object_(obj, "BLObject", 0);
 }
 
 //! Dumps BLPathCore or BLPath.
+BL_MAYBE_UNUSED
 static void bl_debug_path(const BLPathCore* obj) {
   bl_debug_path_(obj, "BLPath", 0);
 }
 
 //! Dumps BLPatternCore or BLPattern.
+BL_MAYBE_UNUSED
 static void bl_debug_pattern(const BLPatternCore* obj) {
   bl_debug_pattern_(obj, "BLPattern", 0);
 }
@@ -912,6 +967,7 @@ static void bl_debug_pattern(const BLPatternCore* obj) {
 
 #undef BL_DEBUG_FMT
 #undef BL_DEBUG_OUT
+#undef BL_MAYBE_UNUSED
 
 //! \endcond
 

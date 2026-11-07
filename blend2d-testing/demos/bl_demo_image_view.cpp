@@ -39,11 +39,11 @@ public:
     _next_frame_button = new QPushButton("Next");
     _canvas = new QBLCanvas();
 
-    connect(_file_selected_button, SIGNAL(clicked()), SLOT(selectFile()));
-    connect(_file_selected, SIGNAL(textChanged(const QString&)), SLOT(fileChanged(const QString&)));
-    connect(&_timer, SIGNAL(timeout()), this, SLOT(onTimer()));
-    connect(_next_frame_button, SIGNAL(clicked()), SLOT(onNextFrame()));
-    connect(_background_check_box, SIGNAL(clicked()), SLOT(onRedraw()));
+    connect(_file_selected_button, SIGNAL(clicked()), SLOT(select_file()));
+    connect(_file_selected, SIGNAL(textChanged(const QString&)), SLOT(file_changed(const QString&)));
+    connect(&_timer, SIGNAL(timeout()), this, SLOT(on_timer()));
+    connect(_next_frame_button, SIGNAL(clicked()), SLOT(on_next_frame()));
+    connect(_background_check_box, SIGNAL(clicked()), SLOT(on_redraw()));
 
     _canvas->on_render_blend2d = std::bind(&MainWindow::on_render_blend2d, this, std::placeholders::_1);
 
@@ -115,10 +115,10 @@ public:
       }
     }
 
-    _updateTitle();
+    _update_window_title();
   }
 
-  Q_SLOT void selectFile() {
+  Q_SLOT void select_file() {
     QString file_name = _file_selected->text();
     QFileDialog dialog(this);
 
@@ -136,7 +136,7 @@ public:
     }
   }
 
-  Q_SLOT void fileChanged(const QString&) {
+  Q_SLOT void file_changed(const QString&) {
     QByteArray file_name_utf8 = _file_selected->text().toUtf8();
     file_name_utf8.append('\0');
 
@@ -144,7 +144,7 @@ public:
     _canvas->update_canvas();
   }
 
-  Q_SLOT void onTimer() {
+  Q_SLOT void on_timer() {
     if (!_animate_check_box->isChecked()) {
       return;
     }
@@ -157,7 +157,7 @@ public:
     }
   }
 
-  Q_SLOT void onNextFrame() {
+  Q_SLOT void on_next_frame() {
     if (_loaded_image_info.frame_count > 1u) {
       if (read_frame()) {
         _canvas->update_canvas();
@@ -165,7 +165,7 @@ public:
     }
   }
 
-  Q_SLOT void onRedraw() {
+  Q_SLOT void on_redraw() {
     _canvas->update_canvas();
   }
 
@@ -176,14 +176,14 @@ public:
     ctx.blit_image(BLPointI(0, 0), _loaded_image);
   }
 
-  void _updateTitle() {
+  void _update_window_title() {
     BLString s;
 
     if (!_error_message.is_empty()) {
       s.assign_format("Load ERROR=%s", _error_message.data());
     }
     else {
-      s.assign_format("Image Size=[%dx%d] Format=%s Depth=%u Compression=%s Frames=%llu",
+      s.assign_format("Image Size=[%dx%d] Fmt=%s BPP=%u Compression=%s Frames=%llu",
         _loaded_image.width(),
         _loaded_image.height(),
         _loaded_image_info.format,

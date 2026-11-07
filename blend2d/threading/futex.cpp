@@ -1,10 +1,9 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// This file is part of Blend2D project <https://blend2d.com>
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_p.h>
+#include <blend2d/core/api_build_p.h>
 #include <blend2d/core/runtime_p.h>
 #include <blend2d/threading/futex_p.h>
 
@@ -14,8 +13,8 @@
   #endif
 #endif
 
-// bl::Futex - Runtime Registration
-// ================================
+// Futex - Runtime Registration
+// ============================
 
 #if !defined(BL_BUILD_NO_FUTEX) && defined(__linux__)
 
@@ -34,17 +33,17 @@ void bl_fuxex_rt_init(BLRuntimeContext* rt) noexcept {
 #elif !defined(BL_BUILD_NO_FUTEX) && defined(_WIN32)
 
 namespace bl::Futex::Native {
-FutexSyncAPI futexSyncAPI;
+FutexSyncAPI futex_sync_api;
 } // {bl::Futex::Native}
 
 void bl_fuxex_rt_init(BLRuntimeContext* rt) noexcept {
-  HMODULE hModule = GetModuleHandleA("api-ms-win-core-synch-l1-2-0.dll");
+  HMODULE hModule = GetModuleHandleA("api_ms-win-core-synch-l1-2-0.dll");
 
   if (!hModule)
     return;
 
   using FutexSyncAPI = bl::Futex::Native::FutexSyncAPI;
-  FutexSyncAPI& fn = bl::Futex::Native::futexSyncAPI;
+  FutexSyncAPI& fn = bl::Futex::Native::futex_sync_api;
 
   fn.WaitOnAddress       = (FutexSyncAPI::WaitOnAddressFunc      )GetProcAddress(hModule, "WaitOnAddress");
   fn.WakeByAddressSingle = (FutexSyncAPI::WakeByAddressSingleFunc)GetProcAddress(hModule, "WakeByAddressSingle");
@@ -57,6 +56,6 @@ void bl_fuxex_rt_init(BLRuntimeContext* rt) noexcept {
 #else
 
 // Futex not supported.
-void bl_fuxex_rt_init(BLRuntimeContext* rt) noexcept { bl_unused(rt); }
+void bl_fuxex_rt_init([[maybe_unused]] BLRuntimeContext* rt) noexcept {}
 
 #endif

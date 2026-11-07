@@ -29,7 +29,7 @@ public:
   int _grabbed_y = 0;
 
   MainWindow() {
-    setWindowTitle(QLatin1String("Gradients"));
+    setWindowTitle(QLatin1String("bl_demo_gradients"));
 
     QVBoxLayout* vBox = new QVBoxLayout();
     vBox->setContentsMargins(0, 0, 0, 0);
@@ -40,7 +40,7 @@ public:
     grid->setSpacing(5);
 
     QBLCanvas::init_renderer_select_box(&_renderer_select);
-    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(onRendererChanged(int)));
+    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(on_renderer_changed(int)));
 
     _gradient_type_select.addItem("Linear", QVariant(int(BL_GRADIENT_TYPE_LINEAR)));
     _gradient_type_select.addItem("Radial", QVariant(int(BL_GRADIENT_TYPE_RADIAL)));
@@ -124,7 +124,7 @@ public:
     _canvas.on_render_qt = std::bind(&MainWindow::on_render_qt, this, std::placeholders::_1);
     _canvas.on_mouse_event = std::bind(&MainWindow::on_mouse_event, this, std::placeholders::_1);
 
-    onInit();
+    init_data();
     updateLabels();
   }
 
@@ -149,12 +149,12 @@ public:
 
   void keyPressEvent(QKeyEvent *event) override {}
 
-  void onInit() {
+  void init_data() {
     _pts[0].reset(350, 300);
     _pts[1].reset(200, 150);
   }
 
-  size_t getClosestVertex(BLPoint p, double maxDistance) noexcept {
+  size_t get_closest_vertex(BLPoint p, double maxDistance) noexcept {
     size_t closestIndex = SIZE_MAX;
     double closestDistance = std::numeric_limits<double>::max();
     for (size_t i = 0; i < _num_points; i++) {
@@ -197,7 +197,7 @@ public:
 
     if (event->type() == QEvent::MouseMove) {
       if (_grabbed_vertex == SIZE_MAX) {
-        _closest_vertex = getClosestVertex(BLPoint(mx, my), 5);
+        _closest_vertex = get_closest_vertex(BLPoint(mx, my), 5);
         _canvas.update_canvas();
       }
       else {
@@ -207,7 +207,7 @@ public:
     }
   }
 
-  Q_SLOT void onRendererChanged(int index) {
+  Q_SLOT void on_renderer_changed(int index) {
     _canvas.set_renderer_type(_renderer_select.itemData(index).toInt());
   }
 

@@ -6,7 +6,7 @@
 #ifndef BLEND2D_PIXELOPS_SCALAR_P_H_INCLUDED
 #define BLEND2D_PIXELOPS_SCALAR_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/core/api_internal_p.h>
 #include <blend2d/core/rgba_p.h>
 #include <blend2d/simd/simd_p.h>
 #include <blend2d/tables/tables_p.h>
@@ -120,7 +120,7 @@ static BL_INLINE uint32_t cvt_argb32_8888_from_argb16_4444(uint32_t src) noexcep
 }
 
 static BL_INLINE uint32_t cvt_prgb32_8888_from_argb32_8888(uint32_t val32, uint32_t _a) noexcept {
-#if BL_TARGET_SIMD_I
+#if BL_SIMD_WIDTH_I
   using namespace SIMD;
 
   Vec8xU16 p0 = unpack_lo64_u8_u16(cast_from_u32<Vec8xU16>(val32 | 0xFF000000u));
@@ -144,7 +144,7 @@ static BL_INLINE uint32_t cvt_prgb32_8888_from_argb32_8888(uint32_t val32, uint3
 }
 
 static BL_INLINE uint32_t cvt_prgb32_8888_from_argb32_8888(uint32_t val32) noexcept {
-#if BL_TARGET_SIMD_I
+#if BL_SIMD_WIDTH_I
   using namespace SIMD;
 
   Vec8xU16 p0 = unpack_lo64_u8_u16(cast_from_u32<Vec8xU16>(val32));

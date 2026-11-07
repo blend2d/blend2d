@@ -37,8 +37,8 @@ public:
     _count_slider.setValue(500);
     _count_slider.setOrientation(Qt::Horizontal);
 
-    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(onRendererChanged(int)));
-    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(onLimitFpsChanged(int)));
+    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(on_renderer_changed(int)));
+    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(on_limit_fps_changed(int)));
 
     grid->addWidget(new QLabel("Renderer:"), 0, 0);
     grid->addWidget(&_renderer_select, 0, 1);
@@ -56,28 +56,28 @@ public:
     vBox->addWidget(&_canvas);
     setLayout(vBox);
 
-    connect(&_timer, SIGNAL(timeout()), this, SLOT(onTimer()));
-    connect(new QShortcut(QKeySequence(Qt::Key_P), this), SIGNAL(activated()), SLOT(onToggleAnimate()));
+    connect(&_timer, SIGNAL(timeout()), this, SLOT(on_timer()));
+    connect(new QShortcut(QKeySequence(Qt::Key_P), this), SIGNAL(activated()), SLOT(on_toggle_animate()));
 
-    onInit();
+    init_data();
   }
 
   void showEvent(QShowEvent* event) override { _timer.start(); }
   void hideEvent(QHideEvent* event) override { _timer.stop(); }
   void keyPressEvent(QKeyEvent* event) override {}
 
-  void onInit() {
+  void init_data() {
     _angle = 0;
     _count = 0;
     _limit_fps_check.setChecked(true);
-    _updateTitle();
+    _update_window_title();
   }
 
-  Q_SLOT void onToggleAnimate() { _animate = !_animate; }
-  Q_SLOT void onRendererChanged(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt()); }
-  Q_SLOT void onLimitFpsChanged(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
+  Q_SLOT void on_toggle_animate() { _animate = !_animate; }
+  Q_SLOT void on_renderer_changed(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt()); }
+  Q_SLOT void on_limit_fps_changed(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
 
-  Q_SLOT void onTimer() {
+  Q_SLOT void on_timer() {
     if (_animate) {
       _angle += 0.05;
       if (_angle >= 360)
@@ -85,7 +85,7 @@ public:
     }
 
     _canvas.update_canvas(true);
-    _updateTitle();
+    _update_window_title();
   }
 
   // The idea is based on:
@@ -144,9 +144,9 @@ public:
     ctx.fillPath(p, brush);
   }
 
-  void _updateTitle() {
+  void _update_window_title() {
     char buf[256];
-    snprintf(buf, 256, "Circles [%dx%d] [Count=%d] [RenderTime=%.2fms FPS=%.1f]",
+    snprintf(buf, 256, "bl_demo_circles [%dx%d] [N=%d] [RenderTime=%.2fms FPS=%.1f]",
       _canvas.image_width(),
       _canvas.image_height(),
       _count_slider.value(),

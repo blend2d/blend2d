@@ -6,8 +6,8 @@
 #include <stdint.h>
 
 // Supplement some Blend2D types and definitions (this generator is totally standalone).
-#define BLEND2D_API_BUILD_P_H_INCLUDED
-#define BLEND2D_API_INTERNAL_P_H_INCLUDED
+#define BLEND2D_CORE_API_BUILD_P_H_INCLUDED
+#define BLEND2D_CORE_API_INTERNAL_P_H_INCLUDED
 
 typedef uint32_t BLTag;
 
@@ -15,8 +15,8 @@ typedef uint32_t BLTag;
 #define BL_INLINE inline
 #define BL_MAKE_TAG(A, B, C, D) ((BLTag)(((BLTag)(A) << 24) | ((BLTag)(B) << 16) | ((BLTag)(C) << 8) | ((BLTag)(D))))
 
-#include <blend2d/core/fonttagdataids_p.h>
-#include <blend2d/core/fonttagdataids.cpp>
+#include <blend2d/core/font_tag_data_ids_p.h>
+#include <blend2d/core/font_tag_data_ids.cpp>
 
 int main() {
   printf("-- Finding table tags to ids hash function --\n");

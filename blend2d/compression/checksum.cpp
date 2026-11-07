@@ -3,20 +3,21 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_p.h>
+#include <blend2d/core/api_build_p.h>
+
+#include <blend2d/axl/commons.h>
 #include <blend2d/core/runtime_p.h>
 #include <blend2d/compression/checksum_p.h>
-#include <blend2d/support/ptrops_p.h>
 
 namespace bl::Compression::Checksum {
 
-// bl::Compression - CheckSum - Function Table
-// ===========================================
+// Compression - CheckSum - Function Table
+// =======================================
 
 FunctionTable function_table;
 
-// bl::Compression - CheckSum - Adler32
-// ====================================
+// Compression - CheckSum - Adler32
+// ================================
 
 uint32_t adler32_update_ref(uint32_t checksum, const uint8_t* data, size_t size) noexcept {
   uint32_t s1 = checksum & 0xFFFFu;
@@ -26,7 +27,7 @@ uint32_t adler32_update_ref(uint32_t checksum, const uint8_t* data, size_t size)
   const uint8_t* end = data + size;
 
   while (p != end) {
-    size_t n = bl_min<size_t>(PtrOps::bytes_until(p, end), kAdler32MaxBytesPerChunk);
+    size_t n = bl_min<size_t>(axl::ptr_byte_diff(p, end), kAdler32MaxBytesPerChunk);
     const uint8_t* chunk_end = p + n;
 
     n /= 4u;
@@ -63,8 +64,8 @@ uint32_t adler32(const uint8_t* data, size_t size) noexcept {
   return function_table.adler32(kAdler32Initial, data, size);
 }
 
-// bl::Compression - CheckSum - Crc32
-// ==================================
+// Compression - CheckSum - Crc32
+// ==============================
 
 const uint32_t crc32_table[] = {
   0x00000000u, 0x77073096u, 0xEE0E612Cu, 0x990951BAu,
@@ -146,32 +147,32 @@ uint32_t crc32(const uint8_t* data, size_t size) noexcept {
 
 } // {bl::Compression::Checksum}
 
-void bl_compression_rt_init(BLRuntimeContext* rt) noexcept {
-  bl_unused(rt);
+void bl_compression_rt_init([[maybe_unused]] BLRuntimeContext* rt) noexcept {
+  using namespace bl;
 
-  bl::Compression::Checksum::FunctionTable& ft = bl::Compression::Checksum::function_table;
-  ft.adler32 = bl::Compression::Checksum::adler32_update_ref;
-  ft.crc32 = bl::Compression::Checksum::crc32_update_ref;
+  Compression::Checksum::FunctionTable& ft = Compression::Checksum::function_table;
+  ft.adler32 = Compression::Checksum::adler32_update_ref;
+  ft.crc32 = Compression::Checksum::crc32_update_ref;
 
 #if BL_TARGET_ARCH_X86
   if (bl_runtime_has_sse2(rt)) {
-    ft.adler32 = bl::Compression::Checksum::adler32_update_sse2;
+    ft.adler32 = Compression::Checksum::adler32_update_sse2;
   }
 
   if (bl_runtime_has_sse4_2(rt)) {
-    ft.crc32 = bl::Compression::Checksum::crc32_update_sse4_2;
+    ft.crc32 = Compression::Checksum::crc32_update_sse4_2;
   }
 #endif // BL_TARGET_ARCH_X86
 
 #if defined(BL_BUILD_OPT_ASIMD)
   if (bl_runtime_has_asimd(rt)) {
-    ft.adler32 = bl::Compression::Checksum::adler32_update_asimd;
+    ft.adler32 = Compression::Checksum::adler32_update_asimd;
   }
 #endif // BL_BUILD_OPT_ASIMD
 
 #if defined(BL_BUILD_OPT_ASIMD_CRYPTO)
   if (bl_runtime_has_crc32(rt) && bl_runtime_has_pmull(rt)) {
-    ft.crc32 = bl::Compression::Checksum::crc32_update_asimd;
+    ft.crc32 = Compression::Checksum::crc32_update_asimd;
   }
 #endif // BL_BUILD_OPT_ASIMD_CRYPTO
 }

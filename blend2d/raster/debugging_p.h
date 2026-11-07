@@ -6,10 +6,10 @@
 #ifndef BLEND2D_RASTER_DEBUGGING_P_H_INCLUDED
 #define BLEND2D_RASTER_DEBUGGING_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
-#include <blend2d/raster/edgebuilder_p.h>
-#include <blend2d/raster/rasterdefs_p.h>
-#include <blend2d/support/traits_p.h>
+#include <blend2d/axl/commons.h>
+#include <blend2d/core/api_internal_p.h>
+#include <blend2d/raster/edge_builder_p.h>
+#include <blend2d/raster/raster_defs_p.h>
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_raster_engine_impl
@@ -23,10 +23,10 @@ static void debug_edges(EdgeStorage<int>* edge_storage) noexcept {
   size_t count = edge_storage->band_count();
   uint32_t band_height = edge_storage->band_height();
 
-  int min_x = Traits::max_value<int>();
-  int min_y = Traits::max_value<int>();
-  int max_x = Traits::min_value<int>();
-  int max_y = Traits::min_value<int>();
+  int min_x = axl::max_value<int>();
+  int min_y = axl::max_value<int>();
+  int max_x = axl::min_value<int>();
+  int max_y = axl::min_value<int>();
 
   const BLBoxI& bb = edge_storage->bounding_box();
   printf("EDGE STORAGE [%d.%d %d.%d %d.%d %d.%d]:\n",

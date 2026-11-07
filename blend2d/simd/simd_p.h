@@ -6,19 +6,21 @@
 #ifndef BLEND2D_SIMD_SIMD_P_H_INCLUDED
 #define BLEND2D_SIMD_SIMD_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/core/api_internal_p.h>
 
 // SIMD - Architecture
 // ===================
+
+namespace bl::SIMD {}
 
 #if BL_TARGET_ARCH_X86
   #include <blend2d/simd/simdx86_p.h>
 #elif BL_TARGET_ARCH_ARM && (defined(__ARM_NEON) || defined(_M_ARM) || defined(_M_ARM64))
   #include <blend2d/simd/simdarm_p.h>
 #else
-  #define BL_TARGET_SIMD_I 0
-  #define BL_TARGET_SIMD_F 0
-  #define BL_TARGET_SIMD_D 0
+  #define BL_SIMD_WIDTH_I 0
+  #define BL_SIMD_WIDTH_F 0
+  #define BL_SIMD_WIDTH_D 0
 #endif
 
 #endif // BLEND2D_SIMD_SIMD_P_H_INCLUDED

@@ -3,17 +3,17 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_p.h>
+#include <blend2d/core/api_build_p.h>
 #if defined(BL_TARGET_OPT_SSE2)
 
+#include <blend2d/axl/commons.h>
 #include <blend2d/core/geometry.h>
 #include <blend2d/core/matrix_p.h>
 #include <blend2d/core/runtime_p.h>
 #include <blend2d/simd/simd_p.h>
-#include <blend2d/support/ptrops_p.h>
 
 namespace bl {
-namespace TransformInternal {
+namespace TransformDetail {
 
 // bl::Transform - MapPointDArray (SSE2)
 // =====================================
@@ -21,12 +21,12 @@ namespace TransformInternal {
 static BLResult BL_CDECL map_pointd_array_identity_sse2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
-  bl_unused(self);
+  axl::maybe_unused(self);
   if (dst == src)
     return BL_SUCCESS;
 
   size_t i = size;
-  if (PtrOps::both_aligned(dst, src, 16)) {
+  if (axl::ptrs_are_aligned<16>(dst, src)) {
     while (i >= 4) {
       Vec2xF64 v0 = loada<Vec2xF64>(src + 0);
       Vec2xF64 v1 = loada<Vec2xF64>(src + 1);
@@ -70,7 +70,7 @@ static BLResult BL_CDECL map_pointd_array_translate_sse2(const BLMatrix2D* self,
   size_t i = size;
   Vec2xF64 m21_m20 = loadu<Vec2xF64>(&self->m20);
 
-  if (PtrOps::both_aligned(dst, src, 16)) {
+  if (axl::ptrs_are_aligned<16>(dst, src)) {
     while (i >= 4) {
       Vec2xF64 v0 = loada<Vec2xF64>(src + 0) + m21_m20;
       Vec2xF64 v1 = loada<Vec2xF64>(src + 1) + m21_m20;
@@ -131,7 +131,7 @@ static BLResult BL_CDECL map_pointd_array_scale_sse2(const BLMatrix2D* self, BLP
   Vec2xF64 m11_m00 = make128_f64(self->m11, self->m00);
   Vec2xF64 m21_m20 = loadu<Vec2xF64>(&self->m20);
 
-  if (PtrOps::both_aligned(dst, src, 16)) {
+  if (axl::ptrs_are_aligned<16>(dst, src)) {
     while (i >= 4) {
       Vec2xF64 v0 = loada<Vec2xF64>(src + 0) * m11_m00 + m21_m20;
       Vec2xF64 v1 = loada<Vec2xF64>(src + 1) * m11_m00 + m21_m20;
@@ -192,7 +192,7 @@ static BLResult BL_CDECL map_pointd_array_swap_sse2(const BLMatrix2D* self, BLPo
   Vec2xF64 m21_m20 = loadu<Vec2xF64>(&self->m20);
 
   size_t i = size;
-  if (bl::PtrOps::both_aligned(dst, src, 16)) {
+  if (bl::axl::ptrs_are_aligned<16>(dst, src)) {
     while (i >= 4) {
       Vec2xF64 v0 = swap_f64(loada<Vec2xF64>(src + 0)) * m01_m10 + m21_m20;
       Vec2xF64 v1 = swap_f64(loada<Vec2xF64>(src + 1)) * m01_m10 + m21_m20;
@@ -254,7 +254,7 @@ static BLResult BL_CDECL map_pointd_array_affine_sse2(const BLMatrix2D* self, BL
   Vec2xF64 m01_m10 = make128_f64(self->m01, self->m10);
   Vec2xF64 m21_m20 = loadu<Vec2xF64>(&self->m20);
 
-  if (PtrOps::both_aligned(dst, src, 16)) {
+  if (axl::ptrs_are_aligned<16>(dst, src)) {
     while (i >= 4) {
       Vec2xF64 v0 = loada<Vec2xF64>(src + 0);
       Vec2xF64 v1 = loada<Vec2xF64>(src + 1);
@@ -313,8 +313,7 @@ static BLResult BL_CDECL map_pointd_array_affine_sse2(const BLMatrix2D* self, BL
 // Transform - Runtime Registration (SSE2)
 // =======================================
 
-void bl_transform_rt_init_sse2(BLRuntimeContext* rt) noexcept {
-  bl_unused(rt);
+void bl_transform_rt_init_sse2([[maybe_unused]] BLRuntimeContext* rt) noexcept {
   BLMapPointDArrayFunc* funcs = map_pointd_array_funcs;
 
   bl_assign_func(&funcs[BL_TRANSFORM_TYPE_IDENTITY ], map_pointd_array_identity_sse2);
@@ -325,7 +324,7 @@ void bl_transform_rt_init_sse2(BLRuntimeContext* rt) noexcept {
   bl_assign_func(&funcs[BL_TRANSFORM_TYPE_INVALID  ], map_pointd_array_affine_sse2);
 }
 
-} // {TransformInternal}
+} // {TransformDetail}
 } // {bl}
 
 #endif

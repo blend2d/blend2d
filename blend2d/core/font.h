@@ -3,21 +3,21 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_FONT_H_INCLUDED
-#define BLEND2D_FONT_H_INCLUDED
+#ifndef BLEND2D_CORE_FONT_H_INCLUDED
+#define BLEND2D_CORE_FONT_H_INCLUDED
 
 #include <blend2d/core/array.h>
-#include <blend2d/core/bitset.h>
-#include <blend2d/core/filesystem.h>
-#include <blend2d/core/fontdata.h>
-#include <blend2d/core/fontdefs.h>
-#include <blend2d/core/fontface.h>
-#include <blend2d/core/fontfeaturesettings.h>
-#include <blend2d/core/fontvariationsettings.h>
+#include <blend2d/core/coverage_set.h>
+#include <blend2d/core/file_system.h>
+#include <blend2d/core/font_data.h>
+#include <blend2d/core/font_defs.h>
+#include <blend2d/core/font_face.h>
+#include <blend2d/core/font_feature_settings.h>
+#include <blend2d/core/font_variation_settings.h>
 #include <blend2d/core/geometry.h>
-#include <blend2d/core/glyphbuffer.h>
-#include <blend2d/core/glyphrun.h>
-#include <blend2d/core/object.h>
+#include <blend2d/core/glyph_buffer.h>
+#include <blend2d/core/glyph_run.h>
+#include <blend2d/core/object_layer.h>
 #include <blend2d/core/path.h>
 #include <blend2d/core/string.h>
 
@@ -28,16 +28,17 @@
 //! \{
 
 //! Font [C API].
-struct BLFontCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLFont)
+struct BLFontCore BL_INHERITS_FROM(BLObjectCore) {
+  BL_DEFINE_OBJECT(BLFont, bl::ObjectLayer::ObjectInfo<
+    BL_OBJECT_TYPE_FONT,
+    bl::ObjectLayer::ObjectMode::kDyn,
+    bl::ObjectLayer::ObjectLayout::kUnknown>
+  )
 };
-
-BL_BEGIN_C_DECLS
 
 //! \cond INTERNAL
 //! Font [C API Impl].
-struct BLFontImpl BL_CLASS_INHERITS(BLObjectImpl) {
+struct BLFontImpl BL_INHERITS_FROM(BLObjectImpl) {
   //! Font face used by this font.
   BLFontFaceCore face;
 
@@ -60,6 +61,8 @@ struct BLFontImpl BL_CLASS_INHERITS(BLObjectImpl) {
   BLFontVariationSettingsCore variation_settings;
 };
 //! \endcond
+
+BL_EXTERN_C_BEGIN
 
 BL_API BLResult BL_CDECL bl_font_init(BLFontCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_font_init_move(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
@@ -95,7 +98,7 @@ BL_API BLResult BL_CDECL bl_font_get_glyph_advances(const BLFontCore* self, cons
 BL_API BLResult BL_CDECL bl_font_get_glyph_outlines(const BLFontCore* self, BLGlyphId glyph_id, const BLMatrix2D* user_transform, BLPathCore* out, BLPathSinkFunc sink, void* user_data) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_font_get_glyph_run_outlines(const BLFontCore* self, const BLGlyphRun* glyph_run, const BLMatrix2D* user_transform, BLPathCore* out, BLPathSinkFunc sink, void* user_data) BL_NOEXCEPT_C;
 
-BL_END_C_DECLS
+BL_EXTERN_C_END
 
 //! \}
 //! \}
@@ -115,12 +118,7 @@ public:
   //! \name Internals
   //! \{
 
-  //! Object info values of a default constructed BLFont.
-  static inline constexpr uint32_t kDefaultSignature =
-    BLObjectInfo::pack_type_with_marker(BL_OBJECT_TYPE_FONT) | BL_OBJECT_INFO_D_FLAG;
-
-  [[nodiscard]]
-  BL_INLINE_NODEBUG BLFontImpl* _impl() const noexcept { return static_cast<BLFontImpl*>(_d.impl); }
+  static constexpr uint8_t kDefaultMetaFlags = BLObjectDetail::kMetaFlagD;
 
   //! \}
   //! \endcond
@@ -135,8 +133,8 @@ public:
   BL_INLINE_NODEBUG BLFont() noexcept {
     bl_font_init(this);
 
-    // Assume a default constructed BLFont.
-    BL_ASSUME(_d.info.bits == kDefaultSignature);
+    // Assume that a default constructed BLFont has the required flags set/unset.
+    BL_ASSUME(_d._sso_data[BLObjectDetail::kMetaByteIndex] == kDefaultMetaFlags);
   }
 
   //! Move constructor moves the underlying representation of the `other` font into this newly created instance and
@@ -145,7 +143,7 @@ public:
     bl_font_init_move(this, &other);
 
     // Assume a default initialized `other`.
-    BL_ASSUME(other._d.info.bits == kDefaultSignature);
+    BL_ASSUME(other._d._sso_data[BLObjectDetail::kMetaByteIndex] == kDefaultMetaFlags);
   }
 
   //! Copy constructor makes a weak copy of the underlying representation of the `other` font.
@@ -155,7 +153,7 @@ public:
 
   //! Destroys the font.
   BL_INLINE_NODEBUG ~BLFont() noexcept {
-    if (BLInternal::object_needs_cleanup(_d.info.bits)) {
+    if (bl::ObjectLayer::requires_destroy(this)) {
       bl_font_destroy(this);
     }
   }
@@ -190,8 +188,8 @@ public:
 
     // Reset operation always succeeds.
     BL_ASSUME(result == BL_SUCCESS);
-    // Assume a default constructed BLFont after reset.
-    BL_ASSUME(_d.info.bits == kDefaultSignature);
+    // Assume that a default constructed BLFont has the required flags set/unset.
+    BL_ASSUME(_d._sso_data[BLObjectDetail::kMetaByteIndex] == kDefaultMetaFlags);
 
     return result;
   }
@@ -231,7 +229,7 @@ public:
 
   //! Creates a new font from the existing font `face` scaled to the given `size`.
   //!
-  //! This is an overloaded function that takes additional argument `feature_settings.
+  //! This is an overloaded function that takes additional argument `feature_settings`.
   BL_INLINE_NODEBUG BLResult create_from_face(const BLFontFaceCore& face, float size, const BLFontFeatureSettingsCore& feature_settings) noexcept {
     return bl_font_create_from_face_with_settings(this, &face, size, &feature_settings, nullptr);
   }
@@ -406,4 +404,4 @@ public:
 
 //! \}
 
-#endif // BLEND2D_FONT_H_INCLUDED
+#endif // BLEND2D_CORE_FONT_H_INCLUDED

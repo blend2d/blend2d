@@ -3,13 +3,14 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_MATRIX_P_H_INCLUDED
-#define BLEND2D_MATRIX_P_H_INCLUDED
+#ifndef BLEND2D_CORE_MATRIX_P_H_INCLUDED
+#define BLEND2D_CORE_MATRIX_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/core/api_internal_p.h>
+
+#include <blend2d/axl/math_p.h>
 #include <blend2d/core/matrix.h>
 #include <blend2d/core/runtime_p.h>
-#include <blend2d/support/math_p.h>
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -20,7 +21,7 @@
 typedef BLResult (BL_CDECL* BLMapPointDArrayFunc)(const void* ctx, BLPoint* dst, const BLPoint* src, size_t count) noexcept;
 
 namespace bl {
-namespace TransformInternal {
+namespace TransformDetail {
 
 //! Array of functions for transforming points indexed by `BLMatrixType`. Each function is optimized for the respective
 //! type. This is mostly used internally, but exported for users that can take advantage of Blend2D SIMD optimziations.
@@ -63,10 +64,10 @@ static BL_INLINE void multiply(BLMatrix2D& dst, const BLMatrix2D& a, const BLMat
             a.m20 * b.m01 + a.m21 * b.m11 + b.m21);
 }
 
-} // {TransformInternal}
+} // {TransformDetail}
 } // {bl}
 
 //! \}
 //! \endcond
 
-#endif // BLEND2D_MATRIX_P_H_INCLUDED
+#endif // BLEND2D_CORE_MATRIX_P_H_INCLUDED

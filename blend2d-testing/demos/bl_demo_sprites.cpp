@@ -73,10 +73,10 @@ public:
     _canvas.on_render_blend2d = std::bind(&MainWindow::on_render_blend2d, this, std::placeholders::_1);
     _canvas.on_render_qt = std::bind(&MainWindow::on_render_qt, this, std::placeholders::_1);
 
-    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(onRendererChanged(int)));
-    connect(&_comp_op_select, SIGNAL(activated(int)), SLOT(onCompOpChanged(int)));
-    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(onLimitFpsChanged(int)));
-    connect(&_count_slider, SIGNAL(valueChanged(int)), SLOT(onCountChanged(int)));
+    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(on_renderer_changed(int)));
+    connect(&_comp_op_select, SIGNAL(activated(int)), SLOT(on_comp_op_changed(int)));
+    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(on_limit_fps_changed(int)));
+    connect(&_count_slider, SIGNAL(valueChanged(int)), SLOT(on_count_changed(int)));
 
     grid->addWidget(new QLabel("Renderer:"), 0, 0);
     grid->addWidget(&_renderer_select, 0, 1);
@@ -94,17 +94,17 @@ public:
     vBox->addWidget(&_canvas);
     setLayout(vBox);
 
-    connect(&_timer, SIGNAL(timeout()), this, SLOT(onTimer()));
-    connect(new QShortcut(QKeySequence(Qt::Key_P), this), SIGNAL(activated()), SLOT(onToggleAnimate()));
+    connect(&_timer, SIGNAL(timeout()), this, SLOT(on_timer()));
+    connect(new QShortcut(QKeySequence(Qt::Key_P), this), SIGNAL(activated()), SLOT(on_toggle_animate()));
 
-    onInit();
+    init_data();
   }
 
   void showEvent(QShowEvent* event) override { _timer.start(); }
   void hideEvent(QHideEvent* event) override { _timer.stop(); }
   void keyPressEvent(QKeyEvent* event) override {}
 
-  void onInit() {
+  void init_data() {
     _sprites_blend2d[0].read_from_data(_resource_babelfish_png, sizeof(_resource_babelfish_png));
     _sprites_blend2d[1].read_from_data(_resource_ksplash_png  , sizeof(_resource_ksplash_png  ));
     _sprites_blend2d[2].read_from_data(_resource_ktip_png     , sizeof(_resource_ktip_png     ));
@@ -123,20 +123,20 @@ public:
         int(sprite_data.stride), QImage::Format_ARGB32_Premultiplied);
     }
 
-    setCount(_count_slider.sliderPosition());
+    set_count(_count_slider.sliderPosition());
     _limit_fps_check.setChecked(true);
-    _updateTitle();
+    _update_window_title();
   }
 
-  double randomSign() noexcept { return _random.next_double() < 0.5 ? 1.0 : -1.0; }
+  double random_sign() noexcept { return _random.next_double() < 0.5 ? 1.0 : -1.0; }
 
-  Q_SLOT void onToggleAnimate() { _animate = !_animate; }
-  Q_SLOT void onRendererChanged(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt());  }
-  Q_SLOT void onCompOpChanged(int index) { _comp_op = (BLCompOp)_comp_op_select.itemData(index).toInt(); };
-  Q_SLOT void onLimitFpsChanged(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
-  Q_SLOT void onCountChanged(int value) { setCount(size_t(value)); }
+  Q_SLOT void on_toggle_animate() { _animate = !_animate; }
+  Q_SLOT void on_renderer_changed(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt());  }
+  Q_SLOT void on_comp_op_changed(int index) { _comp_op = (BLCompOp)_comp_op_select.itemData(index).toInt(); };
+  Q_SLOT void on_limit_fps_changed(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
+  Q_SLOT void on_count_changed(int value) { set_count(size_t(value)); }
 
-  Q_SLOT void onTimer() {
+  Q_SLOT void on_timer() {
     if (_animate) {
       double w = _canvas.image_width();
       double h = _canvas.image_height();
@@ -164,7 +164,29 @@ public:
     }
 
     _canvas.update_canvas(true);
-    _updateTitle();
+    _update_window_title();
+  }
+
+  void set_count(size_t size) {
+    int w = _canvas.image_width();
+    int h = _canvas.image_height();
+    size_t i = _coords.size();
+
+    if (w < 16) w = 128;
+    if (h < 16) h = 128;
+
+    _coords.resize(size);
+    _steps.resize(size);
+    _sprite_ids.resize(size);
+
+    while (i < size) {
+      _coords[i].reset(_random.next_double() * (w - 1),
+                       _random.next_double() * (h - 1));
+      _steps[i].reset((_random.next_double() * 2 + 1) * random_sign(),
+                      (_random.next_double() * 2 + 1) * random_sign());
+      _sprite_ids[i] = _random.next_uint32() % 4u;
+      i++;
+    }
   }
 
   void on_render_blend2d(BLContext& ctx) noexcept {
@@ -200,31 +222,9 @@ public:
     }
   }
 
-  void setCount(size_t size) {
-    int w = _canvas.image_width();
-    int h = _canvas.image_height();
-    size_t i = _coords.size();
-
-    if (w < 16) w = 128;
-    if (h < 16) h = 128;
-
-    _coords.resize(size);
-    _steps.resize(size);
-    _sprite_ids.resize(size);
-
-    while (i < size) {
-      _coords[i].reset(_random.next_double() * (w - 1),
-                       _random.next_double() * (h - 1));
-      _steps[i].reset((_random.next_double() * 2 + 1) * randomSign(),
-                      (_random.next_double() * 2 + 1) * randomSign());
-      _sprite_ids[i] = _random.next_uint32() % 4u;
-      i++;
-    }
-  }
-
-  void _updateTitle() {
+  void _update_window_title() {
     char buf[256];
-    snprintf(buf, 256, "Sprites [%dx%d] [Count=%zu] [RenderTime=%.2fms FPS=%.1f]",
+    snprintf(buf, 256, "bl_demo_sprites [%dx%d] [N=%zu] [RenderTime=%.2fms FPS=%.1f]",
       _canvas.image_width(),
       _canvas.image_height(),
       _coords.size(),

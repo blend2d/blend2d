@@ -16,11 +16,10 @@ int main() {
   path.cubic_to(259, 29, 99, 279, 275, 267);
   path.cubic_to(537, 245, 300, -170, 274, 430);
 
-  // Use 'setStrokeXXX' to change stroke options.
+  // Use 'set_stroke_xxx()' to change stroke options.
   ctx.set_stroke_width(15);
   ctx.set_stroke_start_cap(BL_STROKE_CAP_ROUND);
   ctx.set_stroke_end_cap(BL_STROKE_CAP_BUTT);
-
   ctx.stroke_path(path, linear);
 
   ctx.end();

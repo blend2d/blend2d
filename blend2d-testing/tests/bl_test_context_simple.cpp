@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include <blend2d/blend2d.h>
-#include <blend2d-testing/commons/imagediff.h>
+#include <blend2d-testing/commons/image_diff.h>
 #include <blend2d-testing/resources/abeezee_regular_ttf.h>
 #include <blend2d-testing/tests/bl_test_context_baseapp.h>
 #include <blend2d-testing/tests/bl_test_context_utilities.h>
@@ -50,8 +50,8 @@ public:
     return 0;
   }
 
-  int run(CmdLine cmd_line) {
-    print_app_info("Blend2D Rendering Context Tester", cmd_line.has_arg("--quiet"));
+  int run(ZeroLib::CmdLine cmd_line) {
+    print_app_info("Blend2D Rendering Context Tests");
 
     if (cmd_line.has_arg("--help"))
       return help();
@@ -128,5 +128,5 @@ int main(int argc, char* argv[]) {
   BLRuntimeScope rt_scope;
   ContextTests::SimpleTestApp app;
 
-  return app.run(CmdLine(argc, argv));
+  return app.run(ZeroLib::CmdLine(argc, argv));
 }

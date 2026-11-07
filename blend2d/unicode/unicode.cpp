@@ -3,10 +3,10 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_p.h>
+#include <blend2d/core/api_build_p.h>
+
+#include <blend2d/axl/commons.h>
 #include <blend2d/unicode/unicode_p.h>
-#include <blend2d/support/intops_p.h>
-#include <blend2d/support/memops_p.h>
 
 namespace bl::Unicode {
 
@@ -46,10 +46,10 @@ static BL_INLINE BLResult validate_latin1_string(const char* data, size_t size, 
   for (size_t i = 0; i < size; i++)
     extra += size_t(uint8_t(data[i])) >> 7;
 
-  bl::OverflowFlag of{};
-  size_t utf8_size = bl::IntOps::add_overflow(size, extra, &of);
+  axl::OverflowFlag of{};
+  size_t utf8_size = bl::axl::add_overflow(size, extra, of);
 
-  if (BL_UNLIKELY(of))
+  if (BL_UNLIKELY(axl::did_overflow(of)))
     return bl_make_error(BL_ERROR_DATA_TOO_LARGE);
 
   state.utf8_index = utf8_size;
@@ -79,7 +79,7 @@ BLResult bl_validate_unicode(const void* data, size_t size_in_bytes, BLTextEncod
 
     case BL_TEXT_ENCODING_UTF16:
       // This will make sure we won't compile specialized code for architectures that don't penalize unaligned reads.
-      if (MemOps::kUnalignedMem16 || !IntOps::is_aligned(data, 2))
+      if (axl::kHasUnalignedMemoryAccess || !axl::is_aligned(data, 2))
         result = validate_unicode_string<Utf16Reader, IOFlags::kStrict | IOFlags::kUnaligned>(data, size_in_bytes, state);
       else
         result = validate_unicode_string<Utf16Reader, IOFlags::kStrict>(data, size_in_bytes, state);
@@ -90,7 +90,7 @@ BLResult bl_validate_unicode(const void* data, size_t size_in_bytes, BLTextEncod
 
     case BL_TEXT_ENCODING_UTF32:
       // This will make sure we won't compile specialized code for architectures that don't penalize unaligned reads.
-      if (MemOps::kUnalignedMem32 || !IntOps::is_aligned(data, 4))
+      if (axl::kHasUnalignedMemoryAccess || !axl::is_aligned(data, 4))
         result = validate_unicode_string<Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(data, size_in_bytes, state);
       else
         result = validate_unicode_string<Utf32Reader, IOFlags::kStrict>(data, size_in_bytes, state);
@@ -119,7 +119,7 @@ static BL_INLINE BLResult convert_unicode_impl(void* dst, size_t dst_size_in_byt
   typedef typename Writer::CharType DstChar;
 
   Writer writer(static_cast<DstChar*>(dst), dst_size_in_bytes / sizeof(DstChar));
-  Iterator iter(src, IntOps::align_down(src_size_in_bytes, Iterator::kCharSize));
+  Iterator iter(src, axl::align_down(src_size_in_bytes, Iterator::kCharSize));
 
   BLResult result = BL_SUCCESS;
   while (iter.has_next()) {
@@ -141,7 +141,7 @@ static BL_INLINE BLResult convert_unicode_impl(void* dst, size_t dst_size_in_byt
   state.dst_index = offset_of_ptr(dst, writer._ptr);
   state.src_index = offset_of_ptr(src, iter._ptr);
 
-  if (Iterator::kCharSize > 1 && result == BL_SUCCESS && !IntOps::is_aligned(state.src_index, Iterator::kCharSize))
+  if (Iterator::kCharSize > 1 && result == BL_SUCCESS && !axl::is_aligned(state.src_index, Iterator::kCharSize))
     return bl_make_error(BL_ERROR_DATA_TRUNCATED);
   else
     return result;
@@ -151,8 +151,6 @@ BLResult convert_unicode(
   void* dst, size_t dst_size_in_bytes, uint32_t dst_encoding,
   const void* src, size_t src_size_in_bytes, uint32_t src_encoding,
   ConversionState& state) noexcept {
-
-  constexpr bool kUnalignedAny = MemOps::kUnalignedMem16 && MemOps::kUnalignedMem32;
 
   BLResult result = BL_SUCCESS;
   state.reset();
@@ -239,7 +237,7 @@ BLResult convert_unicode(
     // -------------
 
     case (BL_TEXT_ENCODING_UTF8 << 2) | BL_TEXT_ENCODING_UTF16:
-      if (MemOps::kUnalignedMem16 || !IntOps::is_aligned(src, 2))
+      if (axl::kHasUnalignedMemoryAccess || !axl::is_aligned(src, 2))
         result = convert_unicode_impl<Utf8Writer, Utf16Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
         result = convert_unicode_impl<Utf8Writer, Utf16Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
@@ -249,7 +247,7 @@ BLResult convert_unicode(
     // -------------
 
     case (BL_TEXT_ENCODING_UTF8 << 2) | BL_TEXT_ENCODING_UTF32: {
-      if (MemOps::kUnalignedMem32 || !IntOps::is_aligned(src, 4))
+      if (axl::kHasUnalignedMemoryAccess || !axl::is_aligned(src, 4))
         result = convert_unicode_impl<Utf8Writer, Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
         result = convert_unicode_impl<Utf8Writer, Utf32Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
@@ -262,13 +260,15 @@ BLResult convert_unicode(
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_LATIN1: {
       size_t count = bl_min(dst_size_in_bytes / 2, src_size_in_bytes);
 
-      if (MemOps::kUnalignedMem16 || IntOps::is_aligned(dst, 2)) {
-        for (size_t i = 0; i < count; i++)
-          MemOps::writeU16aLE(static_cast<uint8_t*>(dst) + i * 2u, static_cast<const uint8_t*>(src)[i]);
+      if (axl::kHasUnalignedMemoryAccess || axl::is_aligned(dst, 2)) {
+        for (size_t i = 0; i < count; i++) {
+          axl::storea_u16_le(static_cast<uint8_t*>(dst) + i * 2u, static_cast<const uint8_t*>(src)[i]);
+        }
       }
       else {
-        for (size_t i = 0; i < count; i++)
-          MemOps::writeU16uLE(static_cast<uint8_t*>(dst) + i * 2u, static_cast<const uint8_t*>(src)[i]);
+        for (size_t i = 0; i < count; i++) {
+          axl::storeu_u16_le(static_cast<uint8_t*>(dst) + i * 2u, static_cast<const uint8_t*>(src)[i]);
+        }
       }
 
       if (count < src_size_in_bytes)
@@ -283,10 +283,10 @@ BLResult convert_unicode(
     // -------------
 
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_UTF8: {
-      if (MemOps::kUnalignedMem16 || !IntOps::is_aligned(dst, 2))
-        result = convert_unicode_impl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
+      if (axl::kHasUnalignedMemoryAccess || !axl::is_aligned(dst, 2))
+        result = convert_unicode_impl<Utf16Writer<axl::ByteOrder::kNative, 1>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convert_unicode_impl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 2>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
+        result = convert_unicode_impl<Utf16Writer<axl::ByteOrder::kNative, 2>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
     }
 
@@ -294,7 +294,7 @@ BLResult convert_unicode(
     // --------------
 
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_UTF16: {
-      size_t copy_size = IntOps::align_down(bl_min(dst_size_in_bytes, src_size_in_bytes), 2);
+      size_t copy_size = axl::align_down(bl_min(dst_size_in_bytes, src_size_in_bytes), 2);
       ValidationState validation_state;
 
       result = bl_validate_unicode(src, copy_size, BL_TEXT_ENCODING_UTF16, validation_state);
@@ -308,7 +308,7 @@ BLResult convert_unicode(
 
       // Report `BL_ERROR_DATA_TRUNCATED` is everything went right, but the
       // source size was not aligned to 2 bytes.
-      if (result == BL_SUCCESS && !IntOps::is_aligned(src_size_in_bytes, 2))
+      if (result == BL_SUCCESS && !axl::is_aligned(src_size_in_bytes, 2))
         result = bl_make_error(BL_ERROR_DATA_TRUNCATED);
 
       state.dst_index = validated_size;
@@ -320,10 +320,10 @@ BLResult convert_unicode(
     // --------------
 
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_UTF32: {
-      if (kUnalignedAny || !IntOps::is_aligned(dst, 2) || !IntOps::is_aligned(src, 4))
-        result = convert_unicode_impl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
+      if (axl::kHasUnalignedMemoryAccess || !axl::is_aligned(dst, 2) || !axl::is_aligned(src, 4))
+        result = convert_unicode_impl<Utf16Writer<axl::ByteOrder::kNative, 1>, Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convert_unicode_impl<Utf16Writer<BL_BYTE_ORDER_NATIVE, 2>, Utf32Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
+        result = convert_unicode_impl<Utf16Writer<axl::ByteOrder::kNative, 2>, Utf32Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
     }
 
@@ -333,13 +333,13 @@ BLResult convert_unicode(
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_LATIN1: {
       size_t count = bl_min(dst_size_in_bytes / 4, src_size_in_bytes);
 
-      if (MemOps::kUnalignedMem32 || IntOps::is_aligned(dst, 4)) {
+      if (axl::kHasUnalignedMemoryAccess || axl::is_aligned(dst, 4)) {
         for (size_t i = 0; i < count; i++)
-          MemOps::writeU32a(static_cast<uint8_t*>(dst) + i * 4u, static_cast<const uint8_t*>(src)[i]);
+          axl::storea_u32(static_cast<uint8_t*>(dst) + i * 4u, static_cast<const uint8_t*>(src)[i]);
       }
       else {
         for (size_t i = 0; i < count; i++)
-          MemOps::writeU32u(static_cast<uint8_t*>(dst) + i * 4u, static_cast<const uint8_t*>(src)[i]);
+          axl::storeu_u32(static_cast<uint8_t*>(dst) + i * 4u, static_cast<const uint8_t*>(src)[i]);
       }
 
       if (count < src_size_in_bytes)
@@ -354,10 +354,10 @@ BLResult convert_unicode(
     // -------------
 
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_UTF8: {
-      if (MemOps::kUnalignedMem32 || !IntOps::is_aligned(dst, 4))
-        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
+      if (axl::kHasUnalignedMemoryAccess || !axl::is_aligned(dst, 4))
+        result = convert_unicode_impl<Utf32Writer<axl::ByteOrder::kNative, 1>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 4>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
+        result = convert_unicode_impl<Utf32Writer<axl::ByteOrder::kNative, 4>, Utf8Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
     }
 
@@ -365,10 +365,10 @@ BLResult convert_unicode(
     // --------------
 
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_UTF16: {
-      if (kUnalignedAny || !IntOps::is_aligned(dst, 4) || !IntOps::is_aligned(src, 2))
-        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf16Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
+      if (axl::kHasUnalignedMemoryAccess || !axl::is_aligned(dst, 4) || !axl::is_aligned(src, 2))
+        result = convert_unicode_impl<Utf32Writer<axl::ByteOrder::kNative, 1>, Utf16Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 4>, Utf16Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
+        result = convert_unicode_impl<Utf32Writer<axl::ByteOrder::kNative, 4>, Utf16Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
     }
 
@@ -376,10 +376,10 @@ BLResult convert_unicode(
     // --------------
 
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_UTF32: {
-      if (MemOps::kUnalignedMem32 || !IntOps::is_aligned(dst, 4) || !IntOps::is_aligned(src, 4))
-        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 1>, Utf32Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
+      if (axl::kHasUnalignedMemoryAccess || !axl::is_aligned(dst, 4) || !axl::is_aligned(src, 4))
+        result = convert_unicode_impl<Utf32Writer<axl::ByteOrder::kNative, 1>, Utf32Reader, IOFlags::kStrict>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       else
-        result = convert_unicode_impl<Utf32Writer<BL_BYTE_ORDER_NATIVE, 4>, Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
+        result = convert_unicode_impl<Utf32Writer<axl::ByteOrder::kNative, 4>, Utf32Reader, IOFlags::kStrict | IOFlags::kUnaligned>(dst, dst_size_in_bytes, src, src_size_in_bytes, state);
       break;
     }
 

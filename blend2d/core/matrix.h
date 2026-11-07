@@ -3,8 +3,8 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_MATRIX_H_INCLUDED
-#define BLEND2D_MATRIX_H_INCLUDED
+#ifndef BLEND2D_CORE_MATRIX_H_INCLUDED
+#define BLEND2D_CORE_MATRIX_H_INCLUDED
 
 #include <blend2d/core/geometry.h>
 
@@ -93,7 +93,7 @@ BL_DEFINE_ENUM(BLTransformOp) {
 //!
 //! \{
 
-BL_BEGIN_C_DECLS
+BL_EXTERN_C_BEGIN
 
 BL_API BLResult BL_CDECL bl_matrix2d_set_identity(BLMatrix2D* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_matrix2d_set_translation(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
@@ -103,9 +103,9 @@ BL_API BLResult BL_CDECL bl_matrix2d_set_rotation(BLMatrix2D* self, double angle
 BL_API BLResult BL_CDECL bl_matrix2d_apply_op(BLMatrix2D* self, BLTransformOp op_type, const void* op_data) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_matrix2d_invert(BLMatrix2D* dst, const BLMatrix2D* src) BL_NOEXCEPT_C;
 BL_API BLTransformType BL_CDECL bl_matrix2d_get_type(const BLMatrix2D* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_matrix2d_map_pointd_array(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_matrix2d_map_point_d_array(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT_C;
 
-BL_END_C_DECLS
+BL_EXTERN_C_END
 
 //! \}
 //! \}
@@ -324,12 +324,11 @@ struct BLMatrix2D {
 
   [[nodiscard]]
   BL_INLINE bool equals(const BLMatrix2D& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(m00, other.m00),
-                                bl_equals(m01, other.m01),
-                                bl_equals(m10, other.m10),
-                                bl_equals(m11, other.m11),
-                                bl_equals(m20, other.m20),
-                                bl_equals(m21, other.m21));
+    return bl::Internal::bool_and(
+      bl_equals(m00, other.m00), bl_equals(m01, other.m01),
+      bl_equals(m10, other.m10), bl_equals(m11, other.m11),
+      bl_equals(m20, other.m20), bl_equals(m21, other.m21)
+    );
   }
 
   //! \}
@@ -458,7 +457,6 @@ struct BLMatrix2D {
 };
 
 //! \}
-
 //! \}
 
-#endif // BLEND2D_MATRIX_H_INCLUDED
+#endif // BLEND2D_CORE_MATRIX_H_INCLUDED
