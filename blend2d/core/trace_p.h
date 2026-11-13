@@ -3,10 +3,10 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_TRACE_P_H_INCLUDED
-#define BLEND2D_TRACE_P_H_INCLUDED
+#ifndef BLEND2D_CORE_TRACE_P_H_INCLUDED
+#define BLEND2D_CORE_TRACE_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/core/api_internal_p.h>
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -45,16 +45,16 @@ public:
   BL_INLINE void deindent() noexcept { indentation--; }
 
   template<typename... Args>
-  BL_INLINE void out(Args&&... args) noexcept { log(0, 0xFFFFFFFFu, BLInternal::forward<Args>(args)...); }
+  BL_INLINE void out(Args&&... args) noexcept { log(0, 0xFFFFFFFFu, bl::Internal::forward<Args>(args)...); }
 
   template<typename... Args>
-  BL_INLINE void info(Args&&... args) noexcept { log(0, indentation, BLInternal::forward<Args>(args)...); }
+  BL_INLINE void info(Args&&... args) noexcept { log(0, indentation, bl::Internal::forward<Args>(args)...); }
 
   template<typename... Args>
-  BL_INLINE bool warn(Args&&... args) noexcept { log(1, indentation, BLInternal::forward<Args>(args)...); return false; }
+  BL_INLINE bool warn(Args&&... args) noexcept { log(1, indentation, bl::Internal::forward<Args>(args)...); return false; }
 
   template<typename... Args>
-  BL_INLINE bool fail(Args&&... args) noexcept { log(2, indentation, BLInternal::forward<Args>(args)...); return false; }
+  BL_INLINE bool fail(Args&&... args) noexcept { log(2, indentation, bl::Internal::forward<Args>(args)...); return false; }
 
   BL_HIDDEN static void log(uint32_t severity, uint32_t indentation, const char* fmt, ...) noexcept;
 
@@ -64,4 +64,4 @@ public:
 //! \}
 //! \endcond
 
-#endif // BLEND2D_TRACE_P_H_INCLUDED
+#endif // BLEND2D_CORE_TRACE_P_H_INCLUDED

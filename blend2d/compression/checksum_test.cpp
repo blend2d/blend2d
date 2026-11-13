@@ -3,7 +3,7 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_test_p.h>
+#include <blend2d/core/api_build_test_p.h>
 #if defined(BL_TEST)
 
 #include <blend2d/core/array.h>
@@ -11,25 +11,25 @@
 
 namespace bl::Compression::Checksum::Tests {
 
-// bl::Compression - CheckSum - CRC32 - Tests
-// ==========================================
+// Compression - CheckSum - CRC32 - Tests
+// ======================================
 
 static constexpr uint32_t kCheckSumInputSize = 1024u * 256u;
 static constexpr uint32_t kCheckSumLargeInputSize = 1024u * 1024u * 4u;
 
 static void fill_array_for_checksum(BLArray<uint8_t>& arr, size_t n) noexcept {
   for (uint32_t i = 0; i < n; i++) {
-    EXPECT_SUCCESS(arr.append(uint8_t((i * 17) & 0xFFu)));
+    EXPECT_OK(arr.append(uint8_t((i * 17) & 0xFFu)));
   }
 }
 
 static void fill_array_with_same_value(BLArray<uint8_t>& arr, uint8_t b, size_t n) noexcept {
   for (uint32_t i = 0; i < n; i++) {
-    EXPECT_SUCCESS(arr.append(b));
+    EXPECT_OK(arr.append(b));
   }
 }
 
-UNIT(compression_checksum_adler32, BL_TEST_GROUP_COMPRESSION_CHECKSUMS) {
+TEST_CASE(compression_checksum_adler32) {
   const uint8_t* lowercase_letters = reinterpret_cast<const uint8_t*>("abcdefghijklmnopqrstuvwxyz");
 
   EXPECT_EQ(adler32(nullptr         ,  0), 0x00000001u);
@@ -94,10 +94,10 @@ UNIT(compression_checksum_adler32, BL_TEST_GROUP_COMPRESSION_CHECKSUMS) {
   }
 }
 
-UNIT(compression_checksum_crc32, BL_TEST_GROUP_COMPRESSION_CHECKSUMS) {
+TEST_CASE(compression_checksum_crc32) {
   const uint8_t* lowercase_letters = reinterpret_cast<const uint8_t*>("abcdefghijklmnopqrstuvwxyz");
 
-  EXPECT_EQ(crc32(nullptr         ,  0), 0x00000000u);
+  EXPECT_EQ(crc32(nullptr          ,  0), 0x00000000u);
   EXPECT_EQ(crc32(lowercase_letters,  1), 0xE8B7BE43u);
   EXPECT_EQ(crc32(lowercase_letters,  2), 0x9E83486Du);
   EXPECT_EQ(crc32(lowercase_letters,  3), 0x352441C2u);

@@ -76,13 +76,13 @@ struct Tiger {
       }
 
       switch (commands[c++]) {
-        case 'M': tp->bl_stroke_options.join = BL_STROKE_JOIN_MITER_BEVEL; break;
-        case 'R': tp->bl_stroke_options.join = BL_STROKE_JOIN_ROUND; break;
-        case 'B': tp->bl_stroke_options.join = BL_STROKE_JOIN_BEVEL; break;
+        case 'M': tp->bl_stroke_options.set_join(BL_STROKE_JOIN_MITER_BEVEL); break;
+        case 'R': tp->bl_stroke_options.set_join(BL_STROKE_JOIN_ROUND); break;
+        case 'B': tp->bl_stroke_options.set_join(BL_STROKE_JOIN_BEVEL); break;
       }
 
-      tp->bl_stroke_options.miter_limit = points[p++];
-      tp->bl_stroke_options.width = points[p++];
+      tp->bl_stroke_options.set_miter_limit(float(points[p++]));
+      tp->bl_stroke_options.set_width(float(points[p++]));
 
       // Stroke & Fill style.
       tp->stroke_color = BLRgba32(uint32_t(points[p + 0] * 255.0f), uint32_t(points[p + 1] * 255.0f), uint32_t(points[p + 2] * 255.0f), 255);
@@ -127,23 +127,23 @@ struct Tiger {
         tp->bl_stroked_path.shrink();
 
         tp->qt_pen = QPen(bl_rgba_to_qcolor(tp->stroke_color));
-        tp->qt_pen.setWidthF(tp->bl_stroke_options.width);
-        tp->qt_pen.setMiterLimit(tp->bl_stroke_options.miter_limit);
+        tp->qt_pen.setWidthF(tp->bl_stroke_options.width());
+        tp->qt_pen.setMiterLimit(tp->bl_stroke_options.miter_limit());
 
         Qt::PenCapStyle qtCapStyle =
-          tp->bl_stroke_options.start_cap == BL_STROKE_CAP_BUTT  ? Qt::FlatCap  :
-          tp->bl_stroke_options.start_cap == BL_STROKE_CAP_ROUND ? Qt::RoundCap : Qt::SquareCap;
+          tp->bl_stroke_options.start_cap() == BL_STROKE_CAP_BUTT  ? Qt::FlatCap  :
+          tp->bl_stroke_options.start_cap() == BL_STROKE_CAP_ROUND ? Qt::RoundCap : Qt::SquareCap;
 
         Qt::PenJoinStyle qtJoinStyle =
-          tp->bl_stroke_options.join == BL_STROKE_JOIN_ROUND ? Qt::RoundJoin :
-          tp->bl_stroke_options.join == BL_STROKE_JOIN_BEVEL ? Qt::BevelJoin : Qt::MiterJoin;
+          tp->bl_stroke_options.join() == BL_STROKE_JOIN_ROUND ? Qt::RoundJoin :
+          tp->bl_stroke_options.join() == BL_STROKE_JOIN_BEVEL ? Qt::BevelJoin : Qt::MiterJoin;
 
         tp->qt_pen.setCapStyle(qtCapStyle);
         tp->qt_pen.setJoinStyle(qtJoinStyle);
 
         QPainterPathStroker stroker;
-        stroker.setWidth(tp->bl_stroke_options.width);
-        stroker.setMiterLimit(tp->bl_stroke_options.miter_limit);
+        stroker.setWidth(tp->bl_stroke_options.width());
+        stroker.setMiterLimit(tp->bl_stroke_options.miter_limit());
         stroker.setJoinStyle(qtJoinStyle);
         stroker.setCapStyle(qtCapStyle);
 
@@ -171,13 +171,18 @@ public:
   QBLCanvas _canvas;
   QComboBox _renderer_select;
   QCheckBox _limit_fps_check;
-  QComboBox _caching_select;
+  QComboBox _strokes_select;
   QSlider _slider;
   Tiger _tiger;
 
+  enum class RenderStrokes {
+    kRegular,
+    kCached,
+    kNone
+  };
+
   bool _animate = true;
-  bool _cache_stroke = false;
-  bool _render_stroke = true;
+  RenderStrokes _render_strokes = RenderStrokes::kRegular;
   double _rot = 0.0;
   double _scale = 1.0;
 
@@ -193,17 +198,18 @@ public:
     QBLCanvas::init_renderer_select_box(&_renderer_select);
     _limit_fps_check.setText(QLatin1String("Limit FPS"));
 
-    _caching_select.addItem("None", QVariant(int(0)));
-    _caching_select.addItem("Strokes", QVariant(int(1)));
+    _strokes_select.addItem("Regular", QVariant(int(0)));
+    _strokes_select.addItem("Cached", QVariant(int(1)));
+    _strokes_select.addItem("None", QVariant(int(2)));
 
     _slider.setOrientation(Qt::Horizontal);
     _slider.setMinimum(50);
     _slider.setMaximum(20000);
     _slider.setSliderPosition(1000);
 
-    connect(&_renderer_select, SIGNAL(currentIndexChanged(int)), SLOT(onRendererChanged(int)));
-    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(onLimitFpsChanged(int)));
-    connect(&_caching_select, SIGNAL(currentIndexChanged(int)), SLOT(onCachingChanged(int)));
+    connect(&_renderer_select, SIGNAL(currentIndexChanged(int)), SLOT(on_renderer_changed(int)));
+    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(on_limit_fps_changed(int)));
+    connect(&_strokes_select, SIGNAL(currentIndexChanged(int)), SLOT(OnStrokesChanged(int)));
     connect(&_slider, SIGNAL(valueChanged(int)), SLOT(onZoomChanged(int)));
 
     _canvas.on_render_blend2d = std::bind(&MainWindow::on_render_blend2d, this, std::placeholders::_1);
@@ -212,8 +218,8 @@ public:
     grid->addWidget(new QLabel("Renderer:"), 0, 0, Qt::AlignRight);
     grid->addWidget(&_renderer_select, 0, 1);
 
-    grid->addWidget(new QLabel("Caching:"), 0, 2, Qt::AlignRight);
-    grid->addWidget(&_caching_select, 0, 3);
+    grid->addWidget(new QLabel("Strokes:"), 0, 2, Qt::AlignRight);
+    grid->addWidget(&_strokes_select, 0, 3);
 
     grid->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding), 0, 4);
     grid->addWidget(&_limit_fps_check, 0, 5);
@@ -228,50 +234,46 @@ public:
     vBox->addWidget(&_canvas);
     setLayout(vBox);
 
-    connect(&_timer, SIGNAL(timeout()), this, SLOT(onTimer()));
-    connect(new QShortcut(QKeySequence(Qt::Key_P), this), SIGNAL(activated()), SLOT(onToggleAnimate()));
+    connect(&_timer, SIGNAL(timeout()), this, SLOT(on_timer()));
+    connect(new QShortcut(QKeySequence(Qt::Key_P), this), SIGNAL(activated()), SLOT(on_toggle_animate()));
     connect(new QShortcut(QKeySequence(Qt::Key_R), this), SIGNAL(activated()), SLOT(onToggleRenderer()));
-    connect(new QShortcut(QKeySequence(Qt::Key_S), this), SIGNAL(activated()), SLOT(onToggleStroke()));
     connect(new QShortcut(QKeySequence(Qt::Key_Q), this), SIGNAL(activated()), SLOT(onRotatePrev()));
     connect(new QShortcut(QKeySequence(Qt::Key_W), this), SIGNAL(activated()), SLOT(onRotateNext()));
 
-    onInit();
+    init_data();
   }
 
   void showEvent(QShowEvent* event) override { _timer.start(); }
   void hideEvent(QHideEvent* event) override { _timer.stop(); }
 
-  void onInit() {
-    _updateTitle();
+  void init_data() {
+    _update_window_title();
     _limit_fps_check.setChecked(true);
   }
 
-  Q_SLOT void onRendererChanged(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt()); }
-  Q_SLOT void onLimitFpsChanged(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
-
-  Q_SLOT void onCachingChanged(int index) { _cache_stroke = index != 0; }
+  Q_SLOT void on_renderer_changed(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt()); }
+  Q_SLOT void on_limit_fps_changed(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
+  Q_SLOT void OnStrokesChanged(int index) { _render_strokes = RenderStrokes(index); }
   Q_SLOT void onZoomChanged(int value) { _scale = (double(value) / 1000.0); }
 
-  Q_SLOT void onToggleAnimate() { _animate = !_animate; }
+  Q_SLOT void on_toggle_animate() { _animate = !_animate; }
   Q_SLOT void onToggleRenderer() { _renderer_select.setCurrentIndex(_renderer_select.currentIndex() ^ 1); }
-  Q_SLOT void onToggleStroke() { _render_stroke = !_render_stroke; }
   Q_SLOT void onRotatePrev() { _rot -= 0.25; }
   Q_SLOT void onRotateNext() { _rot += 0.25; }
 
-  Q_SLOT void onTimer() {
+  Q_SLOT void on_timer() {
     if (_animate) {
       _rot += 0.25;
       if (_rot >= 360) _rot -= 360.0;
     }
 
     _canvas.update_canvas(true);
-    _updateTitle();
+    _update_window_title();
   }
 
   void on_render_blend2d(BLContext& ctx) noexcept {
     ctx.fill_all(BLRgba32(0xFF00007Fu));
 
-    bool renderStroke = _render_stroke;
     double min_x = 17;
     double min_y = 53;
     double max_x = 562.0;
@@ -296,8 +298,8 @@ public:
         ctx.fill_path(tp->bl_path, tp->fill_color);
       }
 
-      if (tp->stroke && renderStroke) {
-        if (_cache_stroke) {
+      if (tp->stroke && _render_strokes != RenderStrokes::kNone) {
+        if (_render_strokes == RenderStrokes::kCached) {
           ctx.fill_path(tp->bl_stroked_path, tp->stroke_color);
         }
         else {
@@ -311,8 +313,6 @@ public:
   }
 
   void on_render_qt(QPainter& ctx) noexcept {
-    bool renderStroke = _render_stroke;
-
     ctx.fillRect(0, 0, _canvas.image_width(), _canvas.image_height(), QColor(0, 0, 0x7F));
     ctx.setRenderHint(QPainter::Antialiasing, true);
 
@@ -339,8 +339,8 @@ public:
         ctx.fillPath(tp->qt_path, tp->qt_brush);
       }
 
-      if (tp->stroke && renderStroke) {
-        if (_cache_stroke)
+      if (tp->stroke && _render_strokes != RenderStrokes::kNone) {
+        if (_render_strokes == RenderStrokes::kCached)
           ctx.fillPath(tp->qt_stroked_path, tp->qt_pen.brush());
         else
           ctx.strokePath(tp->qt_path, tp->qt_pen);
@@ -350,9 +350,9 @@ public:
     ctx.restore();
   }
 
-  void _updateTitle() {
+  void _update_window_title() {
     char buf[256];
-    snprintf(buf, 256, "Tiger [%dx%d] [RenderTime=%.2fms FPS=%.1f]",
+    snprintf(buf, 256, "bl_demo_tiger [%dx%d] [RenderTime=%.2fms FPS=%.1f]",
       _canvas.image_width(),
       _canvas.image_height(),
       _canvas.average_render_time(),

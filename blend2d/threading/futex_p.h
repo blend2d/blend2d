@@ -1,13 +1,13 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// This file is part of Blend2D project <https://blend2d.com>
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_THREADING_FUTEX_P_H
-#define BLEND2D_THREADING_FUTEX_P_H
+#ifndef BLEND2D_THREADING_FUTEX_P_H_INCLUDED
+#define BLEND2D_THREADING_FUTEX_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/axl/commons.h>
+#include <blend2d/core/api_internal_p.h>
 #include <blend2d/core/runtime_p.h>
 
 #ifndef BL_BUILD_NO_FUTEX
@@ -49,7 +49,7 @@ static BL_INLINE_NODEBUG int make_sys_call(uint32_t* addr, int op, int x) noexce
 
 static BL_INLINE_NODEBUG int wait(uint32_t* addr, uint32_t value) noexcept { return make_sys_call(addr, FUTEX_WAIT_PRIVATE, int(value)); }
 static BL_INLINE_NODEBUG int wake_one(uint32_t* addr) noexcept { return make_sys_call(addr, FUTEX_WAKE_PRIVATE, 1); }
-static BL_INLINE_NODEBUG int wake_all(uint32_t* addr) noexcept { return make_sys_call(addr, FUTEX_WAKE_PRIVATE, std::numeric_limits<int>::max()); }
+static BL_INLINE_NODEBUG int wake_all(uint32_t* addr) noexcept { return make_sys_call(addr, FUTEX_WAKE_PRIVATE, axl::max_value<int>()); }
 
 #elif !defined(BL_BUILD_NO_FUTEX) && defined(__OpenBSD__)
 
@@ -57,7 +57,7 @@ static BL_INLINE_NODEBUG int make_sys_call(uint32_t* addr, int op, int x) noexce
 
 static BL_INLINE_NODEBUG int wait(uint32_t* addr, uint32_t value) noexcept { return make_sys_call(addr, FUTEX_WAIT, int(value)); }
 static BL_INLINE_NODEBUG int wake_one(uint32_t* addr) noexcept { return make_sys_call(addr, FUTEX_WAKE, 1); }
-static BL_INLINE_NODEBUG int wake_all(uint32_t* addr) noexcept { return make_sys_call(addr, FUTEX_WAKE, std::numeric_limits<int>::max()); }
+static BL_INLINE_NODEBUG int wake_all(uint32_t* addr) noexcept { return make_sys_call(addr, FUTEX_WAKE, axl::max_value<int>()); }
 
 #elif !defined(BL_BUILD_NO_FUTEX) && defined(_WIN32)
 
@@ -71,11 +71,11 @@ struct FutexSyncAPI {
   WakeByAddressAllFunc WakeByAddressAll;
 };
 
-extern FutexSyncAPI futexSyncAPI;
+extern FutexSyncAPI futex_sync_api;
 
-static BL_INLINE_NODEBUG int wait(uint32_t* addr, uint32_t x) noexcept { futexSyncAPI.WaitOnAddress((void*)addr, &x, sizeof(x), INFINITE); return 0; }
-static BL_INLINE_NODEBUG int wake_one(uint32_t* addr) noexcept { futexSyncAPI.WakeByAddressSingle((void*)addr); return 0; }
-static BL_INLINE_NODEBUG int wake_all(uint32_t* addr) noexcept { futexSyncAPI.WakeByAddressAll((void*)addr); return 0; }
+static BL_INLINE_NODEBUG int wait(uint32_t* addr, uint32_t x) noexcept { futex_sync_api.WaitOnAddress((void*)addr, &x, sizeof(x), INFINITE); return 0; }
+static BL_INLINE_NODEBUG int wake_one(uint32_t* addr) noexcept { futex_sync_api.WakeByAddressSingle((void*)addr); return 0; }
+static BL_INLINE_NODEBUG int wake_all(uint32_t* addr) noexcept { futex_sync_api.WakeByAddressAll((void*)addr); return 0; }
 
 #endif
 
@@ -88,27 +88,27 @@ static BL_INLINE_NODEBUG int wake_all(uint32_t* addr) noexcept { futexSyncAPI.Wa
 static BL_INLINE int wait(uint32_t* addr, uint32_t value) noexcept {
   int result = Native::wait(addr, value);
 
-#if defined(BL_SANITIZE_THREAD)
+#if defined(__SANITIZE_THREAD__)
   if (result == 0) {
     __tsan_acquire(addr);
   }
-#endif // BL_SANITIZE_THREAD
+#endif // __SANITIZE_THREAD__
 
   return result;
 }
 
 static BL_INLINE int wake_one(uint32_t* addr) noexcept {
-#if defined(BL_SANITIZE_THREAD)
+#if defined(__SANITIZE_THREAD__)
   __tsan_release(addr);
-#endif // BL_SANITIZE_THREAD
+#endif // __SANITIZE_THREAD__
 
   return Native::wake_one(addr);
 }
 
 static BL_INLINE int wake_all(uint32_t* addr) noexcept {
-#if defined(BL_SANITIZE_THREAD)
+#if defined(__SANITIZE_THREAD__)
   __tsan_release(addr);
-#endif // BL_SANITIZE_THREAD
+#endif // __SANITIZE_THREAD__
 
   return Native::wake_all(addr);
 }
@@ -123,4 +123,4 @@ static BL_INLINE_NODEBUG int wake_all(uint32_t*) noexcept { return -1; }
 
 //! \endcond
 
-#endif // BLEND2D_THREADING_FUTEX_P_H
+#endif // BLEND2D_THREADING_FUTEX_P_H_INCLUDED

@@ -84,12 +84,12 @@ public:
     _canvas.on_render_blend2d = std::bind(&MainWindow::on_render_blend2d, this, std::placeholders::_1);
     _canvas.on_render_qt = std::bind(&MainWindow::on_render_qt, this, std::placeholders::_1);
 
-    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(onRendererChanged(int)));
-    connect(&_comp_op_select, SIGNAL(activated(int)), SLOT(onCompOpChanged(int)));
-    connect(&_shape_type_select, SIGNAL(activated(int)), SLOT(onShapeTypeChanged(int)));
-    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(onLimitFpsChanged(int)));
-    connect(&_size_slider, SIGNAL(valueChanged(int)), SLOT(onSizeChanged(int)));
-    connect(&_count_slider, SIGNAL(valueChanged(int)), SLOT(onCountChanged(int)));
+    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(on_renderer_changed(int)));
+    connect(&_comp_op_select, SIGNAL(activated(int)), SLOT(on_comp_op_changed(int)));
+    connect(&_shape_type_select, SIGNAL(activated(int)), SLOT(on_shape_type_changed(int)));
+    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(on_limit_fps_changed(int)));
+    connect(&_size_slider, SIGNAL(valueChanged(int)), SLOT(on_size_changed(int)));
+    connect(&_count_slider, SIGNAL(valueChanged(int)), SLOT(on_count_changed(int)));
 
     grid->addWidget(new QLabel("Renderer:"), 0, 0);
     grid->addWidget(&_renderer_select, 0, 1);
@@ -113,43 +113,43 @@ public:
     vBox->addWidget(&_canvas);
     setLayout(vBox);
 
-    connect(&_timer, SIGNAL(timeout()), this, SLOT(onTimer()));
-    connect(new QShortcut(QKeySequence(Qt::Key_P), this), SIGNAL(activated()), SLOT(onToggleAnimate()));
+    connect(&_timer, SIGNAL(timeout()), this, SLOT(on_timer()));
+    connect(new QShortcut(QKeySequence(Qt::Key_P), this), SIGNAL(activated()), SLOT(on_toggle_animate()));
     connect(new QShortcut(QKeySequence(Qt::Key_S), this), SIGNAL(activated()), SLOT(onStep()));
 
-    onInit();
+    init_data();
   }
 
   void showEvent(QShowEvent* event) override { _timer.start(); }
   void hideEvent(QHideEvent* event) override { _timer.stop(); }
   void keyPressEvent(QKeyEvent* event) override {}
 
-  void onInit() {
-    setCount(_count_slider.sliderPosition());
+  void init_data() {
+    set_count(_count_slider.sliderPosition());
     _limit_fps_check.setChecked(true);
-    _updateTitle();
+    _update_window_title();
   }
 
   double randomSign() noexcept { return _random.next_double() < 0.5 ? 1.0 : -1.0; }
   BLRgba32 randomColor() noexcept { return BLRgba32(_random.next_uint32()); }
 
-  Q_SLOT void onToggleAnimate() { _animate = !_animate; }
+  Q_SLOT void on_toggle_animate() { _animate = !_animate; }
   Q_SLOT void onStep() { step(); }
 
-  Q_SLOT void onRendererChanged(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt());  }
-  Q_SLOT void onCompOpChanged(int index) { _comp_op = (BLCompOp)_comp_op_select.itemData(index).toInt(); };
-  Q_SLOT void onShapeTypeChanged(int index) { _shape_type = _shape_type_select.itemData(index).toInt(); };
-  Q_SLOT void onLimitFpsChanged(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
-  Q_SLOT void onSizeChanged(int value) { _rect_size = value; }
-  Q_SLOT void onCountChanged(int value) { setCount(size_t(value)); }
+  Q_SLOT void on_renderer_changed(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt());  }
+  Q_SLOT void on_comp_op_changed(int index) { _comp_op = (BLCompOp)_comp_op_select.itemData(index).toInt(); };
+  Q_SLOT void on_shape_type_changed(int index) { _shape_type = _shape_type_select.itemData(index).toInt(); };
+  Q_SLOT void on_limit_fps_changed(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
+  Q_SLOT void on_size_changed(int value) { _rect_size = value; }
+  Q_SLOT void on_count_changed(int value) { set_count(size_t(value)); }
 
-  Q_SLOT void onTimer() {
+  Q_SLOT void on_timer() {
     if (_animate) {
       step();
     }
 
     _canvas.update_canvas(true);
-    _updateTitle();
+    _update_window_title();
   }
 
   void step() noexcept {
@@ -171,6 +171,25 @@ public:
         step.y = -step.y;
         vertex.y = bl_min(vertex.y + step.y, h);
       }
+    }
+  }
+
+  void set_count(size_t size) {
+    double w = _canvas.image_width();
+    double h = _canvas.image_height();
+    size_t i = _coords.size();
+
+    _coords.resize(size);
+    _steps.resize(size);
+    _colors.resize(size);
+
+    while (i < size) {
+      _coords[i].reset(_random.next_double() * w,
+                       _random.next_double() * h);
+      _steps[i].reset((_random.next_double() * 0.5 + 0.04) * randomSign(),
+                      (_random.next_double() * 0.5 + 0.04) * randomSign());
+      _colors[i].reset(randomColor());
+      i++;
     }
   }
 
@@ -319,32 +338,13 @@ public:
     }
   }
 
-  void setCount(size_t size) {
-    double w = _canvas.image_width();
-    double h = _canvas.image_height();
-    size_t i = _coords.size();
-
-    _coords.resize(size);
-    _steps.resize(size);
-    _colors.resize(size);
-
-    while (i < size) {
-      _coords[i].reset(_random.next_double() * w,
-                       _random.next_double() * h);
-      _steps[i].reset((_random.next_double() * 0.5 + 0.04) * randomSign(),
-                      (_random.next_double() * 0.5 + 0.04) * randomSign());
-      _colors[i].reset(randomColor());
-      i++;
-    }
-  }
-
-  void _updateTitle() {
+  void _update_window_title() {
     char buf[256];
-    snprintf(buf, 256, "Rects [%dx%d] [Size=%d Count=%zu] [RenderTime=%.2fms FPS=%.1f]",
+    snprintf(buf, 256, "bl_demo_rects [%dx%d] [N=%zu] [Size=%d] [RenderTime=%.2fms FPS=%.1f]",
       _canvas.image_width(),
       _canvas.image_height(),
-      int(_rect_size),
       _coords.size(),
+      int(_rect_size),
       _canvas.average_render_time(),
       _canvas.fps());
 

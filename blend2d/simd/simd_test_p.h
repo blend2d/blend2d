@@ -6,15 +6,17 @@
 #ifndef BLEND2D_SIMD_SIMD_TEST_P_H_INCLUDED
 #define BLEND2D_SIMD_SIMD_TEST_P_H_INCLUDED
 
-#include <blend2d/core/api-build_test_p.h>
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/core/api_build_test_p.h>
+
+#include <blend2d/axl/commons.h>
+#include <blend2d/core/api_internal_p.h>
 #include <blend2d/core/random_p.h>
 #include <blend2d/core/string_p.h>
 #include <blend2d/simd/simd_p.h>
 
 //! \cond NEVER
 
-namespace SIMDTests {
+namespace bl::SIMDTests {
 namespace {
 
 static constexpr uint64_t kRandomSeed = 0x1234u;
@@ -23,29 +25,30 @@ static constexpr uint32_t kTestIterCount = 1000u;
 // SIMD - Tests - Costs
 // ====================
 
+[[maybe_unused]]
 static void print_cost_matrix(const char* ext) noexcept {
-  INFO("%s Cost Matrix:", ext);
-  INFO("  abs_i8=%u"        , BL_SIMD_COST_ABS_I8);
-  INFO("  abs_i16=%u"       , BL_SIMD_COST_ABS_I16);
-  INFO("  abs_i32=%u"       , BL_SIMD_COST_ABS_I32);
-  INFO("  abs_i64=%u"       , BL_SIMD_COST_ABS_I64);
-  INFO("  alignr_u8=%u"     , BL_SIMD_COST_ALIGNR_U8);
-  INFO("  cmp_eq_i64=%u"    , BL_SIMD_COST_CMP_EQ_I64);
-  INFO("  cmp_lt_gt_i64=%u" , BL_SIMD_COST_CMP_LT_GT_I64);
-  INFO("  cmp_le_ge_i64=%u" , BL_SIMD_COST_CMP_LE_GE_I64);
-  INFO("  cmp_lt_gt_u64=%u" , BL_SIMD_COST_CMP_LT_GT_U64);
-  INFO("  cmp_le_ge_u64=%u" , BL_SIMD_COST_CMP_LE_GE_U64);
-  INFO("  min_max_i8=%u"    , BL_SIMD_COST_MIN_MAX_I8);
-  INFO("  min_max_u8=%u"    , BL_SIMD_COST_MIN_MAX_U8);
-  INFO("  min_max_i16=%u"   , BL_SIMD_COST_MIN_MAX_I16);
-  INFO("  min_max_u16=%u"   , BL_SIMD_COST_MIN_MAX_U16);
-  INFO("  min_max_i32=%u"   , BL_SIMD_COST_MIN_MAX_I32);
-  INFO("  min_max_u32=%u"   , BL_SIMD_COST_MIN_MAX_U32);
-  INFO("  min_max_i64=%u"   , BL_SIMD_COST_MIN_MAX_I64);
-  INFO("  min_max_u64=%u"   , BL_SIMD_COST_MIN_MAX_U64);
-  INFO("  mul_i16=%u"       , BL_SIMD_COST_MUL_I16);
-  INFO("  mul_i32=%u"       , BL_SIMD_COST_MUL_I32);
-  INFO("  mul_i64=%u"       , BL_SIMD_COST_MUL_I64);
+  TEST_LOG("%s Cost Matrix:", ext);
+  TEST_LOG("  abs_i8=%u"        , BL_SIMD_COST_ABS_I8);
+  TEST_LOG("  abs_i16=%u"       , BL_SIMD_COST_ABS_I16);
+  TEST_LOG("  abs_i32=%u"       , BL_SIMD_COST_ABS_I32);
+  TEST_LOG("  abs_i64=%u"       , BL_SIMD_COST_ABS_I64);
+  TEST_LOG("  alignr_u8=%u"     , BL_SIMD_COST_ALIGNR_U8);
+  TEST_LOG("  cmp_eq_i64=%u"    , BL_SIMD_COST_CMP_EQ_I64);
+  TEST_LOG("  cmp_lt_gt_i64=%u" , BL_SIMD_COST_CMP_LT_GT_I64);
+  TEST_LOG("  cmp_le_ge_i64=%u" , BL_SIMD_COST_CMP_LE_GE_I64);
+  TEST_LOG("  cmp_lt_gt_u64=%u" , BL_SIMD_COST_CMP_LT_GT_U64);
+  TEST_LOG("  cmp_le_ge_u64=%u" , BL_SIMD_COST_CMP_LE_GE_U64);
+  TEST_LOG("  min_max_i8=%u"    , BL_SIMD_COST_MIN_MAX_I8);
+  TEST_LOG("  min_max_u8=%u"    , BL_SIMD_COST_MIN_MAX_U8);
+  TEST_LOG("  min_max_i16=%u"   , BL_SIMD_COST_MIN_MAX_I16);
+  TEST_LOG("  min_max_u16=%u"   , BL_SIMD_COST_MIN_MAX_U16);
+  TEST_LOG("  min_max_i32=%u"   , BL_SIMD_COST_MIN_MAX_I32);
+  TEST_LOG("  min_max_u32=%u"   , BL_SIMD_COST_MIN_MAX_U32);
+  TEST_LOG("  min_max_i64=%u"   , BL_SIMD_COST_MIN_MAX_I64);
+  TEST_LOG("  min_max_u64=%u"   , BL_SIMD_COST_MIN_MAX_U64);
+  TEST_LOG("  mul_i16=%u"       , BL_SIMD_COST_MUL_I16);
+  TEST_LOG("  mul_i32=%u"       , BL_SIMD_COST_MUL_I32);
+  TEST_LOG("  mul_i64=%u"       , BL_SIMD_COST_MUL_I64);
 }
 
 // SIMD - Tests - Vector Overlay
@@ -115,7 +118,7 @@ public:
 // Note that a constraint doesn't have to be always range based, it could be anything.
 struct ConstraintNone {
   template<uint32_t kW, typename T>
-  static BL_INLINE_NODEBUG void apply(VecOverlay<kW, T>& v) noexcept { bl_unused(v); }
+  static BL_INLINE_NODEBUG void apply(VecOverlay<kW, T>& v) noexcept { bl::axl::maybe_unused(v); }
 };
 
 template<typename ElementT, typename Derived>
@@ -213,6 +216,25 @@ template<typename T> struct iop_abs : public op_base_1<T, iop_abs<T>> {
   static BL_INLINE_NODEBUG T apply_one(const T& a) noexcept { return a < 0 ? T(cast_uint(T(0)) - cast_uint(a)) : a; }
 };
 
+struct iop_abs_diff_u8 : public op_base_2<uint8_t, iop_abs_diff_u8> {
+  static BL_INLINE_NODEBUG uint8_t apply_one(uint8_t a, uint8_t b) noexcept { return a > b ? uint8_t(a - b) : uint8_t(b - a); }
+};
+
+struct iop_hadd_u8 : public op_base_2<uint8_t, iop_hadd_u8> {
+  static BL_INLINE_NODEBUG uint8_t apply_one(uint8_t a, uint8_t b) noexcept { return uint8_t((uint32_t(a) + uint32_t(b)) / 2u); }
+};
+
+struct iop_addp_i8 {
+  static BL_INLINE VecOverlay<16, uint8_t> apply(const VecOverlay<16, uint8_t>& a, const VecOverlay<16, uint8_t>& b) noexcept {
+    VecOverlay<16, uint8_t> out{};
+    for (uint32_t i = 0; i < 8u; i++) {
+      out.items[i] = uint8_t(uint32_t(a.items[i * 2u]) + uint32_t(a.items[i * 2u + 1u]));
+      out.items[i + 8u] = uint8_t(uint32_t(b.items[i * 2u]) + uint32_t(b.items[i * 2u + 1u]));
+    }
+    return out;
+  }
+};
+
 template<typename T> struct iop_not : public op_base_1<T, iop_not<T>> {
   static BL_INLINE_NODEBUG T apply_one(const T& a) noexcept { return T(~a); }
 };
@@ -223,16 +245,16 @@ template<typename T> struct iop_add : public op_base_2<T, iop_add<T>> {
 
 template<typename T> struct iop_adds : public op_base_2<T, iop_adds<T>> {
   static BL_INLINE T apply_one(const T& a, const T& b) noexcept {
-    bl::OverflowFlag of{};
-    T result = bl::IntOps::add_overflow(a, b, &of);
+    bl::axl::OverflowFlag of{};
+    T result = bl::axl::add_overflow(a, b, of);
 
-    if (!of)
+    if (!bl::axl::did_overflow(of))
       return result;
 
     if (std::is_unsigned_v<T> || b > 0)
-      return bl::Traits::max_value<T>();
+      return bl::axl::max_value<T>();
     else
-      return bl::Traits::min_value<T>();
+      return bl::axl::min_value<T>();
   }
 };
 
@@ -242,16 +264,16 @@ template<typename T> struct iop_sub : public op_base_2<T, iop_sub<T>> {
 
 template<typename T> struct iop_subs : public op_base_2<T, iop_subs<T>> {
   static BL_INLINE T apply_one(const T& a, const T& b) noexcept {
-    bl::OverflowFlag of{};
-    T result = bl::IntOps::sub_overflow(a, b, &of);
+    bl::axl::OverflowFlag of{};
+    T result = bl::axl::sub_overflow(a, b, of);
 
-    if (!of)
+    if (!bl::axl::did_overflow(of))
       return result;
 
     if (std::is_unsigned_v<T> || b > 0)
-      return bl::Traits::min_value<T>();
+      return bl::axl::min_value<T>();
     else
-      return bl::Traits::max_value<T>();
+      return bl::axl::max_value<T>();
   }
 };
 
@@ -287,27 +309,27 @@ template<typename T, uint32_t kN> struct iop_srai : public op_base_1<T, iop_srai
 };
 
 template<typename T> struct iop_cmp_eq : public op_base_2<T, iop_cmp_eq<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a == b ? bl::IntOps::all_ones<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a == b ? bl::axl::bit_ones<T> : T(0); }
 };
 
 template<typename T> struct iop_cmp_ne : public op_base_2<T, iop_cmp_ne<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a != b ? bl::IntOps::all_ones<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a != b ? bl::axl::bit_ones<T> : T(0); }
 };
 
 template<typename T> struct iop_cmp_gt : public op_base_2<T, iop_cmp_gt<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >  b ? bl::IntOps::all_ones<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >  b ? bl::axl::bit_ones<T> : T(0); }
 };
 
 template<typename T> struct iop_cmp_ge : public op_base_2<T, iop_cmp_ge<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >= b ? bl::IntOps::all_ones<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >= b ? bl::axl::bit_ones<T> : T(0); }
 };
 
 template<typename T> struct iop_cmp_lt : public op_base_2<T, iop_cmp_lt<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <  b ? bl::IntOps::all_ones<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <  b ? bl::axl::bit_ones<T> : T(0); }
 };
 
 template<typename T> struct iop_cmp_le : public op_base_2<T, iop_cmp_le<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <= b ? bl::IntOps::all_ones<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <= b ? bl::axl::bit_ones<T> : T(0); }
 };
 
 template<typename T, uint32_t kN> struct iop_sllb_u128 {
@@ -619,7 +641,7 @@ static BL_NOINLINE BLString format_items(const T* items, uint32_t count) noexcep
   BLString s;
   s.append('{');
   for (uint32_t i = 0; i < count; i++)
-    s.append_format("%s%llu", i == 0 ? "" : ", ", (unsigned long long)items[i] & bl::IntOps::all_ones<std::make_unsigned_t<T>>());
+    s.append_format("%s%llu", i == 0 ? "" : ", ", (unsigned long long)items[i] & bl::axl::bit_ones<std::make_unsigned_t<T>>);
   s.append('}');
   return s;
 }
@@ -753,7 +775,7 @@ static BL_NOINLINE void test_iop1_constraint(VecOp&& vec_op) noexcept {
 
 template<typename V, typename GenericOp, typename VecOp>
 static void test_iop1(VecOp&& vec_op) noexcept {
-  return test_iop1_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vec_op));
+  return test_iop1_constraint<V, GenericOp, ConstraintNone, VecOp>(bl::axl::forward<VecOp>(vec_op));
 }
 
 // SIMD - Tests - Integer Operations - 2 Source Operands
@@ -790,7 +812,35 @@ static BL_NOINLINE void test_iop2_constraint(VecOp&& vec_op) noexcept {
 
 template<typename V, typename GenericOp, typename VecOp>
 static void test_iop2(VecOp&& vec_op) noexcept {
-  return test_iop2_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vec_op));
+  return test_iop2_constraint<V, GenericOp, ConstraintNone, VecOp>(bl::axl::forward<VecOp>(vec_op));
+}
+
+template<typename V, typename GenericOp, typename VecOp>
+static BL_NOINLINE void test_iop2_u8_exhaustive(VecOp&& vec_op) noexcept {
+  static_assert(std::is_same_v<typename V::ElementType, uint8_t>);
+  constexpr uint32_t kItemCount = uint32_t(V::kW);
+
+  for (uint32_t x = 0; x < 256u; x++) {
+    for (uint32_t y = 0; y < 256u; y++) {
+      VecOverlay<V::kW, uint8_t> a;
+      VecOverlay<V::kW, uint8_t> b;
+      VecOverlay<V::kW, uint8_t> observed;
+
+      // Each lane visits every byte pair. Different adjacent values expose
+      // accidental carries and shifts between byte lanes.
+      for (uint32_t i = 0; i < kItemCount; i++) {
+        a.items[i] = uint8_t(x + i * 17u);
+        b.items[i] = uint8_t(y + i * 29u);
+      }
+
+      V vr = vec_op(SIMD::loadu<V>(a.data_u8), SIMD::loadu<V>(b.data_u8));
+      SIMD::storeu(observed.data_u8, vr);
+      VecOverlay<V::kW, uint8_t> expected = GenericOp::apply(a, b);
+
+      if (!compare_ivec(observed.items, expected.items, kItemCount))
+        test_iop2_failed(a.items, b.items, observed.items, expected.items, kItemCount);
+    }
+  }
 }
 
 // SIMD - Tests - Integer Operations - 3 Source Operands
@@ -831,7 +881,44 @@ static BL_NOINLINE void test_iop3_constraint(VecOp&& vec_op) noexcept {
 
 template<typename V, typename GenericOp, typename VecOp>
 static void test_iop3(VecOp&& vec_op) noexcept {
-  return test_iop3_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vec_op));
+  return test_iop3_constraint<V, GenericOp, ConstraintNone, VecOp>(bl::axl::forward<VecOp>(vec_op));
+}
+
+// SIMD - Tests - Mask Extraction
+// ==============================
+
+template<uint32_t kW>
+static BL_NOINLINE void test_extract_mask_bits_i8() noexcept {
+  using namespace SIMD;
+  typedef Vec<kW, uint8_t> V;
+
+  BLRandom rnd(kRandomSeed);
+  for (uint32_t iter = 0; iter < 130u + kTestIterCount; iter++) {
+    uint64_t expected = iter == 0u ? 0u :
+                        iter == 1u ? UINT64_MAX :
+                        iter < 66u ? uint64_t(1) << (iter - 2u) :
+                        iter < 130u ? ~(uint64_t(1) << (iter - 66u)) : rnd.next_uint64();
+    uint8_t bytes[64];
+    for (uint32_t i = 0; i < 64u; i++)
+      bytes[i] = uint8_t(0u - uint32_t((expected >> i) & 1u));
+
+    V a = loadu<V>(bytes);
+    EXPECT_EQ(uint64_t(extract_mask_bits_i8(a)), expected & (UINT64_MAX >> (64u - kW)));
+
+    if constexpr (kW <= 32u) {
+      V b = loadu<V>(bytes + kW);
+      EXPECT_EQ(uint64_t(extract_mask_bits_i8(a, b)), expected & (UINT64_MAX >> (64u - kW * 2u)));
+    }
+
+#if BL_TARGET_ARCH_X86 || defined(BL_SIMD_AARCH64)
+    if constexpr (kW == 16u) {
+      V b = loadu<V>(bytes + 16u);
+      V c = loadu<V>(bytes + 32u);
+      V d = loadu<V>(bytes + 48u);
+      EXPECT_EQ(extract_mask_bits_i8(a, b, c, d), expected);
+    }
+#endif
+  }
 }
 
 // SIMD - Tests - Integer Operations - Dispatcher
@@ -851,7 +938,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
   typedef Vec<kW, uint32_t> V_U32;
   typedef Vec<kW, uint64_t> V_U64;
 
-  INFO("Testing %d-bit %s vector ops - make128_u[8|16|32|64]", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - make128_u[8|16|32|64]", kW*8, ext);
   {
     VecOverlay<16, uint8_t> a;
     VecOverlay<16, uint8_t> b;
@@ -913,7 +1000,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     verify_ivec(a.items, b.items, 16);
   }
 
-  INFO("Testing %d-bit %s vector ops - logical", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - logical", kW*8, ext);
   {
     test_iop1<V_I8, iop_not<int8_t>>([](const V_I8& a) { return not_(a); });
     test_iop1<V_I16, iop_not<int16_t>>([](const V_I16& a) { return not_(a); });
@@ -961,7 +1048,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U64, iop_xor<uint64_t>>([](const V_U64& a, const V_U64& b) { return xor_(a, b); });
   }
 
-  INFO("Testing %d-bit %s vector ops - blendv", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - blendv", kW*8, ext);
   {
     test_iop3<V_I8, iop_blendv_bits<int8_t>>([](const V_I8& a, const V_I8& b, const V_I8& c) { return blendv_bits(a, b, c); });
     test_iop3<V_I16, iop_blendv_bits<int16_t>>([](const V_I16& a, const V_I16& b, const V_I16& c) { return blendv_bits(a, b, c); });
@@ -974,7 +1061,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop3<V_U64, iop_blendv_bits<uint64_t>>([](const V_U64& a, const V_U64& b, const V_U64& c) { return blendv_bits(a, b, c); });
   }
 
-  INFO("Testing %d-bit %s vector ops - abs", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - abs", kW*8, ext);
   {
     test_iop1<V_I8, iop_abs<int8_t>>([](const V_I8& a) { return abs(a); });
     test_iop1<V_I16, iop_abs<int16_t>>([](const V_I16& a) { return abs(a); });
@@ -987,7 +1074,32 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop1<V_I64, iop_abs<int64_t>>([](const V_I64& a) { return abs_i64(a); });
   }
 
-  INFO("Testing %d-bit %s vector ops - add / adds", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - abs_diff_u8 / hadd_u8", kW*8, ext);
+  {
+    test_iop2_u8_exhaustive<V_U8, iop_abs_diff_u8>([](const V_U8& a, const V_U8& b) { return abs_diff_u8(a, b); });
+    test_iop2_u8_exhaustive<V_U8, iop_hadd_u8>([](const V_U8& a, const V_U8& b) { return hadd_u8(a, b); });
+  }
+
+  if constexpr (kW == 16u) {
+    TEST_LOG("Testing %d-bit %s vector ops - addp_i8", kW*8, ext);
+    test_iop2<V_U8, iop_addp_i8>([](const V_U8& a, const V_U8& b) { return addp_i8(a, b); });
+
+    // Distinguish both sources and all pairs, including sums at and above 256.
+    VecOverlay<16, uint8_t> a{{0, 0, 0, 255, 1, 255, 127, 128, 128, 128, 254, 2, 255, 255, 9, 17}};
+    VecOverlay<16, uint8_t> b{{255, 0, 255, 1, 0, 1, 127, 127, 128, 127, 255, 254, 23, 97, 1, 1}};
+    VecOverlay<16, uint8_t> observed;
+    VecOverlay<16, uint8_t> expected = iop_addp_i8::apply(a, b);
+    storeu(observed.data_u8, addp_i8(loadu<V_U8>(a.data_u8), loadu<V_U8>(b.data_u8)));
+    if (!compare_ivec(observed.items, expected.items, 16u))
+      test_iop2_failed(a.items, b.items, observed.items, expected.items, 16u);
+  }
+
+  TEST_LOG("Testing %d-bit %s vector ops - extract_mask_bits_i8", kW*8, ext);
+  {
+    test_extract_mask_bits_i8<kW>();
+  }
+
+  TEST_LOG("Testing %d-bit %s vector ops - add / adds", kW*8, ext);
   {
     test_iop2<V_I8, iop_add<int8_t>>([](const V_I8& a, const V_I8& b) { return add(a, b); });
     test_iop2<V_I16, iop_add<int16_t>>([](const V_I16& a, const V_I16& b) { return add(a, b); });
@@ -1022,7 +1134,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U16, iop_adds<uint16_t>>([](const V_U16& a, const V_U16& b) { return adds_u16(a, b); });
   }
 
-  INFO("Testing %d-bit %s vector ops - sub / subs", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - sub / subs", kW*8, ext);
   {
     test_iop2<V_I8, iop_sub<int8_t>>([](const V_I8& a, const V_I8& b) { return sub(a, b); });
     test_iop2<V_I16, iop_sub<int16_t>>([](const V_I16& a, const V_I16& b) { return sub(a, b); });
@@ -1057,7 +1169,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U16, iop_subs<uint16_t>>([](const V_U16& a, const V_U16& b) { return subs_u16(a, b); });
   }
 
-  INFO("Testing %d-bit %s vector ops - mul", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - mul", kW*8, ext);
   {
     test_iop2<V_I16, iop_mul<int16_t>>([](const V_I16& a, const V_I16& b) { return mul(a, b); });
     test_iop2<V_I32, iop_mul<int32_t>>([](const V_I32& a, const V_I32& b) { return mul(a, b); });
@@ -1074,7 +1186,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U64, iop_mul<uint64_t>>([](const V_U64& a, const V_U64& b) { return mul_u64(a, b); });
   }
 
-  INFO("Testing %d-bit %s vector ops - cmp", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - cmp", kW*8, ext);
   {
     test_iop2<V_I8, iop_cmp_eq<int8_t>>([](const V_I8& a, const V_I8& b) { return cmp_eq(a, b); });
     test_iop2<V_I16, iop_cmp_eq<int16_t>>([](const V_I16& a, const V_I16& b) { return cmp_eq(a, b); });
@@ -1197,7 +1309,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U64, iop_cmp_le<uint64_t>>([](const V_U64& a, const V_U64& b) { return cmp_le_u64(a, b); });
   }
 
-  INFO("Testing %d-bit %s vector ops - min / max", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - min / max", kW*8, ext);
   {
     test_iop2<V_I8, iop_min<int8_t>>([](const V_I8& a, const V_I8& b) { return min(a, b); });
     test_iop2<V_I16, iop_min<int16_t>>([](const V_I16& a, const V_I16& b) { return min(a, b); });
@@ -1240,7 +1352,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U64, iop_max<uint64_t>>([](const V_U64& a, const V_U64& b) { return max_u64(a, b); });
   }
 
-  INFO("Testing %d-bit %s vector ops - bit shift", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - bit shift", kW*8, ext);
   {
     test_iop1<V_I8, iop_slli<int8_t, 1>>([](const V_I8& a) { return slli<1>(a); });
     test_iop1<V_I16, iop_slli<int16_t, 1>>([](const V_I16& a) { return slli<1>(a); });
@@ -1394,7 +1506,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
   }
 
 #if defined(BL_SIMD_FEATURE_RSRL)
-  INFO("Testing %d-bit %s vector ops - bit shift (rounding)", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - bit shift (rounding)", kW*8, ext);
   {
     test_iop1<V_I8, iop_rsrli<int8_t, 1>>([](const V_I8& a) { return rsrli<1>(a); });
     test_iop1<V_I16, iop_rsrli<int16_t, 1>>([](const V_I16& a) { return rsrli<1>(a); });
@@ -1443,7 +1555,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
   }
 #endif
 
-  INFO("Testing %d-bit %s vector ops - sllb_u128", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - sllb_u128", kW*8, ext);
   {
     test_iop1<V_U8, iop_sllb_u128<uint8_t, 1>>([](const V_U8& a) { return sllb_u128<1>(a); });
     test_iop1<V_U8, iop_sllb_u128<uint8_t, 2>>([](const V_U8& a) { return sllb_u128<2>(a); });
@@ -1462,7 +1574,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop1<V_U8, iop_sllb_u128<uint8_t, 15>>([](const V_U8& a) { return sllb_u128<15>(a); });
   }
 
-  INFO("Testing %d-bit %s vector ops - srlb_u128", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - srlb_u128", kW*8, ext);
   {
     test_iop1<V_U8, iop_srlb_u128<uint8_t, 1>>([](const V_U8& a) { return srlb_u128<1>(a); });
     test_iop1<V_U8, iop_srlb_u128<uint8_t, 2>>([](const V_U8& a) { return srlb_u128<2>(a); });
@@ -1481,7 +1593,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop1<V_U8, iop_srlb_u128<uint8_t, 15>>([](const V_U8& a) { return srlb_u128<15>(a); });
   }
 
-  INFO("Testing %d-bit %s vector ops - alignr_u128", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - alignr_u128", kW*8, ext);
   {
     test_iop2<V_U8, iop_alignr_u128<uint8_t, 1>>([](const V_U8& a, const V_U8& b) { return alignr_u128<1>(a, b); });
     test_iop2<V_U8, iop_alignr_u128<uint8_t, 2>>([](const V_U8& a, const V_U8& b) { return alignr_u128<2>(a, b); });
@@ -1500,7 +1612,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U8, iop_alignr_u128<uint8_t, 15>>([](const V_U8& a, const V_U8& b) { return alignr_u128<15>(a, b); });
   }
 
-  INFO("Testing %d-bit %s vector ops - broadcast", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - broadcast", kW*8, ext);
   {
     test_iop1<V_U8, iop_broadcast_u8<uint8_t>>([](const V_U8& a) { return broadcast_u8<V_U8>(a); });
     test_iop1<V_U8, iop_broadcast_u16<uint8_t>>([](const V_U8& a) { return broadcast_u16<V_U8>(a); });
@@ -1508,7 +1620,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop1<V_U8, iop_broadcast_u64<uint8_t>>([](const V_U8& a) { return broadcast_u64<V_U8>(a); });
   }
 
-  INFO("Testing %d-bit %s vector ops - swizzle_[lo|hi]_u16", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - swizzle_[lo|hi]_u16", kW*8, ext);
   {
     test_iop1<V_U8, iop_swizzle_lo_u16<uint8_t, 0, 0, 0, 0>>([](const V_U8& a) { return swizzle_lo_u16<0, 0, 0, 0>(a); });
     test_iop1<V_U8, iop_swizzle_lo_u16<uint8_t, 1, 1, 1, 1>>([](const V_U8& a) { return swizzle_lo_u16<1, 1, 1, 1>(a); });
@@ -1553,7 +1665,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop1<V_U8, iop_swizzle_u16<uint8_t, 1, 3, 3, 1>>([](const V_U8& a) { return swizzle_u16<1, 3, 3, 1>(a); });
   }
 
-  INFO("Testing %d-bit %s vector ops - swizzle_u32", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - swizzle_u32", kW*8, ext);
   {
     test_iop1<V_U8, iop_swizzle_u32<uint8_t, 0, 0, 0, 0>>([](const V_U8& a) { return swizzle_u32<0, 0, 0, 0>(a); });
     test_iop1<V_U8, iop_swizzle_u32<uint8_t, 1, 1, 1, 1>>([](const V_U8& a) { return swizzle_u32<1, 1, 1, 1>(a); });
@@ -1570,7 +1682,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop1<V_U8, iop_swizzle_u32<uint8_t, 1, 3, 3, 1>>([](const V_U8& a) { return swizzle_u32<1, 3, 3, 1>(a); });
   }
 
-  INFO("Testing %d-bit %s vector ops - swizzle_u64", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - swizzle_u64", kW*8, ext);
   {
     test_iop1<V_U8, iop_swizzle_u64<uint8_t, 0, 0>>([](const V_U8& a) { return swizzle_u64<0, 0>(a); });
     test_iop1<V_U8, iop_swizzle_u64<uint8_t, 0, 1>>([](const V_U8& a) { return swizzle_u64<0, 1>(a); });
@@ -1579,13 +1691,13 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
   }
 
 #if defined(BL_SIMD_FEATURE_SWIZZLEV_U8)
-  INFO("Testing %d-bit %s vector ops - swizzlev_u8", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - swizzlev_u8", kW*8, ext);
   {
     test_iop2<V_U8, iop_swizzlev_u8<uint8_t>>([](const V_U8& a, const V_U8& b) { return swizzlev_u8(a, b); });
   }
 #endif // BL_SIMD_FEATURE_SWIZZLEV_U8
 
-  INFO("Testing %d-bit %s vector ops - dup_[lo|hi]", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - dup_[lo|hi]", kW*8, ext);
   {
     test_iop1<V_U8, iop_swizzle_u32<uint8_t, 2, 2, 0, 0>>([](const V_U8& a) { return dup_lo_u32(a); });
     test_iop1<V_U8, iop_swizzle_u32<uint8_t, 3, 3, 1, 1>>([](const V_U8& a) { return dup_hi_u32(a); });
@@ -1593,13 +1705,13 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop1<V_U8, iop_swizzle_u64<uint8_t, 1, 1>>([](const V_U8& a) { return dup_hi_u64(a); });
   }
 
-  INFO("Testing %d-bit %s vector ops - swap", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - swap", kW*8, ext);
   {
     test_iop1<V_U8, iop_swizzle_u32<uint8_t, 2, 3, 0, 1>>([](const V_U8& a) { return swap_u32(a); });
     test_iop1<V_U8, iop_swizzle_u64<uint8_t, 0, 1>>([](const V_U8& a) { return swap_u64(a); });
   }
 
-  INFO("Testing %d-bit %s vector ops - interleave", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - interleave", kW*8, ext);
   {
     test_iop2<V_U8, iop_interleave_lo_u8<uint8_t>>([](const V_U8& a, const V_U8& b) { return interleave_lo_u8(a, b); });
     test_iop2<V_U8, iop_interleave_hi_u8<uint8_t>>([](const V_U8& a, const V_U8& b) { return interleave_hi_u8(a, b); });
@@ -1611,20 +1723,20 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U8, iop_interleave_hi_u64<uint8_t>>([](const V_U8& a, const V_U8& b) { return interleave_hi_u64(a, b); });
   }
 
-  INFO("Testing %d-bit %s vector ops - utilities - div255_u16", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - utilities - div255_u16", kW*8, ext);
   {
     test_iop1_constraint<V_U16,
       iop_div255_u16, ConstraintRangeU16<0, 255u*255u>>([](const V_U16& a) { return div255_u16(a); });
   }
 
-  INFO("Testing %d-bit %s vector ops - utilities - div65535_u32", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - utilities - div65535_u32", kW*8, ext);
   {
     test_iop1_constraint<V_U32,
       iop_div65535_u32, ConstraintRangeU32<0, 65535u*65535u>>([](const V_U32& a) { return div65535_u32(a); });
   }
 
 #if defined(BL_SIMD_FEATURE_ARRAY_LOOKUP)
-  INFO("Testing %d-bit %s vector ops - utilities - array_lookup_u32", kW*8, ext);
+  TEST_LOG("Testing %d-bit %s vector ops - utilities - array_lookup_u32", kW*8, ext);
   {
     alignas(16) uint32_t arr[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
@@ -1665,7 +1777,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
 }
 
 } // {anonymous}
-} // {SIMDTests}
+} // {bl::SIMDTests}
 
 //! \endcond
 

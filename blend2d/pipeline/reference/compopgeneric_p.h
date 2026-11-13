@@ -7,7 +7,7 @@
 #define BLEND2D_PIPELINE_REFERENCE_COMPOPGENERIC_P_H_INCLUDED
 
 #include <blend2d/core/compop_p.h>
-#include <blend2d/pipeline/pipedefs_p.h>
+#include <blend2d/pipeline/pipe_defs_p.h>
 #include <blend2d/pipeline/reference/pixelgeneric_p.h>
 #include <blend2d/pipeline/reference/fetchgeneric_p.h>
 #include <blend2d/pixelops/scalar_p.h>
@@ -31,7 +31,7 @@ struct CompOp_SrcCopy_Op {
   };
 
   static BL_INLINE PixelType op_prgb32_prgb32(PixelType d, PixelType s) noexcept {
-    bl_unused(d);
+    axl::maybe_unused(d);
     return s;
   }
 
@@ -99,24 +99,24 @@ struct CompOp_Base {
     fetch_op.rect_init_fetch(ctx_data, fetch_data, x_pos, y_pos, rect_width);
   }
 
-  BL_INLINE void rectStartX(uint32_t x_pos) noexcept {
-    fetch_op.rectStartX(x_pos);
+  BL_INLINE void rect_start_x(uint32_t x_pos) noexcept {
+    fetch_op.rect_start_x(x_pos);
   }
 
-  BL_INLINE void spanInitY(ContextData* ctx_data, const void* fetch_data, uint32_t y_pos) noexcept {
-    fetch_op.spanInitY(ctx_data, fetch_data, y_pos);
+  BL_INLINE void span_init_y(ContextData* ctx_data, const void* fetch_data, uint32_t y_pos) noexcept {
+    fetch_op.span_init_y(ctx_data, fetch_data, y_pos);
   }
 
-  BL_INLINE void spanStartX(uint32_t x_pos) noexcept {
-    fetch_op.spanStartX(x_pos);
+  BL_INLINE void span_start_x(uint32_t x_pos) noexcept {
+    fetch_op.span_start_x(x_pos);
   }
 
-  BL_INLINE void spanAdvanceX(uint32_t x_pos, uint32_t x_diff) noexcept {
-    fetch_op.spanAdvanceX(x_pos, x_diff);
+  BL_INLINE void span_advance_x(uint32_t x_pos, uint32_t x_diff) noexcept {
+    fetch_op.span_advance_x(x_pos, x_diff);
   }
 
-  BL_INLINE void spanEndX(uint32_t x_pos) noexcept {
-    fetch_op.spanEndX(x_pos);
+  BL_INLINE void span_end_x(uint32_t x_pos) noexcept {
+    fetch_op.span_end_x(x_pos);
   }
 
   BL_INLINE void advance_y() noexcept {
@@ -139,7 +139,7 @@ struct CompOp_Base {
     return dst_ptr + kDstBPP;
   }
 
-  BL_INLINE uint8_t* compositeCSpanOpaque(uint8_t* dst_ptr, size_t w) noexcept {
+  BL_INLINE uint8_t* composite_cspan_opaque(uint8_t* dst_ptr, size_t w) noexcept {
     size_t i = w;
     do {
       dst_ptr = composite_pixel_opaque(dst_ptr);
@@ -147,7 +147,7 @@ struct CompOp_Base {
     return dst_ptr;
   }
 
-  BL_INLINE uint8_t* compositeCSpanMasked(uint8_t* dst_ptr, size_t w, uint32_t m) noexcept {
+  BL_INLINE uint8_t* composite_cspan_masked(uint8_t* dst_ptr, size_t w, uint32_t m) noexcept {
     size_t i = w;
     do {
       dst_ptr = composite_pixel_masked(dst_ptr, m);
@@ -155,14 +155,14 @@ struct CompOp_Base {
     return dst_ptr;
   }
 
-  BL_INLINE uint8_t* compositeCSpan(uint8_t* dst_ptr, size_t w, uint32_t m) noexcept {
+  BL_INLINE uint8_t* composite_cspan(uint8_t* dst_ptr, size_t w, uint32_t m) noexcept {
     if (kOptimizeOpaque && m == 255)
-      return compositeCSpanOpaque(dst_ptr, w);
+      return composite_cspan_opaque(dst_ptr, w);
     else
-      return compositeCSpanMasked(dst_ptr, w, m);
+      return composite_cspan_masked(dst_ptr, w, m);
   }
 
-  BL_INLINE uint8_t* compositeVSpanWithGA(uint8_t* BL_RESTRICT dst_ptr, const uint8_t* BL_RESTRICT mask_ptr, size_t w) noexcept {
+  BL_INLINE uint8_t* composite_vspan_with_ga(uint8_t* BL_RESTRICT dst_ptr, const uint8_t* BL_RESTRICT mask_ptr, size_t w) noexcept {
     size_t i = w;
     do {
       uint32_t msk = mask_ptr[0];
@@ -172,7 +172,7 @@ struct CompOp_Base {
     return dst_ptr;
   }
 
-  BL_INLINE uint8_t* compositeVSpanWithoutGA(uint8_t* BL_RESTRICT dst_ptr, const uint8_t* BL_RESTRICT mask_ptr, uint32_t global_alpha, size_t w) noexcept {
+  BL_INLINE uint8_t* composite_vspan_without_ga(uint8_t* BL_RESTRICT dst_ptr, const uint8_t* BL_RESTRICT mask_ptr, uint32_t global_alpha, size_t w) noexcept {
     size_t i = w;
     do {
       uint32_t msk = PixelOps::Scalar::udiv255(uint32_t(mask_ptr[0]) * global_alpha);

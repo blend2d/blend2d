@@ -3,7 +3,7 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_test_p.h>
+#include <blend2d/core/api_build_test_p.h>
 #if defined(BL_TEST)
 
 #include <blend2d/core/context_p.h>
@@ -11,80 +11,79 @@
 #include <blend2d/core/image_p.h>
 #include <blend2d/core/pattern_p.h>
 
-// bl::Context - Tests
-// ===================
+// Context - Tests
+// ===============
 
-namespace bl {
-namespace Tests {
+namespace bl::ContextTests {
 
 static void test_context_state(BLContext& ctx) {
   // Prepare non-solid styles.
   BLGradient gradient;
-  EXPECT_SUCCESS(gradient.create(BLLinearGradientValues(0.0, 0.0, 0.0, 100.0)));
-  EXPECT_SUCCESS(gradient.add_stop(0.0, BLRgba32(0x00000000u)));
-  EXPECT_SUCCESS(gradient.add_stop(1.0, BLRgba32(0xFF0000FFu)));
+  EXPECT_OK(gradient.create(BLLinearGradientValues(0.0, 0.0, 0.0, 100.0)));
+  EXPECT_OK(gradient.add_stop(0.0, BLRgba32(0x00000000u)));
+  EXPECT_OK(gradient.add_stop(1.0, BLRgba32(0xFF0000FFu)));
 
   BLImage image(16, 16, BL_FORMAT_PRGB32);
   BLPattern pattern(image);
 
-  INFO("Testing state management of global composition options");
+  TEST_LOG("Testing state management of global composition options");
   {
-    EXPECT_SUCCESS(ctx.set_comp_op(BL_COMP_OP_SRC_ATOP));
-    EXPECT_SUCCESS(ctx.set_global_alpha(0.5));
+    EXPECT_OK(ctx.set_comp_op(BL_COMP_OP_SRC_ATOP));
+    EXPECT_OK(ctx.set_global_alpha(0.5));
 
     EXPECT_EQ(ctx.comp_op(), BL_COMP_OP_SRC_ATOP);
     EXPECT_EQ(ctx.global_alpha(), 0.5);
 
-    EXPECT_SUCCESS(ctx.save());
-    EXPECT_SUCCESS(ctx.set_comp_op(BL_COMP_OP_MULTIPLY));
-    EXPECT_SUCCESS(ctx.set_global_alpha(0.9));
+    EXPECT_OK(ctx.save());
+    EXPECT_OK(ctx.set_comp_op(BL_COMP_OP_MULTIPLY));
+    EXPECT_OK(ctx.set_global_alpha(0.9));
     EXPECT_EQ(ctx.comp_op(), BL_COMP_OP_MULTIPLY);
     EXPECT_EQ(ctx.global_alpha(), 0.9);
-    EXPECT_SUCCESS(ctx.restore());
+    EXPECT_OK(ctx.restore());
 
     EXPECT_EQ(ctx.comp_op(), BL_COMP_OP_SRC_ATOP);
     EXPECT_EQ(ctx.global_alpha(), 0.5);
 
-    EXPECT_SUCCESS(ctx.set_comp_op(BL_COMP_OP_SRC_OVER));
-    EXPECT_SUCCESS(ctx.set_global_alpha(1.0));
+    EXPECT_OK(ctx.set_comp_op(BL_COMP_OP_SRC_OVER));
+    EXPECT_OK(ctx.set_global_alpha(1.0));
   }
 
-  INFO("Testing state management of global, fill, and stroke alpha values");
+  TEST_LOG("Testing state management of global, fill, and stroke alpha values");
   {
-    EXPECT_SUCCESS(ctx.set_global_alpha(0.5));
-    EXPECT_SUCCESS(ctx.set_fill_alpha(0.3));
-    EXPECT_SUCCESS(ctx.set_stroke_alpha(0.4));
+    EXPECT_OK(ctx.set_global_alpha(0.5));
+    EXPECT_OK(ctx.set_fill_alpha(0.3));
+    EXPECT_OK(ctx.set_stroke_alpha(0.4));
 
     EXPECT_EQ(ctx.global_alpha(), 0.5);
     EXPECT_EQ(ctx.fill_alpha(), 0.3);
     EXPECT_EQ(ctx.stroke_alpha(), 0.4);
 
-    EXPECT_SUCCESS(ctx.save());
+    EXPECT_OK(ctx.save());
 
-    EXPECT_SUCCESS(ctx.set_global_alpha(1.0));
-    EXPECT_SUCCESS(ctx.set_fill_alpha(0.7));
-    EXPECT_SUCCESS(ctx.set_stroke_alpha(0.8));
+    EXPECT_OK(ctx.set_global_alpha(1.0));
+    EXPECT_OK(ctx.set_fill_alpha(0.7));
+    EXPECT_OK(ctx.set_stroke_alpha(0.8));
 
     EXPECT_EQ(ctx.global_alpha(), 1.0);
     EXPECT_EQ(ctx.fill_alpha(), 0.7);
     EXPECT_EQ(ctx.stroke_alpha(), 0.8);
 
-    EXPECT_SUCCESS(ctx.restore());
+    EXPECT_OK(ctx.restore());
 
     EXPECT_EQ(ctx.global_alpha(), 0.5);
     EXPECT_EQ(ctx.fill_alpha(), 0.3);
     EXPECT_EQ(ctx.stroke_alpha(), 0.4);
 
-    EXPECT_SUCCESS(ctx.set_global_alpha(0.1));
-    EXPECT_SUCCESS(ctx.set_fill_alpha(1.0));
-    EXPECT_SUCCESS(ctx.set_stroke_alpha(0.9));
+    EXPECT_OK(ctx.set_global_alpha(0.1));
+    EXPECT_OK(ctx.set_fill_alpha(1.0));
+    EXPECT_OK(ctx.set_stroke_alpha(0.9));
 
     EXPECT_EQ(ctx.global_alpha(), 0.1);
     EXPECT_EQ(ctx.fill_alpha(), 1.0);
     EXPECT_EQ(ctx.stroke_alpha(), 0.9);
   }
 
-  INFO("Testing state management of styles (Rgba, Rgba32, Rgba64)");
+  TEST_LOG("Testing state management of styles (Rgba, Rgba32, Rgba64)");
   {
     BLRgba32 rgba32;
     BLRgba64 rgba64;
@@ -93,14 +92,14 @@ static void test_context_state(BLContext& ctx) {
     BLRgba fill_color(0.1f, 0.2f, 0.3f, 0.4f);
     BLRgba stroke_color(0.5f, 0.6f, 0.7f, 0.8f);
 
-    EXPECT_SUCCESS(ctx.set_fill_style(fill_color));
-    EXPECT_SUCCESS(ctx.set_stroke_style(stroke_color));
+    EXPECT_OK(ctx.set_fill_style(fill_color));
+    EXPECT_OK(ctx.set_stroke_style(stroke_color));
 
     BLVar fill_style_var;
     BLVar stroke_style_var;
 
-    EXPECT_SUCCESS(ctx.get_fill_style(fill_style_var));
-    EXPECT_SUCCESS(ctx.get_stroke_style(stroke_style_var));
+    EXPECT_OK(ctx.get_fill_style(fill_style_var));
+    EXPECT_OK(ctx.get_stroke_style(stroke_style_var));
 
     EXPECT_TRUE(fill_style_var.is_rgba());
     EXPECT_TRUE(stroke_style_var.is_rgba());
@@ -110,15 +109,15 @@ static void test_context_state(BLContext& ctx) {
 
     // Save and change the style.
     {
-      EXPECT_SUCCESS(ctx.save());
+      EXPECT_OK(ctx.save());
       BLRgba new_fill_color(0.9f, 0.8f, 0.7f, 0.6f);
       BLRgba new_stroke_color(0.7f, 0.6f, 0.5f, 0.4f);
 
-      EXPECT_SUCCESS(ctx.set_fill_style(new_fill_color));
-      EXPECT_SUCCESS(ctx.set_stroke_style(new_stroke_color));
+      EXPECT_OK(ctx.set_fill_style(new_fill_color));
+      EXPECT_OK(ctx.set_stroke_style(new_stroke_color));
 
-      EXPECT_SUCCESS(ctx.get_fill_style(fill_style_var));
-      EXPECT_SUCCESS(ctx.get_stroke_style(stroke_style_var));
+      EXPECT_OK(ctx.get_fill_style(fill_style_var));
+      EXPECT_OK(ctx.get_stroke_style(stroke_style_var));
 
       EXPECT_TRUE(fill_style_var.is_rgba());
       EXPECT_TRUE(stroke_style_var.is_rgba());
@@ -126,26 +125,26 @@ static void test_context_state(BLContext& ctx) {
       EXPECT_EQ(fill_style_var.as<BLRgba>(), new_fill_color);
       EXPECT_EQ(stroke_style_var.as<BLRgba>(), new_stroke_color);
 
-      EXPECT_SUCCESS(ctx.set_fill_style(BLRgba32(0xFFEEDDCCu)));
-      EXPECT_SUCCESS(ctx.set_stroke_style(BLRgba64(0x9999AAAABBBBCCCCu)));
+      EXPECT_OK(ctx.set_fill_style(BLRgba32(0xFFEEDDCCu)));
+      EXPECT_OK(ctx.set_stroke_style(BLRgba64(0x9999AAAABBBBCCCCu)));
 
-      EXPECT_SUCCESS(ctx.get_fill_style(fill_style_var));
-      EXPECT_SUCCESS(ctx.get_stroke_style(stroke_style_var));
+      EXPECT_OK(ctx.get_fill_style(fill_style_var));
+      EXPECT_OK(ctx.get_stroke_style(stroke_style_var));
 
       EXPECT_TRUE(fill_style_var.is_rgba32());
       EXPECT_TRUE(stroke_style_var.is_rgba64());
 
-      EXPECT_SUCCESS(fill_style_var.to_rgba32(&rgba32));
-      EXPECT_SUCCESS(stroke_style_var.to_rgba64(&rgba64));
+      EXPECT_OK(fill_style_var.to_rgba32(&rgba32));
+      EXPECT_OK(stroke_style_var.to_rgba64(&rgba64));
 
       EXPECT_EQ(rgba32, BLRgba32(0xFFEEDDCCu));
       EXPECT_EQ(rgba64, BLRgba64(0x9999AAAABBBBCCCCu));
-      EXPECT_SUCCESS(ctx.restore());
+      EXPECT_OK(ctx.restore());
     }
 
     // Now we should observe the initial style that was active before save().
-    EXPECT_SUCCESS(ctx.get_fill_style(fill_style_var));
-    EXPECT_SUCCESS(ctx.get_stroke_style(stroke_style_var));
+    EXPECT_OK(ctx.get_fill_style(fill_style_var));
+    EXPECT_OK(ctx.get_stroke_style(stroke_style_var));
 
     EXPECT_TRUE(fill_style_var.is_rgba());
     EXPECT_TRUE(stroke_style_var.is_rgba());
@@ -154,7 +153,7 @@ static void test_context_state(BLContext& ctx) {
     EXPECT_EQ(stroke_style_var.as<BLRgba>(), stroke_color);
   }
 
-  INFO("Testing state management of styles (Rgba32, Gradient)");
+  TEST_LOG("Testing state management of styles (Rgba32, Gradient)");
   {
     BLRgba32 rgba32;
 
@@ -162,110 +161,110 @@ static void test_context_state(BLContext& ctx) {
     BLVar stroke_style_var;
 
     // Initial style.
-    EXPECT_SUCCESS(ctx.set_fill_style(gradient));
-    EXPECT_SUCCESS(ctx.set_stroke_style(BLRgba32(0x44332211u)));
+    EXPECT_OK(ctx.set_fill_style(gradient));
+    EXPECT_OK(ctx.set_stroke_style(BLRgba32(0x44332211u)));
 
-    EXPECT_SUCCESS(ctx.get_fill_style(fill_style_var));
-    EXPECT_SUCCESS(ctx.get_stroke_style(stroke_style_var));
+    EXPECT_OK(ctx.get_fill_style(fill_style_var));
+    EXPECT_OK(ctx.get_stroke_style(stroke_style_var));
 
     EXPECT_TRUE(fill_style_var.is_gradient());
     EXPECT_TRUE(stroke_style_var.is_rgba32());
 
     EXPECT_EQ(fill_style_var.as<BLGradient>(), gradient);
-    EXPECT_SUCCESS(stroke_style_var.to_rgba32(&rgba32));
+    EXPECT_OK(stroke_style_var.to_rgba32(&rgba32));
     EXPECT_EQ(rgba32, BLRgba32(0x44332211u));
 
     // Save and change the style.
     {
-      EXPECT_SUCCESS(ctx.save());
-      EXPECT_SUCCESS(ctx.set_fill_style(BLRgba32(0xFFFFFFFFu)));
-      EXPECT_SUCCESS(ctx.set_stroke_style(BLRgba32(0x00000000u)));
+      EXPECT_OK(ctx.save());
+      EXPECT_OK(ctx.set_fill_style(BLRgba32(0xFFFFFFFFu)));
+      EXPECT_OK(ctx.set_stroke_style(BLRgba32(0x00000000u)));
 
-      EXPECT_SUCCESS(ctx.get_fill_style(fill_style_var));
-      EXPECT_SUCCESS(ctx.get_stroke_style(stroke_style_var));
+      EXPECT_OK(ctx.get_fill_style(fill_style_var));
+      EXPECT_OK(ctx.get_stroke_style(stroke_style_var));
 
       EXPECT_TRUE(fill_style_var.is_rgba32());
       EXPECT_TRUE(stroke_style_var.is_rgba32());
 
-      EXPECT_SUCCESS(fill_style_var.to_rgba32(&rgba32));
+      EXPECT_OK(fill_style_var.to_rgba32(&rgba32));
       EXPECT_EQ(rgba32, BLRgba32(0xFFFFFFFFu));
 
-      EXPECT_SUCCESS(stroke_style_var.to_rgba32(&rgba32));
+      EXPECT_OK(stroke_style_var.to_rgba32(&rgba32));
       EXPECT_EQ(rgba32, BLRgba32(0x00000000u));
-      EXPECT_SUCCESS(ctx.restore());
+      EXPECT_OK(ctx.restore());
     }
 
     // Now we should observe the initial style that was active before save().
-    EXPECT_SUCCESS(ctx.get_fill_style(fill_style_var));
-    EXPECT_SUCCESS(ctx.get_stroke_style(stroke_style_var));
+    EXPECT_OK(ctx.get_fill_style(fill_style_var));
+    EXPECT_OK(ctx.get_stroke_style(stroke_style_var));
 
     EXPECT_TRUE(fill_style_var.is_gradient());
     EXPECT_TRUE(stroke_style_var.is_rgba32());
 
     EXPECT_EQ(fill_style_var.as<BLGradient>(), gradient);
-    EXPECT_SUCCESS(stroke_style_var.to_rgba32(&rgba32));
+    EXPECT_OK(stroke_style_var.to_rgba32(&rgba32));
     EXPECT_EQ(rgba32, BLRgba32(0x44332211u));
   }
 
-  INFO("Testing fill and stroke style swapping (Rgba32)");
+  TEST_LOG("Testing fill and stroke style swapping (Rgba32)");
   {
     BLRgba32 a(0xFF000000u);
     BLRgba32 b(0xFFFFFFFFu);
 
-    double alphaA = 0.5;
-    double alphaB = 0.7;
+    double alpha_a = 0.5;
+    double alpha_b = 0.7;
 
     BLVar va;
     BLVar vb;
 
-    BLRgba32 vaRgba32;
-    BLRgba32 vbRgba32;
+    BLRgba32 va_rgba32;
+    BLRgba32 vb_rgba32;
 
-    EXPECT_SUCCESS(ctx.set_fill_style(a));
-    EXPECT_SUCCESS(ctx.set_stroke_style(b));
+    EXPECT_OK(ctx.set_fill_style(a));
+    EXPECT_OK(ctx.set_stroke_style(b));
 
-    ctx.set_fill_alpha(alphaA);
-    ctx.set_stroke_alpha(alphaB);
+    ctx.set_fill_alpha(alpha_a);
+    ctx.set_stroke_alpha(alpha_b);
 
     // Swap styles twice - first time to swap, second time to revert the swap.
     for (uint32_t i = 0; i < 2; i++) {
       for (uint32_t j = 0; j < 2; j++) {
         BLContextStyleSwapMode mode = BLContextStyleSwapMode(j);
 
-        EXPECT_SUCCESS(ctx.swap_styles(mode));
-        EXPECT_SUCCESS(ctx.get_fill_style(va));
-        EXPECT_SUCCESS(ctx.get_stroke_style(vb));
+        EXPECT_OK(ctx.swap_styles(mode));
+        EXPECT_OK(ctx.get_fill_style(va));
+        EXPECT_OK(ctx.get_stroke_style(vb));
 
         EXPECT_TRUE(va.is_rgba32());
         EXPECT_TRUE(vb.is_rgba32());
-        EXPECT_SUCCESS(va.to_rgba32(&vaRgba32));
-        EXPECT_SUCCESS(vb.to_rgba32(&vbRgba32));
+        EXPECT_OK(va.to_rgba32(&va_rgba32));
+        EXPECT_OK(vb.to_rgba32(&vb_rgba32));
 
-        BLInternal::swap(a, b);
-        EXPECT_EQ(a, vaRgba32);
-        EXPECT_EQ(b, vbRgba32);
+        Internal::swap(a, b);
+        EXPECT_EQ(a, va_rgba32);
+        EXPECT_EQ(b, vb_rgba32);
 
         if (mode == BL_CONTEXT_STYLE_SWAP_MODE_STYLES_WITH_ALPHA) {
-          BLInternal::swap(alphaA, alphaB);
-          EXPECT_EQ(ctx.fill_alpha(), alphaA);
-          EXPECT_EQ(ctx.stroke_alpha(), alphaB);
+          Internal::swap(alpha_a, alpha_b);
+          EXPECT_EQ(ctx.fill_alpha(), alpha_a);
+          EXPECT_EQ(ctx.stroke_alpha(), alpha_b);
         }
       }
     }
   }
 
-  INFO("Testing fill and stroke style swapping (Gradient, Pattern)");
+  TEST_LOG("Testing fill and stroke style swapping (Gradient, Pattern)");
   {
     BLVar va;
     BLVar vb;
 
-    EXPECT_SUCCESS(ctx.set_fill_style(gradient));
-    EXPECT_SUCCESS(ctx.set_stroke_style(pattern));
+    EXPECT_OK(ctx.set_fill_style(gradient));
+    EXPECT_OK(ctx.set_stroke_style(pattern));
 
     // First swap.
-    EXPECT_SUCCESS(ctx.swap_styles(BL_CONTEXT_STYLE_SWAP_MODE_STYLES));
-    EXPECT_SUCCESS(ctx.get_fill_style(va));
-    EXPECT_SUCCESS(ctx.get_stroke_style(vb));
+    EXPECT_OK(ctx.swap_styles(BL_CONTEXT_STYLE_SWAP_MODE_STYLES));
+    EXPECT_OK(ctx.get_fill_style(va));
+    EXPECT_OK(ctx.get_stroke_style(vb));
 
     EXPECT_TRUE(va.is_pattern());
     EXPECT_TRUE(vb.is_gradient());
@@ -274,9 +273,9 @@ static void test_context_state(BLContext& ctx) {
     EXPECT_EQ(vb.as<BLGradient>(), gradient);
 
     // Second swap.
-    EXPECT_SUCCESS(ctx.swap_styles(BL_CONTEXT_STYLE_SWAP_MODE_STYLES));
-    EXPECT_SUCCESS(ctx.get_fill_style(va));
-    EXPECT_SUCCESS(ctx.get_stroke_style(vb));
+    EXPECT_OK(ctx.swap_styles(BL_CONTEXT_STYLE_SWAP_MODE_STYLES));
+    EXPECT_OK(ctx.get_fill_style(va));
+    EXPECT_OK(ctx.get_stroke_style(vb));
 
     EXPECT_TRUE(va.is_gradient());
     EXPECT_TRUE(vb.is_pattern());
@@ -285,100 +284,102 @@ static void test_context_state(BLContext& ctx) {
     EXPECT_EQ(vb.as<BLPattern>(), pattern);
   }
 
-  INFO("Testing state management of fill options");
+  TEST_LOG("Testing state management of fill options");
   {
     BLFillRule initial_fill_rule = ctx.fill_rule();
 
-    EXPECT_SUCCESS(ctx.save());
+    EXPECT_OK(ctx.save());
 
-    EXPECT_SUCCESS(ctx.set_fill_rule(BL_FILL_RULE_EVEN_ODD));
+    EXPECT_OK(ctx.set_fill_rule(BL_FILL_RULE_EVEN_ODD));
     EXPECT_EQ(ctx.fill_rule(), BL_FILL_RULE_EVEN_ODD);
 
-    EXPECT_SUCCESS(ctx.set_fill_rule(BL_FILL_RULE_NON_ZERO));
+    EXPECT_OK(ctx.set_fill_rule(BL_FILL_RULE_NON_ZERO));
     EXPECT_EQ(ctx.fill_rule(), BL_FILL_RULE_NON_ZERO);
 
-    EXPECT_SUCCESS(ctx.set_fill_rule(
+    EXPECT_OK(ctx.set_fill_rule(
       initial_fill_rule == BL_FILL_RULE_NON_ZERO
         ? BL_FILL_RULE_EVEN_ODD
         : BL_FILL_RULE_NON_ZERO));
-    EXPECT_SUCCESS(ctx.restore());
+    EXPECT_OK(ctx.restore());
 
     EXPECT_EQ(ctx.fill_rule(), initial_fill_rule);
   }
 
-  INFO("Testing state management of stroke options");
+  TEST_LOG("Testing state management of stroke options");
   {
-    BLArray<double> dashes;
-    dashes.append(1.0, 2.0, 3.0, 4.0);
+    BLArray<float> dashes;
+    dashes.append(1.0f, 2.0f, 3.0f, 4.0f);
 
-    EXPECT_SUCCESS(ctx.save());
+    EXPECT_OK(ctx.save());
 
-    EXPECT_SUCCESS(ctx.set_stroke_width(2.0));
-    EXPECT_EQ(ctx.stroke_width(), 2.0);
+    EXPECT_OK(ctx.set_stroke_width(2.0f));
+    EXPECT_EQ(ctx.stroke_width(), 2.0f);
 
-    EXPECT_SUCCESS(ctx.set_stroke_miter_limit(10.0));
-    EXPECT_EQ(ctx.stroke_miter_limit(), 10.0);
+    EXPECT_OK(ctx.set_stroke_miter_limit(10.0f));
+    EXPECT_EQ(ctx.stroke_miter_limit(), 10.0f);
 
-    EXPECT_SUCCESS(ctx.set_stroke_join(BL_STROKE_JOIN_ROUND));
+    EXPECT_OK(ctx.set_stroke_join(BL_STROKE_JOIN_ROUND));
     EXPECT_EQ(ctx.stroke_join(), BL_STROKE_JOIN_ROUND);
 
-    EXPECT_SUCCESS(ctx.set_stroke_start_cap(BL_STROKE_CAP_ROUND_REV));
+    EXPECT_OK(ctx.set_stroke_start_cap(BL_STROKE_CAP_ROUND_REV));
     EXPECT_EQ(ctx.stroke_start_cap(), BL_STROKE_CAP_ROUND_REV);
 
-    EXPECT_SUCCESS(ctx.set_stroke_end_cap(BL_STROKE_CAP_TRIANGLE_REV));
+    EXPECT_OK(ctx.set_stroke_end_cap(BL_STROKE_CAP_TRIANGLE_REV));
     EXPECT_EQ(ctx.stroke_end_cap(), BL_STROKE_CAP_TRIANGLE_REV);
 
-    EXPECT_SUCCESS(ctx.set_stroke_dash_array(dashes));
-    EXPECT_EQ(ctx.stroke_dash_array(), dashes);
+    EXPECT_OK(ctx.set_stroke_dash_array(dashes));
+    EXPECT_EQ(ctx.stroke_dash_array(), dashes.span());
 
-    EXPECT_SUCCESS(ctx.set_stroke_dash_offset(5.0));
-    EXPECT_EQ(ctx.stroke_dash_offset(), 5.0);
+    EXPECT_OK(ctx.set_stroke_dash_offset(5.0f));
+    EXPECT_EQ(ctx.stroke_dash_offset(), 5.0f);
 
     BLStrokeOptions opt = ctx.stroke_options();
     EXPECT_EQ(opt, ctx.stroke_options());
-    EXPECT_EQ(opt.width, 2.0);
-    EXPECT_EQ(opt.miter_limit, 10.0);
-    EXPECT_EQ(BLStrokeJoin(opt.join), BL_STROKE_JOIN_ROUND);
-    EXPECT_EQ(BLStrokeCap(opt.caps[BL_STROKE_CAP_POSITION_START]), BL_STROKE_CAP_ROUND_REV);
-    EXPECT_EQ(BLStrokeCap(opt.caps[BL_STROKE_CAP_POSITION_END]), BL_STROKE_CAP_TRIANGLE_REV);
-    EXPECT_EQ(opt.dash_array, dashes);
-    EXPECT_EQ(opt.dash_offset, 5.0);
+    EXPECT_EQ(opt.width(), 2.0f);
+    EXPECT_EQ(opt.miter_limit(), 10.0f);
+    EXPECT_EQ(opt.join(), BL_STROKE_JOIN_ROUND);
+    EXPECT_EQ(opt.start_cap(), BL_STROKE_CAP_ROUND_REV);
+    EXPECT_EQ(opt.end_cap(), BL_STROKE_CAP_TRIANGLE_REV);
+    EXPECT_EQ(opt.cap_by_position(BL_STROKE_CAP_POSITION_START), BL_STROKE_CAP_ROUND_REV);
+    EXPECT_EQ(opt.cap_by_position(BL_STROKE_CAP_POSITION_END), BL_STROKE_CAP_TRIANGLE_REV);
+    EXPECT_EQ(opt.dash_array(), dashes.span());
+    EXPECT_EQ(opt.dash_offset(), 5.0f);
 
-    EXPECT_SUCCESS(ctx.restore());
+    EXPECT_OK(ctx.restore());
 
-    EXPECT_SUCCESS(ctx.save());
-    EXPECT_SUCCESS(ctx.set_stroke_options(opt));
-    EXPECT_EQ(ctx.stroke_width(), 2.0);
-    EXPECT_EQ(ctx.stroke_miter_limit(), 10.0);
+    EXPECT_OK(ctx.save());
+    EXPECT_OK(ctx.set_stroke_options(opt));
+    EXPECT_EQ(ctx.stroke_width(), 2.0f);
+    EXPECT_EQ(ctx.stroke_miter_limit(), 10.0f);
     EXPECT_EQ(ctx.stroke_join(), BL_STROKE_JOIN_ROUND);
     EXPECT_EQ(ctx.stroke_start_cap(), BL_STROKE_CAP_ROUND_REV);
     EXPECT_EQ(ctx.stroke_end_cap(), BL_STROKE_CAP_TRIANGLE_REV);
-    EXPECT_EQ(ctx.stroke_dash_array(), dashes);
-    EXPECT_EQ(ctx.stroke_dash_offset(), 5.0);
+    EXPECT_EQ(ctx.stroke_dash_array(), dashes.span());
+    EXPECT_EQ(ctx.stroke_dash_offset(), 5.0f);
 
     BLStrokeOptions opt2 = ctx.stroke_options();
     EXPECT_EQ(opt, opt2);
 
-    EXPECT_SUCCESS(ctx.restore());
+    EXPECT_OK(ctx.restore());
   }
 
-  INFO("Testing state management of transformations");
+  TEST_LOG("Testing state management of transformations");
   {
     BLMatrix2D transform = BLMatrix2D::make_scaling(2.0);
-    EXPECT_SUCCESS(ctx.apply_transform(transform));
+    EXPECT_OK(ctx.apply_transform(transform));
     EXPECT_EQ(ctx.user_transform(), transform);
     EXPECT_EQ(ctx.meta_transform(), BLMatrix2D::make_identity());
 
-    EXPECT_SUCCESS(ctx.save());
-    EXPECT_SUCCESS(ctx.user_to_meta());
+    EXPECT_OK(ctx.save());
+    EXPECT_OK(ctx.user_to_meta());
     EXPECT_EQ(ctx.meta_transform(), transform);
     EXPECT_EQ(ctx.user_transform(), BLMatrix2D::make_identity());
-    EXPECT_SUCCESS(ctx.restore());
+    EXPECT_OK(ctx.restore());
 
     EXPECT_EQ(ctx.user_transform(), transform);
     EXPECT_EQ(ctx.meta_transform(), BLMatrix2D::make_identity());
 
-    EXPECT_SUCCESS(ctx.reset_transform());
+    EXPECT_OK(ctx.reset_transform());
     EXPECT_EQ(ctx.user_transform(), BLMatrix2D::make_identity());
   }
 }
@@ -413,7 +414,7 @@ static void test_context_blit_fill_clip(BLContext& ctx) {
     BLMatrix2D::make_scaling(1e-100, 1e-100),
   };
 
-  BLPointI pointIData[] = {
+  BLPointI pointi_data[] = {
     BLPointI(        0,         0),
     BLPointI(        0,        -1),
     BLPointI(       -1,         0),
@@ -436,7 +437,7 @@ static void test_context_blit_fill_clip(BLContext& ctx) {
     BLPointI(INT32_MAX, INT32_MAX)
   };
 
-  BLPoint pointDData[] = {
+  BLPoint pointd_data[] = {
     BLPoint(       0.0,       0.0),
     BLPoint(       0.0,       0.3),
     BLPoint(       0.3,       0.0),
@@ -494,7 +495,7 @@ static void test_context_blit_fill_clip(BLContext& ctx) {
     BLPoint(      kNaN,      kNaN)
   };
 
-  BLSizeI sizeIData[] = {
+  BLSizeI sizei_data[] = {
     BLSizeI(       sw,       sh),
     BLSizeI(   sw / 2,   sh / 2),
     BLSizeI(        1,        1),
@@ -507,7 +508,7 @@ static void test_context_blit_fill_clip(BLContext& ctx) {
     BLSizeI(INT32_MAX,INT32_MAX)
   };
 
-  BLSize sizeDData[] = {
+  BLSize sized_data[] = {
     BLSize(       sw,       sh),
     BLSize(   sw / 2,   sh / 2),
     BLSize(      1.0,      1.0),
@@ -543,7 +544,7 @@ static void test_context_blit_fill_clip(BLContext& ctx) {
     BLSize(     kNaN,     kNaN)
   };
 
-  INFO("Testing fill clipping");
+  TEST_LOG("Testing fill clipping");
 
   ctx.clear_all();
 
@@ -551,43 +552,43 @@ static void test_context_blit_fill_clip(BLContext& ctx) {
     ctx.set_transform(matrix_data[i]);
     ctx.set_fill_style(BLRgba32(0xFFFFFFFF));
 
-    for (size_t j = 0; j < BL_ARRAY_SIZE(pointIData); j++) {
-      for (size_t k = 0; k < BL_ARRAY_SIZE(sizeIData); k++) {
-        ctx.fill_rect(BLRectI(pointIData[j].x, pointIData[j].y, sizeIData[k].w, sizeIData[k].h));
+    for (size_t j = 0; j < BL_ARRAY_SIZE(pointi_data); j++) {
+      for (size_t k = 0; k < BL_ARRAY_SIZE(sizei_data); k++) {
+        ctx.fill_rect(BLRectI(pointi_data[j].x, pointi_data[j].y, sizei_data[k].w, sizei_data[k].h));
       }
     }
 
-    for (size_t j = 0; j < BL_ARRAY_SIZE(pointDData); j++) {
-      for (size_t k = 0; k < BL_ARRAY_SIZE(sizeDData); k++) {
-        ctx.fill_rect(BLRect(pointDData[j].x, pointDData[j].y, sizeDData[k].w, sizeDData[k].h));
+    for (size_t j = 0; j < BL_ARRAY_SIZE(pointd_data); j++) {
+      for (size_t k = 0; k < BL_ARRAY_SIZE(sized_data); k++) {
+        ctx.fill_rect(BLRect(pointd_data[j].x, pointd_data[j].y, sized_data[k].w, sized_data[k].h));
       }
     }
   }
 
-  INFO("Testing blit clipping");
+  TEST_LOG("Testing blit clipping");
 
   ctx.clear_all();
 
   for (size_t i = 0; i < BL_ARRAY_SIZE(matrix_data); i++) {
     ctx.set_transform(matrix_data[i]);
 
-    for (size_t j = 0; j < BL_ARRAY_SIZE(pointIData); j++) {
-      ctx.blit_image(pointIData[j], sprite);
-      for (size_t k = 0; k < BL_ARRAY_SIZE(sizeIData); k++) {
-        ctx.blit_image(BLRectI(pointIData[j].x, pointIData[j].y, sizeIData[k].w, sizeIData[k].h), sprite);
+    for (size_t j = 0; j < BL_ARRAY_SIZE(pointi_data); j++) {
+      ctx.blit_image(pointi_data[j], sprite);
+      for (size_t k = 0; k < BL_ARRAY_SIZE(sizei_data); k++) {
+        ctx.blit_image(BLRectI(pointi_data[j].x, pointi_data[j].y, sizei_data[k].w, sizei_data[k].h), sprite);
       }
     }
 
-    for (size_t j = 0; j < BL_ARRAY_SIZE(pointDData); j++) {
-      ctx.blit_image(pointDData[j], sprite);
-      for (size_t k = 0; k < BL_ARRAY_SIZE(sizeDData); k++) {
-        ctx.blit_image(BLRect(pointDData[j].x, pointDData[j].y, sizeDData[k].w, sizeDData[k].h), sprite);
+    for (size_t j = 0; j < BL_ARRAY_SIZE(pointd_data); j++) {
+      ctx.blit_image(pointd_data[j], sprite);
+      for (size_t k = 0; k < BL_ARRAY_SIZE(sized_data); k++) {
+        ctx.blit_image(BLRect(pointd_data[j].x, pointd_data[j].y, sized_data[k].w, sized_data[k].h), sprite);
       }
     }
   }
 }
 
-UNIT(context, BL_TEST_GROUP_RENDERING_CONTEXT) {
+TEST_CASE(core_context) {
   BLImage img(256, 256, BL_FORMAT_PRGB32);
   BLContext ctx(img);
 
@@ -595,7 +596,123 @@ UNIT(context, BL_TEST_GROUP_RENDERING_CONTEXT) {
   test_context_blit_fill_clip(ctx);
 }
 
-} // {Tests}
-} // {bl}
+TEST_CASE(core_context_mask_lifetime) {
+  uint8_t pixels[64];
+  memset(pixels, 0xFF, sizeof(pixels));
+
+  auto destroy_func = []([[maybe_unused]] void* impl_ptr, [[maybe_unused]] void* external_data, void* user_data) noexcept {
+    ++*static_cast<uint32_t*>(user_data);
+  };
+
+  BLGradient gradient;
+  EXPECT_OK(gradient.create(BLLinearGradientValues(0.0, 0.0, 8.0, 8.0)));
+  EXPECT_OK(gradient.add_stop(0.0, BLRgba32(0xFFFF0000u)));
+  EXPECT_OK(gradient.add_stop(1.0, BLRgba32(0xFF0000FFu)));
+
+  for (uint32_t thread_count = 0; thread_count <= 2; thread_count++) {
+    BLContextCreateInfo create_info{};
+    create_info.thread_count = thread_count;
+    create_info.command_queue_limit = 1024;
+
+    for (uint32_t read_only = 0; read_only <= 1; read_only++) {
+      BLDataAccessMode access_mode = read_only ? BL_DATA_ACCESS_MODE_RO : BL_DATA_ACCESS_MODE_RW;
+
+      for (uint32_t use_gradient = 0; use_gradient <= 1; use_gradient++) {
+        TEST_LOG("Testing mask lifetime (thread_count=%u, read_only=%u, gradient=%u)", thread_count, read_only, use_gradient);
+
+        // More than 256 commands exercise both multiple cleanup bit words and linked command queues.
+        {
+          uint32_t destroy_count = 0;
+          BLImage target(16, 16, BL_FORMAT_PRGB32);
+          BLImage mask;
+          EXPECT_OK(mask.create_from_data(8, 8, BL_FORMAT_A8, pixels, 8, access_mode, destroy_func, &destroy_count));
+          size_t initial_ref_count = ObjectLayer::get_impl_ref_count(ObjectLayer::get_impl(&mask));
+
+          BLContext ctx;
+          EXPECT_OK(ctx.begin(target, create_info));
+          if (use_gradient)
+            EXPECT_OK(ctx.set_fill_style(gradient));
+          else
+            EXPECT_OK(ctx.set_fill_style(BLRgba32(0xFFFFFFFFu)));
+
+          for (uint32_t batch = 0; batch < 2; batch++) {
+            for (uint32_t i = 0; i < 257; i++) {
+              if (i & 1)
+                EXPECT_OK(ctx.fill_mask(BLPoint(0.0, 0.0), mask));
+              else
+                EXPECT_OK(ctx.fill_mask(BLPointI(0, 0), mask));
+            }
+            EXPECT_OK(ctx.flush(BL_CONTEXT_FLUSH_SYNC));
+            EXPECT_EQ(ObjectLayer::get_impl_ref_count(ObjectLayer::get_impl(&mask)), initial_ref_count);
+            EXPECT_EQ(destroy_count, 0u);
+          }
+
+          EXPECT_OK(ctx.end());
+          EXPECT_EQ(ObjectLayer::get_impl_ref_count(ObjectLayer::get_impl(&mask)), initial_ref_count);
+          EXPECT_OK(mask.reset());
+          EXPECT_EQ(destroy_count, 1u);
+        }
+
+        // The caller can release the mask before an explicit flush, end(), or context destruction.
+        for (uint32_t finish_mode = 0; finish_mode < 3; finish_mode++) {
+          uint32_t destroy_count = 0;
+          BLImage target(16, 16, BL_FORMAT_PRGB32);
+          {
+            BLImage mask;
+            EXPECT_OK(mask.create_from_data(8, 8, BL_FORMAT_A8, pixels, 8, access_mode, destroy_func, &destroy_count));
+            BLContext ctx;
+            EXPECT_OK(ctx.begin(target, create_info));
+            if (use_gradient)
+              EXPECT_OK(ctx.set_fill_style(gradient));
+            else
+              EXPECT_OK(ctx.set_fill_style(BLRgba32(0xFFFFFFFFu)));
+
+            for (uint32_t i = 0; i < 3; i++)
+              EXPECT_OK(ctx.fill_mask(BLPointI(0, 0), mask));
+            EXPECT_OK(mask.reset());
+            EXPECT_EQ(destroy_count, thread_count ? 0u : 1u);
+
+            if (finish_mode == 0)
+              EXPECT_OK(ctx.flush(BL_CONTEXT_FLUSH_SYNC));
+            else if (finish_mode == 1)
+              EXPECT_OK(ctx.end());
+
+            if (finish_mode != 2)
+              EXPECT_EQ(destroy_count, 1u);
+          }
+          EXPECT_EQ(destroy_count, 1u);
+
+          BLImageData target_data;
+          EXPECT_OK(target.get_data(&target_data));
+          EXPECT_EQ(*static_cast<const uint32_t*>(target_data.pixel_data) >> 24, 0xFFu);
+        }
+      }
+    }
+  }
+
+  // Releasing the last mask reference must defer destruction while another context is still writing to it.
+  for (uint32_t thread_count = 1; thread_count <= 2; thread_count++) {
+    uint32_t destroy_count = 0;
+    BLImage target(16, 16, BL_FORMAT_PRGB32);
+    BLImage mask;
+    EXPECT_OK(mask.create_from_data_mut(8, 8, BL_FORMAT_A8, pixels, 8, destroy_func, &destroy_count));
+    BLContext mask_writer(mask);
+    EXPECT_OK(mask_writer.fill_all(BLRgba32(0xFFFFFFFFu)));
+
+    BLContextCreateInfo create_info{};
+    create_info.thread_count = thread_count;
+    BLContext ctx;
+    EXPECT_OK(ctx.begin(target, create_info));
+    EXPECT_OK(ctx.fill_mask(BLPointI(0, 0), mask, BLRgba32(0xFFFFFFFFu)));
+    EXPECT_OK(mask.reset());
+    EXPECT_EQ(destroy_count, 0u);
+    EXPECT_OK(ctx.end());
+    EXPECT_EQ(destroy_count, 0u);
+    EXPECT_OK(mask_writer.end());
+    EXPECT_EQ(destroy_count, 1u);
+  }
+}
+
+} // {bl::ContextTests}
 
 #endif // BL_TEST

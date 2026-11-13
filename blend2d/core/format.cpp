@@ -3,12 +3,13 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_p.h>
-#include <blend2d/core/format_p.h>
-#include <blend2d/support/lookuptable_p.h>
+#include <blend2d/core/api_build_p.h>
 
-// bl::FormatInfo - Globals
-// ========================
+#include <blend2d/axl/lookuptable_p.h>
+#include <blend2d/core/format_p.h>
+
+// FormatInfo - Globals
+// ====================
 
 const BLFormatInfo bl_format_info[] = {
   #define U 0 // Used only to distinguish between zero and unused.
@@ -32,8 +33,8 @@ const BLFormatInfo bl_format_info[] = {
 static_assert(uint32_t(bl::FormatExt::kMaxValue) == 8,
               "New formats must be added to 'bl_format_info' table");
 
-// bl::FormatInfo - Tables
-// =======================
+// FormatInfo - Tables
+// ===================
 
 // Indexes of components based on format flags that describe components. Each bit in the mask describes RGBA components
 // (in order). Thus 0x1 describes red component, 0x2 green 0x4 blue, and 0x8 alpha. Components can be combined so 0x7
@@ -51,8 +52,8 @@ struct BLPixelConverterComponentIndexesGen {
 static constexpr const auto bl_pixel_converter_component_indexes_table =
   bl::make_lookup_table<uint8_t, 16, BLPixelConverterComponentIndexesGen>();
 
-// bl::FormatInfo - Query
-// ======================
+// FormatInfo - Query
+// ==================
 
 BLResult bl_format_info_query(BLFormatInfo* self, BLFormat format) noexcept {
   if (BL_UNLIKELY(format == BL_FORMAT_NONE || format > BL_FORMAT_MAX_VALUE)) {
@@ -64,8 +65,8 @@ BLResult bl_format_info_query(BLFormatInfo* self, BLFormat format) noexcept {
   return BL_SUCCESS;
 }
 
-// bl::FormatInfo - Sanitize
-// =========================
+// FormatInfo - Sanitize
+// =====================
 
 static BL_INLINE bool bl_format_info_is_depth_valid(uint32_t depth) noexcept {
   switch (depth) {
@@ -154,33 +155,35 @@ BL_API_IMPL BLResult bl_format_info_sanitize(BLFormatInfo* self) noexcept {
           crosses_byte_boundary = true;
 
         // Does the mask overlap with others?
-        uint64_t maskAsU64 = uint64_t(bl::IntOps::non_zero_lsb_mask<uint32_t>(size)) << shift;
-        if (masks_combined & maskAsU64) {
+        uint64_t mask_u64 = uint64_t(bl::axl::trailing_bits_run_nz<uint32_t>(size)) << shift;
+        if (masks_combined & mask_u64) {
           masks_overlap = true;
           // Alpha channels cannot overlap.
-          if (i == 3)
+          if (i == 3) {
             return bl_make_error(BL_ERROR_INVALID_VALUE);
+          }
         }
 
-        masks_combined |= maskAsU64;
+        masks_combined |= mask_u64;
       }
     }
 
-    if (bl::IntOps::non_zero_lsb_mask<uint64_t>(f.depth) ^ masks_combined)
+    if (bl::axl::trailing_bits_run_nz<uint64_t>(f.depth) ^ masks_combined) {
       has_undefined_bits = true;
+    }
 
     // Unset `kPremultiplied` if the format doesn't have alpha.
     if (!bl_test_flag(flags, FormatFlagsExt::kAlpha))
       flags &= ~FormatFlagsExt::kPremultiplied;
 
     // It's allowed that masks overlap only when the pixel format describes a grayscale (LUM).
-    bool isLUM = bl_test_flag(flags, FormatFlagsExt::kLUM);
-    if (isLUM != masks_overlap)
+    bool is_lum = bl_test_flag(flags, FormatFlagsExt::kLUM);
+    if (is_lum != masks_overlap)
       return bl_make_error(BL_ERROR_INVALID_VALUE);
 
     // RGB components must match in grayscale (LUM) mode.
-    if (isLUM && (f.r_size != f.g_size || f.r_shift != f.g_shift ||
-                  f.g_size != f.b_size || f.g_shift != f.b_shift))
+    if (is_lum && (f.r_size != f.g_size || f.r_shift != f.g_shift ||
+                   f.g_size != f.b_size || f.g_shift != f.b_shift))
       return bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 

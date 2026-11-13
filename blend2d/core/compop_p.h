@@ -3,10 +3,10 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_COMPOP_P_H_INCLUDED
-#define BLEND2D_COMPOP_P_H_INCLUDED
+#ifndef BLEND2D_CORE_COMPOP_P_H_INCLUDED
+#define BLEND2D_CORE_COMPOP_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/core/api_internal_p.h>
 #include <blend2d/core/context.h>
 
 //! \cond INTERNAL
@@ -120,4 +120,4 @@ enum class CompOpSolidId : uint32_t {
 //! \}
 //! \endcond
 
-#endif // BLEND2D_COMPOP_P_H_INCLUDED
+#endif // BLEND2D_CORE_COMPOP_P_H_INCLUDED

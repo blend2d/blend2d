@@ -3,39 +3,43 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_p.h>
+#include <blend2d/core/api_build_p.h>
+
+#include <blend2d/axl/math_p.h>
 #include <blend2d/core/matrix_p.h>
 #include <blend2d/core/runtime_p.h>
 #include <blend2d/simd/simd_p.h>
-#include <blend2d/support/math_p.h>
 
 namespace bl {
-namespace TransformInternal {
+namespace TransformDetail {
 
-// bl::Transform - Private - Globals
-// =================================
+// Transform - Private - Globals
+// =============================
 
 BLMapPointDArrayFunc map_pointd_array_funcs[BL_TRANSFORM_TYPE_MAX_VALUE + 1];
 
 const BLMatrix2D identity_transform { 1.0, 0.0, 0.0, 1.0, 0.0, 0.0 };
 
-// bl::Transform - Private - MapPointDArray
-// ========================================
+// Transform - Private - MapPointDArray
+// ====================================
 
 [[maybe_unused]]
-static BLResult BL_CDECL bl_matrix2d_map_pointd_array_identity(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
-  bl_unused(self);
-  if (dst == src)
-    return BL_SUCCESS;
+static BLResult BL_CDECL bl_matrix2d_map_point_d_array_identity(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+  axl::maybe_unused(self);
 
-  for (size_t i = 0; i < size; i++)
+  if (dst == src) {
+    return BL_SUCCESS;
+  }
+
+  for (size_t i = 0; i < size; i++) {
     dst[i] = src[i];
+  }
 
   return BL_SUCCESS;
 }
 
 [[maybe_unused]]
-static BLResult BL_CDECL bl_matrix2d_map_pointd_array_translate(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL bl_matrix2d_map_point_d_array_translate(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   double m20 = self->m20;
   double m21 = self->m21;
 
@@ -47,7 +51,7 @@ static BLResult BL_CDECL bl_matrix2d_map_pointd_array_translate(const BLMatrix2D
 }
 
 [[maybe_unused]]
-static BLResult BL_CDECL bl_matrix2d_map_pointd_array_scale(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL bl_matrix2d_map_point_d_array_scale(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   double m00 = self->m00;
   double m11 = self->m11;
   double m20 = self->m20;
@@ -61,7 +65,7 @@ static BLResult BL_CDECL bl_matrix2d_map_pointd_array_scale(const BLMatrix2D* se
 }
 
 [[maybe_unused]]
-static BLResult BL_CDECL bl_matrix2d_map_pointd_array_swap(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL bl_matrix2d_map_point_d_array_swap(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   double m10 = self->m10;
   double m01 = self->m01;
   double m20 = self->m20;
@@ -75,7 +79,7 @@ static BLResult BL_CDECL bl_matrix2d_map_pointd_array_swap(const BLMatrix2D* sel
 }
 
 [[maybe_unused]]
-static BLResult BL_CDECL bl_matrix2d_map_pointd_array_affine(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL bl_matrix2d_map_point_d_array_affine(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   double m00 = self->m00;
   double m01 = self->m01;
   double m10 = self->m10;
@@ -90,47 +94,60 @@ static BLResult BL_CDECL bl_matrix2d_map_pointd_array_affine(const BLMatrix2D* s
   return BL_SUCCESS;
 }
 
-} // {TransformInternal}
+} // {TransformDetail}
 } // {bl}
 
-// bl::Transform - API - Reset
-// ===========================
+// Transform - API - Reset
+// =======================
 
 BL_API_IMPL BLResult bl_matrix2d_set_identity(BLMatrix2D* self) noexcept {
+  using namespace bl;
   self->reset(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult bl_matrix2d_set_translation(BLMatrix2D* self, double x, double y) noexcept {
+  using namespace bl;
   self->reset(1.0, 0.0, 0.0, 1.0, x, y);
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult bl_matrix2d_set_scaling(BLMatrix2D* self, double x, double y) noexcept {
+  using namespace bl;
   self->reset(x, 0.0, 0.0, y, 0.0, 0.0);
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult bl_matrix2d_set_skewing(BLMatrix2D* self, double x, double y) noexcept {
-  double x_tan = bl::Math::tan(x);
-  double y_tan = bl::Math::tan(y);
+  using namespace bl;
+
+  double x_tan = Math::tan(x);
+  double y_tan = Math::tan(y);
 
   self->reset(1.0, y_tan, x_tan, 1.0, 0.0, 0.0);
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult bl_matrix2d_set_rotation(BLMatrix2D* self, double angle, double x, double y) noexcept {
-  double as = bl::Math::sin(angle);
-  double ac = bl::Math::cos(angle);
+  using namespace bl;
 
-  self->reset(ac, as, -as, ac, x, y);
+  double as = Math::sin(angle);
+  double ac = Math::cos(angle);
+
+  double tx = x - ac * x + as * y;
+  double ty = y - as * x - ac * y;
+
+  self->reset(ac, as, -as, ac, tx, ty);
   return BL_SUCCESS;
 }
 
-// bl::Transform - API - Accessors
-// ===============================
+// Transform - API - Accessors
+// ===========================
 
 BL_API_IMPL BLTransformType bl_matrix2d_get_type(const BLMatrix2D* self) noexcept {
+  using namespace bl;
+  using namespace bl::SIMD;
+
   double m00 = self->m00;
   double m01 = self->m01;
   double m10 = self->m10;
@@ -147,9 +164,8 @@ BL_API_IMPL BLTransformType bl_matrix2d_get_type(const BLMatrix2D* self) noexcep
   // NOTE: Ideally this should be somewhere else, but for simplicity and easier dispatch it was placed here.
   // We do this as C++ compilers still cannot figure out how to do this and this is a much better solution
   // compared to scalar versions compilers produce.
-  using namespace SIMD;
   uint32_t value_msk = uint32_t(extract_sign_bits_i64(cmp_ne_f64(make128_f64(m00, m01), make_zero<Vec2xF64>())) << 2) |
-                      uint32_t(extract_sign_bits_i64(cmp_ne_f64(make128_f64(m10, m11), make_zero<Vec2xF64>())) << 0) ;
+                       uint32_t(extract_sign_bits_i64(cmp_ne_f64(make128_f64(m10, m11), make_zero<Vec2xF64>())) << 0) ;
 #else
   uint32_t value_msk = (uint32_t(m00 != 0.0) << 3) | (uint32_t(m01 != 0.0) << 2) |
                       (uint32_t(m10 != 0.0) << 1) | (uint32_t(m11 != 0.0) << 0) ;
@@ -175,9 +191,9 @@ BL_API_IMPL BLTransformType bl_matrix2d_get_type(const BLMatrix2D* self) noexcep
 
   double d = m00 * m11 - m01 * m10;
   if (!((1u << value_msk) & valid_tab) ||
-      !bl::Math::is_finite(d) ||
-      !bl::Math::is_finite(m20) ||
-      !bl::Math::is_finite(m21)) {
+      !Math::is_finite(d) ||
+      !Math::is_finite(m20) ||
+      !Math::is_finite(m21)) {
     return BL_TRANSFORM_TYPE_INVALID;
   }
 
@@ -210,10 +226,12 @@ BL_API_IMPL BLTransformType bl_matrix2d_get_type(const BLMatrix2D* self) noexcep
   return BL_TRANSFORM_TYPE_IDENTITY;
 }
 
-// bl::Transform - API - Operations
-// ================================
+// Transform - API - Operations
+// ============================
 
 BL_API_IMPL BLResult bl_matrix2d_apply_op(BLMatrix2D* self, BLTransformOp op_type, const void* op_data) noexcept {
+  using namespace bl;
+
   BLMatrix2D* a = self;
   const double* data = static_cast<const double*>(op_data);
 
@@ -266,8 +284,8 @@ BL_API_IMPL BLResult bl_matrix2d_apply_op(BLMatrix2D* self, BLTransformOp op_typ
     case BL_TRANSFORM_OP_SKEW: {
       double x = data[0];
       double y = data[1];
-      double x_tan = bl::Math::tan(x);
-      double y_tan = bl::Math::tan(y);
+      double x_tan = Math::tan(x);
+      double y_tan = Math::tan(y);
 
       double t00 = y_tan * a->m10;
       double t01 = y_tan * a->m11;
@@ -292,8 +310,8 @@ BL_API_IMPL BLResult bl_matrix2d_apply_op(BLMatrix2D* self, BLTransformOp op_typ
     case BL_TRANSFORM_OP_ROTATE:
     case BL_TRANSFORM_OP_ROTATE_PT: {
       double angle = data[0];
-      double as = bl::Math::sin(angle);
-      double ac = bl::Math::cos(angle);
+      double as = Math::sin(angle);
+      double ac = Math::cos(angle);
 
       double t00 = as * a->m10 + ac * a->m00;
       double t01 = as * a->m11 + ac * a->m01;
@@ -373,8 +391,8 @@ BL_API_IMPL BLResult bl_matrix2d_apply_op(BLMatrix2D* self, BLTransformOp op_typ
     case BL_TRANSFORM_OP_POST_SKEW:{
       double x = data[0];
       double y = data[1];
-      double x_tan = bl::Math::tan(x);
-      double y_tan = bl::Math::tan(y);
+      double x_tan = Math::tan(x);
+      double y_tan = Math::tan(y);
 
       double t00 = a->m01 * x_tan;
       double t10 = a->m11 * x_tan;
@@ -397,8 +415,8 @@ BL_API_IMPL BLResult bl_matrix2d_apply_op(BLMatrix2D* self, BLTransformOp op_typ
     case BL_TRANSFORM_OP_POST_ROTATE:
     case BL_TRANSFORM_OP_POST_ROTATE_PT: {
       double angle = data[0];
-      double as = bl::Math::sin(angle);
-      double ac = bl::Math::cos(angle);
+      double as = Math::sin(angle);
+      double ac = Math::cos(angle);
 
       double t00 = a->m00 * ac - a->m01 * as;
       double t01 = a->m00 * as + a->m01 * ac;
@@ -440,10 +458,12 @@ BL_API_IMPL BLResult bl_matrix2d_apply_op(BLMatrix2D* self, BLTransformOp op_typ
 }
 
 BL_API_IMPL BLResult bl_matrix2d_invert(BLMatrix2D* dst, const BLMatrix2D* src) noexcept {
-  double d = src->m00 * src->m11 - src->m01 * src->m10;
+  using namespace bl;
 
-  if (d == 0.0 || !bl::Math::is_finite(d))
+  double d = src->m00 * src->m11 - src->m01 * src->m10;
+  if (d == 0.0 || !Math::is_finite(d)) {
     return bl_make_error(BL_ERROR_INVALID_VALUE);
+  }
 
   double t00 =  src->m11;
   double t01 = -src->m01;
@@ -462,23 +482,24 @@ BL_API_IMPL BLResult bl_matrix2d_invert(BLMatrix2D* dst, const BLMatrix2D* src) 
   return BL_SUCCESS;
 }
 
-// bl::Transform - API - Map
-// =========================
+// Transform - API - Map
+// =====================
 
-BL_API_IMPL BLResult bl_matrix2d_map_pointd_array(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) noexcept {
+BL_API_IMPL BLResult bl_matrix2d_map_point_d_array(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) noexcept {
+  using namespace bl;
   BLTransformType transform_type = BL_TRANSFORM_TYPE_AFFINE;
 
   if (count >= BL_MATRIX_TYPE_MINIMUM_SIZE)
     transform_type = self->type();
 
-  return bl::TransformInternal::map_pointd_array_funcs[transform_type](self, dst, src, count);
+  return TransformDetail::map_pointd_array_funcs[transform_type](self, dst, src, count);
 }
 
-// bl::Transform - Runtime Registration
-// ====================================
+// Transform - Runtime Registration
+// ================================
 
 namespace bl {
-namespace TransformInternal {
+namespace TransformDetail {
 
 #ifdef BL_BUILD_OPT_SSE2
 BL_HIDDEN void bl_transform_rt_init_sse2(BLRuntimeContext* rt) noexcept;
@@ -488,32 +509,32 @@ BL_HIDDEN void bl_transform_rt_init_sse2(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void bl_transform_rt_init_avx(BLRuntimeContext* rt) noexcept;
 #endif
 
-} // {TransformInternal}
+} // {TransformDetail}
 } // {bl}
 
-void bl_transform_rt_init(BLRuntimeContext* rt) noexcept {
-  // Maybe unused.
-  bl_unused(rt);
+void bl_transform_rt_init([[maybe_unused]] BLRuntimeContext* rt) noexcept {
+  using namespace bl;
 
 #if !defined(BL_TARGET_OPT_SSE2)
-  bl_unused(rt);
-  BLMapPointDArrayFunc* funcs = bl::TransformInternal::map_pointd_array_funcs;
+  BLMapPointDArrayFunc* funcs = TransformDetail::map_pointd_array_funcs;
 
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_IDENTITY ], bl::TransformInternal::bl_matrix2d_map_pointd_array_identity);
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_TRANSLATE], bl::TransformInternal::bl_matrix2d_map_pointd_array_translate);
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_SCALE    ], bl::TransformInternal::bl_matrix2d_map_pointd_array_scale);
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_SWAP     ], bl::TransformInternal::bl_matrix2d_map_pointd_array_swap);
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_AFFINE   ], bl::TransformInternal::bl_matrix2d_map_pointd_array_affine);
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_INVALID  ], bl::TransformInternal::bl_matrix2d_map_pointd_array_affine);
+  funcs[BL_TRANSFORM_TYPE_IDENTITY ] = TransformDetail::bl_matrix2d_map_point_d_array_identity;
+  funcs[BL_TRANSFORM_TYPE_TRANSLATE] = TransformDetail::bl_matrix2d_map_point_d_array_translate;
+  funcs[BL_TRANSFORM_TYPE_SCALE    ] = TransformDetail::bl_matrix2d_map_point_d_array_scale;
+  funcs[BL_TRANSFORM_TYPE_SWAP     ] = TransformDetail::bl_matrix2d_map_point_d_array_swap;
+  funcs[BL_TRANSFORM_TYPE_AFFINE   ] = TransformDetail::bl_matrix2d_map_point_d_array_affine;
+  funcs[BL_TRANSFORM_TYPE_INVALID  ] = TransformDetail::bl_matrix2d_map_point_d_array_affine;
 #endif
 
 #ifdef BL_BUILD_OPT_SSE2
-  if (bl_runtime_has_sse2(rt))
-    bl::TransformInternal::bl_transform_rt_init_sse2(rt);
+  if (bl_runtime_has_sse2(rt)) {
+    TransformDetail::bl_transform_rt_init_sse2(rt);
+  }
 #endif
 
 #ifdef BL_BUILD_OPT_AVX
-  if (bl_runtime_has_avx(rt))
-    bl::TransformInternal::bl_transform_rt_init_avx(rt);
+  if (bl_runtime_has_avx(rt)) {
+    TransformDetail::bl_transform_rt_init_avx(rt);
+  }
 #endif
 }

@@ -3,13 +3,13 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_p.h>
+#include <blend2d/core/api_build_p.h>
 #if defined(BL_TARGET_OPT_SSE2)
 
+#include <blend2d/axl/math_p.h>
 #include <blend2d/core/gradient_p.h>
 #include <blend2d/pixelops/funcs_p.h>
 #include <blend2d/simd/simd_p.h>
-#include <blend2d/support/math_p.h>
 
 namespace bl {
 namespace PixelOps {

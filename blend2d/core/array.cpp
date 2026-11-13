@@ -3,25 +3,53 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_p.h>
+#include <blend2d/core/api_build_p.h>
+
+#include <blend2d/axl/commons.h>
+#include <blend2d/axl/lookuptable_p.h>
 #include <blend2d/core/array_p.h>
-#include <blend2d/core/object_p.h>
+#include <blend2d/core/object_layer_p.h>
 #include <blend2d/core/runtime_p.h>
 #include <blend2d/core/string_p.h>
-#include <blend2d/core/var_p.h>
-#include <blend2d/support/lookuptable_p.h>
-#include <blend2d/support/memops_p.h>
-#include <blend2d/support/ptrops_p.h>
+#include <blend2d/core/var.h>
 
-namespace bl::ArrayInternal {
+namespace bl {
 
-// bl::Array - Private - Tables
-// ============================
+// Array - Internal - Null
+// =======================
 
-struct ItemSizeGen {
-  static constexpr uint8_t value(size_t impl_type) noexcept {
-    return impl_type == BL_OBJECT_TYPE_ARRAY_OBJECT    ? uint8_t(sizeof(BLObjectCore)) :
-           impl_type == BL_OBJECT_TYPE_ARRAY_INT8      ? uint8_t(1) :
+static constexpr ObjectLayer::EternalImpl<BLArrayImpl> null_array {};
+
+// Array - Internal - Tables
+// =========================
+
+struct DivMulConst64 {
+  uint64_t multiply;
+  uint8_t hi_shift;
+  uint8_t is_one;
+};
+
+static consteval DivMulConst64 div_mul_const_64(uint64_t divisor) noexcept {
+  switch (divisor) {
+    case  1: return DivMulConst64{0x0000000000000000u, 0u, 1u};
+    case  2: return DivMulConst64{0x8000000000000000u, 0u, 0u};
+    case  3: return DivMulConst64{0xAAAAAAAAAAAAAAABu, 1u, 0u};
+    case  4: return DivMulConst64{0x8000000000000000u, 1u, 0u};
+    case  6: return DivMulConst64{0xAAAAAAAAAAAAAAABu, 2u, 0u};
+    case  8: return DivMulConst64{0x8000000000000000u, 2u, 0u};
+    case 10: return DivMulConst64{0xCCCCCCCCCCCCCCCDu, 3u, 0u};
+    case 12: return DivMulConst64{0xAAAAAAAAAAAAAAABu, 3u, 0u};
+    case 16: return DivMulConst64{0x8000000000000000u, 3u, 0u};
+    case 20: return DivMulConst64{0xCCCCCCCCCCCCCCCDu, 4u, 0u};
+    case 24: return DivMulConst64{0xAAAAAAAAAAAAAAABu, 4u, 0u};
+    case 32: return DivMulConst64{0x8000000000000000u, 4u, 0u};
+    default: return DivMulConst64{0x0000000000000000u, 0u, 0u};
+  }
+}
+
+struct ArrayItemSizeGenerator {
+  static consteval uint8_t value(size_t impl_type) noexcept {
+    return impl_type == BL_OBJECT_TYPE_ARRAY_INT8      ? uint8_t(1) :
            impl_type == BL_OBJECT_TYPE_ARRAY_UINT8     ? uint8_t(1) :
            impl_type == BL_OBJECT_TYPE_ARRAY_INT16     ? uint8_t(2) :
            impl_type == BL_OBJECT_TYPE_ARRAY_UINT16    ? uint8_t(2) :
@@ -42,171 +70,114 @@ struct ItemSizeGen {
            impl_type == BL_OBJECT_TYPE_ARRAY_STRUCT_16 ? uint8_t(16) :
            impl_type == BL_OBJECT_TYPE_ARRAY_STRUCT_20 ? uint8_t(20) :
            impl_type == BL_OBJECT_TYPE_ARRAY_STRUCT_24 ? uint8_t(24) :
-           impl_type == BL_OBJECT_TYPE_ARRAY_STRUCT_32 ? uint8_t(32) : uint8_t(0);
+           impl_type == BL_OBJECT_TYPE_ARRAY_STRUCT_32 ? uint8_t(32) :
+           impl_type == BL_OBJECT_TYPE_ARRAY_OBJECT    ? uint8_t(sizeof(BLObjectCore)) : uint8_t(0);
   }
 };
 
-struct SSOCapacityGen {
-  static constexpr uint8_t value(size_t object_type) noexcept {
-    return ItemSizeGen::value(object_type) == 0
-      ? uint8_t(0)
-      : uint8_t(BLObjectDetail::kStaticDataSize / ItemSizeGen::value(object_type));
-  }
-};
-
-struct MaximumCapacityGen {
-  static constexpr size_t value(size_t object_type) noexcept {
-    return ItemSizeGen::value(object_type) == 0
+struct ArrayMaxSizeGenerator {
+  static consteval size_t value(size_t object_type) noexcept {
+    return ArrayItemSizeGenerator::value(object_type) == 0
       ? size_t(0)
-      : (BL_OBJECT_IMPL_MAX_SIZE - sizeof(BLArrayImpl)) / ItemSizeGen::value(object_type);
+      : (ObjectLayer::kMaxImplSize - sizeof(BLArrayImpl)) / ArrayItemSizeGenerator::value(object_type);
   }
 };
 
-static constexpr const auto item_size_table = make_lookup_table<uint8_t, BL_OBJECT_TYPE_MAX_VALUE + 1, ItemSizeGen>();
-static constexpr const auto sso_capacity_table = make_lookup_table<uint8_t, BL_OBJECT_TYPE_MAX_VALUE + 1, SSOCapacityGen>();
-static constexpr const auto maximum_capacity_table = make_lookup_table<size_t, BL_OBJECT_TYPE_MAX_VALUE + 1, MaximumCapacityGen>();
+struct ArraySSOCapacityGenerator {
+  static consteval uint8_t value(size_t object_type) noexcept {
+    uint8_t object_size = ArrayItemSizeGenerator::value(object_type);
+    return object_size == 0 ? uint8_t(0) : uint8_t(BLObjectDetail::kSSOCapacity / object_size);
+  }
+};
 
-// bl::Array - Private - Commons
-// =============================
+static constexpr auto array_max_size_table = make_lookup_table<size_t, BL_OBJECT_TYPE_MAX_ARRAY + 1, ArrayMaxSizeGenerator>();
+static constexpr auto array_item_size_table = make_lookup_table<uint8_t, BL_OBJECT_TYPE_MAX_ARRAY + 1, ArrayItemSizeGenerator>();
+static constexpr auto array_sso_capacity_table = make_lookup_table<uint8_t, BL_OBJECT_TYPE_MAX_ARRAY + 1, ArraySSOCapacityGenerator>();
+
+template<typename T>
+inline constexpr size_t array_sso_capacity_of_type = BLObjectDetail::kSSOCapacity / sizeof(T);
+
+// Array - Internal - Commons
+// ==========================
 
 // Only used as a filler
 template<size_t N>
 struct UInt32xN { uint32_t data[N]; };
 
-static BL_INLINE constexpr bool is_array_type_valid(BLObjectType array_type) noexcept {
-  return array_type >= BL_OBJECT_TYPE_MIN_ARRAY &&
-         array_type <= BL_OBJECT_TYPE_MAX_ARRAY;
+static BL_INLINE_CONSTEXPR bool is_array_type(BLObjectType type) noexcept {
+  return axl::is_between(type, BL_OBJECT_TYPE_MIN_ARRAY, BL_OBJECT_TYPE_MAX_ARRAY);
 }
 
-static BL_INLINE constexpr bool is_array_type_object_based(BLObjectType array_type) noexcept {
-  return array_type == BL_OBJECT_TYPE_ARRAY_OBJECT;
+static BL_INLINE_CONSTEXPR bool is_array_of_objects(BLObjectType type) noexcept { return type == BL_OBJECT_TYPE_ARRAY_OBJECT; }
+static BL_INLINE_CONSTEXPR size_t array_max_size_from_array_type(BLObjectType type) noexcept { return array_max_size_table[type]; }
+static BL_INLINE_CONSTEXPR size_t array_item_size_from_array_type(BLObjectType type) noexcept { return array_item_size_table[type]; }
+static BL_INLINE_CONSTEXPR size_t array_sso_capacity_from_array_type(BLObjectType type) noexcept { return array_sso_capacity_table[type]; }
+
+static BL_INLINE_CONSTEXPR size_t array_capacity_from_impl_size(ObjectImplSize impl_size, size_t item_size) noexcept {
+  return (size_t(impl_size) - ObjectLayer::data_offset_of<BLArrayCore>) / item_size;
 }
 
-static BL_INLINE size_t item_size_from_array_type(BLObjectType array_type) noexcept {
-  return item_size_table[array_type];
+static BL_INLINE_CONSTEXPR ObjectImplSize array_impl_size_from_capacity(size_t capacity, size_t item_size) noexcept {
+  return ObjectImplSize(axl::align_up(ObjectLayer::data_offset_of<BLArrayCore> + capacity * item_size, ObjectLayer::kMinImplAlignment));
 }
 
-static BL_INLINE constexpr size_t capacity_from_impl_size(BLObjectImplSize impl_size, size_t item_size) noexcept {
-  return (impl_size.value() - sizeof(BLArrayImpl)) / item_size;
+static BL_INLINE size_t array_get_capacity(const BLArrayCore* self) noexcept {
+  size_t sso_capacity = array_sso_capacity_from_array_type(self->_d.type());
+  return ObjectLayer::get_capacity_of_array(self, sso_capacity);
 }
 
-static BL_INLINE constexpr BLObjectImplSize impl_size_from_capacity(size_t capacity, size_t item_size) noexcept {
-  return BLObjectImplSize(sizeof(BLArrayImpl) + capacity * item_size);
-}
+// Array - Internal - Low-Level Operations
+// =======================================
 
-static BL_INLINE BLObjectImplSize expand_impl_size(BLObjectImplSize impl_size) noexcept {
-  return bl_object_expand_impl_size(impl_size);
-}
+static BL_NOINLINE BLResult array_fill_objects(void* dst, const void* src, size_t item_count, size_t item_size) noexcept {
+  BL_ASSUME((item_size % sizeof(BLObjectCore)) == 0);
 
-static BLObjectImplSize expand_impl_size_with_modify_op(BLObjectImplSize impl_size, BLModifyOp modify_op) noexcept {
-  return bl_object_expand_impl_size_with_modify_op(impl_size, modify_op);
-}
-
-// bl::Array - Private - Low-Level Operations
-// ==========================================
-
-static BL_NOINLINE void init_content_objects(void* dst_, const void* src_, size_t n_bytes) noexcept {
-  BL_ASSUME((n_bytes % sizeof(BLObjectCore)) == 0);
-
-  BLObjectCore* dst = static_cast<BLObjectCore*>(dst_);
-  BLObjectCore* end = PtrOps::offset(dst, n_bytes);
-  const BLObjectCore* src = static_cast<const BLObjectCore*>(src_);
-
-  while (dst != end) {
-    bl_object_private_init_weak_unknown(dst, src);
-
-    dst++;
-    src++;
-  }
-}
-
-static BL_INLINE void init_content_by_type(void* dst, const void* src, size_t n_bytes, BLObjectType array_type) noexcept {
-  if (is_array_type_object_based(array_type))
-    init_content_objects(dst, src, n_bytes);
-  else
-    memcpy(dst, src, n_bytes);
-}
-
-static BL_NOINLINE void assign_content_objects(void* dst_, const void* src_, size_t n_bytes) noexcept {
-  BL_ASSUME((n_bytes % sizeof(BLObjectCore)) == 0);
-
-  BLObjectCore* dst = static_cast<BLObjectCore*>(dst_);
-  BLObjectCore* end = PtrOps::offset(dst, n_bytes);
-  const BLObjectCore* src = static_cast<const BLObjectCore*>(src_);
-
-  while (dst != end) {
-    bl_object_private_assign_weak_unknown(dst, src);
-    dst++;
-    src++;
-  }
-}
-
-static BL_INLINE void assign_content_by_type(void* dst, const void* src, size_t n_bytes, BLObjectType array_type) noexcept {
-  if (is_array_type_object_based(array_type))
-    assign_content_objects(dst, src, n_bytes);
-  else
-    memcpy(dst, src, n_bytes);
-}
-
-static BL_NOINLINE void release_content_objects(void* data, size_t n_bytes) noexcept {
-  BL_ASSUME((n_bytes % sizeof(BLObjectCore)) == 0);
-
-  for (size_t i = 0; i < n_bytes; i += sizeof(BLObjectCore))
-    ObjectInternal::release_unknown_instance(PtrOps::offset<BLObjectCore>(data, i));
-}
-
-static BL_INLINE void release_content_by_type(void* data, size_t n_bytes, BLObjectType array_type) noexcept {
-  if (is_array_type_object_based(array_type))
-    release_content_objects(data, n_bytes);
-}
-
-static BL_INLINE void fill_content_objects(void* dst, size_t n, const void* src, size_t item_size) noexcept {
-  // NOTE: This is the best we can do. We can increase the reference count of each item in the item / tuple
-  // (in case the array stores pair/tuple of objects) and then just copy the content of BLObjectDetail to the
-  // destination.
-  BLObjectCore* dst_obj = static_cast<BLObjectCore*>(dst);
-  const BLObjectCore* src_obj = static_cast<const BLObjectCore*>(src);
-
-  size_t tuple_size = item_size / sizeof(BLObjectCore);
-  BL_ASSERT(tuple_size > 0);
-
-  size_t i, j;
-  for (j = 0; j < tuple_size; j++) {
-    ObjectInternal::retain_instance(&src_obj[j], n);
+  if (item_count == 0u) {
+    return BL_SUCCESS;
   }
 
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < tuple_size; j++) {
-      dst_obj->_d = src_obj[j]._d;
-      dst_obj++;
+  BLObjectCore* dst_ptr = static_cast<BLObjectCore*>(dst);
+  const BLObjectCore* src_ptr = static_cast<const BLObjectCore*>(src);
+
+  // Weak assigning a single object into an array of objects - if it's reference counted, increase the ref_count only once.
+  for (size_t item_offset = 0; item_offset < item_size; item_offset += sizeof(BLObjectCore)) {
+    const BLObjectCore* src_obj = axl::offset_ptr(src_ptr, item_offset);
+    ObjectLayer::retain_object(src_obj, item_count);
+  }
+
+  for (size_t i = 0; i < item_count; i++) {
+    for (size_t item_offset = 0; item_offset < item_size; item_offset += sizeof(BLObjectCore)) {
+      BLObjectCore* dst_obj = axl::offset_ptr(dst_ptr, item_offset);
+      const BLObjectCore* src_obj = axl::offset_ptr(src_ptr, item_offset);
+
+      dst_obj->_d = src_obj->_d;
+    }
+    dst_ptr = axl::offset_ptr(dst_ptr, item_size);
+  }
+
+  return BL_SUCCESS;
+}
+
+static BL_NOINLINE BLResult array_fill_items(void* dst, const void* fill, size_t item_count, size_t item_size) noexcept {
+  BL_ASSERT(item_size > 0u);
+
+  if (item_count > 0u) {
+    if (item_size == 1) {
+      memset(dst, static_cast<const uint8_t*>(fill)[0], item_count);
+    }
+    else {
+      axl::copy_bytes_small(dst, fill, item_size);
+      axl::copy_forward(axl::offset_ptr<uint8_t>(dst, item_size), static_cast<uint8_t*>(dst), (item_count - 1u) * item_size);
     }
   }
+  return BL_SUCCESS;
 }
 
-static BL_INLINE void fill_content_simple(void* dst, size_t n, const void* src, size_t item_size) noexcept {
-  switch (item_size) {
-    case  1: MemOps::fill_inline_t(static_cast<uint8_t    *>(dst), *static_cast<const uint8_t    *>(src), n); break;
-    case  2: MemOps::fill_inline_t(static_cast<uint16_t   *>(dst), *static_cast<const uint16_t   *>(src), n); break;
-    case  4: MemOps::fill_inline_t(static_cast<uint32_t   *>(dst), *static_cast<const uint32_t   *>(src), n); break;
-    case  8: MemOps::fill_inline_t(static_cast<UInt32xN<2>*>(dst), *static_cast<const UInt32xN<2>*>(src), n); break;
-    case 12: MemOps::fill_inline_t(static_cast<UInt32xN<3>*>(dst), *static_cast<const UInt32xN<3>*>(src), n); break;
-    case 16: MemOps::fill_inline_t(static_cast<UInt32xN<4>*>(dst), *static_cast<const UInt32xN<4>*>(src), n); break;
-
-    default: {
-      for (size_t i = 0; i < n; i++) {
-        memcpy(dst, src, item_size);
-        dst = PtrOps::offset(dst, item_size);
-      }
-      break;
-    }
-  }
-}
-
-static BL_INLINE bool equals_content(const void* a, const void* b, size_t n_bytes, BLObjectType array_type) noexcept {
-  if (is_array_type_object_based(array_type)) {
+static BL_INLINE bool array_equals_content(const void* a, const void* b, size_t n_bytes, BLObjectType array_type) noexcept {
+  if (is_array_of_objects(array_type)) {
     const BLObjectCore* a_obj = static_cast<const BLObjectCore*>(a);
     const BLObjectCore* b_obj = static_cast<const BLObjectCore*>(b);
-    const BLObjectCore* a_end = PtrOps::offset(a_obj, n_bytes);
+    const BLObjectCore* a_end = axl::offset_ptr(a_obj, n_bytes);
 
     while (a_obj != a_end) {
       if (!bl_var_equals(a_obj, b_obj))
@@ -223,1078 +194,1425 @@ static BL_INLINE bool equals_content(const void* a, const void* b, size_t n_byte
   }
 }
 
-// bl::Array - Private - Alloc & Free Impl
-// =======================================
+// Array - Internal - Shared Utilities
+// ===================================
 
-static BL_INLINE BLResult init_static(BLArrayCore* self, BLObjectType array_type, size_t size = 0u) noexcept {
-  self->_d = bl_object_defaults[array_type]._d;
-  // We know the size is default Impl is always zero, so make this faster than `BLObjectInfo::set_a_field()`.
-  self->_d.info.bits |= uint32_t(size) << BL_OBJECT_INFO_A_SHIFT;
+BLResult array_prepend_possibly_aliased_data_inplace(uint8_t* dst, size_t dst_size, const uint8_t* src, size_t src_size) noexcept {
+  // Move memory in-place making space for {src, src_size}.
+  size_t shift_size = src_size;
+  memmove(dst + shift_size, dst, dst_size);
 
+  // Split the source data into LEADING and TRAILING spans and shift TRAILING span in a way to cancel the `memmove()`
+  // operation that already happened in case the given source aliases with the destination. Only TRAILING span needs
+  // adjustment.
+  uint8_t* dst_end = dst + dst_size;
+
+  // LEADING span - precedes `dst`, left as is as there is no adjustment.
+  if (src < dst) {
+    size_t leading_size = axl::min((size_t)(dst - src), src_size);
+    memcpy(dst, src, leading_size);
+
+    dst += leading_size;
+    src += leading_size;
+
+    src_size -= leading_size;
+    if (src_size == 0) {
+      return BL_SUCCESS;
+    }
+  }
+
+  // TRAILING span - if src data aliases string data it has to be adjusted.
+  if (src < dst_end) {
+    src += shift_size;
+  }
+
+  memcpy(dst, src, src_size);
   return BL_SUCCESS;
 }
 
-static BL_INLINE BLResult init_dynamic(BLArrayCore* self, BLObjectType array_type, size_t size, BLObjectImplSize impl_size) noexcept {
-  BLObjectInfo info = BLObjectInfo::from_type_with_marker(array_type);
-  BL_PROPAGATE(ObjectInternal::alloc_impl_t<BLArrayImpl>(self, info, impl_size));
+BLResult array_replace_possibly_aliased_data_inplace(uint8_t* dst, size_t dst_size, const uint8_t* src, size_t src_size, size_t replace_size) noexcept {
+  BL_ASSERT(dst_size >= replace_size);
+  size_t tail_size = dst_size - replace_size;
 
-  BLArrayImpl* impl = get_impl(self);
-  uint8_t* data = PtrOps::offset<uint8_t>(impl, sizeof(BLArrayImpl));
-  size_t item_size = item_size_table[array_type];
+  if (replace_size >= src_size) {
+    memmove(dst, src, src_size);
+    if (replace_size != src_size) {
+      memmove(dst + src_size, dst + replace_size, tail_size);
+    }
+    return BL_SUCCESS;
+  }
+  else {
+    // [dddDDDDDD..] - destination data.
+    // [---        ] - data to be replaced.
+    // [sssss      ] - data to be inserted.
+    //
+    // [     DDDDDD] - destination data, shifted right.
+    // [sssssDDDDDD] - destination with source data.
+    uint8_t* dst_end = dst + dst_size;
+    size_t shift_size = src_size - replace_size;
 
-  impl->capacity = capacity_from_impl_size(impl_size, item_size);
-  impl->size = size;
-  impl->data = data;
-  return BL_SUCCESS;
+    // Move memory in-place making space for {src, src_size}.
+    // [ddd  DDDDDD] - destination data, shifted right.
+    memmove(dst + src_size, dst + replace_size, dst_size - replace_size);
+
+    // Split the source data into LEADING and TRAILING spans and shift TRAILING span in a way to cancel the `memmove()`
+    // operation that already happened in case the given source aliases with the destination. Only TRAILING span needs
+    // adjustment.
+
+    // LEADING span - precedes `dst`, left as is as there is no adjustment.
+    uint8_t* dst_adjusted = dst + src_size;
+    if (src < dst_adjusted) {
+      size_t leading_size = axl::min((size_t)(dst_adjusted - src), src_size);
+      memmove(dst, src, leading_size);
+
+      dst += leading_size;
+      src += leading_size;
+
+      src_size -= leading_size;
+      if (src_size == 0) {
+        return BL_SUCCESS;
+      }
+    }
+
+    // TRAILING span - if src data aliases string data, which was moved, it has to be adjusted.
+    if (src < dst_end) {
+      src += shift_size;
+    }
+
+    memmove(dst, src, src_size);
+    return BL_SUCCESS;
+  }
 }
 
-static BL_INLINE BLResult init_external(
-  BLArrayCore* self, BLObjectType array_type,
-  void* external_data, size_t size, size_t capacity, BLDataAccessFlags access_flags,
-  BLDestroyExternalDataFunc destroy_func, void* user_data) noexcept {
+// Array - Internal - Alloc & Free Impl
+// ====================================
 
-  BLObjectImplSize impl_size(sizeof(BLArrayImpl));
-  BLObjectInfo info = BLObjectInfo::from_type_with_marker(array_type);
-
-  bool immutable = !(access_flags & BL_DATA_ACCESS_WRITE);
-  BL_PROPAGATE(ObjectInternal::alloc_impl_external_t<BLArrayImpl>(self, info, impl_size, immutable, destroy_func, user_data));
-
-  BLArrayImpl* impl = get_impl(self);
-  impl->data = external_data;
-  impl->size = size;
-  impl->capacity = capacity;
-  return BL_SUCCESS;
+static BL_INLINE BLResult array_init_dynamic(BLArrayCore* self, BLObjectType array_type, ObjectImplSize impl_size, size_t size, size_t capacity) noexcept {
+  return ObjectLayer::alloc_container_impl(self, impl_size, {
+    .object_type = array_type,
+    .data_offset = ObjectLayer::data_offset_of<BLArrayCore>,
+    .size        = size,
+    .capacity    = capacity
+  });
 }
 
-static BL_NOINLINE BLResult init_array(BLArrayCore* self, BLObjectType array_type, size_t size, size_t capacity, uint8_t** out) noexcept {
-  size_t sso_capacity = sso_capacity_table[array_type];
+static BL_INLINE BLResult array_init_dynamic_with_data(BLArrayCore* self, BLObjectType array_type, ObjectImplSize impl_size, size_t size, BLSpan<const uint8_t> data) noexcept {
+  size_t item_size = array_item_size_from_array_type(array_type);
+  return ObjectLayer::alloc_container_impl_with_data(self, impl_size, {
+    .object_type    = array_type,
+    .data_offset    = ObjectLayer::data_offset_of<BLArrayCore>,
+    .size           = size,
+    .capacity       = array_capacity_from_impl_size(impl_size, item_size),
+    .src_data       = data.data(),
+    .src_data_size  = data.size()
+  });
+}
+
+static BL_INLINE BLResult array_init_external(
+  BLArrayCore* self,
+  BLObjectType array_type,
+  BLDataAccessMode access_mode,
+  void* external_data, size_t size, size_t capacity,
+  BLDestroyExternalDataFunc destroy_func, void* user_data
+) noexcept {
+  ObjectImplSize impl_size = ObjectImplSize(sizeof(BLArrayImpl));
+  return ObjectLayer::alloc_external_impl(self, impl_size, {
+    .object_type   = array_type,
+    .access_mode   = access_mode,
+    .external_data = external_data,
+    .size          = size,
+    .capacity      = capacity,
+    .destroy_func  = destroy_func,
+    .user_data     = user_data
+  });
+}
+
+static BL_NOINLINE BLResult array_init(BLArrayCore* self, BLObjectType array_type, size_t size, size_t capacity, uint8_t** out) noexcept {
+  size_t sso_capacity = array_sso_capacity_table[array_type];
   if (capacity <= sso_capacity) {
-    init_static(self, array_type, size);
-    *out = self->_d.u8_data;
-    return BL_SUCCESS;
+    *out = ObjectLayer::sso_data<uint8_t>(self);
+    return ObjectLayer::init_sso_with_size(self, array_type, size);
   }
   else {
-    BL_PROPAGATE(init_dynamic(self, array_type, size, impl_size_from_capacity(capacity, item_size_from_array_type(array_type))));
-    *out = get_impl(self)->data_as<uint8_t>();
+    size_t item_size = array_item_size_from_array_type(array_type);
+    BL_PROPAGATE(array_init_dynamic(self, array_type, array_impl_size_from_capacity(capacity, item_size), size, capacity));
+
+    *out = ObjectLayer::dyn_data<uint8_t>(self);
     return BL_SUCCESS;
   }
 }
 
-static BL_NOINLINE BLResult realloc_to_dynamic(BLArrayCore* self, BLObjectType array_type, BLObjectImplSize impl_size) noexcept {
-  BL_ASSERT(self->_d.raw_type() == array_type);
+static BL_INLINE BLResult array_realloc_dynamic(BLArrayCore* self, BLObjectType array_type, ObjectImplSize impl_size, size_t size, BLSpan<const uint8_t> data) noexcept {
+  BLArrayCore tmp;
+  BL_PROPAGATE(array_init_dynamic_with_data(&tmp, array_type, impl_size, size, data));
 
-  size_t size = get_size(self);
-  size_t item_size = item_size_from_array_type(array_type);
-
-  BLArrayCore newO;
-  BL_PROPAGATE(init_dynamic(&newO, array_type, size, impl_size));
-
-  uint8_t* dst = get_impl(&newO)->data_as<uint8_t>();
-  if (is_instance_dynamic_and_mutable(self)) {
-    BLArrayImpl* tmp_impl = get_impl(self);
-    memcpy(dst, tmp_impl->data, size * item_size);
-    tmp_impl->size = 0;
-  }
-  else {
-    init_content_by_type(dst, get_data(self), size * item_size, array_type);
+  if (is_array_of_objects(array_type)) {
+    if (ObjectLayer::is_object_mutable<ObjectLayer::ObjectMode::kDyn>(self)) {
+      ObjectLayer::set_dyn_size(self, 0u);
+    }
+    else {
+      ObjectLayer::retain_object_array(ObjectLayer::dyn_data<BLObjectCore>(&tmp), size);
+    }
   }
 
-  return replace_instance(self, &newO);
+  return ObjectLayer::replace_object<ObjectLayer::ObjectMode::kDyn>(self, &tmp);
 }
 
-BLResult free_impl(BLArrayImpl* impl) noexcept {
-  if (ObjectInternal::is_impl_external(impl))
-    ObjectInternal::call_external_destroy_func(impl, impl->data);
-  return ObjectInternal::free_impl(impl);
+BLResult array_free_object(BLArrayCore* self, BLArrayImpl* impl) noexcept {
+  void* array_data = ObjectLayer::dyn_data<void>(self);
+
+  BLObjectType array_type = self->_d.type();
+
+  if (is_array_of_objects(array_type)) {
+    size_t item_size = array_item_size_from_array_type(array_type);
+    ObjectLayer::release_object_array(static_cast<BLObjectCore*>(array_data), (ObjectLayer::dyn_size(self) * item_size) / sizeof(BLObjectCore));
+  }
+
+  ObjectLayer::ImplHeader* impl_header = ObjectLayer::get_impl_header(impl);
+  if (impl_header->is_external()) {
+    ObjectLayer::call_external_destroy_func(impl, array_data);
+  }
+
+  return ObjectLayer::dealloc_impl(impl);
 }
 
-// bl::Array - Private - Typed Operations
-// ======================================
+// Array - Internal - Typed Operations
+// ===================================
 
 template<typename T>
-static BL_INLINE BLResult append_value_t(BLArrayCore* self, T value) noexcept {
+static BL_INLINE BLResult array_append_value_t(BLArrayCore* self, T value) noexcept {
   BL_ASSERT(self->_d.is_array());
-  BL_ASSERT(item_size_from_array_type(self->_d.raw_type()) == sizeof(T));
+  BL_ASSERT(array_item_size_from_array_type(self->_d.type()) == sizeof(T));
 
-  if (self->_d.sso()) {
-    size_t size = self->_d.a_field();
-    size_t capacity = self->_d.b_field();
+  constexpr size_t sso_capacity = array_sso_capacity_of_type<T>;
 
-    BL_ASSERT(size <= capacity);
-    if (size == capacity)
-      return bl_array_append_item(self, &value);
-
-    T* data = self->_d.data_as<T>() + size;
-    self->_d.info.set_a_field(uint32_t(size + 1));
-
-    *data = value;
-    return BL_SUCCESS;
+  if (self->_d.is_sso()) {
+    ObjectLayer::DataSpan<T> content = ObjectLayer::object_sso_span<T>(self);
+    if (content.size < sso_capacity) {
+      ObjectLayer::set_sso_size(self, content.size + 1u);
+      content.data[content.size] = value;
+      return BL_SUCCESS;
+    }
   }
   else {
-    BLArrayImpl* self_impl = get_impl(self);
-
-    size_t size = self_impl->size;
-    size_t capacity = self_impl->capacity;
-    size_t immutable_msk = IntOps::bool_as_mask<size_t>(!is_impl_mutable(self_impl));
-
-    // Not enough capacity or not mutable - bail to the generic implementation.
-    if ((size | immutable_msk) >= capacity)
-      return bl_array_append_item(self, &value);
-
-    T* dst = self_impl->data_as<T>() + size;
-    self_impl->size = size + 1;
-
-    *dst = value;
-    return BL_SUCCESS;
+    ObjectLayer::DataSpan<T> content = ObjectLayer::object_dyn_span<T>(self);
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, 1, content.size)) {
+      ObjectLayer::set_dyn_size(self, content.size + 1u);
+      content.data[content.size] = value;
+      return BL_SUCCESS;
+    }
   }
+
+  return bl_array_append_item(self, &value);
 }
 
 template<typename T>
-static BL_INLINE BLResult insert_value_t(BLArrayCore* self, size_t index, T value) noexcept {
+static BL_INLINE BLResult array_insert_value_t(BLArrayCore* self, size_t index, T value) noexcept {
   BL_ASSERT(self->_d.is_array());
-  BL_ASSERT(item_size_from_array_type(self->_d.raw_type()) == sizeof(T));
+  BL_ASSERT(array_item_size_from_array_type(self->_d.type()) == sizeof(T));
 
   T* dst;
-  BL_PROPAGATE(bl_array_insert_op(self, index, 1, (void**)&dst));
+  BL_PROPAGATE(bl_array_insert_uninitialized(self, index, 1, (void**)&dst));
 
   *dst = value;
   return BL_SUCCESS;
 }
 
 template<typename T>
-static BL_INLINE BLResult replace_value_t(BLArrayCore* self, size_t index, T value) noexcept {
+static BL_INLINE BLResult array_replace_value_t(BLArrayCore* self, size_t index, T value) noexcept {
   BL_ASSERT(self->_d.is_array());
-  BL_ASSERT(item_size_from_array_type(self->_d.raw_type()) == sizeof(T));
+  BL_ASSERT(array_item_size_from_array_type(self->_d.type()) == sizeof(T));
 
-  if (!self->_d.sso()) {
-    BLArrayImpl* self_impl = get_impl(self);
-    size_t size = self_impl->size;
-
-    if (BL_UNLIKELY(index >= size))
+  if (self->_d.is_sso()) {
+    ObjectLayer::DataSpan<T> content = ObjectLayer::object_sso_span<T>(self);
+    if (BL_UNLIKELY(index >= content.size)) {
       return bl_make_error(BL_ERROR_INVALID_VALUE);
+    }
 
-    // Not mutable - don't inline as this is an expensive case anyway.
-    if (!is_impl_mutable(self_impl))
-      return bl_array_replace_item(self, index, &value);
-
-    T* data = self_impl->data_as<T>();
-    data[index] = value;
-
+    content.data[index] = value;
     return BL_SUCCESS;
   }
   else {
-    size_t size = self->_d.a_field();
-    if (BL_UNLIKELY(index >= size))
-      return bl_make_error(BL_ERROR_INVALID_VALUE);
+    ObjectLayer::DataSpan<T> content = ObjectLayer::object_dyn_span<T>(self);
+    if (BL_UNLIKELY(axl::bool_or(!ObjectLayer::is_object_mutable<ObjectLayer::ObjectMode::kDyn>(self), index >= content.size))) {
+      return bl_array_replace_item(self, index, &value);
+    }
 
-    T* data = self->_d.data_as<T>();
-    data[index] = value;
-
+    content.data[index] = value;
     return BL_SUCCESS;
   }
 }
 
-} // {bl::ArrayInternal}
+} // {bl}
 
-// bl::Array - API - Init & Destroy
-// ================================
+// Array - API - Init & Destroy
+// ============================
 
 BL_API_IMPL BLResult bl_array_init(BLArrayCore* self, BLObjectType array_type) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
 
   BLResult result = BL_SUCCESS;
-  if (BL_UNLIKELY(!is_array_type_valid(array_type))) {
+  if (BL_UNLIKELY(!is_array_type(array_type))) {
     array_type = BL_OBJECT_TYPE_NULL;
     result = bl_make_error(BL_ERROR_INVALID_VALUE);
   }
 
-  init_static(self, array_type);
+  self->_d = bl_object_defaults[array_type]._d;
   return result;
 }
 
 BL_API_IMPL BLResult bl_array_init_move(BLArrayCore* self, BLArrayCore* other) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
 
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.is_array());
 
-  self->_d = other->_d;
-  return init_static(other, other->_d.raw_type());
+  return ObjectLayer::move_object(self, other);
 }
 
 BL_API_IMPL BLResult bl_array_init_weak(BLArrayCore* self, const BLArrayCore* other) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
 
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.is_array());
 
-  self->_d = other->_d;
-  return retain_instance(self);
+  return ObjectLayer::copy_object(self, other);
 }
 
 BL_API_IMPL BLResult bl_array_destroy(BLArrayCore* self) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  return release_instance(self);
+  return ObjectLayer::release_object<ObjectLayer::ObjectMode::kAny>(self);
 }
 
-// bl::Array - API - Reset
-// =======================
+// Array - API - Reset
+// ===================
 
 BL_API_IMPL BLResult bl_array_reset(BLArrayCore* self) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  BLObjectType array_type = self->_d.raw_type();
-  return replace_instance(self, static_cast<const BLArrayCore*>(&bl_object_defaults[array_type]));
+  BLObjectType array_type = self->_d.type();
+  return ObjectLayer::replace_object(self, static_cast<const BLArrayCore*>(&bl_object_defaults[array_type]));
 }
 
-// bl::Array - API - Accessors
-// ===========================
+// Array - API - Accessors
+// =======================
 
 BL_API_IMPL size_t bl_array_get_size(const BLArrayCore* self) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  return get_size(self);
+  return ObjectLayer::get_size(self);
 }
 
 BL_API_IMPL size_t bl_array_get_capacity(const BLArrayCore* self) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  return get_capacity(self);
+  BLObjectType array_type = self->_d.type();
+  size_t sso_capacity = array_sso_capacity_from_array_type(array_type);
+
+  return ObjectLayer::get_capacity_of_array(self, sso_capacity);
 }
 
 BL_API_IMPL size_t bl_array_get_item_size(BLArrayCore* self) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  return item_size_from_array_type(self->_d.raw_type());
+  return array_item_size_from_array_type(self->_d.type());
 }
 
 BL_API_IMPL const void* bl_array_get_data(const BLArrayCore* self) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  return get_data(self);
+  return ObjectLayer::get_data<void>(self);
 }
 
-// bl::Array - API - Data Manipulation
-// ===================================
+// Array - API - Data Manipulation
+// ===============================
 
 BL_API_IMPL BLResult bl_array_clear(BLArrayCore* self) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  if (self->_d.sso()) {
-    size_t size = self->_d.a_field();
-    if (size) {
-      self->_d.clear_static_data();
-      self->_d.info.set_a_field(0);
-    }
-    return BL_SUCCESS;
-  }
-  else {
-    BLArrayImpl* self_impl = get_impl(self);
-    BLObjectType array_type = self->_d.raw_type();
+  BLObjectType array_type = self->_d.type();
 
-    if (!is_impl_mutable(self_impl)) {
-      release_instance(self);
-      return init_static(self, array_type);
-    }
-
-    size_t size = self_impl->size;
-    if (!size)
+  if (self->_d.is_ref_counted()) {
+    if (ObjectLayer::is_object_mutable<ObjectLayer::ObjectMode::kRC>(self)) {
+      if (is_array_of_objects(array_type)) {
+        size_t item_size = array_item_size_from_array_type(array_type);
+        ObjectLayer::release_object_array(ObjectLayer::dyn_data<BLObjectCore>(self), (ObjectLayer::dyn_size(self) * item_size) / sizeof(BLObjectCore));
+      }
+      ObjectLayer::set_dyn_size(self, 0u);
       return BL_SUCCESS;
-
-    size_t item_size = item_size_table[array_type];
-    release_content_by_type(self_impl->data, size * item_size, array_type);
-
-    self_impl->size = 0;
-    return BL_SUCCESS;
+    }
+    ObjectLayer::release_object<ObjectLayer::ObjectMode::kRC>(self);
   }
+
+  self->_d = bl_object_defaults[array_type]._d;
+  return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult bl_array_shrink(BLArrayCore* self) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  UnpackedData u = unpack(self);
-  BLObjectType array_type = self->_d.raw_type();
-
-  size_t item_size = item_size_from_array_type(array_type);
-  uint32_t sso_capacity = sso_capacity_table[array_type];
-
-  // 1. Try to move the content to static storage, if possible.
-  if (u.size <= sso_capacity) {
-    if (self->_d.sso())
-      return BL_SUCCESS;
-
-    BLArrayCore newO;
-    newO._d.init_static(BLObjectInfo::from_type_with_marker(array_type) |
-                       BLObjectInfo::from_abcp(uint32_t(u.size), sso_capacity));
-    memcpy(newO._d.u8_data, u.data, u.size * item_size);
-    return replace_instance(self, &newO);
+  // Don't shrink SSO, external, or non-ref counted arrays.
+  if (!self->_d.is_ref_counted() || ObjectLayer::get_impl_header(self->_d.impl())->is_external()) {
+    return BL_SUCCESS;
   }
 
-  // 2. Don't touch arrays that hold external data.
-  if (bl::ObjectInternal::is_impl_external(self->_d.impl))
-    return BL_SUCCESS;
+  BLObjectType array_type = self->_d.type();
+  ObjectLayer::DataSpan<uint8_t> content = ObjectLayer::object_dyn_span<uint8_t>(self);
 
-  // 2. Only reallocate if we can save at least a single cache line.
-  BLObjectImplSize fitting_impl_size = impl_size_from_capacity(u.size, item_size);
-  BLObjectImplSize current_impl_size = impl_size_from_capacity(u.capacity, item_size);
+  size_t item_size = array_item_size_from_array_type(array_type);
+  size_t sso_capacity = array_sso_capacity_from_array_type(array_type);
 
-  if (current_impl_size - fitting_impl_size >= BL_OBJECT_IMPL_ALIGNMENT)
-    return realloc_to_dynamic(self, array_type, fitting_impl_size);
+  BLArrayCore tmp;
+  if (content.size <= sso_capacity) {
+    ObjectLayer::init_sso_with_data(&tmp, array_type, content.size, content.data, content.size * item_size);
+    return ObjectLayer::replace_object<ObjectLayer::ObjectMode::kRC>(self, &tmp);
+  }
+  else {
+    size_t capacity = ObjectLayer::dyn_capacity(self);
+    ObjectImplSize fitting_impl_size = array_impl_size_from_capacity(content.size, item_size);
+    ObjectImplSize current_impl_size = array_impl_size_from_capacity(capacity, item_size);
 
-  return BL_SUCCESS;
+    if (fitting_impl_size == current_impl_size) {
+      return BL_SUCCESS;
+    }
+
+    return array_realloc_dynamic(self, array_type, fitting_impl_size, content.size, {content.data, content.size * item_size});
+  }
 }
 
-BL_API_IMPL BLResult bl_array_resize(BLArrayCore* self, size_t n, const void* fill) noexcept {
-  using namespace bl::ArrayInternal;
+BL_API_IMPL BLResult bl_array_resize(BLArrayCore* self, size_t new_size, const void* fill) noexcept {
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  UnpackedData u = unpack(self);
-  BLObjectType array_type = self->_d.raw_type();
-  size_t item_size = item_size_from_array_type(array_type);
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
+  size_t sso_capacity = array_sso_capacity_from_array_type(array_type);
 
-  // If `n` is smaller than the current `size` then this is a truncation. We only have
-  // to cover the BLObjectCore[] case, which means to destroy all variants beyond `n`.
-  if (n <= u.size) {
-    if (!is_instance_mutable(self)) {
-      if (n == u.size)
-        return BL_SUCCESS;
+  ObjectLayer::DataSpan<uint8_t> content;
+  size_t fill_count;
+  size_t byte_index;
 
-      BLArrayCore newO;
-      uint8_t* dst;
-      BL_PROPAGATE(init_array(&newO, array_type, n, n, &dst));
-
-      init_content_by_type(dst, u.data, n * item_size, array_type);
-      return replace_instance(self, &newO);
+  if (self->_d.is_sso()) {
+    content = ObjectLayer::object_sso_span<uint8_t>(self);
+    if (new_size <= content.size) {
+      return bl_array_truncate(self, new_size);
     }
-    else {
-      set_size(self, n);
-      release_content_by_type(u.data, (u.size - n) * item_size, array_type);
-      return BL_SUCCESS;
+
+    fill_count = new_size - content.size;
+    byte_index = content.size * item_size;
+
+    if (new_size <= sso_capacity) {
+      ObjectLayer::set_sso_size(self, new_size);
+      return array_fill_items(content.data + byte_index, static_cast<const uint8_t*>(fill), fill_count, item_size);
+    }
+  }
+  else {
+    content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    if (new_size <= content.size) {
+      return bl_array_truncate(self, new_size);
+    }
+
+    fill_count = new_size - content.size;
+    byte_index = content.size * item_size;
+
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, new_size)) {
+      ObjectLayer::set_dyn_size(self, new_size);
+      if (is_array_of_objects(array_type)) {
+        return array_fill_objects(content.data + byte_index, fill, fill_count, item_size);
+      }
+      else {
+        return array_fill_items(content.data + byte_index, fill, fill_count, item_size);
+      }
     }
   }
 
-  // `n` becames the number of items to add to the array.
-  n -= u.size;
+  if (BL_UNLIKELY(new_size > array_max_size_table[array_type])) {
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  }
 
-  void* dst;
-  BL_PROPAGATE(bl_array_modify_op(self, BL_MODIFY_OP_APPEND_FIT, n, &dst));
+  BLArrayCore tmp;
+  ObjectImplSize impl_size = array_impl_size_from_capacity(new_size, item_size);
+  BL_PROPAGATE(array_init_dynamic_with_data(&tmp, array_type, impl_size, new_size, {content.data, content.size * item_size}));
 
-  if (!fill)
-    memset(dst, 0, n * item_size);
-  else if (is_array_type_object_based(array_type))
-    fill_content_objects(dst, n, fill, item_size);
-  else
-    fill_content_simple(dst, n, fill, item_size);
+  if (is_array_of_objects(array_type)) {
+    BLObjectCore* dst = ObjectLayer::dyn_data<BLObjectCore>(&tmp);
+    ObjectLayer::retain_object_array(dst, (content.size * item_size) / sizeof(BLObjectCore));
+    BL_PROPAGATE(array_fill_objects(axl::offset_ptr(dst, byte_index), fill, fill_count, item_size));
+  }
+  else {
+    uint8_t* dst = ObjectLayer::dyn_data<uint8_t>(&tmp);
+    BL_PROPAGATE(array_fill_items(dst + byte_index, static_cast<const uint8_t*>(fill), fill_count, item_size));
+  }
 
-  return BL_SUCCESS;
+  return ObjectLayer::replace_object(self, &tmp);
+}
+
+BL_API_IMPL BLResult bl_array_truncate(BLArrayCore* self, size_t truncated_size) noexcept {
+  using namespace bl;
+  BL_ASSERT(self->_d.is_array());
+
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
+
+  if (self->_d.is_sso()) {
+    // SSO: Make sure that the truncated content is zeroed to follow SSO requirements.
+    ObjectLayer::DataSpan<uint8_t> content = ObjectLayer::object_sso_span<uint8_t>(self);
+    if (truncated_size >= content.size) {
+      return BL_SUCCESS;
+    }
+
+    ObjectLayer::set_sso_size(self, truncated_size);
+
+    size_t truncate_index = truncated_size * item_size;
+    size_t truncate_byte_size = (content.size * item_size) - truncate_index;
+
+    memset(ObjectLayer::sso_data<uint8_t>(self) + truncate_index, 0, truncate_byte_size);
+    return BL_SUCCESS;
+  }
+  else {
+    ObjectLayer::DataSpan<uint8_t> content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    if (truncated_size >= content.size) {
+      return BL_SUCCESS;
+    }
+
+    if (is_array_of_objects(array_type)) {
+      // If the array has BLObjectCore content, we cannot just simply truncate the size. The objects need to be released first.
+      if (ObjectLayer::is_object_mutable<ObjectLayer::ObjectMode::kDyn>(self)) {
+        size_t truncate_index = truncated_size * item_size;
+        size_t truncate_byte_size = (content.size * item_size) - truncate_index;
+        ObjectLayer::release_object_array(axl::offset_ptr<BLObjectCore>(content.data, truncate_index), truncate_byte_size / sizeof(BLObjectCore));
+        ObjectLayer::set_dyn_size(self, truncated_size);
+        return BL_SUCCESS;
+      }
+      else {
+        BLArrayCore tmp;
+        ObjectImplSize impl_size = array_impl_size_from_capacity(truncated_size, item_size);
+        BL_PROPAGATE(array_init_dynamic_with_data(&tmp, array_type, impl_size, truncated_size, {content.data, truncated_size * item_size}));
+
+        ObjectLayer::retain_object_array(ObjectLayer::dyn_data<BLObjectCore>(&tmp), truncated_size);
+        return ObjectLayer::replace_object(self, &tmp);
+      }
+    }
+    else {
+      // Just set the array size. Since the size is stored in BLArrayCore we don't have to touch anything in the dynamically
+      // allocated Impl, thus we don't even have to make it data unique in this case.
+      ObjectLayer::set_dyn_size(self, truncated_size);
+      return BL_SUCCESS;
+    }
+  }
 }
 
 BL_API_IMPL BLResult bl_array_reserve(BLArrayCore* self, size_t n) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  UnpackedData u = unpack(self);
-  size_t immutable_msk = bl::IntOps::bool_as_mask<size_t>(!is_instance_mutable(self));
+  BLObjectType array_type = self->_d.type();
+  size_t sso_capacity = array_sso_capacity_table[array_type];
 
-  if ((n | immutable_msk) <= u.capacity)
-    return BL_SUCCESS;
-
-  BLObjectType array_type = self->_d.raw_type();
-  if (BL_UNLIKELY(n > maximum_capacity_table[array_type]))
-    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
-
-  size_t sso_capacity = sso_capacity_table[array_type];
-  size_t item_size = item_size_from_array_type(array_type);
-  n = bl_max(n, u.size);
-
-  if (n <= sso_capacity) {
-    BLArrayCore newO;
-    init_static(&newO, array_type, u.size);
-
-    uint8_t* dst = newO._d.u8_data;
-    bl::MemOps::copy_forward_inline_t(dst, get_impl(self)->data_as<uint8_t>(), u.size * item_size);
-    return replace_instance(self, &newO);
+  ObjectLayer::DataSpan<uint8_t> content;
+  if (self->_d.is_sso()) {
+    content = ObjectLayer::object_sso_span<uint8_t>(self);
+    if (n <= sso_capacity) {
+      return BL_SUCCESS;
+    }
   }
   else {
-    return realloc_to_dynamic(self, array_type, impl_size_from_capacity(n, item_size));
+    content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, n)) {
+      return BL_SUCCESS;
+    }
   }
+
+  size_t item_size = array_item_size_from_array_type(array_type);
+  n = axl::max(n, content.size);
+
+  if (BL_UNLIKELY(n > array_max_size_table[array_type])) {
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  }
+
+  if (n <= sso_capacity) {
+    // Must be dynamic - immutable when the capacity was checked.
+    BL_ASSERT(self->_d.is_dynamic());
+
+    BLArrayCore tmp;
+    ObjectLayer::init_sso_with_data(&tmp, array_type, content.size, content.data, content.size * item_size);
+    return ObjectLayer::replace_object<ObjectLayer::ObjectMode::kDyn>(self, &tmp);
+  }
+  else {
+    ObjectImplSize impl_size = array_impl_size_from_capacity(n, item_size);
+    return array_realloc_dynamic(self, array_type, impl_size, content.size, {content.data, content.size * item_size});
+  }
+}
+
+BL_API_IMPL BLResult bl_array_reserve_for_append(BLArrayCore* self, size_t n) noexcept {
+  using namespace bl;
+  BL_ASSERT(self->_d.is_array());
+
+  BLObjectType array_type = self->_d.type();
+  size_t sso_capacity = array_sso_capacity_table[array_type];
+
+  ObjectLayer::DataSpan<uint8_t> content;
+  if (self->_d.is_sso()) {
+    content = ObjectLayer::object_sso_span<uint8_t>(self);
+    if (n <= sso_capacity - content.size) {
+      return BL_SUCCESS;
+    }
+  }
+  else {
+    content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, n, content.size)) {
+      return BL_SUCCESS;
+    }
+  }
+
+  size_t item_size = array_item_size_from_array_type(array_type);
+  size_t max_allowed = array_max_size_table[array_type] - content.size;
+  size_t min_capacity = content.size + n;
+
+  if (BL_UNLIKELY(n >= max_allowed)) {
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  }
+
+  ObjectImplSize impl_size = ObjectLayer::expand_impl_size(array_impl_size_from_capacity(min_capacity, item_size));
+  return array_realloc_dynamic(self, array_type, impl_size, content.size, {content.data, content.size * item_size});
 }
 
 BL_API_IMPL BLResult bl_array_make_mutable(BLArrayCore* self, void** data_out) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  if (self->_d.sso()) {
-    *data_out = self->_d.u8_data;
+  if (self->_d.is_sso()) {
+    *data_out = ObjectLayer::sso_data<uint8_t>(self);
     return BL_SUCCESS;
   }
 
-  BLArrayImpl* self_impl = get_impl(self);
-  if (is_impl_mutable(self_impl)) {
-    *data_out = self_impl->data;
+  if (ObjectLayer::is_object_mutable(self)) {
+    *data_out = ObjectLayer::dyn_data<uint8_t>(self);
     return BL_SUCCESS;
   }
 
-  BLObjectType array_type = self->_d.raw_type();
-  size_t size = self_impl->size;
-  size_t item_size = item_size_from_array_type(array_type);
+  // No need to optimize the slow case - let reserve handle the preparation for mutation.
+  BL_PROPAGATE(bl_array_reserve(self, ObjectLayer::dyn_size(self)));
 
-  BLArrayCore tmp = *self;
-  uint8_t* dst;
-
-  BL_PROPAGATE(init_array(self, array_type, size, size, &dst));
-  init_content_by_type(dst, self_impl->data, size * item_size, array_type);
-  release_instance(&tmp);
-
-  *data_out = dst;
+  *data_out = ObjectLayer::get_data<uint8_t>(self);
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLResult bl_array_modify_op(BLArrayCore* self, BLModifyOp op, size_t n, void** data_out) noexcept {
-  using namespace bl::ArrayInternal;
-  BL_ASSERT(self->_d.is_array());
-
-  BLObjectType array_type = self->_d.raw_type();
-  size_t item_size = item_size_table[array_type];
-
-  UnpackedData u;
-
-  size_t index;
-  size_t size_after;
-
-  if (self->_d.sso()) {
-    u.data = self->_d.u8_data;
-    u.size = self->_d.a_field();
-    u.capacity = self->_d.b_field();
-
-    if (bl_modify_op_is_assign(op)) {
-      index = 0;
-      size_after = n;
-
-      if (size_after <= u.capacity) {
-        self->_d.info.set_a_field(uint32_t(size_after));
-        self->_d.clear_static_data();
-
-        *data_out = self->_d.u8_data;
-        return BL_SUCCESS;
-      }
-    }
-    else {
-      bl::OverflowFlag of{};
-      index = u.size;
-      size_after = bl::IntOps::add_overflow(u.size, n, &of);
-
-      if (BL_UNLIKELY(of))
-        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
-
-      if (size_after <= u.capacity) {
-        self->_d.info.set_a_field(uint32_t(size_after));
-
-        *data_out = self->_d.u8_data + index * item_size;
-        return BL_SUCCESS;
-      }
-    }
-  }
-  else {
-    BLArrayImpl* self_impl = get_impl(self);
-    size_t immutable_msk = bl::IntOps::bool_as_mask<size_t>(!is_impl_mutable(self_impl));
-
-    u.data = self_impl->data_as<uint8_t>();
-    u.size = self_impl->size;
-    u.capacity = self_impl->capacity;
-
-    if (bl_modify_op_is_assign(op)) {
-      index = 0;
-      size_after = n;
-
-      if ((size_after | immutable_msk) <= u.capacity) {
-        self_impl->size = size_after;
-        release_content_by_type(u.data, u.size * item_size, array_type);
-
-        *data_out = u.data;
-        return BL_SUCCESS;
-      }
-    }
-    else {
-      bl::OverflowFlag of{};
-      index = u.size;
-      size_after = bl::IntOps::add_overflow(u.size, n, &of);
-
-      if (BL_UNLIKELY(of))
-        return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
-
-      if ((size_after | immutable_msk) <= u.capacity) {
-        self_impl->size = size_after;
-
-        *data_out = u.data + index * item_size;
-        return BL_SUCCESS;
-      }
-    }
-  }
-
-  // The container is either immutable or doesn't have the capacity required.
-  BLArrayCore newO;
-  size_t sso_capacity = sso_capacity_table[array_type];
-
-  if (size_after <= sso_capacity) {
-    // The new content fits in static storage, which implies that the current content must be dynamic.
-    BL_ASSERT(!self->_d.sso());
-
-    newO._d.init_static(BLObjectInfo::from_type_with_marker(array_type) |
-                       BLObjectInfo::from_abcp(uint32_t(size_after), uint32_t(sso_capacity)));
-    bl::MemOps::copy_forward_inline_t(newO._d.u8_data, u.data, index * item_size);
-
-    *data_out = self->_d.u8_data + index * item_size;
-    return replace_instance(self, &newO);
-  }
-  else {
-    BLObjectImplSize impl_size = expand_impl_size_with_modify_op(impl_size_from_capacity(size_after, item_size), op);
-    BL_PROPAGATE(init_dynamic(&newO, array_type, size_after, impl_size));
-
-    uint8_t* dst = get_impl(&newO)->data_as<uint8_t>();
-    if (self->_d.is_dynamic_object() && bl::ObjectInternal::is_impl_mutable(self->_d.impl)) {
-      // Use memcpy() instead of weak copying if the original data is gonna be destroyed.
-      memcpy(dst, u.data, index * item_size);
-      // We have to patch the source Impl as release_instance() as we have moved the content.
-      get_impl(self)->size = 0;
-    }
-    else {
-      init_content_by_type(dst, u.data, index * item_size, array_type);
-    }
-
-    *data_out = dst + index * item_size;
-    return replace_instance(self, &newO);
-  }
-}
-
-BL_API_IMPL BLResult bl_array_insert_op(BLArrayCore* self, size_t index, size_t n, void** data_out) noexcept {
-  using namespace bl::ArrayInternal;
-  BL_ASSERT(self->_d.is_array());
-
-  UnpackedData u = unpack(self);
-  BLObjectType array_type = self->_d.raw_type();
-  size_t item_size = item_size_from_array_type(array_type);
-
-  size_t size_after = bl::IntOps::uadd_saturate(u.size, n);
-  size_t immutable_msk = bl::IntOps::bool_as_mask<size_t>(!is_instance_mutable(self));
-
-  if ((size_after | immutable_msk) > u.capacity) {
-    if (BL_UNLIKELY(size_after > maximum_capacity_table[array_type]))
-      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
-
-    BLArrayCore tmp = *self;
-
-    uint8_t* dst = nullptr;
-    const uint8_t* src = get_data<uint8_t>(&tmp);
-
-    size_t sso_capacity = sso_capacity_table[array_type];
-    if (size_after <= sso_capacity) {
-      init_static(self, array_type, size_after);
-      dst = self->_d.u8_data;
-    }
-    else {
-      BLObjectImplSize impl_size = expand_impl_size(impl_size_from_capacity(size_after, item_size));
-      *data_out = nullptr;
-
-      BL_PROPAGATE(init_dynamic(self, array_type, size_after, impl_size));
-      dst = get_impl(self)->data_as<uint8_t>();
-    }
-
-    if (!immutable_msk) {
-      // Move if `tmp` will be destroyed.
-      memcpy(dst, src, index * item_size);
-      memcpy(dst + (index + n) * item_size, src + index * item_size, (u.size - index) * item_size);
-      set_size(&tmp, 0);
-    }
-    else {
-      init_content_by_type(dst, src, index * item_size, array_type);
-      init_content_by_type(dst + (index + n) * item_size, src + index * item_size, (u.size - index) * item_size, array_type);
-    }
-
-    *data_out = dst + index * item_size;
-    return release_instance(&tmp);
-  }
-  else {
-    set_size(self, size_after);
-    memmove(u.data + (index + n) * item_size, u.data + index * item_size, (u.size - index) * item_size);
-
-    *data_out = u.data + index * item_size;
-    return BL_SUCCESS;
-  }
-}
-
-// bl::Array - API - Data Manipulation - Assignment
-// ================================================
+// Array - API - Assign
+// ====================
 
 BL_API_IMPL BLResult bl_array_assign_move(BLArrayCore* self, BLArrayCore* other) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
 
   BL_ASSERT(self->_d.is_array());
-  BL_ASSERT(other->_d.is_array());
-  BL_ASSERT(self->_d.raw_type() == other->_d.raw_type());
+  BL_ASSERT(self->_d.type() == other->_d.type());
 
-  BLObjectType array_type = self->_d.raw_type();
-  BLArrayCore tmp = *other;
-
-  init_static(other, array_type);
-  return replace_instance(self, &tmp);
+  return ObjectLayer::assign_object_move(self, other);
 }
 
 BL_API_IMPL BLResult bl_array_assign_weak(BLArrayCore* self, const BLArrayCore* other) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
 
   BL_ASSERT(self->_d.is_array());
-  BL_ASSERT(other->_d.is_array());
-  BL_ASSERT(self->_d.raw_type() == other->_d.raw_type());
+  BL_ASSERT(self->_d.type() == other->_d.type());
 
-  retain_instance(other);
-  return replace_instance(self, other);
+  return ObjectLayer::assign_object_weak(self, other);
 }
 
 BL_API_IMPL BLResult bl_array_assign_deep(BLArrayCore* self, const BLArrayCore* other) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
 
   BL_ASSERT(self->_d.is_array());
-  BL_ASSERT(other->_d.is_array());
-  BL_ASSERT(self->_d.raw_type() == other->_d.raw_type());
+  BL_ASSERT(self->_d.type() == other->_d.type());
 
-  return bl_array_assign_data(self, get_data(other), get_size(other));
+  return bl_array_assign_data(self, ObjectLayer::get_data<void>(other), ObjectLayer::get_size(other));
 }
 
 BL_API_IMPL BLResult bl_array_assign_data(BLArrayCore* self, const void* items, size_t n) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  UnpackedData u = unpack(self);
-  BLObjectType array_type = self->_d.raw_type();
-  size_t item_size = item_size_from_array_type(array_type);
-  size_t immutable_msk = bl::IntOps::bool_as_mask<size_t>(!is_instance_mutable(self));
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
 
-  if ((n | immutable_msk) > u.capacity) {
-    if (BL_UNLIKELY(n > maximum_capacity_table[array_type]))
-      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  ObjectLayer::DataSpan<uint8_t> content;
+  size_t copy_size;
 
-    BLObjectImplSize impl_size = impl_size_from_capacity(u.size, item_size);
-    BLArrayCore newO;
-    BL_PROPAGATE(init_dynamic(&newO, array_type, n, impl_size));
+  if (self->_d.is_sso()) {
+    size_t sso_capacity = array_sso_capacity_from_array_type(array_type);
 
-    uint8_t* dst = get_impl(&newO)->data_as<uint8_t>();
-    init_content_by_type(dst, items, n * item_size, array_type);
-    return replace_instance(self, &newO);
-  }
+    content = ObjectLayer::object_sso_span<uint8_t>(self);
+    copy_size = n * item_size;
 
-  if (!n)
-    return bl_array_clear(self);
+    if (n <= sso_capacity) {
+      // ALIASING: Use memmove() to handle cases in which `items` aliases `content.data`.
+      ObjectLayer::set_sso_size(self, n);
 
-  set_size(self, n);
+      memmove(content.data, items, copy_size);
+      memset(content.data + copy_size, 0, BLObjectDetail::kSSOCapacity - copy_size);
 
-  if (is_array_type_object_based(array_type)) {
-    size_t replace_size = bl_min(u.size, n);
-    const uint8_t* src = static_cast<const uint8_t*>(items);
-
-    assign_content_objects(u.data, src, replace_size * item_size);
-    release_content_objects(u.data + replace_size * item_size, (u.size - replace_size) * item_size);
-
-    return BL_SUCCESS;
+      return BL_SUCCESS;
+    }
   }
   else {
-    // Memory move is required in case of overlap between `data` and `items`.
-    memmove(u.data, items, n * item_size);
-    return BL_SUCCESS;
+    content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    copy_size = n * item_size;
+
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, n)) {
+      ObjectLayer::set_dyn_size(self, n);
+
+      if (is_array_of_objects(array_type)) {
+        ObjectLayer::retain_object_array(static_cast<const BLObjectCore*>(items), copy_size / sizeof(BLObjectCore));
+        ObjectLayer::release_object_array(reinterpret_cast<BLObjectCore*>(content.data), (content.size * item_size) / sizeof(BLObjectCore));
+      }
+
+      // ALIASING: Use memmove() to handle cases in which `items` aliases `content.data`.
+      memmove(content.data, items, copy_size);
+      return BL_SUCCESS;
+    }
   }
+
+  if (BL_UNLIKELY(n > array_max_size_table[array_type])) {
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  }
+
+  BLArrayCore tmp;
+  ObjectImplSize impl_size = array_impl_size_from_capacity(n, item_size);
+  BL_PROPAGATE(array_init_dynamic(&tmp, array_type, impl_size, n, array_capacity_from_impl_size(impl_size, item_size)));
+
+  if (is_array_of_objects(array_type)) {
+    ObjectLayer::copy_object_array(ObjectLayer::dyn_data<BLObjectCore>(&tmp), static_cast<const BLObjectCore*>(items), copy_size / sizeof(BLObjectCore));
+  }
+  else {
+    memcpy(ObjectLayer::dyn_data<void>(&tmp), items, copy_size);
+  }
+
+  return ObjectLayer::replace_object(self, &tmp);
 }
 
-BL_API_IMPL BLResult bl_array_assign_external_data(BLArrayCore* self, void* external_data, size_t size, size_t capacity, BLDataAccessFlags access_flags, BLDestroyExternalDataFunc destroy_func, void* user_data) noexcept {
-  using namespace bl::ArrayInternal;
+BL_API_IMPL BLResult bl_array_assign_external_data(BLArrayCore* self, void* external_data, size_t size, size_t capacity, BLDataAccessMode access_mode, BLDestroyExternalDataFunc destroy_func, void* user_data) noexcept {
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  BLObjectType array_type = self->_d.raw_type();
-  size_t item_size = item_size_from_array_type(array_type);
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
 
-  bl::OverflowFlag of{};
-  bl::IntOps::mul_overflow(capacity, item_size, &of);
+  axl::OverflowFlag of{};
+  (void)axl::mul_overflow(capacity, item_size, of);
 
-  if (BL_UNLIKELY(!capacity || capacity < size || !bl_data_access_flags_is_valid(access_flags) || of))
+  if (BL_UNLIKELY(!capacity || capacity < size || axl::did_overflow(of))) {
     return bl_make_error(BL_ERROR_INVALID_VALUE);
+  }
 
-  BLArrayCore newO;
-  BL_PROPAGATE(init_external(&newO, array_type, external_data, size, capacity, access_flags, destroy_func, user_data));
+  BLArrayCore tmp;
+  ObjectImplSize impl_size = ObjectImplSize(sizeof(BLArrayImpl));
+  BL_PROPAGATE(ObjectLayer::alloc_external_impl(&tmp, impl_size, ObjectLayer::AllocExternalImplParams{
+    .object_type   = array_type,
+    .access_mode   = access_mode,
+    .external_data = external_data,
+    .size          = size,
+    .capacity      = capacity,
+    .destroy_func  = destroy_func,
+    .user_data     = user_data
+  }));
 
-  return replace_instance(self, &newO);
+  return ObjectLayer::replace_object(self, &tmp);
 }
 
-// bl::Array - API - Data Manipulation - Append
-// ============================================
+BL_API_IMPL BLResult bl_array_assign_uninitialized(BLArrayCore* self, size_t n, void** data_out) noexcept {
+  using namespace bl;
+  BL_ASSERT(self->_d.is_array());
 
-BL_API_IMPL BLResult bl_array_append_u8(BLArrayCore* self, uint8_t value) noexcept { return bl::ArrayInternal::append_value_t<uint8_t>(self, value); }
-BL_API_IMPL BLResult bl_array_append_u16(BLArrayCore* self, uint16_t value) noexcept { return bl::ArrayInternal::append_value_t<uint16_t>(self, value); }
-BL_API_IMPL BLResult bl_array_append_u32(BLArrayCore* self, uint32_t value) noexcept { return bl::ArrayInternal::append_value_t<uint32_t>(self, value); }
-BL_API_IMPL BLResult bl_array_append_u64(BLArrayCore* self, uint64_t value) noexcept { return bl::ArrayInternal::append_value_t<uint64_t>(self, value); }
-BL_API_IMPL BLResult bl_array_append_f32(BLArrayCore* self, float value) noexcept { return bl::ArrayInternal::append_value_t<float>(self, value); }
-BL_API_IMPL BLResult bl_array_append_f64(BLArrayCore* self, double value) noexcept { return bl::ArrayInternal::append_value_t<double>(self, value); }
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
+
+  if (self->_d.is_sso()) {
+    size_t sso_capacity = array_sso_capacity_from_array_type(array_type);
+    if (n <= sso_capacity) {
+      void* dst_ptr = ObjectLayer::sso_data<void>(self);
+
+      ObjectLayer::set_sso_size(self, n);
+      *data_out = dst_ptr;
+
+      memset(dst_ptr, 0, BLObjectDetail::kSSOCapacity);
+      return BL_SUCCESS;
+    }
+  }
+  else {
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, n)) {
+      void* dst_ptr = ObjectLayer::dyn_data<void>(self);
+      size_t old_size = ObjectLayer::dyn_size(self);
+
+      ObjectLayer::set_dyn_size(self, n);
+      *data_out = dst_ptr;
+
+      if (is_array_of_objects(array_type)) {
+        ObjectLayer::release_object_array(static_cast<BLObjectCore*>(dst_ptr), (old_size * item_size) / sizeof(BLObjectCore));
+      }
+      return BL_SUCCESS;
+    }
+  }
+
+  BLArrayCore tmp;
+  ObjectImplSize impl_size = array_impl_size_from_capacity(n, item_size);
+  BL_PROPAGATE(array_init_dynamic(&tmp, array_type, impl_size, n, array_capacity_from_impl_size(impl_size, item_size)));
+
+  *data_out = ObjectLayer::dyn_data<void>(&tmp);
+  return ObjectLayer::replace_object(self, &tmp);
+}
+
+// Array - API - Append
+// ====================
+
+BL_API_IMPL BLResult bl_array_append_u8(BLArrayCore* self, uint8_t value) noexcept { return bl::array_append_value_t<uint8_t>(self, value); }
+BL_API_IMPL BLResult bl_array_append_u16(BLArrayCore* self, uint16_t value) noexcept { return bl::array_append_value_t<uint16_t>(self, value); }
+BL_API_IMPL BLResult bl_array_append_u32(BLArrayCore* self, uint32_t value) noexcept { return bl::array_append_value_t<uint32_t>(self, value); }
+BL_API_IMPL BLResult bl_array_append_u64(BLArrayCore* self, uint64_t value) noexcept { return bl::array_append_value_t<uint64_t>(self, value); }
+BL_API_IMPL BLResult bl_array_append_f32(BLArrayCore* self, float value) noexcept { return bl::array_append_value_t<float>(self, value); }
+BL_API_IMPL BLResult bl_array_append_f64(BLArrayCore* self, double value) noexcept { return bl::array_append_value_t<double>(self, value); }
 
 BL_API_IMPL BLResult bl_array_append_item(BLArrayCore* self, const void* item) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  UnpackedData u = unpack(self);
-  BLObjectType array_type = self->_d.raw_type();
-  size_t item_size = item_size_from_array_type(array_type);
-  size_t immutable_msk = bl::IntOps::bool_as_mask<size_t>(!is_instance_mutable(self));
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
 
-  if (BL_UNLIKELY((u.size | immutable_msk) >= u.capacity)) {
-    if (BL_UNLIKELY(u.size >= maximum_capacity_table[array_type]))
-      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  ObjectLayer::DataSpan<uint8_t> content;
+  size_t content_byte_size;
 
-    BLArrayCore newO;
-    BLObjectImplSize impl_size = expand_impl_size(impl_size_from_capacity(u.size + 1u, item_size));
-    BL_PROPAGATE(init_dynamic(&newO, array_type, u.size + 1, impl_size));
+  if (self->_d.is_sso()) {
+    content = ObjectLayer::object_sso_span<uint8_t>(self);
+    content_byte_size = content.size * item_size;
 
-    // Copy the existing data to a new place / move if the data will be destroyed.
-    uint8_t* dst = get_impl(&newO)->data_as<uint8_t>();
-    if (!immutable_msk) {
-      set_size(self, 0);
-      memcpy(dst, u.data, u.size * item_size);
+    size_t sso_capacity = array_sso_capacity_from_array_type(array_type);
+    if (content.size < sso_capacity) {
+      ObjectLayer::set_sso_size(self, content.size + 1u);
+      axl::copy_bytes_small(content.data + content_byte_size, item, item_size);
+      return BL_SUCCESS;
     }
-    else {
-      init_content_by_type(dst, u.data, u.size * item_size, array_type);
-    }
-
-    init_content_by_type(dst + u.size * item_size, item, item_size, array_type);
-    return replace_instance(self, &newO);
   }
   else {
-    init_content_by_type(u.data + u.size * item_size, item, item_size, array_type);
-    set_size(self, u.size + 1);
+    content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    content_byte_size = content.size * item_size;
 
-    return BL_SUCCESS;
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, 1, content.size)) {
+      ObjectLayer::set_dyn_size(self, content.size + 1u);
+      axl::copy_bytes_small(content.data + content_byte_size, item, item_size);
+
+      if (is_array_of_objects(array_type)) {
+        ObjectLayer::retain_object_array(axl::offset_ptr<BLObjectCore>(content.data, content_byte_size), item_size / sizeof(BLObjectCore));
+      }
+
+      return BL_SUCCESS;
+    }
   }
+
+  BLArrayCore tmp;
+  ObjectImplSize impl_size = array_impl_size_from_capacity(content.size + 1u, item_size);
+
+  if (BL_UNLIKELY(size_t(impl_size) > ObjectLayer::kMaxImplSize)) {
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  }
+
+  impl_size = ObjectLayer::expand_impl_size_if(impl_size, content.size != 0u);
+  BL_PROPAGATE(array_init_dynamic_with_data(&tmp, array_type, impl_size, content.size + 1u, {content.data, content_byte_size}));
+
+  void* dst_ptr = ObjectLayer::dyn_data<void>(&tmp);
+  axl::copy_bytes_small(axl::offset_ptr(dst_ptr, content_byte_size), item, item_size);
+
+  if (is_array_of_objects(array_type)) {
+    size_t retain_byte_index = 0u;
+    size_t retain_byte_size = content_byte_size + item_size;
+
+    if (ObjectLayer::is_object_mutable<ObjectLayer::ObjectMode::kDyn>(self)) {
+      retain_byte_index = content_byte_size;
+      retain_byte_size = item_size;
+
+      // Adjusting the size of `self` is done to prevent releasing the content when the object itself is released.
+      ObjectLayer::set_dyn_size(self, 0);
+    }
+
+    ObjectLayer::retain_object_array(axl::offset_ptr<BLObjectCore>(dst_ptr, retain_byte_index), retain_byte_size / sizeof(BLObjectCore));
+  }
+
+  return ObjectLayer::replace_object(self, &tmp);
 }
 
 BL_API_IMPL BLResult bl_array_append_data(BLArrayCore* self, const void* items, size_t n) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  UnpackedData u = unpack(self);
-  BLObjectType array_type = self->_d.raw_type();
-  size_t item_size = item_size_from_array_type(array_type);
-  size_t immutable_msk = bl::IntOps::bool_as_mask<size_t>(!is_instance_mutable(self));
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
+  size_t items_byte_size = n * item_size;
 
-  size_t size_after = bl::IntOps::uadd_saturate(u.size, n);
+  ObjectLayer::DataSpan<uint8_t> content;
+  size_t content_byte_size;
 
-  if (BL_UNLIKELY((size_after | immutable_msk) > u.capacity)) {
-    if (BL_UNLIKELY(size_after > maximum_capacity_table[array_type]))
-      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  if (self->_d.is_sso()) {
+    content = ObjectLayer::object_sso_span<uint8_t>(self);
+    content_byte_size = content.size * item_size;
 
-    BLArrayCore newO;
-    BLObjectImplSize impl_size = expand_impl_size(impl_size_from_capacity(size_after, item_size));
-    BL_PROPAGATE(init_dynamic(&newO, array_type, size_after, impl_size));
-
-    // Copy the existing data to a new place / move if the data will be destroyed.
-    uint8_t* dst = get_impl(&newO)->data_as<uint8_t>();
-    if (!immutable_msk) {
-      set_size(self, 0);
-      memcpy(dst, u.data, u.size * item_size);
+    size_t sso_capacity = array_sso_capacity_from_array_type(array_type);
+    if (n <= sso_capacity - content.size) {
+      ObjectLayer::set_sso_size(self, content.size + n);
+      memcpy(content.data + content_byte_size, items, items_byte_size);
+      return BL_SUCCESS;
     }
-    else {
-      init_content_by_type(dst, u.data, u.size * item_size, array_type);
-    }
-
-    init_content_by_type(dst + u.size * item_size, items, n * item_size, array_type);
-    return replace_instance(self, &newO);
   }
   else {
-    init_content_by_type(u.data + u.size * item_size, items, n * item_size, array_type);
-    set_size(self, size_after);
+    content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    content_byte_size = content.size * item_size;
 
-    return BL_SUCCESS;
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, n, content.size)) {
+      ObjectLayer::set_dyn_size(self, content.size + n);
+      memcpy(content.data + content_byte_size, items, items_byte_size);
+
+      if (is_array_of_objects(array_type)) {
+        ObjectLayer::retain_object_array(axl::offset_ptr<BLObjectCore>(content.data, content_byte_size), items_byte_size / sizeof(BLObjectCore));
+      }
+
+      return BL_SUCCESS;
+    }
   }
+
+  size_t max_array_size = array_max_size_from_array_type(array_type);
+  if (BL_UNLIKELY(n > max_array_size - content.size)) {
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  }
+
+  BLArrayCore tmp;
+  ObjectImplSize impl_size = array_impl_size_from_capacity(content.size + n, item_size);
+
+  impl_size = ObjectLayer::expand_impl_size_if(impl_size, content.size != 0u);
+  BL_PROPAGATE(array_init_dynamic_with_data(&tmp, array_type, impl_size, content.size + n, {content.data, content_byte_size}));
+
+  void* dst_ptr = ObjectLayer::dyn_data<void>(&tmp);
+  memcpy(axl::offset_ptr(dst_ptr, content_byte_size), items, items_byte_size);
+
+  if (is_array_of_objects(array_type)) {
+    size_t retain_byte_index = 0u;
+    size_t retain_byte_size = content_byte_size + items_byte_size;
+
+    if (ObjectLayer::is_object_mutable<ObjectLayer::ObjectMode::kDyn>(self)) {
+      retain_byte_index = content_byte_size;
+      retain_byte_size = items_byte_size;
+
+      // Adjusting the size of `self` is done to prevent releasing the content when the object itself is released.
+      ObjectLayer::set_dyn_size(self, 0);
+    }
+
+    ObjectLayer::retain_object_array(axl::offset_ptr<BLObjectCore>(dst_ptr, retain_byte_index), retain_byte_size / sizeof(BLObjectCore));
+  }
+
+  return ObjectLayer::replace_object(self, &tmp);
 }
 
-// bl::Array - API - Data Manipulation - Insert
-// ============================================
+BL_API_IMPL BLResult bl_array_append_uninitialized(BLArrayCore* self, size_t n, void** data_out) noexcept {
+  using namespace bl;
+  BL_ASSERT(self->_d.is_array());
 
-BL_API_IMPL BLResult bl_array_insert_u8(BLArrayCore* self, size_t index, uint8_t value) noexcept { return bl::ArrayInternal::insert_value_t<uint8_t>(self, index, value); }
-BL_API_IMPL BLResult bl_array_insert_u16(BLArrayCore* self, size_t index, uint16_t value) noexcept { return bl::ArrayInternal::insert_value_t<uint16_t>(self, index, value); }
-BL_API_IMPL BLResult bl_array_insert_u32(BLArrayCore* self, size_t index, uint32_t value) noexcept { return bl::ArrayInternal::insert_value_t<uint32_t>(self, index, value); }
-BL_API_IMPL BLResult bl_array_insert_u64(BLArrayCore* self, size_t index, uint64_t value) noexcept { return bl::ArrayInternal::insert_value_t<uint64_t>(self, index, value); }
-BL_API_IMPL BLResult bl_array_insert_f32(BLArrayCore* self, size_t index, float value) noexcept { return bl::ArrayInternal::insert_value_t<float>(self, index, value); }
-BL_API_IMPL BLResult bl_array_insert_f64(BLArrayCore* self, size_t index, double value) noexcept { return bl::ArrayInternal::insert_value_t<double>(self, index, value); }
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
+
+  ObjectLayer::DataSpan<uint8_t> content;
+  size_t content_byte_size;
+
+  if (self->_d.is_sso()) {
+    content = ObjectLayer::object_sso_span<uint8_t>(self);
+    content_byte_size = content.size * item_size;
+
+    size_t sso_capacity = array_sso_capacity_from_array_type(array_type);
+    if (n <= sso_capacity - content.size) {
+      ObjectLayer::set_sso_size(self, content.size + n);
+      *data_out = content.data + content_byte_size;
+      return BL_SUCCESS;
+    }
+  }
+  else {
+    content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    content_byte_size = content.size * item_size;
+
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, n, content.size)) {
+      ObjectLayer::set_dyn_size(self, content.size + n);
+      *data_out = content.data + content_byte_size;
+      return BL_SUCCESS;
+    }
+  }
+
+  size_t max_array_size = array_max_size_from_array_type(array_type);
+  if (BL_UNLIKELY(n > max_array_size - content.size)) {
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  }
+
+  BLArrayCore tmp;
+  ObjectImplSize impl_size = array_impl_size_from_capacity(content.size + n, item_size);
+
+  impl_size = ObjectLayer::expand_impl_size_if(impl_size, content.size != 0u);
+  BL_PROPAGATE(array_init_dynamic_with_data(&tmp, array_type, impl_size, content.size + n, {content.data, content_byte_size}));
+
+  void* dst_ptr = ObjectLayer::dyn_data<void>(&tmp);
+  *data_out = axl::offset_ptr(dst_ptr, content_byte_size);
+
+  if (is_array_of_objects(array_type)) {
+    if (ObjectLayer::is_object_mutable<ObjectLayer::ObjectMode::kDyn>(self)) {
+      // Adjusting the size of `self` is done to prevent releasing the content when the object itself is released.
+      ObjectLayer::set_dyn_size(self, 0);
+    }
+    else {
+      ObjectLayer::retain_object_array(static_cast<BLObjectCore*>(dst_ptr), content_byte_size / sizeof(BLObjectCore));
+    }
+  }
+
+  return ObjectLayer::replace_object(self, &tmp);
+}
+
+// Array - API - Insert
+// ====================
+
+BL_API_IMPL BLResult bl_array_insert_u8(BLArrayCore* self, size_t index, uint8_t value) noexcept { return bl::array_insert_value_t<uint8_t>(self, index, value); }
+BL_API_IMPL BLResult bl_array_insert_u16(BLArrayCore* self, size_t index, uint16_t value) noexcept { return bl::array_insert_value_t<uint16_t>(self, index, value); }
+BL_API_IMPL BLResult bl_array_insert_u32(BLArrayCore* self, size_t index, uint32_t value) noexcept { return bl::array_insert_value_t<uint32_t>(self, index, value); }
+BL_API_IMPL BLResult bl_array_insert_u64(BLArrayCore* self, size_t index, uint64_t value) noexcept { return bl::array_insert_value_t<uint64_t>(self, index, value); }
+BL_API_IMPL BLResult bl_array_insert_f32(BLArrayCore* self, size_t index, float value) noexcept { return bl::array_insert_value_t<float>(self, index, value); }
+BL_API_IMPL BLResult bl_array_insert_f64(BLArrayCore* self, size_t index, double value) noexcept { return bl::array_insert_value_t<double>(self, index, value); }
 BL_API_IMPL BLResult bl_array_insert_item(BLArrayCore* self, size_t index, const void* item) noexcept { return bl_array_insert_data(self, index, item, 1); }
 
 BL_API_IMPL BLResult bl_array_insert_data(BLArrayCore* self, size_t index, const void* items, size_t n) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  UnpackedData u = unpack(self);
-  BLObjectType array_type = self->_d.raw_type();
-  size_t item_size = item_size_from_array_type(array_type);
-  size_t immutable_msk = bl::IntOps::bool_as_mask<size_t>(!is_instance_mutable(self));
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
+  size_t items_byte_size = n * item_size;
+  size_t insert_byte_index = index * item_size;
 
-  size_t end_index = index + n;
-  size_t size_after = bl::IntOps::uadd_saturate(u.size, n);
+  ObjectLayer::DataSpan<uint8_t> content;
+  size_t content_byte_size;
 
-  if ((size_after | immutable_msk) > u.capacity) {
-    if (BL_UNLIKELY(size_after > maximum_capacity_table[array_type]))
-      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  if (self->_d.is_sso()) {
+    content = ObjectLayer::object_sso_span<uint8_t>(self);
+    content_byte_size = content.size * item_size;
 
-    BLObjectImplSize impl_size = expand_impl_size(impl_size_from_capacity(size_after, item_size));
-    BLArrayCore newO;
-    BL_PROPAGATE(init_dynamic(&newO, array_type, size_after, impl_size));
+    size_t sso_capacity = array_sso_capacity_from_array_type(array_type);
+    if (n <= sso_capacity - content.size) {
+      uint8_t* insert_ptr = content.data + insert_byte_index;
+      ObjectLayer::set_sso_size(self, content.size + n);
 
-    uint8_t* dst = get_impl(&newO)->data_as<uint8_t>();
-    if (!immutable_msk) {
-      set_size(self, 0);
-      memcpy(dst, u.data, index * item_size);
-      memcpy(dst + end_index * item_size, u.data + index * item_size, (u.size - index) * item_size);
+      return array_prepend_possibly_aliased_data_inplace(
+        insert_ptr, content_byte_size - insert_byte_index,
+        static_cast<const uint8_t*>(items), items_byte_size);
     }
-    else {
-      init_content_by_type(dst, u.data, index * item_size, array_type);
-      init_content_by_type(dst + end_index * item_size, u.data + index * item_size, (u.size - index) * item_size, array_type);
-    }
-
-    init_content_by_type(dst + index * item_size, items, n * item_size, array_type);
-    return replace_instance(self, &newO);
   }
   else {
-    size_t nInBytes = n * item_size;
+    content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    content_byte_size = content.size * item_size;
 
-    uint8_t* dst = u.data;
-    uint8_t* dst_end = dst + u.size * item_size;
-    const uint8_t* src = static_cast<const uint8_t*>(items);
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, n, content.size)) {
+      uint8_t* insert_ptr = content.data + insert_byte_index;
+      ObjectLayer::set_dyn_size(self, content.size + n);
 
-    // The destination would point into the first byte that will be modified. So for example if the
-    // data is `[ABCDEF]` and we are inserting at index 1 then the `dst` would point to `[BCDEF]`.
-    dst += index * item_size;
-    dst_end += nInBytes;
+      if (is_array_of_objects(array_type)) {
+        ObjectLayer::retain_object_array(static_cast<const BLObjectCore*>(items), items_byte_size / sizeof(BLObjectCore));
+      }
 
-    // Move the memory in-place making space for items to insert. For example if the destination points
-    // to [ABCDEF] and we want to insert 4 items we would get [____ABCDEF].
-    memmove(dst + nInBytes, dst, (u.size - index) * item_size);
+      return array_prepend_possibly_aliased_data_inplace(
+        insert_ptr, content_byte_size - insert_byte_index,
+        static_cast<const uint8_t*>(items), items_byte_size);
+    }
+  }
 
-    // Split the [src:src_end] into LEAD and TRAIL slices and shift TRAIL slice in a way to cancel the
-    // `memmove()` if `src` overlaps `dst`. In practice if there is an overlap the [src:src_end] source
-    // should be within [dst:dst_end] as it doesn't make sense to insert something which is outside of
-    // the current valid area.
-    //
-    // This illustrates how the input is divided into leading and traling data.
-    //
-    //   BCDEFGH    <- Insert This
-    // [abcdefghi]
-    //      ^       <- Here
-    //
-    // [abcd_______efgh]
-    //              <- memmove()
-    //
-    //      |-|     <- Copy leading data
-    // [abcdBCD____efgh]
-    //
-    //         |--| <- Copy shifted trailing data.
-    // [abcdBCDEFGHefgh]
+  size_t max_array_size = array_max_size_from_array_type(array_type);
+  if (BL_UNLIKELY(n > max_array_size - content.size)) {
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  }
 
-    // Leading area precedes `dst` - nothing changed in here and if this is the whole area then there
-    // was no overlap that we would have to deal with.
-    size_t nLeadBytes = 0;
-    if (src < dst) {
-      nLeadBytes = bl_min<size_t>((size_t)(dst - src), nInBytes);
-      init_content_by_type(dst, src, nLeadBytes, array_type);
+  BLArrayCore tmp;
+  ObjectImplSize impl_size = array_impl_size_from_capacity(content.size + n, item_size);
 
-      dst += nLeadBytes;
-      src += nLeadBytes;
+  impl_size = ObjectLayer::expand_impl_size_if(impl_size, content.size != 0u);
+  BL_PROPAGATE(array_init_dynamic_with_data(&tmp, array_type, impl_size, content.size + n, {content.data, insert_byte_index}));
+
+  uint8_t* insert_ptr = ObjectLayer::dyn_data<uint8_t>(&tmp) + insert_byte_index;
+  memcpy(insert_ptr, items, items_byte_size);
+  memcpy(insert_ptr + items_byte_size, content.data + insert_byte_index, content_byte_size - insert_byte_index);
+
+  if (is_array_of_objects(array_type)) {
+    size_t retain_byte_index = 0u;
+    size_t retain_byte_size = content_byte_size + items_byte_size;
+
+    if (ObjectLayer::is_object_mutable<ObjectLayer::ObjectMode::kDyn>(self)) {
+      retain_byte_index = insert_byte_index;
+      retain_byte_size = items_byte_size;
+
+      // Adjusting the size of `self` is done to prevent releasing the content when the object itself is released.
+      ObjectLayer::set_dyn_size(self, 0);
     }
 
-    // Trailing area - we either shift none or all of it.
-    if (src < dst_end)
-      src += nInBytes; // Shift source in case of overlap.
-
-    init_content_by_type(dst, src, nInBytes - nLeadBytes, array_type);
-    set_size(self, size_after);
-
-    return BL_SUCCESS;
+    ObjectLayer::retain_object_array(
+      axl::offset_ptr<BLObjectCore>(ObjectLayer::dyn_data<uint8_t>(&tmp), retain_byte_index), retain_byte_size / sizeof(BLObjectCore));
   }
+
+  return ObjectLayer::replace_object(self, &tmp);
 }
 
-// bl::Array - API - Data Manipulation - Replace
-// =============================================
-
-BL_API_IMPL BLResult bl_array_replace_u8(BLArrayCore* self, size_t index, uint8_t value) noexcept { return bl::ArrayInternal::replace_value_t<uint8_t>(self, index, value); }
-BL_API_IMPL BLResult bl_array_replace_u16(BLArrayCore* self, size_t index, uint16_t value) noexcept { return bl::ArrayInternal::replace_value_t<uint16_t>(self, index, value); }
-BL_API_IMPL BLResult bl_array_replace_u32(BLArrayCore* self, size_t index, uint32_t value) noexcept { return bl::ArrayInternal::replace_value_t<uint32_t>(self, index, value); }
-BL_API_IMPL BLResult bl_array_replace_u64(BLArrayCore* self, size_t index, uint64_t value) noexcept { return bl::ArrayInternal::replace_value_t<uint64_t>(self, index, value); }
-BL_API_IMPL BLResult bl_array_replace_f32(BLArrayCore* self, size_t index, float value) noexcept { return bl::ArrayInternal::replace_value_t<float>(self, index, value); }
-BL_API_IMPL BLResult bl_array_replace_f64(BLArrayCore* self, size_t index, double value) noexcept { return bl::ArrayInternal::replace_value_t<double>(self, index, value); }
-
-BL_API_IMPL BLResult bl_array_replace_item(BLArrayCore* self, size_t index, const void* item) noexcept {
-  using namespace bl::ArrayInternal;
+BL_API_IMPL BLResult bl_array_insert_uninitialized(BLArrayCore* self, size_t index, size_t n, void** data_out) noexcept {
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  UnpackedData u = unpack(self);
-  if (BL_UNLIKELY(index >= u.size))
-    return bl_make_error(BL_ERROR_INVALID_VALUE);
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
+  size_t items_byte_size = n * item_size;
+  size_t insert_byte_index = index * item_size;
 
-  BLObjectType array_type = self->_d.raw_type();
-  size_t item_size = item_size_from_array_type(array_type);
+  ObjectLayer::DataSpan<uint8_t> content;
+  size_t content_byte_size;
 
-  if (!is_instance_mutable(self)) {
-    BLArrayCore newO;
-    BLObjectImplSize impl_size = impl_size_from_capacity(u.size, item_size);
-    BL_PROPAGATE(init_dynamic(&newO, array_type, u.size, impl_size));
+  if (self->_d.is_sso()) {
+    content = ObjectLayer::object_sso_span<uint8_t>(self);
+    content_byte_size = content.size * item_size;
 
-    uint8_t* dst = get_impl(&newO)->data_as<uint8_t>();
-    const uint8_t* src = u.data;
+    size_t sso_capacity = array_sso_capacity_from_array_type(array_type);
+    if (n <= sso_capacity - content.size) {
+      uint8_t* insert_ptr = content.data + insert_byte_index;
+      ObjectLayer::set_sso_size(self, content.size + n);
 
-    init_content_by_type(dst, src, index * item_size, array_type);
-    dst += index * item_size;
-    src += index * item_size;
-
-    init_content_by_type(dst, item, item_size, array_type);
-    dst += item_size;
-    src += item_size;
-
-    init_content_by_type(dst, src, (u.size - index - 1) * item_size, array_type);
-    return replace_instance(self, &newO);
+      *data_out = insert_ptr;
+      memmove(insert_ptr + items_byte_size, insert_ptr, content_byte_size - insert_byte_index);
+      return BL_SUCCESS;
+    }
   }
   else {
-    assign_content_by_type(u.data + index * item_size, item, item_size, array_type);
+    content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    content_byte_size = content.size * item_size;
+
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, n, content.size)) {
+      uint8_t* insert_ptr = content.data + insert_byte_index;
+      ObjectLayer::set_dyn_size(self, content.size + n);
+
+      *data_out = insert_ptr;
+      memmove(insert_ptr + items_byte_size, insert_ptr, content_byte_size - insert_byte_index);
+      return BL_SUCCESS;
+    }
+  }
+
+  size_t max_array_size = array_max_size_from_array_type(array_type);
+  if (BL_UNLIKELY(n > max_array_size - content.size)) {
+    return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+  }
+
+  BLArrayCore tmp;
+  ObjectImplSize impl_size = array_impl_size_from_capacity(content.size + n, item_size);
+
+  impl_size = ObjectLayer::expand_impl_size(impl_size);
+  BL_PROPAGATE(array_init_dynamic_with_data(&tmp, array_type, impl_size, content.size + n, {content.data, insert_byte_index}));
+
+  uint8_t* insert_ptr = ObjectLayer::dyn_data<uint8_t>(&tmp) + insert_byte_index;
+  *data_out = insert_ptr;
+
+  memcpy(insert_ptr + items_byte_size, content.data + insert_byte_index, content_byte_size - insert_byte_index);
+
+  if (is_array_of_objects(array_type)) {
+    if (ObjectLayer::is_object_mutable<ObjectLayer::ObjectMode::kDyn>(self)) {
+      // Adjusting the size of `self` is done to prevent releasing the content when the object itself is released.
+      ObjectLayer::set_dyn_size(self, 0);
+    }
+    else {
+      ObjectLayer::retain_object_array(reinterpret_cast<BLObjectCore*>(content.data), content_byte_size / sizeof(BLObjectCore));
+    }
+  }
+
+  return ObjectLayer::replace_object(self, &tmp);
+}
+
+// Array - API - Replace
+// =====================
+
+BL_API_IMPL BLResult bl_array_replace_u8(BLArrayCore* self, size_t index, uint8_t value) noexcept { return bl::array_replace_value_t<uint8_t>(self, index, value); }
+BL_API_IMPL BLResult bl_array_replace_u16(BLArrayCore* self, size_t index, uint16_t value) noexcept { return bl::array_replace_value_t<uint16_t>(self, index, value); }
+BL_API_IMPL BLResult bl_array_replace_u32(BLArrayCore* self, size_t index, uint32_t value) noexcept { return bl::array_replace_value_t<uint32_t>(self, index, value); }
+BL_API_IMPL BLResult bl_array_replace_u64(BLArrayCore* self, size_t index, uint64_t value) noexcept { return bl::array_replace_value_t<uint64_t>(self, index, value); }
+BL_API_IMPL BLResult bl_array_replace_f32(BLArrayCore* self, size_t index, float value) noexcept { return bl::array_replace_value_t<float>(self, index, value); }
+BL_API_IMPL BLResult bl_array_replace_f64(BLArrayCore* self, size_t index, double value) noexcept { return bl::array_replace_value_t<double>(self, index, value); }
+
+BL_API_IMPL BLResult bl_array_replace_item(BLArrayCore* self, size_t index, const void* item) noexcept {
+  using namespace bl;
+  BL_ASSERT(self->_d.is_array());
+
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
+  size_t byte_index = index * item_size;
+
+  ObjectLayer::DataSpan<uint8_t> content;
+  if (self->_d.is_sso()) {
+    content = ObjectLayer::object_sso_span<uint8_t>(self);
+    if (index >= content.size) {
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
+    }
+
+    memcpy(content.data + byte_index, item, item_size);
     return BL_SUCCESS;
+  }
+  else {
+    content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    if (index >= content.size) {
+      return bl_make_error(BL_ERROR_INVALID_VALUE);
+    }
+
+    if (ObjectLayer::is_object_mutable<ObjectLayer::ObjectMode::kDyn>(self)) {
+      if (is_array_of_objects(array_type)) {
+        ObjectLayer::assign_object_array(reinterpret_cast<BLObjectCore*>(content.data + byte_index),
+                                         reinterpret_cast<const BLObjectCore*>(item),
+                                         item_size / sizeof(BLObjectCore));
+      }
+      else {
+        memcpy(content.data + byte_index, item, item_size);
+      }
+
+      return BL_SUCCESS;
+    }
+    else {
+      BLArrayCore tmp;
+      ObjectImplSize impl_size = array_impl_size_from_capacity(content.size, item_size);
+
+      impl_size = ObjectLayer::expand_impl_size(impl_size);
+      BL_PROPAGATE(array_init_dynamic_with_data(&tmp, array_type, impl_size, content.size, {content.data, content.size * item_size}));
+
+      if (is_array_of_objects(array_type)) {
+        BLObjectCore* dst_ptr = ObjectLayer::dyn_data<BLObjectCore>(&tmp);
+        const BLObjectCore* src_ptr = reinterpret_cast<const BLObjectCore*>(item);
+
+        ObjectLayer::retain_object_array(dst_ptr, byte_index / sizeof(BLObjectCore));
+        ObjectLayer::copy_object_array(axl::offset_ptr(dst_ptr, byte_index), src_ptr, item_size / sizeof(BLObjectCore));
+        ObjectLayer::retain_object_array(axl::offset_ptr(dst_ptr, byte_index + item_size), content.size - index - 1u);
+      }
+      else {
+        uint8_t* dst_ptr = ObjectLayer::dyn_data<uint8_t>(&tmp);
+        memcpy(dst_ptr + byte_index, item, item_size);
+      }
+
+      return ObjectLayer::replace_object<ObjectLayer::ObjectMode::kDyn>(self, &tmp);
+    }
   }
 }
 
 BL_API_IMPL BLResult bl_array_replace_data(BLArrayCore* self, size_t r_start, size_t r_end, const void* items, size_t n) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
   BL_ASSERT(self->_d.is_array());
 
-  UnpackedData u = unpack(self);
-  size_t end = bl_min(r_end, u.size);
-  size_t index = bl_min(r_start, end);
-  size_t range_size = end - index;
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
 
-  if (!range_size)
-    return bl_array_insert_data(self, index, items, n);
+  size_t range_size;
 
-  BLObjectType array_type = self->_d.raw_type();
-  size_t item_size = item_size_from_array_type(array_type);
+  uint8_t* array_data;
+  size_t array_size;
+  size_t array_size_without_range;
 
-  size_t tail_size = u.size - end;
-  size_t size_after = u.size - range_size + n;
+  BLArrayCore tmp;
+  uint8_t* tmp_data;
 
-  if (is_instance_mutable(self)) {
-    // 0           |<-Start   End->|          | <- Size
-    // ^***********^***************^**********^
-    // | Unchanged |  Replacement  | TailSize |
-    //
-    // <  Less     |+++++++| <- MidEnd
-    // == Equal    |+++++++++++++++| <- MidEnd
-    // >  Greater  |++++++++++++++++++++++| <- MidEnd
-    const uint8_t* items_ptr = static_cast<const uint8_t*>(items);
-    const uint8_t* items_end = items_ptr + item_size * n;
+  if (self->_d.is_sso()) {
+    array_data = ObjectLayer::sso_data<uint8_t>(self);
+    array_size = ObjectLayer::sso_size(self);
 
-    if (BL_LIKELY(items_ptr >= u.data + u.size * n || items_end <= u.data)) {
-      // Non-overlaping case (the expected one).
-      if (range_size == n) {
-        assign_content_by_type(u.data + index * item_size, items, n * item_size, array_type);
-      }
-      else {
-        release_content_by_type(u.data + index * item_size, range_size * item_size, array_type);
-        memmove(u.data + (index + range_size) * item_size, u.data + end * item_size, tail_size * item_size);
-        init_content_by_type(u.data + index * item_size, items, n * item_size, array_type);
-        set_size(self, size_after);
-      }
-      return BL_SUCCESS;
+    r_end = axl::min(r_end, array_size);
+    r_start = axl::min(r_start, r_end);
+
+    range_size = r_end - r_start;
+    array_size_without_range = array_size - range_size;
+
+    if (r_start == array_size) {
+      return bl_array_append_data(self, items, n);
     }
-  }
 
-  // Array is either immmutable or its data overlaps with `items`.
-  BLArrayCore newO;
-  uint8_t* dst;
-  BL_PROPAGATE(init_array(&newO, array_type, size_after, size_after, &dst));
+    size_t capacity = array_sso_capacity_from_array_type(array_type);
+    if (n > capacity - array_size_without_range) {
+      // The code that implements SSO->Dynamic and Dynamic->Dynamic is identical.
+      goto MakeDynamic;
+    }
 
-  const uint8_t* src = u.data;
-  init_content_by_type(dst, src, index * item_size, array_type);
+    // In-place replace within SSO boundary.
+    //
+    // ALIASING: Avoided as the data is processed in a temporary buffer.
+    size_t result_size = array_size_without_range + n;
+    ObjectLayer::init_sso_with_size(&tmp, array_type, result_size);
 
-  dst += index * item_size;
-  src += (index + range_size) * item_size;
-
-  init_content_by_type(dst, items, n * item_size, array_type);
-  dst += n * item_size;
-
-  init_content_by_type(dst, src, tail_size * item_size, array_type);
-  return replace_instance(self, &newO);
-}
-
-// bl::Array - API - Data Manipulation - Remove
-// ============================================
-
-BL_API_IMPL BLResult bl_array_remove_index(BLArrayCore* self, size_t index) noexcept {
-  using namespace bl::ArrayInternal;
-  BL_ASSERT(self->_d.is_array());
-
-  return bl_array_remove_range(self, index, index + 1);
-}
-
-BL_API_IMPL BLResult bl_array_remove_range(BLArrayCore* self, size_t r_start, size_t r_end) noexcept {
-  using namespace bl::ArrayInternal;
-  BL_ASSERT(self->_d.is_array());
-
-  UnpackedData u = unpack(self);
-  size_t end = bl_min(r_end, u.size);
-  size_t index = bl_min(r_start, end);
-
-  size_t n = end - index;
-  size_t size_after = u.size - n;
-
-  if (!n)
-    return BL_SUCCESS;
-
-  BLObjectType array_type = self->_d.raw_type();
-  size_t item_size = item_size_from_array_type(array_type);
-
-  if (self->_d.sso()) {
-    size_t sso_capacity = self->_d.b_field();
-
-    bl::MemOps::copy_small(u.data + index * item_size, u.data + (index + n) * item_size, (u.size - end) * item_size);
-    bl::MemOps::fill_small_t(u.data + size_after * item_size, uint8_t(0), (sso_capacity - size_after) * item_size);
-
-    self->_d.info.set_a_field(uint32_t(size_after));
-    return BL_SUCCESS;
-  }
-
-  BLArrayImpl* self_impl = get_impl(self);
-  if (!is_impl_mutable(self_impl)) {
-    BLArrayCore newO;
-    uint8_t* dst;
-    BL_PROPAGATE(init_array(&newO, array_type, size_after, size_after, &dst));
-
-    init_content_by_type(dst, u.data, index * item_size, array_type);
-    init_content_by_type(dst + index * item_size, u.data + end * item_size, (u.size - end) * item_size, array_type);
-
-    return replace_instance(self, &newO);
+    tmp_data = ObjectLayer::sso_data<uint8_t>(&tmp);
   }
   else {
-    uint8_t* data = get_data<uint8_t>(self) + index * item_size;
+    array_data = ObjectLayer::dyn_data<uint8_t>(self);
+    array_size = ObjectLayer::dyn_size(self);
 
-    release_content_by_type(data, n * item_size, array_type);
-    memmove(data, data + n * item_size, (u.size - end) * item_size);
+    r_end = axl::min(r_end, array_size);
+    r_start = axl::min(r_start, r_end);
 
-    self_impl->size = size_after;
+    range_size = r_end - r_start;
+    array_size_without_range = array_size - range_size;
+
+    if (r_start == array_size) {
+      return bl_array_append_data(self, items, n);
+    }
+
+    if (ObjectLayer::check_dynamic_capacity_and_mutability(self, n, array_size - range_size)) {
+      // In-place mutation.
+      //
+      // ALIASING: We have to account for `items` aliasing `array_data` - even the data replaced.
+      if (is_array_of_objects(array_type)) {
+        // Retain first
+        ObjectLayer::retain_object_array(
+          static_cast<const BLObjectCore*>(items), (n * item_size) / sizeof(BLObjectCore));
+
+        ObjectLayer::release_object_array(
+          reinterpret_cast<BLObjectCore*>(array_data + r_start * item_size), (range_size * item_size) / sizeof(BLObjectCore));
+      }
+
+      size_t result_size = array_size_without_range + n;
+      ObjectLayer::set_dyn_size(self, result_size);
+
+      return array_replace_possibly_aliased_data_inplace(
+        array_data + r_start * item_size, (array_size - r_start) * item_size,
+        static_cast<const uint8_t*>(items), n * item_size, range_size * item_size);
+    }
+
+MakeDynamic:
+    size_t max_size = array_max_size_from_array_type(array_type);
+    size_t result_size = array_size_without_range + n;
+
+    if (BL_UNLIKELY(n > max_size - array_size_without_range)) {
+      return bl_make_error(BL_ERROR_OUT_OF_MEMORY);
+    }
+
+    ObjectImplSize impl_size = ObjectLayer::expand_impl_size(array_impl_size_from_capacity(result_size, item_size));
+    BL_PROPAGATE(array_init_dynamic(&tmp, array_type, impl_size, result_size, array_capacity_from_impl_size(impl_size, item_size)));
+
+    tmp_data = ObjectLayer::dyn_data<uint8_t>(&tmp);
+  }
+
+  // Replacement to a new undelying array for any combination [SSO->SSO, SSO->Dynamic, Dynamic->SSO, Dynamic->Dynamic].
+  memcpy(tmp_data, array_data, r_start * item_size);
+  tmp_data += r_start * item_size;
+
+  memcpy(tmp_data, items, n * item_size);
+  tmp_data += n * item_size;
+
+  memcpy(tmp_data, array_data + r_end * item_size, (array_size - r_end) * item_size);
+
+  if (is_array_of_objects(array_type)) {
+    // Never SSO -> Use dyn_data() to avoid SSO vs DYN checks.
+    ObjectLayer::retain_object_array(ObjectLayer::dyn_data<BLObjectCore>(&tmp), array_size_without_range + n);
+  }
+
+  return ObjectLayer::replace_object(self, &tmp);
+}
+
+// Array - API - Remove
+// ====================
+
+BL_API_IMPL BLResult bl_array_remove_index(BLArrayCore* self, size_t index) noexcept {
+  using namespace bl;
+  BL_ASSERT(self->_d.is_array());
+
+  return bl_array_remove_range(self, index, index + 1u);
+}
+
+BL_API_IMPL BLResult bl_array_remove_range(BLArrayCore* self, size_t start, size_t end) noexcept {
+  using namespace bl;
+  BL_ASSERT(self->_d.is_array());
+
+  BLObjectType array_type = self->_d.type();
+  size_t item_size = array_item_size_from_array_type(array_type);
+
+  if (self->_d.is_sso()) {
+    ObjectLayer::DataSpan<uint8_t> content = ObjectLayer::object_sso_span<uint8_t>(self);
+    end = axl::min(end, content.size);
+    start = axl::min(start, end);
+
+    size_t n = end - start;
+    if (!n) {
+      return BL_SUCCESS;
+    }
+
+    end *= item_size;
+    start *= item_size;
+
+    size_t result_size = content.size - n;
+    size_t content_byte_size = content.size * item_size;
+
+    n *= item_size;
+
+    ObjectLayer::set_sso_size(self, result_size);
+    axl::copy_forward(content.data + start, content.data + end, content_byte_size - end);
+    axl::fill_bytes_small(content.data + result_size * item_size, n, uint8_t(0));
     return BL_SUCCESS;
+  }
+  else {
+    ObjectLayer::DataSpan<uint8_t> content = ObjectLayer::object_dyn_span<uint8_t>(self);
+    end = axl::min(end, content.size);
+    start = axl::min(start, end);
+
+    size_t n = end - start;
+    if (!n) {
+      return BL_SUCCESS;
+    }
+
+    end *= item_size;
+    start *= item_size;
+
+    size_t result_size = content.size - n;
+    size_t content_byte_size = content.size * item_size;
+
+    n *= item_size;
+
+    if (ObjectLayer::is_object_mutable<ObjectLayer::ObjectMode::kDyn>(self)) {
+      if (is_array_of_objects(array_type)) {
+        ObjectLayer::release_object_array(axl::offset_ptr<BLObjectCore>(content.data, start), n / sizeof(BLObjectCore));
+      }
+
+      ObjectLayer::set_dyn_size(self, result_size);
+      memmove(content.data + start, content.data + end, content_byte_size - end);
+      return BL_SUCCESS;
+    }
+
+    BLArrayCore tmp;
+    uint8_t* dst_ptr;
+
+    size_t sso_capacity = array_sso_capacity_from_array_type(array_type);
+    if (result_size <= sso_capacity) {
+      ObjectLayer::init_sso_with_data(&tmp, array_type, result_size, content.data, start);
+      dst_ptr = ObjectLayer::sso_data<uint8_t>(&tmp);
+    }
+    else {
+      ObjectImplSize impl_size = array_impl_size_from_capacity(result_size, item_size);
+      BL_PROPAGATE(array_init_dynamic_with_data(&tmp, array_type, impl_size, result_size, {content.data, start}));
+      dst_ptr = ObjectLayer::dyn_data<uint8_t>(&tmp);
+    }
+
+    memcpy(dst_ptr + start, content.data + end, content_byte_size - end);
+
+    if (is_array_of_objects(array_type)) {
+      ObjectLayer::retain_object_array(reinterpret_cast<BLObjectCore*>(dst_ptr), (result_size * item_size) / sizeof(BLObjectCore));
+    }
+
+    return ObjectLayer::replace_object<ObjectLayer::ObjectMode::kDyn>(self, &tmp);
   }
 }
 
-// bl::Array - API - Equality & Comparison
-// =======================================
+// Array - API - Equality & Comparison
+// ===================================
 
 BL_API_IMPL bool bl_array_equals(const BLArrayCore* a, const BLArrayCore* b) noexcept {
-  using namespace bl::ArrayInternal;
+  using namespace bl;
 
   BL_ASSERT(a->_d.is_array());
   BL_ASSERT(b->_d.is_array());
@@ -1302,33 +1620,35 @@ BL_API_IMPL bool bl_array_equals(const BLArrayCore* a, const BLArrayCore* b) noe
   if (a->_d == b->_d)
     return true;
 
-  // NOTE: This should never happen. Mixing array types is not supported.
-  BLObjectType array_type = a->_d.raw_type();
-  BL_ASSERT(array_type == b->_d.raw_type());
+  BLObjectType a_array_type = a->_d.type();
+  BLObjectType b_array_type = b->_d.type();
 
-  // However, if it happens, we want the comparison to return false in release builds.
-  if (array_type != b->_d.raw_type())
+  size_t a_size = ObjectLayer::get_size(a);
+  size_t b_size = ObjectLayer::get_size(b);
+
+  if (axl::bool_or(a_array_type != b_array_type, a_size != b_size)) {
     return false;
+  }
 
-  UnpackedData au = unpack(a);
-  UnpackedData bu = unpack(b);
+  const void* a_data = ObjectLayer::get_data<void>(a);
+  const void* b_data = ObjectLayer::get_data<void>(b);
 
-  if (au.size != bu.size)
-    return false;
-
-  size_t item_size = item_size_from_array_type(array_type);
-  return equals_content(au.data, bu.data, au.size * item_size, array_type);
+  size_t item_size = array_item_size_from_array_type(a_array_type);
+  return array_equals_content(a_data, b_data, a_size * item_size, a_array_type);
 }
 
-// bl::Array - Runtime Registration
-// ================================
+// Array - Runtime Registration
+// ============================
 
-void bl_array_rt_init(BLRuntimeContext* rt) noexcept {
-  bl_unused(rt);
+void bl_array_rt_init([[maybe_unused]] BLRuntimeContext* rt) noexcept {
+  using namespace bl;
 
-  for (uint32_t object_type = BL_OBJECT_TYPE_MIN_ARRAY; object_type <= BL_OBJECT_TYPE_MAX_ARRAY; object_type++) {
-    bl_object_defaults[object_type]._d.init_static(
-      BLObjectInfo::from_type_with_marker(BLObjectType(object_type)) |
-      BLObjectInfo::from_abcp(0, bl::ArrayInternal::sso_capacity_table[object_type]));
+  for (uint32_t object_type = BL_OBJECT_TYPE_MIN_ARRAY; object_type < BL_OBJECT_TYPE_ARRAY_STRUCT_32; object_type++) {
+    ObjectLayer::init_sso(&bl_object_defaults[object_type], static_cast<BLObjectType>(object_type));
+  }
+
+  auto* null_impl = const_cast<BLArrayImpl*>(&null_array.impl);
+  for (uint32_t object_type = BL_OBJECT_TYPE_ARRAY_STRUCT_32; object_type <= BL_OBJECT_TYPE_MAX_ARRAY; object_type++) {
+    ObjectLayer::init_dyn(&bl_object_defaults[object_type], static_cast<BLObjectType>(object_type), BLObjectDetail::kMetaFlagD, null_impl, null_impl);
   }
 }

@@ -3,8 +3,8 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_RANDOM_P_H_INCLUDED
-#define BLEND2D_RANDOM_P_H_INCLUDED
+#ifndef BLEND2D_CORE_RANDOM_P_H_INCLUDED
+#define BLEND2D_CORE_RANDOM_P_H_INCLUDED
 
 #include <blend2d/core/random.h>
 #include <blend2d/simd/simd_p.h>
@@ -13,8 +13,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace bl {
-namespace RandomInternal {
+namespace bl::RandomDetail {
 
 //! \name Constants
 //! \{
@@ -71,7 +70,7 @@ static BL_INLINE uint32_t next_uint32(BLRandom* self) noexcept {
 //! High-performance SIMD implementation. Better utilizes CPU in 32-bit mode and it's a better candidate for
 //! `bl_random_next_double()` in general on X86 as it returns a SIMD register, which is easier to convert to `double`
 //! than GP.
-static BL_INLINE SIMD::Vec2xU64 next_uint64AsI128(BLRandom* self) noexcept {
+static BL_INLINE SIMD::Vec2xU64 next_uint64_as_v128(BLRandom* self) noexcept {
   using namespace SIMD;
 
   Vec2xU64 x = loada_64<Vec2xU64>(&self->data[0]);
@@ -92,7 +91,7 @@ static BL_INLINE double next_double(BLRandom* self) noexcept {
   using namespace SIMD;
 
   Vec2xU64 kExpMsk = make128_u64(0x3FF0000000000000u);
-  Vec2xU64 u = (next_uint64AsI128(self) >> Shift<kMantissaShift>{}) | kExpMsk;
+  Vec2xU64 u = (next_uint64_as_v128(self) >> Shift<kMantissaShift>{}) | kExpMsk;
   return cast_to_f64(u) - 1.0;
 }
 
@@ -101,17 +100,16 @@ static BL_INLINE double next_double(BLRandom* self) noexcept {
 static BL_INLINE double next_double(BLRandom* self) noexcept {
   uint64_t kExpMsk = 0x3FF0000000000000u;
   uint64_t u = (next_uint64(self) >> kMantissaShift) | kExpMsk;
-  return bl_bit_cast<double>(u) - 1.0;
+  return std::bit_cast<double>(u) - 1.0;
 }
 
 #endif
 
 //! \}
 
-} // {RandomInternal}
-} // {bl}
+} // {bl::RandomDetail}
 
 //! \}
 //! \endcond
 
-#endif // BLEND2D_RANDOM_P_H_INCLUDED
+#endif // BLEND2D_CORE_RANDOM_P_H_INCLUDED

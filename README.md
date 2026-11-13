@@ -16,14 +16,13 @@ Project Organization
   * **`/`**                - Project root, contains this README.md, other markdown files, CMakeLists.txt, and scripts for developers
     * **src**              - Source code (always point include path in here)
       * **blend2d**        - Blend2D source code and headers, all core classes and public headers are here
+        * **axl**          - Support classes and utilities (arena allocator & containers, bit operations, string operations, ...)
         * **codec**        - Image codecs and codec utilities (BMP, JPEG, PNG, and QOI)
         * **compression**  - Implementation of compression and decompression algorithms (DEFLATE)
         * **opentype**     - TrueType and OpenType font support
         * **pipeline**     - 2D rendering pipeline definitions and implementations (reference and JIT)
         * **pixelops**     - Pixel operations helpers
         * **raster**       - 2D rendering context implementation
-        * **simd**         - SIMD abstraction library Blend2D uses
-        * **support**      - Support classes and utilities (arena allocator & containers, bit operations, string operations, ...)
         * **simd**         - SIMD abstraction library Blend2D uses
         * **tables**       - Lookup tables and SIMD constants
         * **threading**    - Multithreading abstraction (POSIX threads or Windows threads)
@@ -34,7 +33,7 @@ Project Organization
 Roadmap
 -------
 
-  * See [Roadmap](https://asmjit.com/roadmap.html) page for more details
+  * See [Roadmap](https://blend2d.com/roadmap.html) page for more details
 
 Documentation
 -------------
@@ -83,6 +82,31 @@ $ cmake --build blend2d/build/Release --config Release
 Please note that to build interactive demos and benchmarking backends, you need to have Qt installed, in addition to all rendering libraries you would like to benchmark.
 
 For more information, visit [https://blend2d.com/doc/build-instructions.html](Build Instructions)
+
+### Cross-compiling for Windows on Linux
+
+The `debug-mingw-x64` and `release-mingw-x64` presets build Blend2D tests and samples for 64-bit Windows using MinGW. On Debian/Ubuntu, install the cross-compiler and Wine:
+
+```bash
+sudo apt-get install g++-mingw-w64-x86-64-posix wine wine64
+```
+
+And then run these commands from the Blend2D directory:
+
+```bash
+cmake --preset release-mingw-x64
+cmake --build --preset release-mingw-x64 --parallel
+```
+
+Replace `debug-mingw-x64` with `release-mingw-x64` for an optimized build.
+
+The presets build a static Blend2D library and link executable runtime dependencies statically, so tests and samples do not need MinGW runtime DLLs alongside them. This build won't enable Qt demos or any other tests/benchmarks that would need third party libraries installed.
+
+To run a sample or a selected unit test directly:
+
+```bash
+wine build/debug-mingw-x64/bl_test_runner.exe
+```
 
 Bindings
 --------

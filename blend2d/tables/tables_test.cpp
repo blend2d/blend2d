@@ -3,18 +3,17 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_test_p.h>
+#include <blend2d/core/api_build_test_p.h>
 #if defined(BL_TEST)
 
-#include <blend2d/support/intops_p.h>
-#include <blend2d/support/math_p.h>
+#include <blend2d/axl/commons.h>
+#include <blend2d/axl/math_p.h>
 #include <blend2d/tables/tables_p.h>
 
 // bl::CommonTable - Tests
 // =======================
 
-namespace bl {
-namespace Tests {
+namespace bl::Tests {
 
 static BL_INLINE uint32_t unpremultiply_as_float_op(uint32_t c, uint32_t a) noexcept {
   float cf = float(c);
@@ -23,14 +22,14 @@ static BL_INLINE uint32_t unpremultiply_as_float_op(uint32_t c, uint32_t a) noex
   return uint32_t(Math::round_to_int((cf / af) * 255.0f));
 }
 
-UNIT(tables, BL_TEST_GROUP_CORE_UTILITIES) {
+TEST_CASE(tables) {
 #if BL_TARGET_ARCH_X86
   // Make sure that the 256-bit constants are properly aligned.
-  INFO("Testing 'bl::common_table' alignment (X86 specific)");
-  EXPECT_TRUE(IntOps::is_aligned(&common_table, 64));
+  TEST_LOG("Testing 'bl::common_table' alignment (X86 specific)");
+  EXPECT_TRUE(axl::is_aligned(&common_table, 64));
 #endif
 
-  INFO("Testing 'bl::common_table.unpremultiply_rcp' correctness");
+  TEST_LOG("Testing 'bl::common_table.unpremultiply_rcp' correctness");
   {
     for (uint32_t a = 0; a < 256; a++) {
       for (uint32_t c = 0; c <= a; c++) {
@@ -43,7 +42,7 @@ UNIT(tables, BL_TEST_GROUP_CORE_UTILITIES) {
   }
 
 #if BL_TARGET_ARCH_X86
-  INFO("Testing 'bl::common_table.unpremultiply_pmaddwd[Rcp|Rnd]' correctness (X86 specific)");
+  TEST_LOG("Testing 'bl::common_table.unpremultiply_pmaddwd[Rcp|Rnd]' correctness (X86 specific)");
   {
     for (uint32_t a = 0; a < 256; a++) {
       for (uint32_t c = 0; c <= a; c++) {
@@ -64,7 +63,6 @@ UNIT(tables, BL_TEST_GROUP_CORE_UTILITIES) {
 #endif
 }
 
-} // {Tests}
-} // {bl}
+} // {bl::Tests}
 
 #endif // BL_TEST

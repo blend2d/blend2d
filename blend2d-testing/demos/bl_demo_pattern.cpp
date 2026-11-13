@@ -39,7 +39,7 @@ public:
     _bilinear_check_box.setText(QLatin1String("Bilinear"));
     _fill_path_check_box.setText(QLatin1String("Fill Path"));
 
-    static const char* extendModeNames[] = {
+    static const char* extend_mode_names[] = {
       "PAD",
       "REPEAT",
       "REFLECT",
@@ -54,7 +54,7 @@ public:
       "REFLECT-X REFLECT-Y"
     };
 
-    static const BLExtendMode extendModeValues[] = {
+    static const BLExtendMode extend_mode_values[] = {
       BL_EXTEND_MODE_PAD,
       BL_EXTEND_MODE_REPEAT,
       BL_EXTEND_MODE_REFLECT,
@@ -70,8 +70,8 @@ public:
     };
 
     for (uint32_t i = 0; i < 12; i++) {
-      QString s = extendModeNames[i];
-      _extend_mode_select.addItem(s, QVariant(int(extendModeValues[i])));
+      QString s = extend_mode_names[i];
+      _extend_mode_select.addItem(s, QVariant(int(extend_mode_values[i])));
     }
     _extend_mode_select.setCurrentIndex(1);
 
@@ -95,15 +95,15 @@ public:
     _scale.setValue(0);
     _scale.setOrientation(Qt::Horizontal);
 
-    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(onRendererChanged(int)));
-    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(onLimitFpsChanged(int)));
-    connect(&_bilinear_check_box, SIGNAL(valueChanged(int)), SLOT(onSliderChanged(int)));
-    connect(&_fill_path_check_box, SIGNAL(valueChanged(int)), SLOT(onSliderChanged(int)));
-    connect(&_extend_mode_select, SIGNAL(activated(int)), SLOT(onSliderChanged(int)));
-    connect(&_frac_x, SIGNAL(valueChanged(int)), SLOT(onSliderChanged(int)));
-    connect(&_frac_y, SIGNAL(valueChanged(int)), SLOT(onSliderChanged(int)));
-    connect(&_angle, SIGNAL(valueChanged(int)), SLOT(onSliderChanged(int)));
-    connect(&_scale, SIGNAL(valueChanged(int)), SLOT(onSliderChanged(int)));
+    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(on_renderer_changed(int)));
+    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(on_limit_fps_changed(int)));
+    connect(&_bilinear_check_box, SIGNAL(valueChanged(int)), SLOT(on_slider_changed(int)));
+    connect(&_fill_path_check_box, SIGNAL(valueChanged(int)), SLOT(on_slider_changed(int)));
+    connect(&_extend_mode_select, SIGNAL(activated(int)), SLOT(on_slider_changed(int)));
+    connect(&_frac_x, SIGNAL(valueChanged(int)), SLOT(on_slider_changed(int)));
+    connect(&_frac_y, SIGNAL(valueChanged(int)), SLOT(on_slider_changed(int)));
+    connect(&_angle, SIGNAL(valueChanged(int)), SLOT(on_slider_changed(int)));
+    connect(&_scale, SIGNAL(valueChanged(int)), SLOT(on_slider_changed(int)));
 
     grid->addWidget(new QLabel("Renderer:"), 0, 0);
     grid->addWidget(&_renderer_select, 0, 1);
@@ -139,15 +139,15 @@ public:
     vBox->addWidget(&_canvas);
     setLayout(vBox);
 
-    connect(&_timer, SIGNAL(timeout()), this, SLOT(onTimer()));
-    onInit();
+    connect(&_timer, SIGNAL(timeout()), this, SLOT(on_timer()));
+    init_data();
   }
 
   void showEvent(QShowEvent* event) override { _timer.start(); }
   void hideEvent(QHideEvent* event) override { _timer.stop(); }
   void keyPressEvent(QKeyEvent* event) override {}
 
-  void onInit() {
+  void init_data() {
     _limit_fps_check.setChecked(true);
     _bilinear_check_box.setChecked(true);
 
@@ -169,17 +169,16 @@ public:
         int(sprite_data.stride), QImage::Format_ARGB32_Premultiplied);
     }
 
-    _updateTitle();
+    _update_window_title();
   }
 
-  Q_SLOT void onRendererChanged(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt()); }
-  Q_SLOT void onLimitFpsChanged(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
+  Q_SLOT void on_renderer_changed(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt()); }
+  Q_SLOT void on_limit_fps_changed(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
+  Q_SLOT void on_slider_changed(int value) { _canvas.update_canvas(true); }
 
-  Q_SLOT void onSliderChanged(int value) { _canvas.update_canvas(true); }
-
-  Q_SLOT void onTimer() {
+  Q_SLOT void on_timer() {
     _canvas.update_canvas(true);
-    _updateTitle();
+    _update_window_title();
   }
 
   inline double tx() const { return 256.0 + double(_frac_x.value()) / 256.0; }
@@ -241,10 +240,10 @@ public:
     }
   }
 
-  void _updateTitle() {
+  void _update_window_title() {
     char buf[256];
 
-    snprintf(buf, 256, "Patterns [%dx%d] [RenderTime=%.2fms FPS=%.1f]",
+    snprintf(buf, 256, "bl_demo_pattern [%dx%d] [RenderTime=%.2fms FPS=%.1f]",
       _canvas.image_width(),
       _canvas.image_height(),
       _canvas.average_render_time(),

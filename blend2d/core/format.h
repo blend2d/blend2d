@@ -3,8 +3,8 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_FORMAT_H_INCLUDED
-#define BLEND2D_FORMAT_H_INCLUDED
+#ifndef BLEND2D_CORE_FORMAT_H_INCLUDED
+#define BLEND2D_CORE_FORMAT_H_INCLUDED
 
 #include <blend2d/core/api.h>
 
@@ -83,14 +83,22 @@ BL_DEFINE_ENUM(BLFormatFlags) {
   //!
   //! \note This is not a real flag that you can test, it's only provided for convenience to define little endian
   //! pixel formats.
-  BL_FORMAT_FLAG_LE = (BL_BYTE_ORDER == 1234) ? (uint32_t)0 : (uint32_t)BL_FORMAT_FLAG_BYTE_SWAP,
+#if !defined(BL_TARGET_BIG_ENDIAN)
+  BL_FORMAT_FLAG_LE = 0,
+#else
+  BL_FORMAT_FLAG_LE = BL_FORMAT_FLAG_BYTE_SWAP,
+#endif
 
   //! Convenience flag that contains either zero or `BL_FORMAT_FLAG_BYTE_SWAP` depending on host byte order. Big
   //! endian hosts have this flag set to zero and little endian hosts to `BL_FORMAT_FLAG_BYTE_SWAP`.
   //!
   //! \note This is not a real flag that you can test, it's only provided for convenience to define big endian
   //! pixel formats.
-  BL_FORMAT_FLAG_BE = (BL_BYTE_ORDER == 4321) ? (uint32_t)0 : (uint32_t)BL_FORMAT_FLAG_BYTE_SWAP
+#if !defined(BL_TARGET_BIG_ENDIAN)
+  BL_FORMAT_FLAG_BE = BL_FORMAT_FLAG_BYTE_SWAP
+#else
+  BL_FORMAT_FLAG_BE = 0
+#endif
 
   BL_FORCE_ENUM_UINT32(BL_FORMAT_FLAG)
 };
@@ -104,12 +112,12 @@ BL_DEFINE_ENUM(BLFormatFlags) {
 //! \name BLFormat - C API
 //! \{
 
-BL_BEGIN_C_DECLS
+BL_EXTERN_C_BEGIN
 
 BL_API BLResult BL_CDECL bl_format_info_query(BLFormatInfo* self, BLFormat format) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_format_info_sanitize(BLFormatInfo* self) BL_NOEXCEPT_C;
 
-BL_END_C_DECLS
+BL_EXTERN_C_END
 
 //! \}
 //! \}
@@ -204,14 +212,14 @@ struct BLFormatInfo {
 //! \name BLFormat - Globals
 //! \{
 
-BL_BEGIN_C_DECLS
+BL_EXTERN_C_BEGIN
 
 //! Pixel format information of Blend2D native pixel formats, see \ref BLFormat.
 extern BL_API const BLFormatInfo bl_format_info[];
 
-BL_END_C_DECLS
+BL_EXTERN_C_END
 
 //! \}
 //! \}
 
-#endif // BLEND2D_FORMAT_H_INCLUDED
+#endif // BLEND2D_CORE_FORMAT_H_INCLUDED

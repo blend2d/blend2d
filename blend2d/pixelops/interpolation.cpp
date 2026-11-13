@@ -3,11 +3,12 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_p.h>
+#include <blend2d/core/api_build_p.h>
+
+#include <blend2d/axl/math_p.h>
 #include <blend2d/core/gradient_p.h>
 #include <blend2d/pixelops/funcs_p.h>
 #include <blend2d/pixelops/scalar_p.h>
-#include <blend2d/support/math_p.h>
 
 namespace bl {
 namespace PixelOps {
@@ -26,7 +27,7 @@ void BL_CDECL interpolate_prgb32(uint32_t* d_ptr, uint32_t d_size, const BLGradi
   uint32_t* dSpanPtr = d_ptr;
   uint32_t i = d_size;
 
-  uint32_t c0 = RgbaInternal::rgba32FromRgba64(s_ptr[0].rgba.value);
+  uint32_t c0 = RgbaInternal::rgba32_from_rgba64(s_ptr[0].rgba.value);
   uint32_t c1 = c0;
 
   uint32_t p0 = 0;
@@ -42,7 +43,7 @@ void BL_CDECL interpolate_prgb32(uint32_t* d_ptr, uint32_t d_size, const BLGradi
     goto SolidLoop;
 
   do {
-    c1 = RgbaInternal::rgba32FromRgba64(s_ptr[s_index].rgba.value);
+    c1 = RgbaInternal::rgba32_from_rgba64(s_ptr[s_index].rgba.value);
     p1 = uint32_t(Math::round_to_int(s_ptr[s_index].offset * fWidth));
 
     dSpanPtr = d_ptr + (p0 >> 8);
@@ -87,7 +88,7 @@ SolidLoop:
         gPos += 1u << (kShift - 1);
         b_pos += 1u << (kShift - 1);
 
-        if (RgbaInternal::isRgba32FullyOpaque(c0 & c1)) {
+        if (RgbaInternal::is_rgba32_fully_opaque(c0 & c1)) {
           // Both fully opaque, no need to premultiply.
           do {
             r_pos += r_inc;
@@ -229,7 +230,7 @@ SolidLoop:
         gPos += 1u << (kShift - 1);
         b_pos += 1u << (kShift - 1);
 
-        if (RgbaInternal::isRgba64FullyOpaque(c0 & c1)) {
+        if (RgbaInternal::is_rgba64_fully_opaque(c0 & c1)) {
           // Both fully opaque, no need to premultiply.
           do {
             r_pos += r_inc;
@@ -263,7 +264,7 @@ SolidLoop:
             uint32_t cg = Scalar::udiv65535((gPos >> kShift) * ca);
             uint32_t cb = Scalar::udiv65535((b_pos >> kShift) * ca);
 
-            cp = RgbaInternal::packRgba64(cr, cg, cb, ca);
+            cp = RgbaInternal::pack_rgba64(cr, cg, cb, ca);
             dSpanPtr[0] = cp;
             dSpanPtr++;
           } while (--i);

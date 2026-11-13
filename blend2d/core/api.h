@@ -3,13 +3,13 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_API_H_INCLUDED
-#define BLEND2D_API_H_INCLUDED
+#ifndef BLEND2D_CORE_API_H_INCLUDED
+#define BLEND2D_CORE_API_H_INCLUDED
 
 // This header can only be included by either <blend2d/blend2d.h> or by internal Blend2D headers. Prevent users
-// including <blend2d/core/...> headers by accident and prevent not including "blend2d/core/api-build_p.h" during
+// including <blend2d/core/...> headers by accident and prevent not including "blend2d/core/api_build_p.h" during
 // Blend2D compilation.
-#if !defined(BLEND2D_H_INCLUDED) && !defined(BLEND2D_API_BUILD_P_H_INCLUDED) && !defined(__INTELLISENSE__)
+#if !defined(BLEND2D_H_INCLUDED) && !defined(BLEND2D_CORE_API_BUILD_P_H_INCLUDED) && !defined(__INTELLISENSE__)
   #pragma message("Include either <blend2d/blend2d.h> or <blen2d/blend2d-impl.h> to use Blend2D library")
 #endif
 
@@ -19,6 +19,8 @@
 #include <string.h>
 
 #ifdef __cplusplus
+  #include <bit>
+  #include <concepts>
   #include <type_traits>
 #else
   #include <stdbool.h>
@@ -67,8 +69,7 @@
 //!
 //! ### Result / Status Code
 //!
-//!   - \ref BLResult - a `uint32_t` typedef that represents a result returned by most C API and C++ API functions
-//!   - \ref BLResultCode - an actual enumeration that describes known values that can be used by \ref BLResult
+//!   - \ref BLResult - represents a result returned by most C and C++ API functions
 //!   - \ref BL_PROPAGATE() - macro that is used to propagate (return) a non-successful result from a function
 //!
 //! ### Types
@@ -84,9 +85,8 @@
 //! ### Constants
 //!
 //!   - \ref BLByteOrder - byte order
-//!   - \ref BLDataAccessFlags - provides a type of data access (read, write, or both)
+//!   - \ref BLDataAccessMode - whether data is read-only or read/write
 //!   - \ref BLDataSourceType - provides a type of a data source (memory, file, etc...)
-//!   - \ref BLModifyOp - modification operation
 //!   - \ref BLBooleanOp - boolean operation
 
 
@@ -103,9 +103,9 @@
 //!
 //! ### Views & Common Types
 //!
-//!   - \ref BLArrayView<T> - read-only view of an array (any array, not just \ref BLArray<T>)
-//!   - \ref BLStringView - read-only view of a string, the view doesn't have to be null terminated
-//!   - \ref BLRange - start/end range, which can be used with sequential containers
+//!   - \ref BLSpan<T> - non-owning view of a contiguous array or string
+//!   - \ref BLStringView - non-owning view of string, essentially an alias of `BLSpan<const char>`
+//!   - \ref BLRange - start/end range, which can be used with contiguous containers
 //!
 //! ### Sequential Containers
 //!
@@ -120,10 +120,8 @@
 //!   - \ref BLBitArray - a dense bit-array (stores bits starting from 0 to size, sequentially)
 //!     - \ref BLBitArrayCore - C API type representing \ref BLBitArray
 //!
-//!   - \ref BLBitSet - a sparse bit array that can represent sparse/dense bits and range of bits (will be deprecated)
-//!     - \ref BLBitSetCore - C API type representing \ref BLBitSet
-//!     - \ref BLBitSetSegment - segment used by \ref BLBitSet
-//!     - \ref BLBitSetData - data view used by \ref BLBitSet
+//!   - \ref BLCoverageSet - a sparse/dense bit-set designed to hold unicode characters and glyph-id coverage
+//!     - \ref BLCoverageSetCore - C API type representing \ref BLCoverageSet
 
 
 //! \defgroup bl_geometry Geometries
@@ -140,11 +138,13 @@
 //!     - \ref BLPathCore - C API type representing \ref BLPath
 //!     - \ref BLPathCmd - path command specifies the type of a path segment withing \ref BLPath
 //!     - \ref BLPathFlags - flags associated with \ref BLPath
-//!     - \ref BLPathReverseMode - reverse mode accepted by  \ref BLPath::add_reversed_path()
+//!     - \ref BLPathPosition - describes a position in a \ref BLPath - control and vertex offsets
+//!     - \ref BLPathRegion - describes a region of a \ref BLPath - start position and end position
 //!     - \ref BLPathView - view providing all necessary variables to inspect and iterate a \ref BLPath
 //!
 //! ### Path Operations
 //!
+//!   - \ref BLPathFitFlags - flags to fit path to a rectangle
 //!   - \ref BLStrokeOptions - holds stroking options
 //!     - \ref BLStrokeOptionsCore - C API type representing \ref BLStrokeOptions
 //!   - \ref BLOffsetMode - path offsetting mode
@@ -375,17 +375,22 @@
 //!
 //! ### File
 //!
-//!   - \ref BLFile - a lightweight non-shareable file API that uses a system file descriptor API where possible.
+//!   - \ref BLFile - cross-platform non-shareable file API that uses a system file descriptor API where possible.
 //!     - \ref BLFileCore - C API type representing \ref BLFile
 //!     - \ref BLFileOpenFlags - flags used by \ref BLFile::open() function
 //!     - \ref BLFileReadFlags - flags used when reading whole files by \ref BLFileSystem::read_file()
 //!     - \ref BLFileSeekType - flags used by \ref BLFile::seek() function
+//!   - \ref BLFileInfo - file information (retrieved either by calling `stat()` or a similar function under Windows)
+//!     - \ref BLFileInfoFlags - flags used by \ref BLFileInfo
 //!
-//! ### Filesystem
+//! ### Directory
+//!
+//!   - \ref BLDirIterator - cross-platform directory iterator
+//!     - \ref BLDirIteratorCore - C API type representing \ref BLDirIterator
+//!
+//! ### Utilities
 //!
 //!   - \ref BLFileSystem - filesystem utilities
-//!     - \ref BLFileInfo - file information (retrieved either by calling `stat()` or a similar function under Windows)
-//!     - \ref BLFileInfoFlags - flags used by \ref BLFileInfo
 
 
 //! \defgroup bl_miscellaneous Miscellaneous
@@ -398,8 +403,9 @@
 //! \defgroup bl_impl Impl API
 //! \brief API required for extending Blend2D functionality.
 //!
-//! Everything that is part of this group requires `<blend2d-impl.h>` to be
-//! included before the use as this API is only for users that extend Blend2D.
+//! Everything that is part of this group requires `<blend2d-impl.h>` to be included before the use as this API. It's
+//! only for users that extend Blend2D library by providing their own implementations of objects that provide virtual
+//! dispatch.
 
 
 //! \defgroup bl_macros Macros
@@ -537,7 +543,7 @@
 #define BL_MAKE_VERSION(MAJOR, MINOR, PATCH) (((MAJOR) << 16) | ((MINOR) << 8) | (PATCH))
 
 //! Blend2D library version.
-#define BL_VERSION BL_MAKE_VERSION(0, 21, 3)
+#define BL_VERSION BL_MAKE_VERSION(0, 22, 0)
 
 //! \}
 //! \}
@@ -580,16 +586,29 @@
 //! \name Target Information
 //! \{
 
-//! \def BL_BYTE_ORDER
+//! \def BL_TARGET_ARCH_BITS
+//!
+//! Target architecture bit-width detected at compile time - either 32 or 64.
+#if defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(_M_X64) || \
+    defined(__wasm64__) || defined(__aarch64__) || defined(__ARM64__) || defined(_M_ARM64) || \
+    defined(_MIPS_ARCH_MIPS64) || defined(__mips64) || \
+    defined(__LP64__) || defined(_LP64)
+  #define BL_TARGET_ARCH_BITS 64
+#elif (defined(__riscv) || defined(__riscv__)) && defined(__riscv_xlen)
+  #define BL_TARGET_ARCH_BITS __riscv_xlen
+#elif defined(__loongarch__) && defined(__loongarch_grlen)
+  #define BL_TARGET_ARCH_BITS __loongarch_grlen
+#else
+  #define BL_TARGET_ARCH_BITS 32
+#endif
+
+//! \def BL_TARGET_BIG_ENDIAN
 //!
 //! A compile-time constant (macro) that defines byte-order of the target. It can be either `1234` for little-endian
 //! targets or `4321` for big-endian targets. Blend2D uses this macro internally, but it's also available to end
 //! users as sometimes it could be important for deciding between pixel formats or other important details.
-#if (defined(__ARMEB__)) || (defined(__MIPSEB__)) || \
-    (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__))
-  #define BL_BYTE_ORDER 4321
-#else
-  #define BL_BYTE_ORDER 1234
+#if (defined(__ARMEB__)) || (defined(__MIPSEB__)) || (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__))
+  #define BL_TARGET_BIG_ENDIAN
 #endif
 
 //! \}
@@ -652,7 +671,7 @@
 //! if the compiler supports any of them.
 //!
 //! The purpose of this macro is to tell the compiler that the function should not need debugging, thus the debug
-//! information can be omitted completely. Blend2D uses tris decorator to decorate C++ inline functions that either
+//! information can be omitted completely. Blend2D uses this decorator to decorate C++ inline functions that either
 //! call C API or that are trivial to improve debugging experience of some tiny abstractions.
 #if defined(__clang__)
   #define BL_INLINE_NODEBUG inline __attribute__((__always_inline__, __nodebug__))
@@ -681,7 +700,7 @@
 //!
 //! Defined to `noexcept` in C++ mode and nothing in C mode. This is used to mark Blend2D C API, which is `noexcept`
 //! by design.
-#if defined(__cplusplus)
+#ifdef __cplusplus
   #define BL_NOEXCEPT_C noexcept
 #else
   #define BL_NOEXCEPT_C
@@ -748,6 +767,20 @@
 
 //! \}
 
+//! \name Lifetime Attributes
+//! \{
+
+//! \def BL_LIFETIME_NOESCAPE
+//!
+//! Marks a pointer that cannot escape a function call.
+#if defined(__clang__)
+  #define BL_LIFETIME_NOESCAPE [[clang::noescape]]
+#else
+  #define BL_LIFETIME_NOESCAPE
+#endif
+
+//! \}
+
 //! \name Debugging and Error Handling
 //! \{
 
@@ -758,11 +791,18 @@
   #define BL_ASSERT(EXP)                                                      \
     do {                                                                      \
       if (BL_UNLIKELY(!(EXP))) {                                              \
-        bl_runtime_assertion_failure(__FILE__, __LINE__, #EXP);                  \
+        bl_runtime_assertion_failure(__FILE__, __LINE__, #EXP);               \
+      }                                                                       \
+    } while (0)
+  #define BL_ASSERT_BOUNDS(EXP)                                               \
+    do {                                                                      \
+      if (BL_UNLIKELY(!(EXP))) {                                              \
+        bl_runtime_assertion_failure(__FILE__, __LINE__, #EXP);               \
       }                                                                       \
     } while (0)
 #else
   #define BL_ASSERT(EXP) ((void)0)
+  #define BL_ASSERT_BOUNDS(EXP) ((void)0)
 #endif
 
 //! Executes the code within the macro, which is expected to provide a \ref BLResult, which is returned in case that it
@@ -771,9 +811,9 @@
 //! errors returned by Blend2D or user code returning \ref BLResult.
 #define BL_PROPAGATE(...)                                                     \
   do {                                                                        \
-    BLResult result_to_propagate = (__VA_ARGS__);                               \
-    if (BL_UNLIKELY(result_to_propagate)) {                                     \
-      return result_to_propagate;                                               \
+    BLResult result_to_propagate = (__VA_ARGS__);                             \
+    if (BL_UNLIKELY(result_to_propagate)) {                                   \
+      return result_to_propagate;                                             \
     }                                                                         \
   } while (0)
 
@@ -820,54 +860,35 @@
 //! \name Internals
 //! \{
 
-//! \def BL_BEGIN_C_DECLS
+//! \def BL_EXTERN_C_BEGIN
 //! Begins C declarations scope when compiling with a C++ compiler.
 
-//! \def BL_END_C_DECLS
+//! \def BL_EXTERN_C_END
 //! Ends C declarations scope when compiling with a C++ compiler.
 
 //! \}
 //! \endcond
 
 #ifdef __cplusplus
-  #define BL_BEGIN_C_DECLS extern "C" {
-  #define BL_END_C_DECLS } /* {ExternC} */
+  #define BL_EXTERN_C_BEGIN extern "C" {
+  #define BL_EXTERN_C_END } /* {ExternC} */
 #else
-  #define BL_BEGIN_C_DECLS
-  #define BL_END_C_DECLS
+  #define BL_EXTERN_C_BEGIN
+  #define BL_EXTERN_C_END
 #endif
 
 //! \cond INTERNAL
-//! \name Compiler Diagnostics
+//! \name Compiler Support
 //! \{
 
-// Diagnostic warnings can be turned on/off by using pragmas, however, this is a compiler specific stuff we have to
-// maintain for each compiler. Ideally we should have a clean code that would compiler without any warnings with all
-// of them enabled by default, but since there is a lot of nitpicks we just disable some locally when needed (like
-// unused parameter in null-impl functions, etc).
-#if defined(__clang__)
-  #define BL_DIAGNOSTIC_PUSH(...)              _Pragma("clang diagnostic push") __VA_ARGS__
-  #define BL_DIAGNOSTIC_POP                    _Pragma("clang diagnostic pop")
-  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")
-  #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS      _Pragma("clang diagnostic ignored \"-Wextra\"")
-#elif defined(__GNUC__)
-  #define BL_DIAGNOSTIC_PUSH(...)              _Pragma("GCC diagnostic push") __VA_ARGS__
-  #define BL_DIAGNOSTIC_POP                    _Pragma("GCC diagnostic pop")
-  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
-  #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS      _Pragma("GCC diagnostic ignored \"-Wextra\"")
-#elif defined(_MSC_VER)
-  #define BL_DIAGNOSTIC_PUSH(...)              __pragma(warning(push)) __VA_ARGS__
-  #define BL_DIAGNOSTIC_POP                    __pragma(warning(pop))
-  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   __pragma(warning(disable: 4100))
-  #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS
+// This doesn't work reliably in GCC - GCC emits warnings in code-paths where __builtin_constant_p evaluates to false
+// like it also evaluated to true, so it's disabled for now. Maybe in the future if the diagnostics improve.
+#if defined(__clang__) && !defined(__GNUC__)
+  #define BL_BUILTIN_CONSTANT_P(...) (__builtin_constant_p(__VA_ARGS__))
+#else
+  #define BL_BUILTIN_CONSTANT_P(...) constexpr (false)
 #endif
 
-#if !defined(BL_DIAGNOSTIC_PUSH)
-  #define BL_DIAGNOSTIC_PUSH(...)
-  #define BL_DIAGNOSTIC_POP
-  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS
-  #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS
-#endif
 
 //! \}
 //! \endcond
@@ -878,223 +899,210 @@
 // ====================
 
 #ifdef __cplusplus
-  #define BL_FORWARD_DECLARE_STRUCT(NAME) struct NAME
+  #define BL_FORWARD_DECLARE_UNION_C(UnionName) union BL##UnionName; namespace bl { using UnionName = BL##UnionName; }
+  #define BL_FORWARD_DECLARE_CLASS_X(ClassName) class BL##ClassName; namespace bl { using ClassName = BL##ClassName; }
+  #define BL_FORWARD_DECLARE_STRUCT_C(StructName) struct BL##StructName;
+  #define BL_FORWARD_DECLARE_STRUCT_X(StructName) struct BL##StructName; namespace bl { using StructName = BL##StructName; }
 #else
-  #define BL_FORWARD_DECLARE_STRUCT(NAME) typedef struct NAME NAME
+  #define BL_FORWARD_DECLARE_UNION_C(UnionName) typedef union BL##UnionName BL##UnionName;
+  #define BL_FORWARD_DECLARE_CLASS_X(ClassName) /* not available in pure C code */
+  #define BL_FORWARD_DECLARE_STRUCT_C(StructName) typedef struct BL##StructName BL##StructName;
+  #define BL_FORWARD_DECLARE_STRUCT_X(StructName) typedef struct BL##StructName BL##StructName;
 #endif
 
-#ifdef __cplusplus
-  #define BL_FORWARD_DECLARE_UNION(NAME) union NAME
-#else
-  #define BL_FORWARD_DECLARE_UNION(NAME) typedef union NAME NAME
-#endif
+BL_FORWARD_DECLARE_STRUCT_C(ObjectCore)
+BL_FORWARD_DECLARE_STRUCT_C(ObjectImpl)
+BL_FORWARD_DECLARE_STRUCT_C(ObjectVirt)
+BL_FORWARD_DECLARE_STRUCT_C(ObjectVirtBase)
+BL_FORWARD_DECLARE_UNION_C(ObjectDetail)
+
+BL_FORWARD_DECLARE_CLASS_X(String)
+BL_FORWARD_DECLARE_STRUCT_C(StringCore)
+BL_FORWARD_DECLARE_STRUCT_C(StringImpl)
+
+BL_FORWARD_DECLARE_STRUCT_C(ArrayCore)
+BL_FORWARD_DECLARE_STRUCT_C(ArrayImpl)
+
+BL_FORWARD_DECLARE_CLASS_X(BitArray)
+BL_FORWARD_DECLARE_STRUCT_C(BitArrayCore)
+BL_FORWARD_DECLARE_STRUCT_C(BitArrayImpl)
+
+BL_FORWARD_DECLARE_STRUCT_C(CoverageSetCore)
+BL_FORWARD_DECLARE_STRUCT_C(CoverageSetImpl)
+BL_FORWARD_DECLARE_STRUCT_C(CoverageSetRange)
+
+BL_FORWARD_DECLARE_CLASS_X(Path)
+BL_FORWARD_DECLARE_CLASS_X(PathIterator)
+BL_FORWARD_DECLARE_STRUCT_C(PathCore)
+BL_FORWARD_DECLARE_STRUCT_C(PathImpl)
+BL_FORWARD_DECLARE_STRUCT_X(PathPosition)
+BL_FORWARD_DECLARE_STRUCT_X(PathRegion)
+BL_FORWARD_DECLARE_STRUCT_X(PathView)
+
+BL_FORWARD_DECLARE_CLASS_X(StrokeOptions)
+BL_FORWARD_DECLARE_STRUCT_C(StrokeOptionsCore)
+
+BL_FORWARD_DECLARE_CLASS_X(Image)
+BL_FORWARD_DECLARE_STRUCT_C(ImageCore)
+BL_FORWARD_DECLARE_STRUCT_C(ImageImpl)
+BL_FORWARD_DECLARE_STRUCT_X(ImageData)
+BL_FORWARD_DECLARE_STRUCT_X(ImageInfo)
+
+BL_FORWARD_DECLARE_CLASS_X(ImageCodec)
+BL_FORWARD_DECLARE_STRUCT_C(ImageCodecCore)
+BL_FORWARD_DECLARE_STRUCT_C(ImageCodecImpl)
+BL_FORWARD_DECLARE_STRUCT_C(ImageCodecVirt)
+
+BL_FORWARD_DECLARE_CLASS_X(ImageDecoder)
+BL_FORWARD_DECLARE_STRUCT_C(ImageDecoderCore)
+BL_FORWARD_DECLARE_STRUCT_C(ImageDecoderImpl)
+BL_FORWARD_DECLARE_STRUCT_C(ImageDecoderVirt)
+
+BL_FORWARD_DECLARE_CLASS_X(ImageEncoder)
+BL_FORWARD_DECLARE_STRUCT_C(ImageEncoderCore)
+BL_FORWARD_DECLARE_STRUCT_C(ImageEncoderImpl)
+BL_FORWARD_DECLARE_STRUCT_C(ImageEncoderVirt)
+
+BL_FORWARD_DECLARE_CLASS_X(PixelConverter)
+BL_FORWARD_DECLARE_STRUCT_C(PixelConverterCore)
+BL_FORWARD_DECLARE_STRUCT_X(PixelConverterOptions)
+
+BL_FORWARD_DECLARE_CLASS_X(Gradient)
+BL_FORWARD_DECLARE_STRUCT_C(GradientCore)
+BL_FORWARD_DECLARE_STRUCT_C(GradientImpl)
+BL_FORWARD_DECLARE_STRUCT_X(GradientStop)
+
+BL_FORWARD_DECLARE_STRUCT_X(LinearGradientValues)
+BL_FORWARD_DECLARE_STRUCT_X(RadialGradientValues)
+BL_FORWARD_DECLARE_STRUCT_X(ConicGradientValues)
+
+BL_FORWARD_DECLARE_CLASS_X(Pattern)
+BL_FORWARD_DECLARE_STRUCT_C(PatternCore)
+BL_FORWARD_DECLARE_STRUCT_C(PatternImpl)
+
+BL_FORWARD_DECLARE_CLASS_X(Context)
+BL_FORWARD_DECLARE_STRUCT_C(ContextCore)
+BL_FORWARD_DECLARE_STRUCT_C(ContextImpl)
+BL_FORWARD_DECLARE_STRUCT_C(ContextVirt)
+BL_FORWARD_DECLARE_STRUCT_X(ContextCookie)
+BL_FORWARD_DECLARE_STRUCT_X(ContextCreateInfo)
+BL_FORWARD_DECLARE_STRUCT_X(ContextHints)
+BL_FORWARD_DECLARE_STRUCT_X(ContextState)
+
+BL_FORWARD_DECLARE_CLASS_X(GlyphBuffer)
+BL_FORWARD_DECLARE_STRUCT_C(GlyphBufferCore)
+BL_FORWARD_DECLARE_STRUCT_C(GlyphBufferImpl)
+BL_FORWARD_DECLARE_STRUCT_X(GlyphInfo)
+BL_FORWARD_DECLARE_STRUCT_X(GlyphMappingState)
+BL_FORWARD_DECLARE_STRUCT_X(GlyphOutlineSinkInfo)
+BL_FORWARD_DECLARE_STRUCT_X(GlyphPlacement)
+BL_FORWARD_DECLARE_STRUCT_X(GlyphRun)
+BL_FORWARD_DECLARE_CLASS_X(GlyphRunIterator)
+
+BL_FORWARD_DECLARE_STRUCT_X(FontCoverageInfo)
+BL_FORWARD_DECLARE_STRUCT_X(FontFaceInfo)
+BL_FORWARD_DECLARE_STRUCT_X(FontQueryProperties)
+BL_FORWARD_DECLARE_STRUCT_X(FontDesignMetrics)
+BL_FORWARD_DECLARE_STRUCT_X(FontMatrix)
+BL_FORWARD_DECLARE_STRUCT_X(FontMetrics)
+BL_FORWARD_DECLARE_STRUCT_X(FontPanoseInfo)
+BL_FORWARD_DECLARE_STRUCT_X(FontTable)
+BL_FORWARD_DECLARE_STRUCT_X(TextMetrics)
+
+BL_FORWARD_DECLARE_CLASS_X(Font)
+BL_FORWARD_DECLARE_STRUCT_C(FontCore)
+BL_FORWARD_DECLARE_STRUCT_C(FontImpl)
+
+BL_FORWARD_DECLARE_CLASS_X(FontData)
+BL_FORWARD_DECLARE_STRUCT_C(FontDataCore)
+BL_FORWARD_DECLARE_STRUCT_C(FontDataImpl)
+BL_FORWARD_DECLARE_STRUCT_C(FontDataVirt)
+
+BL_FORWARD_DECLARE_CLASS_X(FontFace)
+BL_FORWARD_DECLARE_STRUCT_C(FontFaceCore)
+BL_FORWARD_DECLARE_STRUCT_C(FontFaceImpl)
+BL_FORWARD_DECLARE_STRUCT_C(FontFaceVirt)
+
+BL_FORWARD_DECLARE_CLASS_X(FontManager)
+BL_FORWARD_DECLARE_STRUCT_C(FontManagerCore)
+BL_FORWARD_DECLARE_STRUCT_C(FontManagerImpl)
+BL_FORWARD_DECLARE_STRUCT_C(FontManagerVirt)
+
+BL_FORWARD_DECLARE_CLASS_X(FontFeatureSettings)
+BL_FORWARD_DECLARE_STRUCT_C(FontFeatureSettingsCore)
+BL_FORWARD_DECLARE_STRUCT_C(FontFeatureSettingsImpl)
+BL_FORWARD_DECLARE_STRUCT_X(FontFeatureSettingsView)
+BL_FORWARD_DECLARE_STRUCT_X(FontFeatureItem)
+
+BL_FORWARD_DECLARE_CLASS_X(FontVariationSettings)
+BL_FORWARD_DECLARE_STRUCT_C(FontVariationSettingsCore)
+BL_FORWARD_DECLARE_STRUCT_C(FontVariationSettingsImpl)
+BL_FORWARD_DECLARE_STRUCT_X(FontVariationSettingsView)
+BL_FORWARD_DECLARE_STRUCT_X(FontVariationItem)
+
+BL_FORWARD_DECLARE_CLASS_X(Var)
+BL_FORWARD_DECLARE_STRUCT_C(VarCore)
+
+BL_FORWARD_DECLARE_CLASS_X(RuntimeScope)
+BL_FORWARD_DECLARE_STRUCT_C(RuntimeScopeCore)
+BL_FORWARD_DECLARE_STRUCT_X(RuntimeBuildInfo)
+BL_FORWARD_DECLARE_STRUCT_X(RuntimeSystemInfo)
+BL_FORWARD_DECLARE_STRUCT_X(RuntimeResourceInfo)
+
+#if !defined(BL_BUILD_NO_FILESYSTEM)
+BL_FORWARD_DECLARE_CLASS_X(File)
+BL_FORWARD_DECLARE_STRUCT_C(FileCore)
+BL_FORWARD_DECLARE_STRUCT_C(FileInfo)
+
+BL_FORWARD_DECLARE_CLASS_X(DirectoryIterator)
+BL_FORWARD_DECLARE_STRUCT_C(DirectoryIteratorCore)
+#endif // !BL_BUILD_NO_FILESYSTEM
+
+BL_FORWARD_DECLARE_STRUCT_X(FormatInfo)
+
+BL_FORWARD_DECLARE_STRUCT_X(Rgba)
+BL_FORWARD_DECLARE_STRUCT_X(Rgba32)
+BL_FORWARD_DECLARE_STRUCT_X(Rgba64)
+
+BL_FORWARD_DECLARE_STRUCT_X(Point)
+BL_FORWARD_DECLARE_STRUCT_X(PointI)
+BL_FORWARD_DECLARE_STRUCT_X(Size)
+BL_FORWARD_DECLARE_STRUCT_X(SizeI)
+BL_FORWARD_DECLARE_STRUCT_X(Box)
+BL_FORWARD_DECLARE_STRUCT_X(BoxI)
+BL_FORWARD_DECLARE_STRUCT_X(Rect)
+BL_FORWARD_DECLARE_STRUCT_X(RectI)
+BL_FORWARD_DECLARE_STRUCT_X(Line)
+BL_FORWARD_DECLARE_STRUCT_X(Triangle)
+BL_FORWARD_DECLARE_STRUCT_X(RoundRect)
+BL_FORWARD_DECLARE_STRUCT_X(Circle)
+BL_FORWARD_DECLARE_STRUCT_X(Ellipse)
+BL_FORWARD_DECLARE_STRUCT_X(Arc)
+
+BL_FORWARD_DECLARE_STRUCT_X(Matrix2D)
+BL_FORWARD_DECLARE_STRUCT_X(ApproximationOptions)
+
+BL_FORWARD_DECLARE_STRUCT_X(Range)
+BL_FORWARD_DECLARE_STRUCT_X(Random)
+
+#undef BL_FORWARD_DECLARE_STRUCT_X
+#undef BL_FORWARD_DECLARE_STRUCT_C
+#undef BL_FORWARD_DECLARE_CLASS_X
+#undef BL_FORWARD_DECLARE_UNION_C
 
 #ifdef __cplusplus
-  #define BL_FORWARD_DECLARE_ENUM(NAME) enum NAME : uint32_t
-#else
-  #define BL_FORWARD_DECLARE_ENUM(NAME) typedef enum NAME NAME
-#endif
-
-BL_FORWARD_DECLARE_STRUCT(BLRange);
-BL_FORWARD_DECLARE_STRUCT(BLRandom);
-BL_FORWARD_DECLARE_STRUCT(BLFileCore);
-BL_FORWARD_DECLARE_STRUCT(BLFileInfo);
-
-BL_FORWARD_DECLARE_STRUCT(BLRuntimeScopeCore);
-BL_FORWARD_DECLARE_STRUCT(BLRuntimeBuildInfo);
-BL_FORWARD_DECLARE_STRUCT(BLRuntimeSystemInfo);
-BL_FORWARD_DECLARE_STRUCT(BLRuntimeResourceInfo);
-
-BL_FORWARD_DECLARE_STRUCT(BLRgba);
-BL_FORWARD_DECLARE_STRUCT(BLRgba32);
-BL_FORWARD_DECLARE_STRUCT(BLRgba64);
-
-BL_FORWARD_DECLARE_STRUCT(BLPoint);
-BL_FORWARD_DECLARE_STRUCT(BLPointI);
-BL_FORWARD_DECLARE_STRUCT(BLSize);
-BL_FORWARD_DECLARE_STRUCT(BLSizeI);
-BL_FORWARD_DECLARE_STRUCT(BLBox);
-BL_FORWARD_DECLARE_STRUCT(BLBoxI);
-BL_FORWARD_DECLARE_STRUCT(BLRect);
-BL_FORWARD_DECLARE_STRUCT(BLRectI);
-BL_FORWARD_DECLARE_STRUCT(BLLine);
-BL_FORWARD_DECLARE_STRUCT(BLTriangle);
-BL_FORWARD_DECLARE_STRUCT(BLRoundRect);
-BL_FORWARD_DECLARE_STRUCT(BLCircle);
-BL_FORWARD_DECLARE_STRUCT(BLEllipse);
-BL_FORWARD_DECLARE_STRUCT(BLArc);
-
-BL_FORWARD_DECLARE_STRUCT(BLMatrix2D);
-BL_FORWARD_DECLARE_STRUCT(BLApproximationOptions);
-BL_FORWARD_DECLARE_STRUCT(BLStrokeOptionsCore);
-
-BL_FORWARD_DECLARE_STRUCT(BLFormatInfo);
-
-BL_FORWARD_DECLARE_STRUCT(BLObjectCore);
-BL_FORWARD_DECLARE_STRUCT(BLObjectImpl);
-BL_FORWARD_DECLARE_STRUCT(BLObjectVirt);
-BL_FORWARD_DECLARE_STRUCT(BLObjectVirtBase);
-BL_FORWARD_DECLARE_STRUCT(BLObjectInfo);
-BL_FORWARD_DECLARE_UNION(BLObjectDetail);
-
-BL_FORWARD_DECLARE_STRUCT(BLArrayCore);
-BL_FORWARD_DECLARE_STRUCT(BLArrayImpl);
-
-BL_FORWARD_DECLARE_STRUCT(BLBitArrayCore);
-BL_FORWARD_DECLARE_STRUCT(BLBitArrayImpl);
-
-BL_FORWARD_DECLARE_STRUCT(BLBitSetCore);
-BL_FORWARD_DECLARE_STRUCT(BLBitSetData);
-BL_FORWARD_DECLARE_STRUCT(BLBitSetImpl);
-BL_FORWARD_DECLARE_STRUCT(BLBitSetSegment);
-BL_FORWARD_DECLARE_STRUCT(BLBitSetBuilderCore);
-
-BL_FORWARD_DECLARE_STRUCT(BLStringCore);
-BL_FORWARD_DECLARE_STRUCT(BLStringImpl);
-
-BL_FORWARD_DECLARE_STRUCT(BLPathCore);
-BL_FORWARD_DECLARE_STRUCT(BLPathImpl);
-BL_FORWARD_DECLARE_STRUCT(BLPathView);
-
-BL_FORWARD_DECLARE_STRUCT(BLImageData);
-BL_FORWARD_DECLARE_STRUCT(BLImageInfo);
-
-BL_FORWARD_DECLARE_STRUCT(BLImageCore);
-BL_FORWARD_DECLARE_STRUCT(BLImageImpl);
-
-BL_FORWARD_DECLARE_STRUCT(BLImageCodecCore);
-BL_FORWARD_DECLARE_STRUCT(BLImageCodecImpl);
-BL_FORWARD_DECLARE_STRUCT(BLImageCodecVirt);
-
-BL_FORWARD_DECLARE_STRUCT(BLImageDecoderCore);
-BL_FORWARD_DECLARE_STRUCT(BLImageDecoderImpl);
-BL_FORWARD_DECLARE_STRUCT(BLImageDecoderVirt);
-
-BL_FORWARD_DECLARE_STRUCT(BLImageEncoderCore);
-BL_FORWARD_DECLARE_STRUCT(BLImageEncoderImpl);
-BL_FORWARD_DECLARE_STRUCT(BLImageEncoderVirt);
-
-BL_FORWARD_DECLARE_STRUCT(BLPixelConverterCore);
-BL_FORWARD_DECLARE_STRUCT(BLPixelConverterOptions);
-
-BL_FORWARD_DECLARE_STRUCT(BLGradientCore);
-BL_FORWARD_DECLARE_STRUCT(BLGradientImpl);
-BL_FORWARD_DECLARE_STRUCT(BLGradientStop);
-
-BL_FORWARD_DECLARE_STRUCT(BLLinearGradientValues);
-BL_FORWARD_DECLARE_STRUCT(BLRadialGradientValues);
-BL_FORWARD_DECLARE_STRUCT(BLConicGradientValues);
-
-BL_FORWARD_DECLARE_STRUCT(BLPatternCore);
-BL_FORWARD_DECLARE_STRUCT(BLPatternImpl);
-
-BL_FORWARD_DECLARE_STRUCT(BLContextCookie);
-BL_FORWARD_DECLARE_STRUCT(BLContextCreateInfo);
-BL_FORWARD_DECLARE_STRUCT(BLContextHints);
-BL_FORWARD_DECLARE_STRUCT(BLContextState);
-
-BL_FORWARD_DECLARE_STRUCT(BLContextCore);
-BL_FORWARD_DECLARE_STRUCT(BLContextImpl);
-BL_FORWARD_DECLARE_STRUCT(BLContextVirt);
-
-BL_FORWARD_DECLARE_STRUCT(BLGlyphBufferCore);
-BL_FORWARD_DECLARE_STRUCT(BLGlyphBufferImpl);
-BL_FORWARD_DECLARE_STRUCT(BLGlyphInfo);
-BL_FORWARD_DECLARE_STRUCT(BLGlyphMappingState);
-BL_FORWARD_DECLARE_STRUCT(BLGlyphOutlineSinkInfo);
-BL_FORWARD_DECLARE_STRUCT(BLGlyphPlacement);
-BL_FORWARD_DECLARE_STRUCT(BLGlyphRun);
-
-BL_FORWARD_DECLARE_STRUCT(BLFontCoverageInfo);
-BL_FORWARD_DECLARE_STRUCT(BLFontFaceInfo);
-BL_FORWARD_DECLARE_STRUCT(BLFontQueryProperties);
-BL_FORWARD_DECLARE_STRUCT(BLFontFeatureItem);
-BL_FORWARD_DECLARE_STRUCT(BLFontFeatureSettingsCore);
-BL_FORWARD_DECLARE_STRUCT(BLFontFeatureSettingsImpl);
-BL_FORWARD_DECLARE_STRUCT(BLFontFeatureSettingsView);
-BL_FORWARD_DECLARE_STRUCT(BLFontDesignMetrics);
-BL_FORWARD_DECLARE_STRUCT(BLFontMatrix);
-BL_FORWARD_DECLARE_STRUCT(BLFontMetrics);
-BL_FORWARD_DECLARE_STRUCT(BLFontPanoseInfo);
-BL_FORWARD_DECLARE_STRUCT(BLFontTable);
-BL_FORWARD_DECLARE_STRUCT(BLFontVariationItem);
-BL_FORWARD_DECLARE_STRUCT(BLFontVariationSettingsCore);
-BL_FORWARD_DECLARE_STRUCT(BLFontVariationSettingsImpl);
-BL_FORWARD_DECLARE_STRUCT(BLFontVariationSettingsView);
-BL_FORWARD_DECLARE_STRUCT(BLTextMetrics);
-
-BL_FORWARD_DECLARE_STRUCT(BLFontCore);
-BL_FORWARD_DECLARE_STRUCT(BLFontImpl);
-
-BL_FORWARD_DECLARE_STRUCT(BLFontDataCore);
-BL_FORWARD_DECLARE_STRUCT(BLFontDataImpl);
-BL_FORWARD_DECLARE_STRUCT(BLFontDataVirt);
-
-BL_FORWARD_DECLARE_STRUCT(BLFontFaceCore);
-BL_FORWARD_DECLARE_STRUCT(BLFontFaceImpl);
-BL_FORWARD_DECLARE_STRUCT(BLFontFaceVirt);
-
-BL_FORWARD_DECLARE_STRUCT(BLFontManagerCore);
-BL_FORWARD_DECLARE_STRUCT(BLFontManagerImpl);
-BL_FORWARD_DECLARE_STRUCT(BLFontManagerVirt);
-
-BL_FORWARD_DECLARE_STRUCT(BLVarCore);
-
-#undef BL_FORWARD_DECLARE_ENUM
-#undef BL_FORWARD_DECLARE_UNION
-#undef BL_FORWARD_DECLARE_STRUCT
-
-// C++ API.
-#ifdef __cplusplus
-class BLFile;
-class BLRuntimeScope;
 template<typename T> class BLArray;
-class BLBitArray;
-class BLBitSet;
-template<uint32_t> class BLBitSetBuilderT;
-class BLString;
-class BLPath;
-class BLStrokeOptions;
-class BLImage;
-class BLImageCodec;
-class BLImageDecoder;
-class BLImageEncoder;
-class BLPattern;
-class BLGradient;
-class BLContext;
-class BLPixelConverter;
-class BLGlyphBuffer;
-class BLGlyphRunIterator;
-class BLFont;
-class BLFontData;
-class BLFontFace;
-class BLFontFeatureSettings;
-class BLFontManager;
-class BLFontVariationSettings;
-class BLVar;
+namespace bl { template<typename T> using Array = BLArray<T>; }
+
+class BLCoverageSet;
 #endif
 
 // Public Types
 // ============
 
-//! \ingroup bl_globals
-//!
-//! Result code used by most Blend2D functions (32-bit unsigned integer).
-//!
-//! The \ref BLResultCode enumeration contains Blend2D result codes that contain Blend2D specific set of errors
-//! and an extended set of errors that can come from WIN32 or POSIX APIs. Since the success result code is zero
-//! it's recommended to use the following check to determine whether a call failed or not:
-//!
-//! ```
-//! BLResult result = do_something();
-//! if (result != BL_SUCCESS) {
-//!   // `do_something()` failed...
-//! }
-//! ```
-typedef uint32_t BLResult;
+//! \addtogroup bl_globals
+//! \{
 
-//! \ingroup bl_globals
-//!
 //! Tag is a 32-bit integer consisting of 4 characters in the following format:
 //!
 //! ```
@@ -1107,8 +1115,6 @@ typedef uint32_t BLResult;
 //! Blend2D uses \ref BLTag in public and internal APIs to distinguish between a regular `uint32_t` and tag.
 typedef uint32_t BLTag;
 
-//! \ingroup bl_globals
-//!
 //! Unique identifier that can be used for caching purposes.
 //!
 //! Some objects such as \ref BLImage and \ref BLFontFace have assigned an unique identifier that can be used to
@@ -1119,29 +1125,45 @@ typedef uint32_t BLTag;
 //! a way that identifiers would not collide.
 typedef uint64_t BLUniqueId;
 
-//! \ingroup bl_globals
+//! A type used to store a pack of bits (typedef to `uintptr_t`).
 //!
+//! BitWord should be equal in size to a machine word.
+typedef uintptr_t BLBitWord;
+
 //! BLUnknown is `void` - it's used in places that accept pointer to \ref BLVarCore or any \ref BLObjectCore
 //! compatible object.
 typedef void BLUnknown;
 
-//! \ingroup bl_globals
-//!
 //! A sink that can be used to debug various parts of Blend2D.
 typedef void (BL_CDECL* BLDebugMessageSinkFunc)(const char* message, size_t size, void* user_data) BL_NOEXCEPT_C;
+
+//! \}
 
 // Public Constants
 // ================
 
-//! \ingroup bl_globals
+//! \addtogroup bl_globals
+//! \{
+
+//! Result code used by most Blend2D functions (32-bit unsigned integer).
 //!
-//! Blend2D result code.
-BL_DEFINE_ENUM(BLResultCode) {
+//! The enumeration contains Blend2D result codes that contain Blend2D specific set of errors and an extended
+//! set of errors that can come from WIN32 or POSIX APIs. Since the success result code is zero it's recommended
+//! to use the following check to determine whether a call failed or not:
+//!
+//! ```
+//! BLResult result = do_something();
+//! if (result != BL_SUCCESS) {
+//!   // `do_something()` failed...
+//! }
+//! ```
+BL_DEFINE_ENUM(BLResult) {
   //! Successful result code.
-  BL_SUCCESS = 0,
+  BL_SUCCESS = 0u,
 
   BL_ERROR_START_INDEX = 0x00010000u,
 
+  // @EnumValuesBegin{"enum": "BLResult"}@
   BL_ERROR_OUT_OF_MEMORY = 0x00010000u,  //!< Out of memory                 [ENOMEM].
   BL_ERROR_INVALID_VALUE,                //!< Invalid value/argument        [EINVAL].
   BL_ERROR_INVALID_STATE,                //!< Invalid state                 [EFAULT].
@@ -1192,6 +1214,8 @@ BL_DEFINE_ENUM(BLResultCode) {
 
   BL_ERROR_UNKNOWN_SYSTEM_ERROR,         //!< Unknown system error that failed to translate to Blend2D result code.
 
+  BL_ERROR_CORRUPTED_PATH_DATA,          //!< Path data is corrupted (this should be considered fatal error).
+
   BL_ERROR_INVALID_ALIGNMENT,            //!< Invalid data alignment.
   BL_ERROR_INVALID_SIGNATURE,            //!< Invalid data signature or header.
   BL_ERROR_INVALID_DATA,                 //!< Invalid or corrupted data.
@@ -1237,46 +1261,44 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_FONT_PROGRAM_TERMINATED,      //!< Font program terminated because the execution reached the limit.
   BL_ERROR_GLYPH_SUBSTITUTION_TOO_LARGE, //!< Glyph substitution requires too much space and was terminated.
 
-  BL_ERROR_INVALID_GLYPH                 //!< Invalid glyph identifier.
+  BL_ERROR_INVALID_GLYPH,                //!< Invalid glyph identifier.
+  // @EnumValuesEnd@
+
+  BL_RESULT_MAX_VALUE = BL_ERROR_INVALID_GLYPH
 
   BL_FORCE_ENUM_UINT32(BL_ERROR)
 };
 
-//! \ingroup bl_globals
-//!
 //! Byte order.
 BL_DEFINE_ENUM(BLByteOrder) {
   //! Little endian byte-order.
-  BL_BYTE_ORDER_LE = 0,
+  BL_BYTE_ORDER_LE = 0u,
   //! Big endian byte-order.
-  BL_BYTE_ORDER_BE = 1,
+  BL_BYTE_ORDER_BE = 1u,
 
   //! Native (host) byte-order.
-  BL_BYTE_ORDER_NATIVE = BL_BYTE_ORDER == 1234 ? BL_BYTE_ORDER_LE : BL_BYTE_ORDER_BE,
+#if defined(BL_TARGET_BIG_ENDIAN)
+  BL_BYTE_ORDER_NATIVE = BL_BYTE_ORDER_BE,
+#else
+  BL_BYTE_ORDER_NATIVE = BL_BYTE_ORDER_LE,
+#endif
+
   //! Swapped byte-order (BE if host is LE and vice versa).
-  BL_BYTE_ORDER_SWAPPED = BL_BYTE_ORDER == 1234 ? BL_BYTE_ORDER_BE : BL_BYTE_ORDER_LE
+  BL_BYTE_ORDER_SWAPPED = 1u - BL_BYTE_ORDER_NATIVE
 
   BL_FORCE_ENUM_UINT32(BL_BYTE_ORDER)
 };
 
-//! \ingroup bl_globals
-//!
-//! Data access flags.
-BL_DEFINE_ENUM(BLDataAccessFlags) {
-  //! No data access flags.
-  BL_DATA_ACCESS_NO_FLAGS = 0x00u,
-  //! Read access.
-  BL_DATA_ACCESS_READ = 0x01u,
-  //! Write access.
-  BL_DATA_ACCESS_WRITE = 0x02u,
-  //! Read and write access.
-  BL_DATA_ACCESS_RW = 0x03u
+//! Describes data access - whether it's read-only or read/write.
+BL_DEFINE_ENUM(BLDataAccessMode) {
+  //! Data is read-only.
+  BL_DATA_ACCESS_MODE_RO = 0x00u,
+  //! Data is read/write.
+  BL_DATA_ACCESS_MODE_RW = 0x01u
 
-  BL_FORCE_ENUM_UINT32(BL_DATA_ACCESS)
+  BL_FORCE_ENUM_UINT32(BL_DATA_ACCESS_MODE)
 };
 
-//! \ingroup bl_globals
-//!
 //! Data source type.
 BL_DEFINE_ENUM(BLDataSourceType) {
   //! No data source.
@@ -1294,27 +1316,6 @@ BL_DEFINE_ENUM(BLDataSourceType) {
   BL_FORCE_ENUM_UINT32(BL_DATA_SOURCE_TYPE)
 };
 
-//! \ingroup bl_globals
-//!
-//! Modification operation applied to Blend2D containers.
-BL_DEFINE_ENUM(BLModifyOp) {
-  //! Assign operation, which reserves space only to fit the requested input.
-  BL_MODIFY_OP_ASSIGN_FIT = 0,
-  //! Assign operation, which takes into consideration successive appends.
-  BL_MODIFY_OP_ASSIGN_GROW = 1,
-  //! Append operation, which reserves space only to fit the current and appended content.
-  BL_MODIFY_OP_APPEND_FIT = 2,
-  //! Append operation, which takes into consideration successive appends.
-  BL_MODIFY_OP_APPEND_GROW = 3,
-
-  //! Maximum value of `BLModifyOp`.
-  BL_MODIFY_OP_MAX_VALUE = 3
-
-  BL_FORCE_ENUM_UINT32(BL_MODIFY_OP)
-};
-
-//! \ingroup bl_globals
-//!
 //! Boolean operator.
 BL_DEFINE_ENUM(BLBooleanOp) {
   //! Result = B.
@@ -1336,8 +1337,11 @@ BL_DEFINE_ENUM(BLBooleanOp) {
   BL_FORCE_ENUM_UINT32(BL_BOOLEAN_OP)
 };
 
-//! \ingroup bl_styling
-//!
+//! \}
+
+//! \addtogroup bl_styling
+//! \{
+
 //! Extend mode.
 BL_DEFINE_ENUM(BLExtendMode) {
   //! Pad extend [default].
@@ -1379,8 +1383,11 @@ BL_DEFINE_ENUM(BLExtendMode) {
   BL_FORCE_ENUM_UINT32(BL_EXTEND_MODE)
 };
 
-//! \ingroup bl_text
-//!
+//! \}
+
+//! \addtogroup bl_text
+//! \{
+
 //! Text encoding.
 BL_DEFINE_ENUM(BLTextEncoding) {
   //! UTF-8 encoding.
@@ -1404,19 +1411,21 @@ BL_DEFINE_ENUM(BLTextEncoding) {
   BL_FORCE_ENUM_UINT32(BL_TEXT_ENCODING)
 };
 
+//! \}
+
 // Internal API
 // ============
 
 #ifdef __cplusplus
 //! \cond INTERNAL
+//! \addtogroup blend2d_internal
+//! \{
 
-//! \ingroup blend2d_internal
-//!
 //! Internal namespace that should never be used by Blend2D users.
 //!
 //! This namespace provides functionality that is internally used by the public C++ API in public headers.
 //! There should never be functionality that is not used by public headers, that should always be hidden.
-namespace BLInternal {
+namespace bl::Internal {
 
 template<typename T>
 [[nodiscard]]
@@ -1428,7 +1437,10 @@ BL_INLINE_NODEBUG T&& forward(std::remove_reference_t<T>& v) noexcept { return s
 
 template<typename T>
 [[nodiscard]]
-BL_INLINE_NODEBUG T&& forward(std::remove_reference_t<T>&& v) noexcept { return static_cast<T&&>(v); }
+BL_INLINE_NODEBUG T&& forward(std::remove_reference_t<T>&& v) noexcept {
+  static_assert(!std::is_lvalue_reference_v<T>, "Cannot forward an rvalue as an lvalue");
+  return static_cast<T&&>(v);
+}
 
 template<typename T>
 BL_INLINE void swap(T& t1, T& t2) noexcept {
@@ -1468,43 +1480,6 @@ using IntByType = typename StdIntT<sizeof(T), kUnsigned>::Type;
 
 template<typename T>
 using UIntByType = typename StdIntT<sizeof(T), 1>::Type;
-
-template<uint64_t kInput>
-struct ConstCTZ {
-  static inline constexpr uint32_t kValue =
-    (kInput & (uint64_t(1) <<  0)) ?  0 : (kInput & (uint64_t(1) <<  1)) ?  1 :
-    (kInput & (uint64_t(1) <<  2)) ?  2 : (kInput & (uint64_t(1) <<  3)) ?  3 :
-    (kInput & (uint64_t(1) <<  4)) ?  4 : (kInput & (uint64_t(1) <<  5)) ?  5 :
-    (kInput & (uint64_t(1) <<  6)) ?  6 : (kInput & (uint64_t(1) <<  7)) ?  7 :
-    (kInput & (uint64_t(1) <<  8)) ?  8 : (kInput & (uint64_t(1) <<  9)) ?  9 :
-    (kInput & (uint64_t(1) << 10)) ? 10 : (kInput & (uint64_t(1) << 11)) ? 11 :
-    (kInput & (uint64_t(1) << 12)) ? 12 : (kInput & (uint64_t(1) << 13)) ? 13 :
-    (kInput & (uint64_t(1) << 14)) ? 14 : (kInput & (uint64_t(1) << 15)) ? 15 :
-    (kInput & (uint64_t(1) << 16)) ? 16 : (kInput & (uint64_t(1) << 17)) ? 17 :
-    (kInput & (uint64_t(1) << 18)) ? 18 : (kInput & (uint64_t(1) << 19)) ? 19 :
-    (kInput & (uint64_t(1) << 20)) ? 20 : (kInput & (uint64_t(1) << 21)) ? 21 :
-    (kInput & (uint64_t(1) << 22)) ? 22 : (kInput & (uint64_t(1) << 23)) ? 23 :
-    (kInput & (uint64_t(1) << 24)) ? 24 : (kInput & (uint64_t(1) << 25)) ? 25 :
-    (kInput & (uint64_t(1) << 26)) ? 26 : (kInput & (uint64_t(1) << 27)) ? 27 :
-    (kInput & (uint64_t(1) << 28)) ? 28 : (kInput & (uint64_t(1) << 29)) ? 29 :
-    (kInput & (uint64_t(1) << 30)) ? 30 : (kInput & (uint64_t(1) << 31)) ? 31 :
-    (kInput & (uint64_t(1) << 32)) ? 32 : (kInput & (uint64_t(1) << 33)) ? 33 :
-    (kInput & (uint64_t(1) << 34)) ? 34 : (kInput & (uint64_t(1) << 35)) ? 35 :
-    (kInput & (uint64_t(1) << 36)) ? 36 : (kInput & (uint64_t(1) << 37)) ? 37 :
-    (kInput & (uint64_t(1) << 38)) ? 38 : (kInput & (uint64_t(1) << 39)) ? 39 :
-    (kInput & (uint64_t(1) << 40)) ? 40 : (kInput & (uint64_t(1) << 41)) ? 41 :
-    (kInput & (uint64_t(1) << 42)) ? 42 : (kInput & (uint64_t(1) << 43)) ? 43 :
-    (kInput & (uint64_t(1) << 44)) ? 44 : (kInput & (uint64_t(1) << 45)) ? 45 :
-    (kInput & (uint64_t(1) << 46)) ? 46 : (kInput & (uint64_t(1) << 47)) ? 47 :
-    (kInput & (uint64_t(1) << 48)) ? 48 : (kInput & (uint64_t(1) << 49)) ? 49 :
-    (kInput & (uint64_t(1) << 50)) ? 50 : (kInput & (uint64_t(1) << 51)) ? 51 :
-    (kInput & (uint64_t(1) << 52)) ? 52 : (kInput & (uint64_t(1) << 53)) ? 53 :
-    (kInput & (uint64_t(1) << 54)) ? 54 : (kInput & (uint64_t(1) << 55)) ? 55 :
-    (kInput & (uint64_t(1) << 56)) ? 56 : (kInput & (uint64_t(1) << 57)) ? 57 :
-    (kInput & (uint64_t(1) << 58)) ? 58 : (kInput & (uint64_t(1) << 59)) ? 59 :
-    (kInput & (uint64_t(1) << 60)) ? 60 : (kInput & (uint64_t(1) << 61)) ? 61 :
-    (kInput & (uint64_t(1) << 62)) ? 62 : (kInput & (uint64_t(1) << 63)) ? 63 : 64;
-};
 
 //! Type category.
 //!
@@ -1598,7 +1573,6 @@ struct TypeTraits<BLArray<T>> {
   };
 
 BL_DEFINE_OBJECT_TRAITS(BLBitArray             , kTypeNoFlags)
-BL_DEFINE_OBJECT_TRAITS(BLBitSet               , kTypeNoFlags)
 BL_DEFINE_OBJECT_TRAITS(BLContext              , kTypeNoFlags)
 BL_DEFINE_OBJECT_TRAITS(BLFont                 , kTypeNoFlags)
 BL_DEFINE_OBJECT_TRAITS(BLFontData             , kTypeNoFlags)
@@ -1606,6 +1580,7 @@ BL_DEFINE_OBJECT_TRAITS(BLFontFace             , kTypeNoFlags)
 BL_DEFINE_OBJECT_TRAITS(BLFontFeatureSettings  , kTypeNoFlags)
 BL_DEFINE_OBJECT_TRAITS(BLFontManager          , kTypeNoFlags)
 BL_DEFINE_OBJECT_TRAITS(BLFontVariationSettings, kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLGlyphBuffer          , kTypeNoFlags)
 BL_DEFINE_OBJECT_TRAITS(BLGradient             , kTypeFlagStyle)
 BL_DEFINE_OBJECT_TRAITS(BLImage                , kTypeNoFlags)
 BL_DEFINE_OBJECT_TRAITS(BLImageCodec           , kTypeNoFlags)
@@ -1614,6 +1589,7 @@ BL_DEFINE_OBJECT_TRAITS(BLImageEncoder         , kTypeNoFlags)
 BL_DEFINE_OBJECT_TRAITS(BLPath                 , kTypeNoFlags)
 BL_DEFINE_OBJECT_TRAITS(BLPattern              , kTypeFlagStyle)
 BL_DEFINE_OBJECT_TRAITS(BLString               , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLCoverageSet          , kTypeNoFlags)
 BL_DEFINE_OBJECT_TRAITS(BLVar                  , kTypeFlagVar)
 
 #undef BL_DEFINE_OBJECT_TRAITS
@@ -1621,18 +1597,19 @@ BL_DEFINE_OBJECT_TRAITS(BLVar                  , kTypeFlagVar)
 //! Helper to implement placement new/delete without relying on `<new>` header.
 struct PlacementNew { void* ptr; };
 
-} // {BLInternal}
+} // {bl::Internal}
 
 //! Implementation of a placement new so we don't have to depend on `<new>`.
-BL_INLINE_NODEBUG void* operator new(size_t, const BLInternal::PlacementNew& p) {
+BL_INLINE_NODEBUG void* operator new(size_t, const bl::Internal::PlacementNew& p) {
 #if defined(_MSC_VER) && !defined(__clang__)
   BL_ASSUME(p.ptr != nullptr); // Otherwise MSVC would emit a nullptr check.
 #endif
   return p.ptr;
 }
 
-BL_INLINE_NODEBUG void operator delete(void*, const BLInternal::PlacementNew&) noexcept {}
+BL_INLINE_NODEBUG void operator delete(void*, const bl::Internal::PlacementNew&) noexcept {}
 
+//! \}
 //! \endcond
 #endif
 
@@ -1652,11 +1629,13 @@ BL_INLINE_NODEBUG void operator delete(void*, const BLInternal::PlacementNew&) n
 //!
 //! It's a zero-cost solution that doesn't affect release builds in any way.
 #ifdef __cplusplus
-[[nodiscard]]
+[[nodiscard]] static inline constexpr
+#else
+static inline
 #endif
-static inline BLResult bl_make_error(BLResult result) BL_NOEXCEPT_C { return result; }
+BLResult bl_make_error(BLResult result) BL_NOEXCEPT_C { return result; }
 
-BL_BEGIN_C_DECLS
+BL_EXTERN_C_BEGIN
 
 //! This function is called by Blend2D when an internal assertion failure happens.
 //!
@@ -1665,7 +1644,7 @@ BL_BEGIN_C_DECLS
 //! this function gets called in production.
 BL_API BL_NORETURN void BL_CDECL bl_runtime_assertion_failure(const char* file, int line, const char* msg) BL_NOEXCEPT_C;
 
-BL_END_C_DECLS
+BL_EXTERN_C_END
 
 //! \}
 //! \}
@@ -1697,7 +1676,7 @@ static BL_INLINE void bl_call_ctor(T& instance, Args&&... args) noexcept {
   BL_ASSUME(&instance != nullptr);
 #endif
 
-  new(BLInternal::PlacementNew{&instance}) T(BLInternal::forward<Args>(args)...);
+  new(bl::Internal::PlacementNew{&instance}) T(bl::Internal::forward<Args>(args)...);
 }
 
 //! Destroys an instance in place (calls its destructor).
@@ -1717,19 +1696,6 @@ static BL_INLINE void bl_call_dtor(T& instance) noexcept {
 
 //! \name Global C++ Functions
 //! \{
-
-//! Bit-cast `x` of `In` type to the given `Out` type.
-//!
-//! Useful to bit-cast between integers and floating points. The size of `Out` and `In` must be the same otherwise the
-//! compilation would fail. Bit casting is used by \ref bl_equals() to implement bit equality for floating point types.
-template<typename Out, typename In>
-[[nodiscard]]
-static BL_INLINE_NODEBUG Out bl_bit_cast(const In& x) noexcept {
-  static_assert(sizeof(Out) == sizeof(In),
-                "The size of 'In' and 'Out' types must match");
-  union { In in; Out out; } u = { x };
-  return u.out;
-}
 
 //! Returns an absolute value of `a`.
 template<typename T>
@@ -1754,12 +1720,12 @@ BL_INLINE_CONSTEXPR T bl_clamp(const T& a, const T& b, const T& c) noexcept { re
 //! Returns a minimum value of all arguments passed.
 template<typename T, typename... Args>
 [[nodiscard]]
-BL_INLINE_CONSTEXPR T bl_min(const T& a, const T& b, Args&&... args) noexcept { return bl_min(bl_min(a, b), BLInternal::forward<Args>(args)...); }
+BL_INLINE_CONSTEXPR T bl_min(const T& a, const T& b, Args&&... args) noexcept { return bl_min(bl_min(a, b), bl::Internal::forward<Args>(args)...); }
 
 //! Returns a maximum value of all arguments passed.
 template<typename T, typename... Args>
 [[nodiscard]]
-BL_INLINE_CONSTEXPR T bl_max(const T& a, const T& b, Args&&... args) noexcept { return bl_max(bl_max(a, b), BLInternal::forward<Args>(args)...); }
+BL_INLINE_CONSTEXPR T bl_max(const T& a, const T& b, Args&&... args) noexcept { return bl_max(bl_max(a, b), bl::Internal::forward<Args>(args)...); }
 
 //! Returns `true` if `a` and `b` equals at binary level.
 //!
@@ -1772,13 +1738,13 @@ BL_INLINE_NODEBUG bool bl_equals(const T& a, const T& b) noexcept { return a == 
 template<>
 [[nodiscard]]
 BL_INLINE_NODEBUG bool bl_equals(const float& a, const float& b) noexcept {
-  return bl_bit_cast<uint32_t>(a) == bl_bit_cast<uint32_t>(b);
+  return std::bit_cast<uint32_t>(a) == std::bit_cast<uint32_t>(b);
 }
 
 template<>
 [[nodiscard]]
 BL_INLINE_NODEBUG bool bl_equals(const double& a, const double& b) noexcept {
-  return bl_bit_cast<uint64_t>(a) == bl_bit_cast<uint64_t>(b);
+  return std::bit_cast<uint64_t>(a) == std::bit_cast<uint64_t>(b);
 }
 //! \endcond
 
@@ -1808,11 +1774,8 @@ struct BLRange {
   //! \name Overloaded Operators
   //! \{
 
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool operator==(const BLRange& other) const noexcept { return equals(other); }
-
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool operator!=(const BLRange& other) const noexcept { return !equals(other); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator==(const BLRange& other) const noexcept { return equals(other); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator!=(const BLRange& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -1832,76 +1795,16 @@ struct BLRange {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRange& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(start, other.start),
-                                bl_equals(end, other.end));
+    return bl::Internal::bool_and(
+      bl_equals(start, other.start),
+      bl_equals(end, other.end)
+    );
   }
 
   //! \}
 #endif
 };
 
-#ifdef __cplusplus
-
-//! Array view of `T`.
-//!
-//! \note In C mode the type of data used by \ref BLArrayView is `const void*`, thus it has to be retyped to a real
-//! type this view points to. There are only few specializations like \ref BLStringView that point to a real type.
-template<typename T>
-struct BLArrayView {
-  const T* data;
-  size_t size;
-
-  BL_INLINE_NODEBUG void reset() noexcept { *this = BLArrayView{}; }
-
-  BL_INLINE_NODEBUG void reset(const T* data_in, size_t size_in) noexcept {
-    data = data_in;
-    size = size_in;
-  }
-
-  [[nodiscard]]
-  BL_INLINE const T& operator[](size_t index) noexcept {
-    BL_ASSERT(index < size);
-    return data[index];
-  }
-
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T* begin() const noexcept { return data; }
-
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T* end() const noexcept { return data + size; }
-
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T* cbegin() const noexcept { return data; }
-
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T* cend() const noexcept { return data + size; }
-};
-
-// In C++ mode these are just typedefs of `BLArrayView<Type>`.
-
-//! View of `char[]` data used by String.
-using BLStringView = BLArrayView<char>;
-
-//! View of untyped data.
-using BLDataView = BLArrayView<uint8_t>;
-
-#else
-
-#define BL_DEFINE_ARRAY_VIEW(NAME, TYPE) \
-  typedef struct {                       \
-    const TYPE* data;                    \
-    size_t size;                         \
-  } NAME
-
-BL_DEFINE_ARRAY_VIEW(BLArrayView, void);
-BL_DEFINE_ARRAY_VIEW(BLStringView, char);
-
-typedef BLArrayView BLDataView;
-
-#undef BL_DEFINE_ARRAY_VIEW
-
-#endif
-
 //! \}
 
-#endif // BLEND2D_API_H_INCLUDED
+#endif // BLEND2D_CORE_API_H_INCLUDED

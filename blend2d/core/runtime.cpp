@@ -3,9 +3,11 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_p.h>
+#include <blend2d/core/api_build_p.h>
+
+#include <blend2d/axl/commons.h>
+#include <blend2d/axl/string_index_p.h>
 #include <blend2d/core/runtime_p.h>
-#include <blend2d/support/intops_p.h>
 
 // PTHREAD_STACK_MIN would be defined either by <pthread.h> or <limits.h>.
 #include <limits.h>
@@ -70,6 +72,9 @@ static const BLRuntimeBuildInfo bl_runtime_build_info = {
 #if defined(BL_TARGET_OPT_AVX512)
   | BL_RUNTIME_CPU_FEATURE_X86_AVX512
 #endif
+#if defined(BL_TARGET_OPT_AVX512_V2)
+  | BL_RUNTIME_CPU_FEATURE_X86_AVX512_V2
+#endif
   ,
 
   // Supported CPU features.
@@ -98,6 +103,9 @@ static const BLRuntimeBuildInfo bl_runtime_build_info = {
 #if defined(BL_BUILD_OPT_AVX512)
   | BL_RUNTIME_CPU_FEATURE_X86_AVX512
 #endif
+#if defined(BL_BUILD_OPT_AVX512_V2)
+  | BL_RUNTIME_CPU_FEATURE_X86_AVX512_V2
+#endif
   ,
 
   // Maximum image size.
@@ -111,13 +119,13 @@ static const BLRuntimeBuildInfo bl_runtime_build_info = {
 
   // Compiler Info.
 #if defined(__clang_minor__)
-  "Clang " BL_STRINGIFY(__clang_major__) "." BL_STRINGIFY(__clang_minor__)
+  "clang-" BL_STRINGIFY(__clang_major__) "." BL_STRINGIFY(__clang_minor__)
 #elif defined(__GNUC_MINOR__)
-  "GCC "  BL_STRINGIFY(__GNUC__) "." BL_STRINGIFY(__GNUC_MINOR__)
+  "gcc-"  BL_STRINGIFY(__GNUC__) "." BL_STRINGIFY(__GNUC_MINOR__)
 #elif defined(_MSC_VER)
-  "MSC"
+  "msvc"
 #else
-  "Unknown"
+  "unknown"
 #endif
 };
 
@@ -135,24 +143,30 @@ static BL_INLINE uint32_t bl_runtime_detect_cpu_features(const asmjit::CpuInfo& 
   if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kSSE4_1)) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_1;
 
   if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kSSE4_2) &&
-      asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kPCLMULQDQ)) {
+      asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kPCLMULQDQ) &&
+      asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kPOPCNT)) {
     features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_2;
-
     if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX)) {
       features |= BL_RUNTIME_CPU_FEATURE_X86_AVX;
-
       if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX2) &&
           asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kBMI) &&
           asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kBMI2) &&
-          asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kPOPCNT)) {
+          asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kFMA)) {
         features |= BL_RUNTIME_CPU_FEATURE_X86_AVX2;
-
         if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_F) &&
             asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_BW) &&
             asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_CD) &&
             asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_DQ) &&
             asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_VL)) {
           features |= BL_RUNTIME_CPU_FEATURE_X86_AVX512;
+          if (asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_BITALG) &&
+              asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_IFMA) &&
+              asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_VBMI) &&
+              asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_VBMI2) &&
+              asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kAVX512_VNNI) &&
+              asm_cpu_info.has_feature(asmjit::CpuFeatures::X86::kGFNI)) {
+            features |= BL_RUNTIME_CPU_FEATURE_X86_AVX512_V2;
+          }
         }
       }
     }
@@ -161,7 +175,7 @@ static BL_INLINE uint32_t bl_runtime_detect_cpu_features(const asmjit::CpuInfo& 
   if (asm_cpu_info.has_feature(asmjit::CpuFeatures::ARM::kCRC32)) features |= BL_RUNTIME_CPU_FEATURE_ARM_CRC32;
   if (asm_cpu_info.has_feature(asmjit::CpuFeatures::ARM::kPMULL)) features |= BL_RUNTIME_CPU_FEATURE_ARM_PMULL;
 #else
-  bl_unused(asm_cpu_info);
+  axl::maybe_unused(asm_cpu_info);
 #endif
 
   return features;
@@ -172,8 +186,8 @@ static BL_INLINE void bl_runtime_init_system_info(BLRuntimeContext* rt) noexcept
   BLRuntimeSystemInfo& info = rt->system_info;
 
   info.cpu_arch = BL_TARGET_ARCH_X86  ? BL_RUNTIME_CPU_ARCH_X86  :
-                 BL_TARGET_ARCH_ARM  ? BL_RUNTIME_CPU_ARCH_ARM  :
-                 BL_TARGET_ARCH_MIPS ? BL_RUNTIME_CPU_ARCH_MIPS : BL_RUNTIME_CPU_ARCH_UNKNOWN;
+                  BL_TARGET_ARCH_ARM  ? BL_RUNTIME_CPU_ARCH_ARM  :
+                  BL_TARGET_ARCH_MIPS ? BL_RUNTIME_CPU_ARCH_MIPS : BL_RUNTIME_CPU_ARCH_UNKNOWN;
 
 #ifndef BL_BUILD_NO_JIT
   const asmjit::CpuInfo& asm_cpu_info = asmjit::CpuInfo::host();
@@ -218,12 +232,11 @@ static BL_INLINE void bl_runtime_init_system_info(BLRuntimeContext* rt) noexcept
   constexpr uint32_t kMinStackKiB = 128;
 #endif
 
-  info.thread_stack_size = bl::IntOps::align_up(bl_max<uint32_t>(info.thread_stack_size, kMinStackKiB * 1024u), info.allocation_granularity);
+  info.thread_stack_size = bl::axl::align_up(bl_max<uint32_t>(info.thread_stack_size, kMinStackKiB * 1024u), info.allocation_granularity);
 }
 
-static BL_INLINE void bl_runtime_init_optimization_info(BLRuntimeContext* rt) noexcept {
-  // Maybe unused.
-  bl_unused(rt);
+static BL_INLINE void bl_runtime_init_optimization_info([[maybe_unused]] BLRuntimeContext* rt) noexcept {
+  using namespace bl;
 
 #ifndef BL_BUILD_NO_JIT
 
@@ -260,8 +273,10 @@ static BL_INLINE void bl_runtime_init_optimization_info(BLRuntimeContext* rt) no
 
 BL_API_IMPL BLResult bl_runtime_init() noexcept {
   BLRuntimeContext* rt = &bl_runtime_context;
-  if (bl_atomic_fetch_add_strong(&rt->ref_count) != 0)
+
+  if (bl::Atomic::fetch_add_acq_rel(rt->ref_count) != 0) {
     return BL_SUCCESS;
+  }
 
   // Initializes system information - we need this first so we can properly initialize everything that relies
   // on system or CPU features (futex, thread-pool, SIMD optimized operations, etc...).
@@ -278,21 +293,27 @@ BL_API_IMPL BLResult bl_runtime_init() noexcept {
 
   bl_compression_rt_init(rt);
   bl_pixel_ops_rt_init(rt);
-  bl_bit_array_rt_init(rt);
-  bl_bit_set_rt_init(rt);
   bl_array_rt_init(rt);
+  bl_bit_array_rt_init(rt);
+  bl_coverage_set_rt_init(rt);
   bl_string_rt_init(rt);
   bl_transform_rt_init(rt);
   bl_path_rt_init(rt);
+  bl_stroke_options_rt_init(rt);
   bl_image_rt_init(rt);
+
+#if !defined(BL_BUILD_NO_CODECS)
   bl_image_codec_rt_init(rt);
   bl_image_decoder_rt_init(rt);
   bl_image_encoder_rt_init(rt);
+#endif // !BL_BUILD_NO_CODECS
+
   bl_image_scale_rt_init(rt);
   bl_pattern_rt_init(rt);
   bl_gradient_rt_init(rt);
   bl_font_feature_settings_rt_init(rt);
   bl_font_variation_settings_rt_init(rt);
+  bl_glyph_buffer_rt_init(rt);
   bl_font_data_rt_init(rt);
   bl_font_face_rt_init(rt);
   bl_open_type_rt_init(rt);
@@ -305,14 +326,17 @@ BL_API_IMPL BLResult bl_runtime_init() noexcept {
 #endif
 
   bl_context_rt_init(rt);
+
+#if !defined(BL_BUILD_NO_CODECS)
   bl_register_built_in_codecs(rt);
+#endif // !BL_BUILD_NO_CODECS
 
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult bl_runtime_shutdown() noexcept {
   BLRuntimeContext* rt = &bl_runtime_context;
-  if (bl_atomic_fetch_sub_strong(&rt->ref_count) != 1)
+  if (bl::Atomic::fetch_sub_acq_rel(rt->ref_count) != 1)
     return BL_SUCCESS;
 
   rt->shutdown_handlers.call_in_reverse_order(rt);
@@ -406,12 +430,120 @@ void bl_runtime_failure(const char* fmt, ...) noexcept {
 }
 
 BL_API_IMPL void bl_runtime_assertion_failure(const char* file, int line, const char* msg) noexcept {
-  bl_runtime_message_fmt("[Blend2D] ASSERTION FAILURE: '%s' at '%s' [line %d]\n", msg, file, line);
+  bl_runtime_message_fmt("[blend2d] ASSERTION FAILURE: '%s' at '%s' [line %d]\n", msg, file, line);
   abort();
 }
 
-// BLRuntime - ResultFrom{Win|Posix}Error
-// ======================================
+// BLRuntime - Result as String
+// ============================
+
+BL_API_IMPL const char* BL_CDECL bl_result_as_string(BLResult result) noexcept {
+  using namespace bl;
+
+  if (result == BL_SUCCESS) {
+    return "SUCCESS";
+  }
+
+  static constexpr size_t kStartIndex = BL_ERROR_START_INDEX;
+  static constexpr size_t kEntryCount = BL_RESULT_MAX_VALUE + 1u - BL_ERROR_START_INDEX;
+
+  // @EnumStringBegin{"enum": "BLResult", "output": "error", "strip": "BL_"}@
+  static constexpr char error_data[] =
+    "ERROR_OUT_OF_MEMORY\0"
+    "ERROR_INVALID_VALUE\0"
+    "ERROR_INVALID_STATE\0"
+    "ERROR_INVALID_HANDLE\0"
+    "ERROR_INVALID_CONVERSION\0"
+    "ERROR_OVERFLOW\0"
+    "ERROR_NOT_INITIALIZED\0"
+    "ERROR_NOT_IMPLEMENTED\0"
+    "ERROR_NOT_PERMITTED\0"
+    "ERROR_IO\0"
+    "ERROR_BUSY\0"
+    "ERROR_INTERRUPTED\0"
+    "ERROR_TRY_AGAIN\0"
+    "ERROR_TIMED_OUT\0"
+    "ERROR_BROKEN_PIPE\0"
+    "ERROR_INVALID_SEEK\0"
+    "ERROR_SYMLINK_LOOP\0"
+    "ERROR_FILE_TOO_LARGE\0"
+    "ERROR_ALREADY_EXISTS\0"
+    "ERROR_ACCESS_DENIED\0"
+    "ERROR_MEDIA_CHANGED\0"
+    "ERROR_READ_ONLY_FS\0"
+    "ERROR_NO_DEVICE\0"
+    "ERROR_NO_ENTRY\0"
+    "ERROR_NO_MEDIA\0"
+    "ERROR_NO_MORE_DATA\0"
+    "ERROR_NO_MORE_FILES\0"
+    "ERROR_NO_SPACE_LEFT\0"
+    "ERROR_NOT_EMPTY\0"
+    "ERROR_NOT_FILE\0"
+    "ERROR_NOT_DIRECTORY\0"
+    "ERROR_NOT_SAME_DEVICE\0"
+    "ERROR_NOT_BLOCK_DEVICE\0"
+    "ERROR_INVALID_FILE_NAME\0"
+    "ERROR_FILE_NAME_TOO_LONG\0"
+    "ERROR_TOO_MANY_OPEN_FILES\0"
+    "ERROR_TOO_MANY_OPEN_FILES_BY_OS\0"
+    "ERROR_TOO_MANY_LINKS\0"
+    "ERROR_TOO_MANY_THREADS\0"
+    "ERROR_THREAD_POOL_EXHAUSTED\0"
+    "ERROR_FILE_EMPTY\0"
+    "ERROR_OPEN_FAILED\0"
+    "ERROR_NOT_ROOT_DEVICE\0"
+    "ERROR_UNKNOWN_SYSTEM_ERROR\0"
+    "ERROR_CORRUPTED_PATH_DATA\0"
+    "ERROR_INVALID_ALIGNMENT\0"
+    "ERROR_INVALID_SIGNATURE\0"
+    "ERROR_INVALID_DATA\0"
+    "ERROR_INVALID_STRING\0"
+    "ERROR_INVALID_KEY\0"
+    "ERROR_DATA_TRUNCATED\0"
+    "ERROR_DATA_TOO_LARGE\0"
+    "ERROR_DECOMPRESSION_FAILED\0"
+    "ERROR_INVALID_GEOMETRY\0"
+    "ERROR_NO_MATCHING_VERTEX\0"
+    "ERROR_INVALID_CREATE_FLAGS\0"
+    "ERROR_NO_MATCHING_COOKIE\0"
+    "ERROR_NO_STATES_TO_RESTORE\0"
+    "ERROR_TOO_MANY_SAVED_STATES\0"
+    "ERROR_IMAGE_TOO_LARGE\0"
+    "ERROR_IMAGE_NO_MATCHING_CODEC\0"
+    "ERROR_IMAGE_UNKNOWN_FILE_FORMAT\0"
+    "ERROR_IMAGE_DECODER_NOT_PROVIDED\0"
+    "ERROR_IMAGE_ENCODER_NOT_PROVIDED\0"
+    "ERROR_PNG_MULTIPLE_IHDR\0"
+    "ERROR_PNG_INVALID_IDAT\0"
+    "ERROR_PNG_INVALID_IEND\0"
+    "ERROR_PNG_INVALID_PLTE\0"
+    "ERROR_PNG_INVALID_TRNS\0"
+    "ERROR_PNG_INVALID_FILTER\0"
+    "ERROR_JPEG_UNSUPPORTED_FEATURE\0"
+    "ERROR_JPEG_INVALID_SOS\0"
+    "ERROR_JPEG_INVALID_SOF\0"
+    "ERROR_JPEG_MULTIPLE_SOF\0"
+    "ERROR_JPEG_UNSUPPORTED_SOF\0"
+    "ERROR_FONT_NOT_INITIALIZED\0"
+    "ERROR_FONT_NO_MATCH\0"
+    "ERROR_FONT_NO_CHARACTER_MAPPING\0"
+    "ERROR_FONT_MISSING_IMPORTANT_TABLE\0"
+    "ERROR_FONT_FEATURE_NOT_AVAILABLE\0"
+    "ERROR_FONT_CFF_INVALID_DATA\0"
+    "ERROR_FONT_PROGRAM_TERMINATED\0"
+    "ERROR_GLYPH_SUBSTITUTION_TOO_LARGE\0"
+    "ERROR_INVALID_GLYPH\0"
+    "<Unknown>\0";
+  // @EnumStringEnd@
+
+  size_t result_index = result - kStartIndex;
+
+  static constexpr auto error_index = axl::make_string_index<kEntryCount + 1u>(error_data);
+  return error_data + error_index[axl::min<size_t>(result_index, error_index.size() - 1u)];
+}
+
+// BLRuntime - Result from {Win|Posix} Error
+// =========================================
 
 #ifdef _WIN32
 
@@ -490,8 +622,9 @@ BL_API_IMPL BLResult bl_result_from_win_error(uint32_t e) noexcept {
   }
 
   // Pass the system error if it's below our error indexing.
-  if (e < BL_ERROR_START_INDEX)
-    return e;
+  if (e < BL_ERROR_START_INDEX) {
+    return static_cast<BLResult>(e);
+  }
 
   // Otherwise this is an unmapped system error code.
   return BL_ERROR_UNKNOWN_SYSTEM_ERROR;
@@ -611,7 +744,7 @@ BL_API_IMPL BLResult bl_result_from_posix_error(int e) noexcept {
 
   // Pass the system error if it's below our error indexing.
   if (e != 0 && unsigned(e) < BL_ERROR_START_INDEX)
-    return uint32_t(unsigned(e));
+    return BLResult(unsigned(e));
   else
     return BL_ERROR_UNKNOWN_SYSTEM_ERROR;
 }

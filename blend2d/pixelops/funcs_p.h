@@ -6,7 +6,7 @@
 #ifndef BLEND2D_PIXELOPS_FUNCS_P_H_INCLUDED
 #define BLEND2D_PIXELOPS_FUNCS_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/core/api_internal_p.h>
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal

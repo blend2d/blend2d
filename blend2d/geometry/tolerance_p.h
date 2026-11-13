@@ -6,6 +6,7 @@
 #ifndef BLEND2D_GEOMETRY_TOLERANCE_P_H_INCLUDED
 #define BLEND2D_GEOMETRY_TOLERANCE_P_H_INCLUDED
 
+#include <blend2d/core/geometry.h>
 #include <blend2d/geometry/commons_p.h>
 
 //! \cond INTERNAL
@@ -18,15 +19,16 @@ struct Tolerance {
   //! Tolerance parameter.
   double tolerance;
   //! Tolerance used to simplify conic curves.
-  double toleranceMul4;
+  double tolerance_mul4;
   //! Tolerance used to simplify cubic curves.
-  double toleranceMul54;
+  double tolerance_mul54;
 };
 
-static BL_INLINE Tolerance make_tolerance(double tolerance) noexcept {
-  double mul4 = tolerance * 4.0;
-  double mul54 = tolerance * 54.0;
-  return Tolerance{tolerance, mul4, mul54};
+static BL_INLINE Tolerance make_tolerance(const BLApproximationOptions& approx) noexcept {
+  double tolerance = double(approx.simplify_tolerance);
+  double tolerance_mul4 = tolerance * 4.0;
+  double tolerance_mul54 = tolerance * 54.0;
+  return Tolerance{tolerance, tolerance_mul4, tolerance_mul54};
 }
 
 } // {bl::Geometry}

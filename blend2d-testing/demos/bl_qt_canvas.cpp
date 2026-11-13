@@ -74,7 +74,7 @@ void QBLCanvas::_resize_canvas() {
   qsizetype qimage_stride = qt_image.bytesPerLine();
 
   qt_image_non_scaling = QImage(qimage_bits, sw, sh, qimage_stride, qimage_format);
-  bl_image.create_from_data(sw, sh, BL_FORMAT_PRGB32, qimage_bits, intptr_t(qimage_stride));
+  bl_image.create_from_data_mut(sw, sh, BL_FORMAT_PRGB32, qimage_bits, intptr_t(qimage_stride));
 
   update_canvas(false);
 }

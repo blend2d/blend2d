@@ -1,0 +1,590 @@
+// ZeroTest - Lightweight and embeddable unit testing framework for C++
+//
+// This is free and unencumbered software released into the public domain.
+//
+// Anyone is free to copy, modify, publish, use, compile, sell, or
+// distribute this software, either in source code form or as a compiled
+// binary, for any purpose, commercial or non-commercial, and by any
+// means.
+//
+// In jurisdictions that recognize copyright laws, the author or authors
+// of this software dedicate any and all copyright interest in the
+// software to the public domain. We make this dedication for the benefit
+// of the public at large and to the detriment of our heirs and
+// successors. We intend this dedication to be an overt act of
+// relinquishment in perpetuity of all present and future rights to this
+// software under copyright law.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+// OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+// ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+//
+// For more information, please refer to <http://unlicense.org>
+
+#include "zero_test.h"
+
+#if defined(_WIN32)
+  #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+  #ifndef NOMINMAX
+    #define NOMINMAX
+  #endif
+  #include <windows.h>
+#elif !defined(__EMSCRIPTEN__)
+  #include <pthread.h>
+#endif
+
+namespace ZeroTest {
+
+using MT = MessageType;
+
+// Test Threading Utilities
+// ========================
+
+class Lock {
+public:
+#if defined(_WIN32)
+  SRWLOCK _handle;
+
+  inline void init() noexcept { _handle = SRWLOCK{}; }
+  inline void destroy() noexcept {}
+  inline void lock() noexcept { AcquireSRWLockExclusive(&_handle); }
+  inline void unlock() noexcept { ReleaseSRWLockExclusive(&_handle); }
+#elif !defined(__EMSCRIPTEN__)
+  pthread_mutex_t _handle;
+
+  inline void init() noexcept { pthread_mutex_init(&_handle, nullptr); }
+  inline void destroy() noexcept { pthread_mutex_destroy(&_handle); }
+  inline void lock() noexcept { pthread_mutex_lock(&_handle); }
+  inline void unlock() noexcept { pthread_mutex_unlock(&_handle); }
+#else
+  inline void init() noexcept {}
+  inline void destroy() noexcept {}
+  inline void lock() noexcept {}
+  inline void unlock() noexcept {}
+#endif
+};
+
+// Test Runner Colors
+// ==================
+
+static const Color message_type_to_color_table[] = {
+  Color::kNone,          // kRegularText
+  Color::kBrightYellow,  // kStatus
+  Color::kBrightCyan,    // kBright
+  Color::kNone,          // kRunnerMessage,
+  Color::kBrightCyan,    // kTestCase
+  Color::kBrightMagenta, // kTestVariant
+  Color::kNone,          // kTestLog
+  Color::kBrightYellow,  // kImportant
+  Color::kBrightGreen,   // kSuccess
+  Color::kBrightRed      // kFailure
+};
+
+static ZERO_INLINE_NODEBUG Color color_of(MessageType message_type) noexcept {
+  return message_type_to_color_table[static_cast<size_t>(message_type)];
+}
+
+// Test Runner Status
+// ==================
+
+// Describes what is currently written into the output.
+static constexpr uint32_t kStatusNone = 0u;
+static constexpr uint32_t kStatusTesting = 0x01u;
+static constexpr uint32_t kStatusHasVariations = 0x02u;
+static constexpr uint32_t kStatusHasMessages = 0x04u;
+
+static const char str_open_variation[] = "<";
+static const char str_close_variation[] = ">";
+
+// Globals
+// =======
+
+// Zero initialized globals.
+struct Globals {
+  size_t ref_count;
+  Lock lock;
+
+  TestRunner* test_runner;
+  TestCase* test_list;
+  TestCase* last_added_test;
+};
+static Globals globals {};
+
+// String Utilities
+// ----------------
+
+//! Compares names and priority of two test cases.
+static int test_cmp(const TestCase* a, const TestCase* b) noexcept {
+  int test_file_comparison = strcmp(a->test_file, b->test_file);
+
+  // Tests within the same file are sorted according to their positions in source file.
+  if (test_file_comparison == 0) {
+    return a->test_line < b->test_line ? -1 : int(a->test_line > b->test_line);
+  }
+  else {
+    return test_file_comparison;
+  }
+}
+
+// Test Registration
+// -----------------
+
+void register_test(TestCase* test) noexcept {
+  TestCase** prev_ptr = &globals.test_list;
+  TestCase* current = *prev_ptr;
+
+  // C++ static initialization doesn't guarantee anything. We sort all units according to
+  // `test_cmd()` so the execution will always happen in a deterministic order.
+  if (globals.last_added_test && strcmp(globals.last_added_test->test_file, test->test_file) == 0) {
+    test->next_test = globals.last_added_test->next_test;
+    globals.last_added_test->next_test = test;
+  }
+  else {
+    while (current != nullptr) {
+      if (test_cmp(current, test) >= 0) {
+        break;
+      }
+
+      prev_ptr = &current->next_test;
+      current = *prev_ptr;
+    }
+
+    *prev_ptr = test;
+    test->next_test = current;
+  }
+
+  globals.last_added_test = test;
+}
+
+// Test Runner Logging
+// -------------------
+
+static void TestRunner_variation_log(TestRunner& test_runner, const char* variation_name, size_t len) {
+  StringTmp<1024> buf;
+  auto& status = test_runner._status;
+
+  if (!(status & kStatusHasVariations)) {
+    // Opens a variation <X, Y, Z>.
+    status |= kStatusHasVariations;
+    buf.append(str_open_variation);
+  }
+  else if (!(status & kStatusHasMessages)) {
+    // Variation mode without additional log messages within - continue `<X, Y, Z, ...>` pattern.
+    buf.append(", ");
+  }
+  else {
+    // Variation mode with logging - repeat the test case name with variation `test_case<variation_name`
+    status &= ~kStatusHasMessages;
+    buf.c_append(color_of(MT::kTestCase), test_runner._test_running->test_name);
+    buf.append(str_open_variation);
+  }
+
+  buf.c_append(color_of(MT::kTestVariant), variation_name, len);
+  test_runner.message(MT::kTestCase, buf);
+}
+
+static void TestRunner_variation_done(TestRunner& test_runner, bool message_reason) {
+  auto& status = test_runner._status;
+
+  if (!(status & kStatusHasVariations)) {
+    return;
+  }
+
+  if (!(status & kStatusHasMessages)) {
+    StringTmp<1024> buf;
+    buf.append_format(message_reason ? "*%s\n" : "%s", str_close_variation);
+    test_runner.message(MT::kRegularText, buf);
+
+    if (!message_reason) {
+      status &= ~(kStatusHasMessages | kStatusHasVariations);
+    }
+  }
+}
+
+static void TestRunner_log_test_case(TestRunner& test_runner) {
+  StringTmp<256> buf;
+  buf.append("- ");
+  buf.c_append(color_of(MT::kTestCase), test_runner._test_running->test_name);
+
+  test_runner._log_pending.clear();
+  test_runner._message_out.func(test_runner, MT::kTestCase, buf.data(), buf.size());
+}
+
+static void TestRunner_test_case_done(TestRunner& test_runner, bool success) {
+  TestRunner_variation_done(test_runner, false);
+
+  StringTmp<1024> buf;
+  auto& status = test_runner._status;
+
+  MessageType msg_type =  success ? MT::kSuccess : MT::kFailure;
+  const char* symbol = success ? test_runner._symbol_success : test_runner._symbol_failure;
+
+  buf.c_append_format(color_of(msg_type), !(status & kStatusHasMessages) ? " %s\n": "  %s\n", symbol);
+  test_runner.message(msg_type, buf);
+}
+
+static void TestRunner_message_indented(TestRunner& test_runner, MessageType msg_type, const char* msg, size_t msg_size) {
+  size_t indentation_size = 2;
+
+  if (test_runner._message_out.func && msg_size > 0u) {
+    auto& status = test_runner._status;
+
+    if (status & kStatusHasVariations) {
+      TestRunner_variation_done(test_runner, true);
+    }
+    else if (!(status & kStatusHasMessages)) {
+      test_runner.message(MT::kRegularText, "\n");
+    }
+
+    status |= kStatusHasMessages;
+
+    StringTmp<1024> buf;
+    buf.append_indented(msg, msg_size, indentation_size, true);
+    test_runner._message_out.func(test_runner, msg_type, buf.data(), buf.size());
+  }
+}
+
+// Test Runner Failed
+// ------------------
+
+void test_failure(CheckResult* result, const char* fmt, ...) noexcept {
+  TestRunner* test_runner = globals.test_runner;
+
+  if (test_runner) {
+    TestRunner_test_case_done(*test_runner, false);
+
+    if (test_runner->_log_pending.size()) {
+      TestRunner_message_indented(*test_runner, MT::kTestLog, test_runner->_log_pending.data(), test_runner->_log_pending.size());
+      test_runner->_log_pending.clear();
+    }
+
+    StringTmp<1024> buf;
+    buf.append('\n');
+    buf.c_append(color_of(MT::kFailure), "FAILED CHECK: ");
+    buf.c_append(color_of(MT::kImportant), result->_expression);
+    buf.eat_nl();
+    buf.append('\n');
+
+    if (result->_buf.size()) {
+      buf.c_append(color_of(MT::kFailure), "        WITH: ");
+      buf.c_append(color_of(MT::kImportant), result->_buf);
+      buf.eat_nl();
+      buf.append('\n');
+    }
+
+    if (fmt) {
+      va_list ap;
+      va_start(ap, fmt);
+      buf.c_append(color_of(MT::kFailure), "      REASON: ");
+
+      StringTmp<512> reason_str;
+      reason_str.append_format_v(fmt, ap);
+
+      buf.append_start_escape(color_of(MT::kImportant));
+      buf.append_indented(reason_str.data(), reason_str.size(), 14, false);
+      buf.eat_nl();
+      buf.append_end_escape(color_of(MT::kImportant));
+      buf.append('\n');
+      va_end(ap);
+    }
+
+    buf.c_append(color_of(MT::kFailure), "SRC LOCATION: ");
+    buf.c_append_format(color_of(MT::kImportant), "%s (Line: %d)\n", result->_file, result->_line);
+
+    test_runner->message(MT::kFailure, buf);
+  }
+
+  abort();
+}
+
+// Test Runner Public
+// ------------------
+
+TestRunner::TestRunner(int argc, const char* const* argv) noexcept : _cmd_line(argc, argv) {
+  globals.test_runner = this;
+
+  if (++globals.ref_count == 1) {
+    globals.lock.init();
+  }
+
+  _verbose = _cmd_line.has_arg("--verbose");
+  _run_filter = _cmd_line.get_arg("--run", nullptr);
+
+  if (ZeroLib::is_color_output_supported() && !_cmd_line.has_arg("--no-color")) {
+    set_color_output(true);
+  }
+}
+
+TestRunner::~TestRunner() noexcept {
+  if (globals.test_runner == this) {
+    globals.test_runner = nullptr;
+  }
+
+  if (--globals.ref_count == 0) {
+    globals.lock.destroy();
+  }
+}
+
+void TestRunner::apply_precedence(const TestPrecedence* entries, size_t count) noexcept {
+  _test_precedence_max = unsigned(count);
+
+  for (size_t i = 0; i < count; i++) {
+    const TestPrecedence& entry = entries[i];
+    unsigned filter_size = unsigned(strlen(entry.filter));
+
+    for (TestCase* test = globals.test_list; test != nullptr; test = test->next_test) {
+      if (i == 0) {
+        // Tests not matching any precedence rules are executed last.
+        test->test_precedence = _test_precedence_max;
+      }
+
+      bool matched = StringUtils::match_case(test->test_name, strlen(test->test_name), entry.filter, filter_size);
+      if (matched) {
+        if (filter_size > test->matched_filter_size) {
+          test->test_precedence = static_cast<unsigned>(i);
+          test->matched_filter_size = filter_size;
+        }
+      }
+    }
+  }
+}
+
+void TestRunner::message_f(MessageType msg_type, const char* fmt, ...) {
+  if (_message_out.func) {
+    StringTmp<1024> buf;
+    va_list ap;
+    va_start(ap, fmt);
+    buf.append_format_v(fmt, ap);
+    va_end(ap);
+    _message_out.func(*this, msg_type, buf.data(), buf.size());
+  }
+}
+
+void TestRunner::message_s(MessageType msg_type, const char* msg) {
+  if (_message_out.func) {
+    _message_out.func(*this, msg_type, msg, strlen(msg));
+  }
+}
+
+void TestRunner::message_s(MessageType msg_type, const char* msg, size_t msg_size) {
+  if (_message_out.func) {
+    _message_out.func(*this, msg_type, msg, msg_size);
+  }
+}
+
+void TestRunner::print_help() {
+  StringTmp<1024> buf;
+
+  buf.c_append(color_of(MT::kBright), "ZeroTest Options:\n");
+  buf.append_format("  --help        - print this usage\n");
+  buf.append_format("  --verbose     - turn on verbose test messages via TEST_LOG()\n");
+  buf.append_format("  --no-color    - disable color output\n");
+  buf.append_format("  --list        - list all tests (possibly filtered via --run)\n");
+  buf.append_format("  --run ...     - run filter: substr, ^prefix, suffix$, ^exact$\n");
+
+  if (_options_list.func) {
+    buf.append('\n');
+    buf.c_append(color_of(MT::kBright), "Custom Options:\n");
+    message(MT::kStatus, buf);
+    _options_list.func(*this);
+  }
+  else {
+    message(MT::kStatus, buf);
+  }
+}
+
+void TestRunner::set_color_output(bool enabled) {
+  ZeroLib::set_color_output(enabled);
+
+  // This requires UTF-8 as we serialize bytes - doesn't work on Windows, so disable it.
+#if !defined(_WIN32)
+  if (enabled) {
+    memcpy(_symbol_success, "\xE2\x9C\x94", 4);
+    memcpy(_symbol_failure, "\xE2\x9C\x97", 4);
+    return;
+  }
+#endif
+
+  memcpy(_symbol_success, "[OK]", 5);
+  memcpy(_symbol_failure, "[!!]", 5);
+}
+
+void TestRunner::list_tests() {
+  size_t test_count = 0;
+
+  StringTmp<2048> buf;
+
+  for (unsigned precedence = 0; precedence <= _test_precedence_max; precedence++) {
+    for (TestCase* test = globals.test_list; test != nullptr; test = test->next_test) {
+      if (test->test_precedence == precedence && can_run(test)) {
+        if (test_count == 0) {
+          if (_run_filter) {
+            buf.append_format("Tests matching --run \"%s\":\n", _run_filter);
+          }
+          else {
+            buf.append_format("Tests:\n");
+          }
+        }
+        buf.append("- ");
+        buf.c_append_format(color_of(MT::kTestCase), "%s\n", test->test_name);
+        test_count++;
+      }
+    }
+  }
+
+  if (!test_count) {
+    if (_run_filter) {
+      buf.c_append_format(color_of(MT::kFailure), "No tests matched --run \"%s\" \n", _run_filter);
+      list_filter_options();
+    }
+    else {
+      buf.c_append(color_of(MT::kFailure), "No tests provided!\n");
+    }
+  }
+
+  message(MT::kStatus, buf);
+}
+
+void TestRunner::list_filter_options() {
+  StringTmp<1024> buf;
+  buf.append("  - use --run 'sub' or '*sub*' to run tests matching 'sub' substring\n");
+  buf.append("  - use --run '^prefix' or 'prefix*' to run tests having a common 'prefix'\n");
+  buf.append("  - use --run 'suffix$' or '*suffix' to run tests having a common 'suffix'\n");
+  buf.append("  - use --run '^test_case$' to run an exact test 'test_case'\n");
+  message(MT::kRunnerMessage, buf);
+}
+
+int TestRunner::run_tests() {
+  if (_cmd_line.has_arg("--help")) {
+    print_help();
+    return 0;
+  }
+
+  if (_cmd_line.has_arg("--list")) {
+    list_tests();
+    return 0;
+  }
+
+  if (_run_before.func) {
+    _run_before.func(*this);
+  }
+
+  size_t test_executed_count = 0u;
+  size_t test_skipped_count = 0u;
+
+  for (unsigned precedence = 0; precedence <= _test_precedence_max; precedence++) {
+    for (TestCase* test = globals.test_list; test != nullptr; test = test->next_test) {
+      if (test->test_precedence == precedence) {
+        if (can_run(test)) {
+          run_test(test);
+          test_executed_count++;
+        }
+        else {
+          test_skipped_count++;
+        }
+      }
+    }
+  }
+
+  StringTmp<256> buf;
+  MessageType message_type = test_executed_count ? MT::kSuccess : MT::kFailure;
+
+  if (test_executed_count) {
+    buf.append('\n');
+    buf.c_append_format(color_of(message_type), "PASSED");
+    buf.append(" [");
+    buf.c_append_format(color_of(message_type), "%zu %s", test_executed_count, test_executed_count > 1u ? "tests" : "test");
+
+    if (test_skipped_count != 0u) {
+      buf.append(", ");
+      buf.c_append_format(color_of(MT::kImportant), "%zu skipped", test_skipped_count);
+    }
+
+    buf.append("]\n");
+  }
+  else {
+    if (_run_filter) {
+      buf.c_append_format(color_of(message_type), "NO TESTS MATCHED [--run %s] filter!\n", _run_filter);
+      list_filter_options();
+    }
+    else {
+      buf.c_append_format(color_of(message_type), "NO TESTS AVAILABLE!\n");
+    }
+  }
+
+  message(message_type, buf);
+
+  if (_run_after.func) {
+    _run_after.func(*this);
+  }
+
+  return 0;
+}
+
+bool TestRunner::can_run(const TestCase* test) const {
+  if (!_run_filter || _run_filter[0] == '\0') {
+    return true;
+  }
+
+  return StringUtils::match_case(test->test_name, strlen(test->test_name), _run_filter, strlen(_run_filter));
+}
+
+void TestRunner::run_test(TestCase* test) {
+  _test_running = test;
+  _status = kStatusTesting;
+  _log_pending.clear();
+
+  TestRunner_log_test_case(*this);
+  test->test_func(*this);
+  test->test_flags = TestCase::Flags(unsigned(test->test_flags) | unsigned(TestCase::Flags::kFinished));
+  TestRunner_test_case_done(*this, true);
+
+  _status = kStatusNone;
+  _test_running = nullptr;
+}
+
+bool TestRunner::test_variation(const char* variation_name, size_t len) noexcept {
+  if (len == SIZE_MAX) {
+    len = strlen(variation_name);
+  }
+
+  TestRunner_variation_log(*this, variation_name, len);
+  return true;
+}
+
+TestRunner* test_runner() noexcept {
+  return globals.test_runner;
+}
+
+void log_info(const char* fmt, ...) noexcept {
+  TestRunner* test_runner = globals.test_runner;
+
+  if (test_runner) {
+    va_list ap;
+    va_start(ap, fmt);
+
+    StringTmp<1024> buf;
+    buf.append_format_v(fmt, ap);
+
+    if (test_runner->_verbose) {
+      TestRunner_message_indented(*test_runner, MessageType::kTestLog, buf.data(), buf.size());
+    }
+    else {
+      globals.lock.lock();
+      test_runner->_log_pending.append(buf);
+      test_runner->_log_pending.eat_nl();
+      test_runner->_log_pending.append('\n');
+      globals.lock.unlock();
+    }
+
+    va_end(ap);
+  }
+}
+
+} // {ZeroTest}

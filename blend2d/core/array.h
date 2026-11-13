@@ -3,10 +3,12 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_ARRAY_H_INCLUDED
-#define BLEND2D_ARRAY_H_INCLUDED
+#ifndef BLEND2D_CORE_ARRAY_H_INCLUDED
+#define BLEND2D_CORE_ARRAY_H_INCLUDED
 
 #include <blend2d/core/object.h>
+#include <blend2d/core/object_layer.h>
+#include <blend2d/core/span.h>
 
 //! \addtogroup bl_c_api
 //! \{
@@ -23,49 +25,43 @@
 //! \{
 
 //! Array container [C API].
-struct BLArrayCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-
+struct BLArrayCore BL_INHERITS_FROM(BLObjectCore) {
 #ifdef __cplusplus
   //! \cond INTERNAL
+  using CoreType = BLArrayCore;
+  using ImplType = BLArrayImpl;
+
+  using Info = bl::ObjectLayer::ContainerInfo<
+    BL_OBJECT_TYPE_UNKNOWN,
+    bl::ObjectLayer::ObjectMode::kAny,
+    bl::ObjectLayer::ObjectLayout::kNative,
+    0u, 0u, BLObjectDetail::kMetaByteIndex>;
 
   template<typename T>
-  [[nodiscard]]
-  BL_INLINE_NODEBUG T& dcast() noexcept { return static_cast<T&>(*this); }
+  [[nodiscard]] BL_INLINE_NODEBUG T& dcast() noexcept { return static_cast<T&>(*this); }
 
   template<typename T>
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T& dcast() const noexcept { return static_cast<const T&>(*this); }
+  [[nodiscard]] BL_INLINE_NODEBUG const T& dcast() const noexcept { return static_cast<const T&>(*this); }
+
+  template<typename I = BLArrayImpl>
+  [[nodiscard]] BL_INLINE_NODEBUG I* _impl() const noexcept { return _d.impl<I>(); }
 
   //! \endcond
+#else
+  BLObjectDetail _d;
 #endif
 };
 
 //! \cond INTERNAL
-//! Array container [C API Impl].
-struct BLArrayImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Pointer to array data.
-  void* data;
-  //! Array size [in items].
-  size_t size;
-  //! Array capacity [in items].
-  size_t capacity;
 
-#ifdef __cplusplus
-  //! Returns the pointer to the `data` casted to `T*`.
-  template<typename T>
-  [[nodiscard]]
-  BL_INLINE_NODEBUG T* data_as() noexcept { return (T*)data; }
-
-  //! Returns the pointer to the `data` casted to `const T*`.
-  template<typename T>
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T* data_as() const noexcept { return (const T*)data; }
+#if defined(__cplusplus)
+//! Array container [C++ API Impl].
+struct BLArrayImpl {};
 #endif
-};
+
 //! \endcond
 
-BL_BEGIN_C_DECLS
+BL_EXTERN_C_BEGIN
 
 BL_API BLResult BL_CDECL bl_array_init(BLArrayCore* self, BLObjectType array_type) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_init_move(BLArrayCore* self, BLArrayCore* other) BL_NOEXCEPT_C;
@@ -82,17 +78,18 @@ BL_API const void* BL_CDECL bl_array_get_data(const BLArrayCore* self) BL_NOEXCE
 BL_API BLResult BL_CDECL bl_array_clear(BLArrayCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_shrink(BLArrayCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_reserve(BLArrayCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_array_resize(BLArrayCore* self, size_t n, const void* fill) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_array_reserve_for_append(BLArrayCore* self, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_array_resize(BLArrayCore* self, size_t new_size, const void* fill) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_array_truncate(BLArrayCore* self, size_t truncated_size) BL_NOEXCEPT_C;
 
 BL_API BLResult BL_CDECL bl_array_make_mutable(BLArrayCore* self, void** data_out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_array_modify_op(BLArrayCore* self, BLModifyOp op, size_t n, void** data_out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_array_insert_op(BLArrayCore* self, size_t index, size_t n, void** data_out) BL_NOEXCEPT_C;
 
 BL_API BLResult BL_CDECL bl_array_assign_move(BLArrayCore* self, BLArrayCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_assign_weak(BLArrayCore* self, const BLArrayCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_assign_deep(BLArrayCore* self, const BLArrayCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_assign_data(BLArrayCore* self, const void* data, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_array_assign_external_data(BLArrayCore* self, void* data, size_t size, size_t capacity, BLDataAccessFlags data_access_flags, BLDestroyExternalDataFunc destroy_func, void* user_data) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_array_assign_external_data(BLArrayCore* self, void* data, size_t size, size_t capacity, BLDataAccessMode access_mode, BLDestroyExternalDataFunc destroy_func, void* user_data) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_array_assign_uninitialized(BLArrayCore* self, size_t n, void** data_out) BL_NOEXCEPT_C;
 
 BL_API BLResult BL_CDECL bl_array_append_u8(BLArrayCore* self, uint8_t value) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_append_u16(BLArrayCore* self, uint16_t value) BL_NOEXCEPT_C;
@@ -102,6 +99,7 @@ BL_API BLResult BL_CDECL bl_array_append_f32(BLArrayCore* self, float value) BL_
 BL_API BLResult BL_CDECL bl_array_append_f64(BLArrayCore* self, double value) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_append_item(BLArrayCore* self, const void* item) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_append_data(BLArrayCore* self, const void* data, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_array_append_uninitialized(BLArrayCore* self, size_t n, void** data_out) BL_NOEXCEPT_C;
 
 BL_API BLResult BL_CDECL bl_array_insert_u8(BLArrayCore* self, size_t index, uint8_t value) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_insert_u16(BLArrayCore* self, size_t index, uint16_t value) BL_NOEXCEPT_C;
@@ -111,6 +109,7 @@ BL_API BLResult BL_CDECL bl_array_insert_f32(BLArrayCore* self, size_t index, fl
 BL_API BLResult BL_CDECL bl_array_insert_f64(BLArrayCore* self, size_t index, double value) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_insert_item(BLArrayCore* self, size_t index, const void* item) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_insert_data(BLArrayCore* self, size_t index, const void* data, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_array_insert_uninitialized(BLArrayCore* self, size_t index, size_t n, void** data_out) BL_NOEXCEPT_C;
 
 BL_API BLResult BL_CDECL bl_array_replace_u8(BLArrayCore* self, size_t index, uint8_t value) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_array_replace_u16(BLArrayCore* self, size_t index, uint16_t value) BL_NOEXCEPT_C;
@@ -122,11 +121,11 @@ BL_API BLResult BL_CDECL bl_array_replace_item(BLArrayCore* self, size_t index, 
 BL_API BLResult BL_CDECL bl_array_replace_data(BLArrayCore* self, size_t r_start, size_t r_end, const void* data, size_t n) BL_NOEXCEPT_C;
 
 BL_API BLResult BL_CDECL bl_array_remove_index(BLArrayCore* self, size_t index) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_array_remove_range(BLArrayCore* self, size_t r_start, size_t r_end) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_array_remove_range(BLArrayCore* self, size_t start, size_t end) BL_NOEXCEPT_C;
 
 BL_API bool BL_CDECL bl_array_equals(const BLArrayCore* a, const BLArrayCore* b) BL_NOEXCEPT_C BL_PURE;
 
-BL_END_C_DECLS
+BL_EXTERN_C_END
 
 //! \}
 
@@ -140,12 +139,12 @@ BL_END_C_DECLS
 //! \{
 
 #ifdef __cplusplus
-namespace BLInternal {
+namespace bl::Internal {
 namespace {
 
 template<typename T, uint32_t TypeCategory>
 struct ArrayTraitsByCategory {
-  static constexpr const uint32_t kArrayType = BL_OBJECT_TYPE_NULL;
+  static constexpr const BLObjectType kObjectType = BL_OBJECT_TYPE_NULL;
 
   typedef T CompatibleType;
   static BL_INLINE_NODEBUG const T& pass(const T& arg) noexcept { return arg; }
@@ -153,7 +152,7 @@ struct ArrayTraitsByCategory {
 
 template<typename T>
 struct ArrayTraitsByCategory<T, kTypeCategoryObject> {
-  static constexpr const uint32_t kArrayType = BL_OBJECT_TYPE_ARRAY_OBJECT;
+  static constexpr const BLObjectType kObjectType = BL_OBJECT_TYPE_ARRAY_OBJECT;
 
   typedef T CompatibleType;
   static BL_INLINE_NODEBUG const CompatibleType& pass(const T& arg) noexcept { return arg; }
@@ -161,16 +160,16 @@ struct ArrayTraitsByCategory<T, kTypeCategoryObject> {
 
 template<typename T>
 struct ArrayTraitsByCategory<T, kTypeCategoryPtr> {
-  static constexpr const uint32_t kArrayType =
+  static constexpr const BLObjectType kObjectType =
     sizeof(T) == 4 ? BL_OBJECT_TYPE_ARRAY_UINT32 : BL_OBJECT_TYPE_ARRAY_UINT64;
 
-  using CompatibleType = BLInternal::UIntByType<T>;
+  using CompatibleType = UIntByType<T>;
   static BL_INLINE_NODEBUG CompatibleType pass(const T& arg) noexcept { return (CompatibleType)arg; }
 };
 
 template<typename T>
 struct ArrayTraitsByCategory<T, kTypeCategoryInt> {
-  static constexpr const uint32_t kArrayType =
+  static constexpr const BLObjectType kObjectType =
     sizeof(T) == 1 && std::is_signed_v  <T> ? BL_OBJECT_TYPE_ARRAY_INT8   :
     sizeof(T) == 1 && std::is_unsigned_v<T> ? BL_OBJECT_TYPE_ARRAY_UINT8  :
     sizeof(T) == 2 && std::is_signed_v  <T> ? BL_OBJECT_TYPE_ARRAY_INT16  :
@@ -180,13 +179,13 @@ struct ArrayTraitsByCategory<T, kTypeCategoryInt> {
     sizeof(T) == 8 && std::is_signed_v  <T> ? BL_OBJECT_TYPE_ARRAY_INT64  :
     sizeof(T) == 8 && std::is_unsigned_v<T> ? BL_OBJECT_TYPE_ARRAY_UINT64 : BL_OBJECT_TYPE_NULL;
 
-  using CompatibleType = BLInternal::UIntByType<T>;
+  using CompatibleType = UIntByType<T>;
   static BL_INLINE_NODEBUG CompatibleType pass(const T& arg) noexcept { return (CompatibleType)arg; }
 };
 
 template<typename T>
 struct ArrayTraitsByCategory<T, kTypeCategoryFloat> {
-  static constexpr const uint32_t kArrayType =
+  static constexpr const BLObjectType kObjectType =
     sizeof(T) == 4 ? BL_OBJECT_TYPE_ARRAY_FLOAT32 :
     sizeof(T) == 8 ? BL_OBJECT_TYPE_ARRAY_FLOAT64 : BL_OBJECT_TYPE_NULL;
 
@@ -196,7 +195,7 @@ struct ArrayTraitsByCategory<T, kTypeCategoryFloat> {
 
 template<typename T>
 struct ArrayTraitsByCategory<T, kTypeCategoryStruct> {
-  static constexpr const uint32_t kArrayType =
+  static constexpr const BLObjectType kObjectType =
     sizeof(T) ==  1 ? BL_OBJECT_TYPE_ARRAY_STRUCT_1  :
     sizeof(T) ==  2 ? BL_OBJECT_TYPE_ARRAY_STRUCT_2  :
     sizeof(T) ==  3 ? BL_OBJECT_TYPE_ARRAY_STRUCT_3  :
@@ -257,7 +256,7 @@ template<> BL_INLINE_NODEBUG BLResult replace_item(BLArrayCore* self, size_t ind
 template<> BL_INLINE_NODEBUG BLResult replace_item(BLArrayCore* self, size_t index, const double& item) noexcept { return bl_array_replace_f64(self, index, item); }
 
 } // {anonymous}
-} // {BLInternal}
+} // {bl::Internal}
 #endif
 
 //! \}
@@ -276,24 +275,17 @@ public:
   //! \{
 
   //! Array traits of `T`.
-  typedef BLInternal::ArrayTraits<T> Traits;
+  using Traits = bl::Internal::ArrayTraits<T>;
 
-  //! Implementation type of this BLArray<T> matching `T` traits.
-  enum : uint32_t {
-    kArrayType = Traits::kArrayType,
+  using Info = bl::ObjectLayer::ContainerInfo<
+    Traits::kObjectType,
+    (BLObjectDetail::kSSOCapacity / sizeof(T) >= 1u) ? bl::ObjectLayer::ObjectMode::kAny : bl::ObjectLayer::ObjectMode::kDyn,
+    bl::ObjectLayer::ObjectLayout::kNative,
+    (BLObjectDetail::kSSOCapacity / sizeof(T)), 0u, BLObjectDetail::kMetaByteIndex>;
 
-    //! Capacity of an SSO array - depends on the size of `T`.
-    kSSOCapacity = BLObjectDetail::kStaticDataSize / uint32_t(sizeof(T)),
-
-    //! Signature of SSO representation of an empty array.
-    kSSOEmptySignature = BLObjectInfo::pack_type_with_marker(BLObjectType(kArrayType)) | BLObjectInfo::pack_abcp(0u, kSSOCapacity)
-  };
-
-  static_assert(uint32_t(kArrayType) != BL_OBJECT_TYPE_NULL,
-                "Type 'T' cannot be used with 'BLArray<T>' as it's either non-trivial or non-specialized");
-
-  [[nodiscard]]
-  BL_INLINE_NODEBUG BLArrayImpl* _impl() const noexcept { return static_cast<BLArrayImpl*>(_d.impl); }
+  static_assert(Info::kType >= BL_OBJECT_TYPE_MIN_ARRAY &&
+                Info::kType <= BL_OBJECT_TYPE_MAX_ARRAY,
+                "BLArray<T> requires `T` to be either bool, integer, floating point, BLObject-derived type, or a trivial type of a supported size");
 
   //! \}
   //! \endcond
@@ -303,15 +295,25 @@ public:
 
   //! Creates a default constructed array.
   BL_INLINE_NODEBUG BLArray() noexcept {
-    _d.init_static(BLObjectInfo{kSSOEmptySignature});
+    if (Info::kSSOAvailable) {
+      bl::ObjectLayer::init_sso(this);
+    }
+    else {
+      bl_array_init(this, Info::kType);
+    }
   }
 
   //! Move constructor.
   //!
-  //! \note The `other` array is always reset by a move construction, so it becomes an empty array.
+  //! \remarks The `other` array is always reset by move constructor, so it becomes a default constructed empty array.
   BL_INLINE_NODEBUG BLArray(BLArray&& other) noexcept {
-    _d = other._d;
-    other._d.init_static(BLObjectInfo{kSSOEmptySignature});
+    if (Info::kSSOAvailable) {
+      _d = other._d;
+      bl::ObjectLayer::init_sso(&other);
+    }
+    else {
+      bl_array_init_move(this, &other);
+    }
   }
 
   //! Copy constructor, performs weak copy of the data held by the `other` array.
@@ -321,7 +323,7 @@ public:
 
   //! Destroys the array.
   BL_INLINE_NODEBUG ~BLArray() noexcept {
-    if (BLInternal::object_needs_cleanup(_d.info.bits)) {
+    if (bl::ObjectLayer::requires_destroy(this)) {
       bl_array_destroy(this);
     }
   }
@@ -334,7 +336,7 @@ public:
   //! Tests whether the array has items. Returns `true` if the array is not empty.
   //!
   //! \note This is essentially the opposite of `is_empty()`.
-  BL_INLINE_NODEBUG explicit operator bool() const noexcept { return !is_empty(); }
+  [[nodiscard]] BL_INLINE_NODEBUG explicit operator bool() const noexcept { return !is_empty(); }
 
   //! Move assignment.
   //!
@@ -345,18 +347,15 @@ public:
   BL_INLINE_NODEBUG BLArray& operator=(const BLArray& other) noexcept { bl_array_assign_weak(this, &other); return *this; }
 
   //! Returns true if this and `other` arrays are equal.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool operator==(const BLArray& other) const noexcept { return equals(other); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator==(const BLArray& other) const noexcept { return equals(other); }
 
   //! Returns true if this and `other` arrays are not equal.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool operator!=(const BLArray& other) const noexcept { return !equals(other); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator!=(const BLArray& other) const noexcept { return !equals(other); }
 
   //! Returns a read-only reference to the array item at the given `index`.
   //!
   //! \note This is the same as calling `at(index)`.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T& operator[](size_t index) const noexcept { return at(index); }
+  [[nodiscard]] BL_INLINE_NODEBUG const T& operator[](size_t index) const noexcept { return at(index); }
 
   //! \}
 
@@ -371,8 +370,11 @@ public:
 
     // Reset operation always succeeds.
     BL_ASSUME(result == BL_SUCCESS);
-    // Assume a default constructed BLArray<T> after reset.
-    BL_ASSUME(_d.info.bits == kSSOEmptySignature);
+
+    // Assume a default constructed BLArray<T> after reset has a zero SSO size (if the array itself is SSO).
+    if (Info::kSSOAvailable) {
+      BL_ASSUME(_d._sso_data[BLObjectDetail::kMetaByteIndex] == 0);
+    }
 
     return result;
   }
@@ -386,42 +388,28 @@ public:
   //! \{
 
   //! Tests whether the array is empty.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool is_empty() const noexcept { return size() == 0; }
-
+  [[nodiscard]] BL_INLINE_NODEBUG bool is_empty() const noexcept { return bl::ObjectLayer::get_size(this) == 0; }
   //! Returns the size of the array (number of items).
-  [[nodiscard]]
-  BL_INLINE_NODEBUG size_t size() const noexcept { return _d.sso() ? size_t(_d.a_field()) : _impl()->size; }
-
+  [[nodiscard]] BL_INLINE_NODEBUG size_t size() const noexcept { return bl::ObjectLayer::get_size(this); }
   //! Returns the capacity of the array (number of items).
-  [[nodiscard]]
-  BL_INLINE_NODEBUG size_t capacity() const noexcept { return _d.sso() ? size_t(_d.b_field()) : _impl()->capacity; }
+  [[nodiscard]] BL_INLINE_NODEBUG size_t capacity() const noexcept { return bl::ObjectLayer::get_capacity(this); }
 
   //! Returns a pointer to the array data.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T* data() const noexcept { return _d.sso() ? (const T*)(_d.char_data) : (const T*)_impl()->data; }
+  [[nodiscard]] BL_INLINE_NODEBUG const T* data() const noexcept { return bl::ObjectLayer::get_data<T>(this); }
 
   //! Returns a pointer to the array data (iterator compatibility).
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T* begin() const noexcept { return data(); }
-
+  [[nodiscard]] BL_INLINE_NODEBUG const T* begin() const noexcept { return data(); }
   //! Returns a pointer to the end of array data (iterator compatibility).
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T* end() const noexcept {
-    return _d.sso() ? (const T*)(_d.char_data) + size_t(_d.a_field())
-                    : (const T*)_impl()->data + _impl()->size;
-  }
+  [[nodiscard]] BL_INLINE_NODEBUG const T* end() const noexcept { return begin() + size(); }
 
-  //! Returns the array data as `BLArrayView<T>`.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG BLArrayView<T> view() const noexcept { return BLArrayView<T> { data(), size() }; }
+  //! Returns the array data as `BLSpan<const T>`.
+  [[nodiscard]] BL_INLINE_NODEBUG BLSpan<const T> span() const noexcept { return BLSpan<const T> { data(), size() }; }
 
   //! Returns a read-only reference to the array item at the given `index`.
   //!
   //! \note The index must be valid, which means it has to be less than the array length. Accessing items out of range
   //! is undefined behavior that would be caught by assertions in debug builds.
-  [[nodiscard]]
-  BL_INLINE const T& at(size_t index) const noexcept {
+  [[nodiscard]] BL_INLINE const T& at(size_t index) const noexcept {
     BL_ASSERT(index < size());
     return data()[index];
   }
@@ -431,16 +419,14 @@ public:
   //! \note The array must have at least one item otherwise calling `first()` would point to the end of the array,
   //! which is not initialized, and such reference would be invalid. Debug builds would catch this condition with
   //! an assertion.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T& first() const noexcept { return at(0); }
+  [[nodiscard]] BL_INLINE_NODEBUG const T& first() const noexcept { return at(0); }
 
   //! Returns a read-only reference to the last item.
   //!
   //! \note The array must have at least one item otherwise calling `last()`  would point to the end of the array,
   //! which is not initialized, and such reference would be invalid. Debug builds would catch this condition with
   //! an assertion.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG const T& last() const noexcept { return at(size() - 1); }
+  [[nodiscard]] BL_INLINE_NODEBUG const T& last() const noexcept { return at(size() - 1); }
 
   //! \}
 
@@ -461,13 +447,18 @@ public:
   //! of items it stores, which could optimize the application's memory requirements.
   BL_INLINE_NODEBUG BLResult shrink() noexcept { return bl_array_shrink(this); }
 
-  //! Reserves the array capacity to hold at least `n` items.
-  BL_INLINE_NODEBUG BLResult reserve(size_t n) noexcept { return bl_array_reserve(this, n); }
+  //! Reserves the array capacity to hold at least `min_capacity` items.
+  //!
+  //! \remarks The function would never try to resize the array when `min_capacity` is lesser than the array length.
+  BL_INLINE_NODEBUG BLResult reserve(size_t min_capacity) noexcept { return bl_array_reserve(this, min_capacity); }
+
+  //! Reserves the array capacity to hold the currently stored items and more items passed as `additional_size`.
+  BL_INLINE_NODEBUG BLResult reserve_for_append(size_t additional_size) noexcept { return bl_array_reserve_for_append(this, additional_size); }
 
   //! Truncates the length of the array to maximum `n` items.
   //!
   //! If the length of the array is less than `n`n then truncation does nothing.
-  BL_INLINE_NODEBUG BLResult truncate(size_t n) noexcept { return bl_array_resize(this, bl_min(n, size()), nullptr); }
+  BL_INLINE_NODEBUG BLResult truncate(size_t truncated_size) noexcept { return bl_array_truncate(this, truncated_size); }
 
   //! Resizes the array to `n` items.
   //!
@@ -498,36 +489,6 @@ public:
     return bl_array_make_mutable(this, (void**)data_out);
   }
 
-  //! Modify operation is similar to `make_mutable`, however, the `op` argument specifies the desired array operation,
-  //! see \ref BLModifyOp. The pointer returned in `data_out` points to the first item to be either assigned or
-  //! appended and it points to an uninitialized memory.
-  //!
-  //! Please note that assignments mean to wipe out the whole array content and to set the length of the array to `n`.
-  //! The caller is responsible for initializing the data returned in `data_out`.
-  BL_INLINE_NODEBUG BLResult modify_op(BLModifyOp op, size_t n, T** data_out) noexcept {
-    return bl_array_modify_op(this, op, n, (void**)data_out);
-  }
-
-  //! Insert operation, the semantics is similar to `modify_op()`, however, items are inserted at the given `index`
-  //! instead of assigned or appended.
-  //!
-  //! The caller is responsible for initializing the data returned in `data_out`.
-  BL_INLINE_NODEBUG BLResult insert_op(size_t index, size_t n, T** data_out) noexcept {
-    return bl_array_insert_op(this, index, n, (void**)data_out);
-  }
-
-  //! Similar to `modify_op()`, but the items to assign/append to the array are given after the `op` argument.
-  //!
-  //! \note This is a variadic template that makes such modification easier if you have a constant number of items
-  //! to assign or append.
-  template<typename... Args>
-  BL_INLINE BLResult modify_v(BLModifyOp op, Args&&... args) noexcept {
-    T* dst;
-    BL_PROPAGATE(bl_array_modify_op(this, op, sizeof...(args), (void**)&dst));
-    BLInternal::copy_to_uninitialized(dst, BLInternal::forward<Args>(args)...);
-    return BL_SUCCESS;
-  }
-
   //! Move assignment, the same as `operator=`, but returns a `BLResult` instead of `this`.
   BL_INLINE_NODEBUG BLResult assign(BLArray<T>&& other) noexcept {
     return bl_array_assign_move(this, &other);
@@ -543,24 +504,18 @@ public:
     return bl_array_assign_deep(this, &other);
   }
 
-  //! Replaces the content of the array with variadic number of items passed in `args...`.
-  template<typename... Args>
-  BL_INLINE_NODEBUG BLResult assign_v(Args&&... args) noexcept {
-    return modify_v(BL_MODIFY_OP_ASSIGN_FIT, BLInternal::forward<Args>(args)...);
-  }
-
-  //! Replaces the content of the array by items in the passed array `view`.
+  //! Replaces the content of the array by items in the passed via `data` span or compatible.
   //!
-  //! \note The implementation can handle `view` pointing to the array's data as well, so it's possible to create
-  //! a slice of the array if required.
-  BL_INLINE_NODEBUG BLResult assign_data(const BLArrayView<T>& view) noexcept {
-    return bl_array_assign_data(this, (const void*)view.data, view.size);
+  //! \remarks The implementation can handle `data` span pointing to the array's data as well, so it's possible
+  //! to create a slice of the array itself.
+  BL_INLINE_NODEBUG BLResult assign_data(BLSpanConvertible<const T> auto&& data) noexcept {
+    return bl_array_assign_data(this, (const void*)data.data(), data.size());
   }
 
   //! Replaces the content of the array `items` of length `n`.
   //!
-  //! \note The implementation can handle items pointing to the array's data as well, so it's possible to create
-  //! a slice of the array if required.
+  //! \remarks The implementation can handle `items` pointing to the array's data as well, so it's possible
+  //! to create a slice of the array itself.
   BL_INLINE_NODEBUG BLResult assign_data(const T* items, size_t n) noexcept {
     return bl_array_assign_data(this, (const void*)items, n);
   }
@@ -570,18 +525,42 @@ public:
   //! \param data External data buffer to use (cannot be NULL).
   //! \param size Size of the data buffer in items.
   //! \param capacity Capacity of the buffer, cannot be zero or smaller than `size`.
-  //! \param access_flags Flags that describe whether the data is read-only or read-write, see \ref BLDataAccessFlags.
+  //! \param access_mode Describes whether the data is read-only or read-write, see \ref BLDataAccessMode.
   //! \param destroy_func A function that would be called when the array is destroyed (can be null if you don't need it).
   //! \param user_data User data passed to `destroy_func`.
   BL_INLINE_NODEBUG BLResult assign_external_data(
-    T* data,
-    size_t size,
-    size_t capacity,
-    BLDataAccessFlags access_flags,
-    BLDestroyExternalDataFunc destroy_func = nullptr,
-    void* user_data = nullptr) noexcept {
+    T* data, size_t size, size_t capacity,
+    BLDataAccessMode access_mode,
+    BLDestroyExternalDataFunc destroy_func = nullptr, void* user_data = nullptr
+  ) noexcept {
+    return bl_array_assign_external_data(this, data, size, capacity, access_mode, destroy_func, user_data);
+  }
 
-    return bl_array_assign_external_data(this, data, size, capacity, access_flags, destroy_func, user_data);
+  BL_INLINE_NODEBUG BLResult assign_external_data_const(
+    const T* data, size_t size, size_t capacity,
+    BLDestroyExternalDataFunc destroy_func = nullptr, void* user_data = nullptr
+  ) noexcept {
+    return bl_array_assign_external_data(this, const_cast<T*>(data), size, capacity, BL_DATA_ACCESS_MODE_RO, destroy_func, user_data);
+  }
+
+  BL_INLINE_NODEBUG BLResult assign_external_data_mut(
+    T* data, size_t size, size_t capacity,
+    BLDestroyExternalDataFunc destroy_func = nullptr, void* user_data = nullptr
+  ) noexcept {
+    return bl_array_assign_external_data(this, data, size, capacity, BL_DATA_ACCESS_MODE_RW, destroy_func, user_data);
+  }
+
+  //! Replaces the content of the array with variadic number of items passed in `args...`.
+  template<typename... Args>
+  BL_INLINE_NODEBUG BLResult assign_v(Args&&... args) noexcept {
+    T* dst;
+    BL_PROPAGATE(bl_array_assign_uninitialized(this, sizeof...(args), (void**)&dst));
+    bl::Internal::copy_to_uninitialized(dst, bl::Internal::forward<Args>(args)...);
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE_NODEBUG BLResult assign_uninitialized(size_t size, T** data_out) noexcept {
+    return bl_array_assign_uninitialized(this, size, (void**)data_out);
   }
 
   //! Appends a variadic number of items items passed in `args...` to the array.
@@ -591,24 +570,33 @@ public:
   //! behavior in such case.
   template<typename... Args>
   BL_INLINE BLResult append(Args&&... args) noexcept {
-    if constexpr (sizeof...(args) == 1)
-      return BLInternal::append_item(this, Traits::pass(BLInternal::first_in_var_args(BLInternal::forward<Args>(args)...)));
-    else
-      return modify_v(BL_MODIFY_OP_APPEND_GROW, BLInternal::forward<Args>(args)...);
+    if constexpr (sizeof...(args) == 1) {
+      return bl::Internal::append_item(this, Traits::pass(bl::Internal::first_in_var_args(bl::Internal::forward<Args>(args)...)));
+    }
+    else {
+      T* dst;
+      BL_PROPAGATE(bl_array_append_uninitialized(this, sizeof...(args), (void**)&dst));
+      bl::Internal::copy_to_uninitialized(dst, bl::Internal::forward<Args>(args)...);
+      return BL_SUCCESS;
+    }
   }
 
-  //! Appends items to the array of the given array `view`.
+  //! Appends items to the array passed by `span`.
   //!
-  //! \note The implementation guarantees that a `view` pointing to the array data itself would work.
-  BL_INLINE_NODEBUG BLResult append_data(const BLArrayView<T>& view) noexcept {
-    return bl_array_append_data(this, (const void*)view.data, view.size);
+  //! \note The implementation guarantees that a `span` could point to the array data itself.
+  BL_INLINE_NODEBUG BLResult append_data(BLSpanConvertible<const T> auto&& span) noexcept {
+    return bl_array_append_data(this, (const void*)span.data(), span.size());
   }
 
-  //! Appends `items` to the array of length `n`.
+  //! Appends items to the array passed through `data` and `size` arguments. The `size` describes the number of items in `data`.
   //!
-  //! \note The implementation guarantees that a `items` pointing to the array data itself would work.
-  BL_INLINE_NODEBUG BLResult append_data(const T* items, size_t n) noexcept {
-    return bl_array_append_data(this, (const void*)items, n);
+  //! \note The implementation guarantees that `data` could point to the array data itself.
+  BL_INLINE_NODEBUG BLResult append_data(const T* data, size_t size) noexcept {
+    return bl_array_append_data(this, (const void*)data, size);
+  }
+
+  BL_INLINE_NODEBUG BLResult append_uninitialized(size_t size, T** data_out) noexcept {
+    return bl_array_append_uninitialized(this, size, (void**)data_out);
   }
 
   //! Prepends a variadic number of items items passed in `args...` to the array.
@@ -619,23 +607,30 @@ public:
   template<typename... Args>
   BL_INLINE BLResult prepend(Args&&... args) noexcept {
     if constexpr (sizeof...(args) == 1)
-      return BLInternal::insert_item(this, 0, Traits::pass(BLInternal::first_in_var_args(BLInternal::forward<Args>(args)...)));
+      return bl::Internal::insert_item(this, 0, Traits::pass(bl::Internal::first_in_var_args(bl::Internal::forward<Args>(args)...)));
     else
-      return insert(0, BLInternal::forward<Args>(args)...);
+      return insert(0, bl::Internal::forward<Args>(args)...);
   }
 
-  //! Prepends items to the array of the given array `view`.
+  //! Prepends items to the array of the given array `span`.
   //!
   //! \note The implementation guarantees that a `view` pointing to the array data itself would work.
-  BL_INLINE_NODEBUG BLResult prepend_data(const BLArrayView<T>& view) noexcept {
-    return bl_array_insert_data(this, 0, (const void*)view.data, view.size);
+  BL_INLINE_NODEBUG BLResult prepend_data(BLSpanConvertible<const T> auto&& span) noexcept {
+    return bl_array_insert_data(this, 0, (const void*)span.data(), span.size());
   }
 
   //! Prepends `items` to the array of length `n`.
   //!
   //! \note The implementation guarantees that a `items` pointing to the array data itself would work.
-  BL_INLINE_NODEBUG BLResult prepend_data(const T* items, size_t n) noexcept {
-    return bl_array_insert_data(this, 0, (const void*)items, n);
+  BL_INLINE_NODEBUG BLResult prepend_data(const T* data, size_t size) noexcept {
+    return bl_array_insert_data(this, 0, (const void*)data, size);
+  }
+
+  //! Prepare for prepend, but don't initialize the data to be prepended.
+  //!
+  //! \remarks The caller is responsible for initializing the data returned in `data_out` when the call succeeds.
+  BL_INLINE_NODEBUG BLResult prepend_uninitialized(size_t n, T** data_out) noexcept {
+    return bl_array_insert_uninitialized(this, 0u, n, (void**)data_out);
   }
 
   //! Inserts a variadic number of items items passed in `args...` at the given `index`.
@@ -646,12 +641,12 @@ public:
   template<typename... Args>
   BL_INLINE BLResult insert(size_t index, Args&&... args) noexcept {
     if constexpr (sizeof...(args) == 1) {
-      return BLInternal::insert_item(this, index, Traits::pass(BLInternal::first_in_var_args(BLInternal::forward<Args>(args)...)));
+      return bl::Internal::insert_item(this, index, Traits::pass(bl::Internal::first_in_var_args(bl::Internal::forward<Args>(args)...)));
     }
     else {
       T* dst;
-      BL_PROPAGATE(bl_array_insert_op(this, index, sizeof...(args), (void**)&dst));
-      BLInternal::copy_to_uninitialized(dst, BLInternal::forward<Args>(args)...);
+      BL_PROPAGATE(bl_array_insert_uninitialized(this, index, sizeof...(args), (void**)&dst));
+      bl::Internal::copy_to_uninitialized(dst, bl::Internal::forward<Args>(args)...);
       return BL_SUCCESS;
     }
   }
@@ -659,30 +654,37 @@ public:
   //! Inserts items to the array of the given array `view` at the given `index`.
   //!
   //! \note The implementation guarantees that a `view` pointing to the array data itself would work.
-  BL_INLINE_NODEBUG BLResult insert_data(size_t index, const BLArrayView<T>& view) noexcept {
-    return bl_array_insert_data(this, index, (const void*)view.data, view.size);
+  BL_INLINE_NODEBUG BLResult insert_data(size_t index, BLSpanConvertible<const T> auto&& span) noexcept {
+    return bl_array_insert_data(this, index, (const void*)span.data(), span.size());
   }
 
   //! Prepends `items` to the array of length `n` at the given `index`.
   //!
   //! \note The implementation guarantees that a `items` pointing to the array data itself would work.
-  BL_INLINE_NODEBUG BLResult insert_data(size_t index, const T* items, size_t n) noexcept {
-    return bl_array_insert_data(this, index, (const void*)items, n);
+  BL_INLINE_NODEBUG BLResult insert_data(size_t index, const T* data, size_t size) noexcept {
+    return bl_array_insert_data(this, index, (const void*)data, size);
+  }
+
+  //! Prepare for insert, but don't initialize the data to be inserted.
+  //!
+  //! \remarks The caller is responsible for initializing the data returned in `data_out` when the call succeeds.
+  BL_INLINE_NODEBUG BLResult insert_uninitialized(size_t index, size_t n, T** data_out) noexcept {
+    return bl_array_insert_uninitialized(this, index, n, (void**)data_out);
   }
 
   //! Replaces an item at the given `index` by `item`.
   BL_INLINE_NODEBUG BLResult replace(size_t index, const T& item) noexcept {
-    return BLInternal::replace_item(this, index, Traits::pass(item));
+    return bl::Internal::replace_item(this, index, Traits::pass(item));
   }
 
-  //! Replaces the given `range` of items by the given array `view`.
-  BL_INLINE_NODEBUG BLResult replace_data(const BLRange& range, BLArrayView<T>& view) noexcept {
-    return bl_array_replace_data(this, range.start, range.end, (const void*)view.data, view.size);
+  //! Replaces the given `range` of items by the given array `span`.
+  BL_INLINE_NODEBUG BLResult replace_data(const BLRange& range, BLSpanConvertible<const T> auto&& span) noexcept {
+    return bl_array_replace_data(this, range.start, range.end, (const void*)span.data(), span.size());
   }
 
   //! Replaces the given `range` of items by `items` of length `n`.
-  BL_INLINE_NODEBUG BLResult replace_data(const BLRange& range, const T* items, size_t n) noexcept {
-    return bl_array_replace_data(this, range.start, range.end, items, n);
+  BL_INLINE_NODEBUG BLResult replace_data(const BLRange& range, const T* data, size_t size) noexcept {
+    return bl_array_replace_data(this, range.start, range.end, data, size);
   }
 
   //! Removes an item at the given `index`.
@@ -691,8 +693,28 @@ public:
   }
 
   //! Removes a `range` of items.
-  BL_INLINE_NODEBUG BLResult remove(const BLRange& range) noexcept {
+  BL_INLINE_NODEBUG BLResult remove(BLRange range) noexcept {
     return bl_array_remove_range(this, range.start, range.end);
+  }
+
+  //! Removes a `range` of items.
+  BL_INLINE_NODEBUG BLResult remove(size_t start, size_t end) noexcept {
+    return bl_array_remove_range(this, start, end);
+  }
+
+  //! \}
+
+  //! \name Manipulation
+  //! \{
+
+  BL_INLINE_NODEBUG void _set_size_unsafe(size_t new_size) noexcept {
+    BL_ASSERT(new_size <= capacity());
+    bl::ObjectLayer::set_object_size(this, new_size);
+  }
+
+  BL_INLINE_NODEBUG void _set_size_from_end_ptr_unsafe(const T* end_ptr) noexcept {
+    BL_ASSERT(end_ptr >= data() && end_ptr <= data() + capacity());
+    bl::ObjectLayer::set_object_size(this, (size_t)(end_ptr - data()));
   }
 
   //! \}
@@ -701,9 +723,15 @@ public:
   //! \{
 
   //! Returns whether the content of this array and `other` matches.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool equals(const BLArray<T>& other) const noexcept {
-    return bl_array_equals(this, &other);
+  [[nodiscard]] BL_INLINE_NODEBUG bool equals(const BLArray<T>& rhs) const noexcept {
+    return bl_array_equals(this, &rhs);
+  }
+
+  //! Returns whether the content of this array and `span` matches.
+  [[nodiscard]] BL_INLINE_NODEBUG bool equals(BLSpanConvertible<const T> auto&& rhs) const noexcept
+    requires (!std::same_as<std::remove_cvref_t<decltype(rhs)>, BLArray<T>>)
+  {
+    return span() == BLSpan<const T>(rhs.data(), rhs.size());
   }
 
   //! \}
@@ -712,52 +740,25 @@ public:
   //! \{
 
   //! Returns the first index at which a given `item` can be found in the array, or `SIZE_MAX` if not found.
-  [[nodiscard]]
-  BL_INLINE size_t index_of(const T& item) const noexcept {
-    return index_of(item, 0);
+  [[nodiscard]] BL_INLINE size_t index_of(const T& item) const noexcept {
+    return span().index_of(item, 0u);
   }
 
   //! Returns the index at which a given `item` can be found in the array starting from `from_index`, or `SIZE_MAX`
   //! if not present.
-  [[nodiscard]]
-  BL_INLINE size_t index_of(const T& item, size_t from_index) const noexcept {
-    const T* p = data();
-    size_t iEnd = size();
-
-    for (size_t i = from_index; i < iEnd; i++)
-      if (p[i] == item)
-        return i;
-
-    return SIZE_MAX;
+  [[nodiscard]] BL_INLINE size_t index_of(const T& item, size_t from_index) const noexcept {
+    return span().index_of(item, from_index);
   }
 
   //! Returns the last index at which a given `item` can be found in the array, or `SIZE_MAX` if not present.
-  [[nodiscard]]
-  BL_INLINE size_t last_index_of(const T& item) const noexcept {
-    const T* p = data();
-    size_t i = size();
-
-    while (--i != SIZE_MAX && !(p[i] == item))
-      continue;
-
-    return i;
+  [[nodiscard]] BL_INLINE size_t last_index_of(const T& item) const noexcept {
+    return span().last_index_of(item);
   }
 
   //! Returns the index at which a given `item` can be found in the array starting from `from_index` and ending
   //! at `0`, or `SIZE_MAX` if not present.
-  [[nodiscard]]
-  BL_INLINE size_t last_index_of(const T& item, size_t from_index) const noexcept {
-    const T* p = data();
-    size_t i = size() - 1;
-
-    if (i == SIZE_MAX)
-      return i;
-
-    i = bl_min<size_t>(i, from_index);
-    while (!(p[i] == item) && --i != SIZE_MAX)
-      continue;
-
-    return i;
+  [[nodiscard]] BL_INLINE size_t last_index_of(const T& item, size_t from_index) const noexcept {
+    return span().last_index_of(item, from_index);
   }
 
   //! \}
@@ -768,4 +769,4 @@ public:
 
 //! \}
 
-#endif // BLEND2D_ARRAY_H_INCLUDED
+#endif // BLEND2D_CORE_ARRAY_H_INCLUDED

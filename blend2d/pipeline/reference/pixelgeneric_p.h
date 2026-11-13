@@ -6,7 +6,7 @@
 #ifndef BLEND2D_PIPELINE_REFERENCE_PIXELGENERIC_P_H_INCLUDED
 #define BLEND2D_PIPELINE_REFERENCE_PIXELGENERIC_P_H_INCLUDED
 
-#include <blend2d/pipeline/pipedefs_p.h>
+#include <blend2d/pipeline/pipe_defs_p.h>
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_pipeline_reference
@@ -305,7 +305,7 @@ struct U32_8888 {
 
   template<uint32_t shift>
   BL_INLINE uint32_t value_by_shift_t() const noexcept {
-    BL_STATIC_ASSERT(shift == 0 || shift == 8 || shift == 16 || shift == 24);
+    static_assert(shift == 0 || shift == 8 || shift == 16 || shift == 24);
 
     if (shift == 0)
       return uint32_t((u3120 >>  0) & 0xFFFFu);
@@ -425,7 +425,7 @@ struct U32_8888 {
 
   template<uint32_t shift>
   BL_INLINE uint32_t value_by_shift_t() const noexcept {
-    BL_STATIC_ASSERT(shift == 0 || shift == 8 || shift == 16 || shift == 24);
+    static_assert(shift == 0 || shift == 8 || shift == 16 || shift == 24);
 
     if (shift == 0)
       return u20 & 0xFFFFu;
@@ -596,7 +596,7 @@ struct PixelIO<Pixel::P8_Alpha, FormatExt::kPRGB32> {
   typedef Pixel::P8_Alpha PixelType;
 
   static BL_INLINE_NODEBUG PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
-    bl_unused(r, g, b);
+    axl::maybe_unused(r, g, b);
     return PixelType::from_value(a);
   }
 
@@ -608,12 +608,12 @@ struct PixelIO<Pixel::P8_Alpha, FormatExt::kXRGB32> {
   typedef Pixel::P8_Alpha PixelType;
 
   static BL_INLINE_NODEBUG PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
-    bl_unused(r, g, b);
+    axl::maybe_unused(r, g, b);
     return PixelType::from_value(a);
   }
 
   static BL_INLINE_NODEBUG PixelType fetch(const void* src) noexcept {
-    bl_unused(src);
+    axl::maybe_unused(src);
     return PixelType{uint8_t(0xFFu)};
   }
 };
@@ -626,7 +626,7 @@ struct PixelIO<Pixel::P8_Alpha, FormatExt::kA8> {
   typedef Pixel::P8_Alpha PixelType;
 
   static BL_INLINE_NODEBUG PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
-    bl_unused(r, g, b);
+    axl::maybe_unused(r, g, b);
     return PixelType::from_value(a);
   }
 
@@ -651,7 +651,7 @@ struct PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kXRGB32> {
   typedef Pixel::P32_A8R8G8B8 PixelType;
 
   static BL_INLINE_NODEBUG PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
-    bl_unused(a);
+    axl::maybe_unused(a);
     return PixelType::from_value((0xFFu << 24) | (r << 16) | (g << 8) | b);
   }
 
@@ -664,7 +664,7 @@ struct PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kA8> {
   typedef Pixel::P32_A8R8G8B8 PixelType;
 
   static BL_INLINE_NODEBUG PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
-    bl_unused(r, g, b);
+    axl::maybe_unused(r, g, b);
     return PixelType::from_value(a * 0x01010101u);
   }
 

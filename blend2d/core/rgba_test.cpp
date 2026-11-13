@@ -3,18 +3,17 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_test_p.h>
+#include <blend2d/core/api_build_test_p.h>
 #if defined(BL_TEST)
 
 #include <blend2d/core/rgba_p.h>
 
-// bl::Rgba - Tests
-// ================
+// Rgba - Tests
+// ============
 
-namespace bl {
-namespace Tests {
+namespace bl::RgbaTests {
 
-UNIT(rgba, BL_TEST_GROUP_RENDERING_STYLES) {
+TEST_CASE(core_rgba) {
   BLRgba32 c32(0x01, 0x02, 0x03, 0xFF);
   BLRgba64 c64(0x100, 0x200, 0x300, 0xFFFF);
 
@@ -25,7 +24,6 @@ UNIT(rgba, BL_TEST_GROUP_RENDERING_STYLES) {
   EXPECT_EQ(BLRgba32(c64).value, 0xFF010203u);
 }
 
-} // {Tests}
-} // {bl}
+} // {bl::RgbaTests}
 
 #endif // BL_TEST

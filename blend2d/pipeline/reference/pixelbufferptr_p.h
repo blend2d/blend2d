@@ -6,8 +6,8 @@
 #ifndef BLEND2D_PIPELINE_REFERENCE_PIXELBUFFERPTR_P_H_INCLUDED
 #define BLEND2D_PIPELINE_REFERENCE_PIXELBUFFERPTR_P_H_INCLUDED
 
-#include <blend2d/pipeline/pipedefs_p.h>
-#include <blend2d/support/intops_p.h>
+#include <blend2d/axl/commons.h>
+#include <blend2d/pipeline/pipe_defs_p.h>
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_pipeline_reference
@@ -43,7 +43,7 @@ public:
     // Each AdvanceY would advance to the beginning of the next scanline from the
     // end of the current scanline. Since this is a FillRect operation we assume
     // that we would never skip a scanline, which makes this trick possible.
-    _stride -= intptr_t(size_t(blAsUInt(width)) * kBytesPerPixel);
+    _stride -= intptr_t(size_t(axl::as_std_uint(width)) * kBytesPerPixel);
   }
 
   template<typename T>
@@ -52,12 +52,12 @@ public:
   }
 
   template<typename T>
-  BL_INLINE void advance_x(const T& x) noexcept { _ptr += size_t(IntOps::asStdUInt(x)) * kBytesPerPixel; }
+  BL_INLINE void advance_x(const T& x) noexcept { _ptr += size_t(axl::as_std_uint(x)) * kBytesPerPixel; }
   template<typename T>
-  BL_INLINE void advance_y(const T& y) noexcept { _ptr += intptr_t(size_t(IntOps::asStdUInt(y))) * _stride; }
+  BL_INLINE void advance_y(const T& y) noexcept { _ptr += intptr_t(size_t(axl::as_std_uint(y))) * _stride; }
 
   template<typename T>
-  BL_INLINE void deadvanceX(const T& x) noexcept { _ptr -= size_t(IntOps::asStdUInt(x)) * kBytesPerPixel; }
+  BL_INLINE void deadvance_x(const T& x) noexcept { _ptr -= size_t(axl::as_std_uint(x)) * kBytesPerPixel; }
 
   BL_INLINE void advance_x() noexcept { advance_x(1); }
   BL_INLINE void advance_y() noexcept { advance_y(1); }

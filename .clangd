@@ -1,0 +1,16 @@
+CompileFlags:
+  CompilationDatabase: build/debug
+  Add: [-std=c++20, -Wall, -Wextra, -DBL_TEST -D__INTELLISENSE__]
+  Remove: [-Werror]
+
+Diagnostics:
+  UnusedIncludes: Strict
+
+Index:
+  Background: Build
+
+Completion:
+  AllScopes: true
+
+Documentation:
+  CommentFormat: Doxygen

@@ -3,7 +3,7 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_p.h>
+#include <blend2d/core/api_build_p.h>
 #ifdef BL_TARGET_OPT_AVX
 
 #include <blend2d/core/geometry.h>
@@ -12,7 +12,7 @@
 #include <blend2d/simd/simd_p.h>
 
 namespace bl {
-namespace TransformInternal {
+namespace TransformDetail {
 
 // bl::Transform - MapPointDArray (AVX)
 // ====================================
@@ -20,7 +20,7 @@ namespace TransformInternal {
 static BLResult BL_CDECL map_point_darray_identity_avx(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
-  bl_unused(self);
+  axl::maybe_unused(self);
   if (dst == src)
     return BL_SUCCESS;
 
@@ -209,19 +209,18 @@ static BLResult BL_CDECL map_point_darray_affine_avx(const BLMatrix2D* self, BLP
 // bl::Transform - Runtime Registration (AVX)
 // ==========================================
 
-void bl_transform_rt_init_avx(BLRuntimeContext* rt) noexcept {
-  bl_unused(rt);
+void bl_transform_rt_init_avx([[maybe_unused]] BLRuntimeContext* rt) noexcept {
   BLMapPointDArrayFunc* funcs = map_pointd_array_funcs;
 
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_IDENTITY ], map_point_darray_identity_avx);
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_TRANSLATE], map_point_darray_translate_avx);
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_SCALE    ], map_point_darray_scale_avx);
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_SWAP     ], map_point_darray_swap_avx);
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_AFFINE   ], map_point_darray_affine_avx);
-  bl_assign_func(&funcs[BL_TRANSFORM_TYPE_INVALID  ], map_point_darray_affine_avx);
+  funcs[BL_TRANSFORM_TYPE_IDENTITY ] = map_point_darray_identity_avx;
+  funcs[BL_TRANSFORM_TYPE_TRANSLATE] = map_point_darray_translate_avx;
+  funcs[BL_TRANSFORM_TYPE_SCALE    ] = map_point_darray_scale_avx;
+  funcs[BL_TRANSFORM_TYPE_SWAP     ] = map_point_darray_swap_avx;
+  funcs[BL_TRANSFORM_TYPE_AFFINE   ] = map_point_darray_affine_avx;
+  funcs[BL_TRANSFORM_TYPE_INVALID  ] = map_point_darray_affine_avx;
 }
 
-} // {TransformInternal}
+} // {TransformDetail}
 } // {bl}
 
 #endif

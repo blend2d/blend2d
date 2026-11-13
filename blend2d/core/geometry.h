@@ -3,8 +3,8 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_GEOMETRY_H_INCLUDED
-#define BLEND2D_GEOMETRY_H_INCLUDED
+#ifndef BLEND2D_CORE_GEOMETRY_H_INCLUDED
+#define BLEND2D_CORE_GEOMETRY_H_INCLUDED
 
 #include <blend2d/core/api.h>
 
@@ -18,7 +18,9 @@ BL_DEFINE_ENUM(BLGeometryDirection) {
   //! Clockwise direction.
   BL_GEOMETRY_DIRECTION_CW = 1,
   //! Counter-clockwise direction.
-  BL_GEOMETRY_DIRECTION_CCW = 2
+  BL_GEOMETRY_DIRECTION_CCW = 2,
+  //! Maximum value of `BLGeometryDirection`.
+  BL_GEOMETRY_DIRECTION_MAX_VALUE = 2
 
   BL_FORCE_ENUM_UINT32(BL_GEOMETRY_DIRECTION)
 };
@@ -40,47 +42,47 @@ BL_DEFINE_ENUM(BLGeometryType) {
   //! No geometry provided.
   BL_GEOMETRY_TYPE_NONE = 0,
   //! BLBoxI struct.
-  BL_GEOMETRY_TYPE_BOXI = 1,
+  BL_GEOMETRY_TYPE_BOX_I = 1,
   //! BLBox struct.
-  BL_GEOMETRY_TYPE_BOXD = 2,
+  BL_GEOMETRY_TYPE_BOX_D = 2,
   //! BLRectI struct.
-  BL_GEOMETRY_TYPE_RECTI = 3,
+  BL_GEOMETRY_TYPE_RECT_I = 3,
   //! BLRect struct.
-  BL_GEOMETRY_TYPE_RECTD = 4,
+  BL_GEOMETRY_TYPE_RECT_D = 4,
   //! BLCircle struct.
-  BL_GEOMETRY_TYPE_CIRCLE = 5,
+  BL_GEOMETRY_TYPE_CIRCLE_D = 5,
   //! BLEllipse struct.
-  BL_GEOMETRY_TYPE_ELLIPSE = 6,
+  BL_GEOMETRY_TYPE_ELLIPSE_D = 6,
   //! BLRoundRect struct.
-  BL_GEOMETRY_TYPE_ROUND_RECT = 7,
+  BL_GEOMETRY_TYPE_ROUND_RECT_D = 7,
   //! BLArc struct.
-  BL_GEOMETRY_TYPE_ARC = 8,
+  BL_GEOMETRY_TYPE_ARC_D = 8,
   //! BLArc struct representing chord.
-  BL_GEOMETRY_TYPE_CHORD = 9,
+  BL_GEOMETRY_TYPE_CHORD_D = 9,
   //! BLArc struct representing pie.
-  BL_GEOMETRY_TYPE_PIE = 10,
+  BL_GEOMETRY_TYPE_PIE_D = 10,
   //! BLLine struct.
-  BL_GEOMETRY_TYPE_LINE = 11,
+  BL_GEOMETRY_TYPE_LINE_D = 11,
   //! BLTriangle struct.
-  BL_GEOMETRY_TYPE_TRIANGLE = 12,
-  //! BLArrayView<BLPointI> representing a polyline.
-  BL_GEOMETRY_TYPE_POLYLINEI = 13,
-  //! BLArrayView<BLPoint> representing a polyline.
-  BL_GEOMETRY_TYPE_POLYLINED = 14,
-  //! BLArrayView<BLPointI> representing a polygon.
-  BL_GEOMETRY_TYPE_POLYGONI = 15,
-  //! BLArrayView<BLPoint> representing a polygon.
-  BL_GEOMETRY_TYPE_POLYGOND = 16,
-  //! BLArrayView<BLBoxI> struct.
-  BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXI = 17,
-  //! BLArrayView<BLBox> struct.
-  BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXD = 18,
-  //! BLArrayView<BLRectI> struct.
-  BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTI = 19,
-  //! BLArrayView<BLRect> struct.
-  BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTD = 20,
+  BL_GEOMETRY_TYPE_TRIANGLE_D = 12,
+  //! BLSpan<const BLPointI> representing a polyline.
+  BL_GEOMETRY_TYPE_POLYLINE_I = 13,
+  //! BLSpan<const BLPoint> representing a polyline.
+  BL_GEOMETRY_TYPE_POLYLINE_D = 14,
+  //! BLSpan<const BLPointI> representing a polygon.
+  BL_GEOMETRY_TYPE_POLYGON_I = 15,
+  //! BLSpan<const BLPoint> representing a polygon.
+  BL_GEOMETRY_TYPE_POLYGON_D = 16,
+  //! BLSpan<const BLBoxI> struct.
+  BL_GEOMETRY_TYPE_SPAN_BOX_I = 17,
+  //! BLSpan<const BLBox> struct.
+  BL_GEOMETRY_TYPE_SPAN_BOX_D = 18,
+  //! BLSpan<const BLRectI> struct.
+  BL_GEOMETRY_TYPE_SPAN_RECT_I = 19,
+  //! BLSpan<const BLRect> struct.
+  BL_GEOMETRY_TYPE_SPAN_RECT_D = 20,
   //! BLPath (or BLPathCore).
-  BL_GEOMETRY_TYPE_PATH = 21,
+  BL_GEOMETRY_TYPE_PATH_D = 21,
 
   //! Maximum value of `BLGeometryType`.
   BL_GEOMETRY_TYPE_MAX_VALUE = 21,
@@ -88,7 +90,7 @@ BL_DEFINE_ENUM(BLGeometryType) {
   //! \cond INTERNAL
 
   //! The last simple type.
-  BL_GEOMETRY_TYPE_SIMPLE_LAST = BL_GEOMETRY_TYPE_TRIANGLE
+  BL_GEOMETRY_TYPE_SIMPLE_LAST = BL_GEOMETRY_TYPE_TRIANGLE_D
 
   //! \endcond
 
@@ -123,6 +125,38 @@ BL_DEFINE_ENUM(BLHitTest) {
   BL_FORCE_ENUM_UINT32(BL_HIT_TEST)
 };
 
+//! Options used to describe how geometry is approximated.
+//!
+//! This struct cannot be simply zeroed and then passed to functions that accept approximation options.
+//! Use `bl_default_approximation_options` to setup defaults and then alter values you want to change.
+//!
+//! Example of using `BLApproximationOptions`:
+//!
+//! ```
+//! // Initialize with defaults first.
+//! BLApproximationOptions approx = bl_default_approximation_options;
+//!
+//! // Override values you want to change.
+//! approx.simplify_tolerance = 0.02f;
+//!
+//! // ... now safely use approximation options in your code ...
+//! ```
+struct BLApproximationOptions {
+  //! Specifies how curves are flattened, see \ref BLFlattenMode.
+  uint8_t flatten_mode;
+  //! Specifies how curves are offsetted (used by stroking), see \ref BLOffsetMode.
+  uint8_t offset_mode;
+  //! Reserved for future use, must be zero.
+  uint8_t reserved_flags[2];
+
+  //! Tolerance used to flatten curves.
+  float flatten_tolerance;
+  //! Tolerance used to approximate cubic curves with quadratic curves.
+  float simplify_tolerance;
+  //! Curve offsetting parameter, exact meaning depends on `offset_mode`.
+  float offset_parameter;
+};
+
 //! Point specified as [x, y] using `int` as a storage type.
 struct BLPointI {
   int x;
@@ -153,8 +187,10 @@ struct BLPointI {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLPointI& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(x, other.x),
-                                bl_equals(y, other.y));
+    return bl::Internal::bool_and(
+      bl_equals(x, other.x),
+      bl_equals(y, other.y)
+    );
   }
 #endif
 };
@@ -189,8 +225,10 @@ struct BLSizeI {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLSizeI& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(w, other.w),
-                                bl_equals(h, other.h));
+    return bl::Internal::bool_and(
+      bl_equals(w, other.w),
+      bl_equals(h, other.h)
+    );
   }
 #endif
 };
@@ -231,15 +269,17 @@ struct BLBoxI {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLBoxI& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(x0, other.x0),
-                                bl_equals(y0, other.y0),
-                                bl_equals(x1, other.x1),
-                                bl_equals(y1, other.y1));
+    return bl::Internal::bool_and(
+      bl_equals(x0, other.x0),
+      bl_equals(y0, other.y0),
+      bl_equals(x1, other.x1),
+      bl_equals(y1, other.y1)
+    );
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool contains(int x, int y) const noexcept {
-    return BLInternal::bool_and(x >= x0, y >= y0, x < x1, y < y1);
+    return bl::Internal::bool_and(x >= x0, y >= y0, x < x1, y < y1);
   }
 
   [[nodiscard]]
@@ -283,10 +323,12 @@ struct BLRectI {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRectI& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(x, other.x),
-                                bl_equals(y, other.y),
-                                bl_equals(w, other.w),
-                                bl_equals(h, other.h));
+    return bl::Internal::bool_and(
+      bl_equals(x, other.x),
+      bl_equals(y, other.y),
+      bl_equals(w, other.w),
+      bl_equals(h, other.h)
+    );
   }
 #endif
 };
@@ -325,7 +367,10 @@ struct BLPoint {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLPoint& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(x, other.x), bl_equals(y, other.y));
+    return bl::Internal::bool_and(
+      bl_equals(x, other.x),
+      bl_equals(y, other.y)
+    );
   }
 #endif
 };
@@ -364,7 +409,10 @@ struct BLSize {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLSize& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(w, other.w), bl_equals(h, other.h));
+    return bl::Internal::bool_and(
+      bl_equals(w, other.w),
+      bl_equals(h, other.h)
+    );
   }
 #endif
 };
@@ -411,15 +459,17 @@ struct BLBox {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLBox& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(x0, other.x0),
-                                bl_equals(y0, other.y0),
-                                bl_equals(x1, other.x1),
-                                bl_equals(y1, other.y1));
+    return bl::Internal::bool_and(
+      bl_equals(x0, other.x0),
+      bl_equals(y0, other.y0),
+      bl_equals(x1, other.x1),
+      bl_equals(y1, other.y1)
+    );
   }
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool contains(double x, double y) const noexcept {
-    return BLInternal::bool_and(x >= x0, y >= y0, x < x1, y < y1);
+    return bl::Internal::bool_and(x >= x0, y >= y0, x < x1, y < y1);
   }
 
   [[nodiscard]]
@@ -466,10 +516,12 @@ struct BLRect {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRect& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(x, other.x),
-                                bl_equals(y, other.y),
-                                bl_equals(w, other.w),
-                                bl_equals(h, other.h));
+    return bl::Internal::bool_and(
+      bl_equals(x, other.x),
+      bl_equals(y, other.y),
+      bl_equals(w, other.w),
+      bl_equals(h, other.h)
+    );
   }
 #endif
 };
@@ -505,8 +557,12 @@ struct BLLine {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLLine& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(x0, other.x0), bl_equals(y0, other.y0),
-                                bl_equals(x1, other.x1), bl_equals(y1, other.y1));
+    return bl::Internal::bool_and(
+      bl_equals(x0, other.x0),
+      bl_equals(y0, other.y0),
+      bl_equals(x1, other.x1),
+      bl_equals(y1, other.y1)
+    );
   }
 #endif
 };
@@ -545,9 +601,11 @@ struct BLTriangle {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLTriangle& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(x0, other.x0), bl_equals(y0, other.y0),
-                                bl_equals(x1, other.x1), bl_equals(y1, other.y1),
-                                bl_equals(x2, other.x2), bl_equals(y2, other.y2));
+    return bl::Internal::bool_and(
+      bl_equals(x0, other.x0), bl_equals(y0, other.y0),
+      bl_equals(x1, other.x1), bl_equals(y1, other.y1),
+      bl_equals(x2, other.x2), bl_equals(y2, other.y2)
+    );
   }
 #endif
 };
@@ -602,9 +660,14 @@ struct BLRoundRect {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRoundRect& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(x , other.x ), bl_equals(y , other.y ),
-                                bl_equals(w , other.w ), bl_equals(h , other.h ),
-                                bl_equals(rx, other.rx), bl_equals(rx, other.ry));
+    return bl::Internal::bool_and(
+      bl_equals(x, other.x),
+      bl_equals(y, other.y),
+      bl_equals(w, other.w),
+      bl_equals(h, other.h),
+      bl_equals(rx, other.rx),
+      bl_equals(rx, other.ry)
+    );
   }
 #endif
 };
@@ -639,9 +702,11 @@ struct BLCircle {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLCircle& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(cx, other.cx),
-                                bl_equals(cy, other.cy),
-                                bl_equals(r , other.r));
+    return bl::Internal::bool_and(
+      bl_equals(cx, other.cx),
+      bl_equals(cy, other.cy),
+      bl_equals(r, other.r)
+    );
   }
 #endif
 };
@@ -682,8 +747,12 @@ struct BLEllipse {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLEllipse& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(cx, other.cx), bl_equals(cy, other.cy),
-                                bl_equals(rx, other.rx), bl_equals(ry, other.ry));
+    return bl::Internal::bool_and(
+      bl_equals(cx, other.cx),
+      bl_equals(cy, other.cy),
+      bl_equals(rx, other.rx),
+      bl_equals(ry, other.ry)
+    );
   }
 #endif
 };
@@ -728,12 +797,14 @@ struct BLArc {
 
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLArc& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(cx   , other.cx   ),
-                                bl_equals(cy   , other.cy   ),
-                                bl_equals(rx   , other.rx   ),
-                                bl_equals(ry   , other.ry   ),
-                                bl_equals(start, other.start),
-                                bl_equals(sweep, other.sweep));
+    return bl::Internal::bool_and(
+      bl_equals(cx   , other.cx   ),
+      bl_equals(cy   , other.cy   ),
+      bl_equals(rx   , other.rx   ),
+      bl_equals(ry   , other.ry   ),
+      bl_equals(start, other.start),
+      bl_equals(sweep, other.sweep)
+    );
   }
 #endif
 };
@@ -854,4 +925,4 @@ static BL_INLINE_NODEBUG BLBox& operator/=(BLBox& a, const BLPoint& b) noexcept 
 //! \}
 #endif
 
-#endif // BLEND2D_GEOMETRY_H_INCLUDED
+#endif // BLEND2D_CORE_GEOMETRY_H_INCLUDED

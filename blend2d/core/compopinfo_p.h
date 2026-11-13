@@ -3,14 +3,14 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_COMPOPINFO_P_H_INCLUDED
-#define BLEND2D_COMPOPINFO_P_H_INCLUDED
+#ifndef BLEND2D_CORE_COMPOPINFO_P_H_INCLUDED
+#define BLEND2D_CORE_COMPOPINFO_P_H_INCLUDED
 
-#include <blend2d/core/api-internal_p.h>
+#include <blend2d/axl/bitops_p.h>
+#include <blend2d/axl/lookuptable_p.h>
+#include <blend2d/core/api_internal_p.h>
 #include <blend2d/core/compop_p.h>
-#include <blend2d/pipeline/pipedefs_p.h>
-#include <blend2d/support/bitops_p.h>
-#include <blend2d/support/lookuptable_p.h>
+#include <blend2d/pipeline/pipe_defs_p.h>
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -41,9 +41,9 @@ struct CompOpSimplifyInfo {
   //! \{
 
   // Data shift specify where the value is stored in `data`.
-  static inline constexpr uint32_t kCompOpShift = IntOps::bit_shift_of(Pipeline::Signature::kMaskCompOp);
-  static inline constexpr uint32_t kDstFmtShift = IntOps::bit_shift_of(Pipeline::Signature::kMaskDstFormat);
-  static inline constexpr uint32_t kSrcFmtShift = IntOps::bit_shift_of(Pipeline::Signature::kMaskSrcFormat);
+  static inline constexpr uint32_t kCompOpShift = axl::ctz_const(Pipeline::Signature::kMaskCompOp);
+  static inline constexpr uint32_t kDstFmtShift = axl::ctz_const(Pipeline::Signature::kMaskDstFormat);
+  static inline constexpr uint32_t kSrcFmtShift = axl::ctz_const(Pipeline::Signature::kMaskSrcFormat);
   static inline constexpr uint32_t kSolidIdShift = 16;
 
   //! \}
@@ -119,4 +119,4 @@ static BL_INLINE const CompOpSimplifyInfo& comp_op_simplify_info(CompOpExt comp_
 //! \}
 //! \endcond
 
-#endif // BLEND2D_COMPOPINFO_P_H_INCLUDED
+#endif // BLEND2D_CORE_COMPOPINFO_P_H_INCLUDED

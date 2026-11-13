@@ -33,7 +33,7 @@ int main(void) {
 
   BLCircle circle = {180, 180, 160};
   bl_context_fill_geometry_ext(&ctx,
-    BL_GEOMETRY_TYPE_CIRCLE, &circle, &radial);
+    BL_GEOMETRY_TYPE_CIRCLE_D, &circle, &radial);
 
   // Unused styles must be destroyed.
   bl_gradient_destroy(&radial);
@@ -55,7 +55,7 @@ int main(void) {
 
   BLRoundRect round_rect = { 195, 195, 270, 270, 25, 25 };
   bl_context_fill_geometry_ext(&ctx,
-    BL_GEOMETRY_TYPE_ROUND_RECT, &round_rect, &linear);
+    BL_GEOMETRY_TYPE_ROUND_RECT_D, &round_rect, &linear);
 
   // Unused styles must be destroyed.
   bl_gradient_destroy(&linear);
@@ -65,7 +65,7 @@ int main(void) {
 
   // An example of querying a codec from Blend2D internal codecs.
   BLImageCodecCore codec;
-  bl_image_codec_init_by_name(&codec, "PNG", SIZE_MAX, NULL);
+  bl_image_codec_init_by_name_cstr(&codec, "PNG", NULL);
   bl_image_write_to_file(&img, "bl_sample_capi.png", &codec);
   bl_image_codec_destroy(&codec);
 

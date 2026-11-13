@@ -20,7 +20,9 @@
 namespace ContextTests {
 
 enum class CommandId : uint32_t {
-  kFillRectI = 0,
+  kBlitRectI = 0,
+  kBlitRectD,
+  kFillRectI,
   kFillRectD,
   kFillMultipleRects,
   kFillRound,
@@ -158,14 +160,15 @@ static const char* bool_to_string(bool value) {
 [[maybe_unused]]
 static const char* cpu_x86_feature_to_string(BLRuntimeCpuFeatures feature) {
   switch (feature) {
-    case BL_RUNTIME_CPU_FEATURE_X86_SSE2    : return "sse2";
-    case BL_RUNTIME_CPU_FEATURE_X86_SSE3    : return "sse3";
-    case BL_RUNTIME_CPU_FEATURE_X86_SSSE3   : return "ssse3";
-    case BL_RUNTIME_CPU_FEATURE_X86_SSE4_1  : return "sse4.1";
-    case BL_RUNTIME_CPU_FEATURE_X86_SSE4_2  : return "sse4.2";
-    case BL_RUNTIME_CPU_FEATURE_X86_AVX     : return "avx";
-    case BL_RUNTIME_CPU_FEATURE_X86_AVX2    : return "avx2";
-    case BL_RUNTIME_CPU_FEATURE_X86_AVX512  : return "avx512";
+    case BL_RUNTIME_CPU_FEATURE_X86_SSE2     : return "sse2";
+    case BL_RUNTIME_CPU_FEATURE_X86_SSE3     : return "sse3";
+    case BL_RUNTIME_CPU_FEATURE_X86_SSSE3    : return "ssse3";
+    case BL_RUNTIME_CPU_FEATURE_X86_SSE4_1   : return "sse4.1";
+    case BL_RUNTIME_CPU_FEATURE_X86_SSE4_2   : return "sse4.2";
+    case BL_RUNTIME_CPU_FEATURE_X86_AVX      : return "avx";
+    case BL_RUNTIME_CPU_FEATURE_X86_AVX2     : return "avx2";
+    case BL_RUNTIME_CPU_FEATURE_X86_AVX512   : return "avx512";
+    case BL_RUNTIME_CPU_FEATURE_X86_AVX512_V2: return "avx512_v2";
 
     default:
       return "unknown";
@@ -256,6 +259,8 @@ static const char* opacity_op_to_string(OpacityOp opacity) {
 [[maybe_unused]]
 static const char* command_id_to_string(CommandId command) {
   switch (command) {
+    case CommandId::kBlitRectI          : return "blit-rect-i";
+    case CommandId::kBlitRectD          : return "blit-rect-d";
     case CommandId::kFillRectI          : return "fill-rect-i";
     case CommandId::kFillRectD          : return "fill-rect-d";
     case CommandId::kFillMultipleRects  : return "fill-multiple-rects";
@@ -359,20 +364,20 @@ public:
 
   template<typename... Args>
   inline void print(const char* fmt, Args&&... args) {
-    printf(fmt, BLInternal::forward<Args>(args)...);
+    printf(fmt, bl::Internal::forward<Args>(args)...);
     fflush(stdout);
   }
 
   template<typename... Args>
   inline void debug(const char* fmt, Args&&... args) {
     if (_verbosity <= Verbosity::Debug)
-      print(fmt, BLInternal::forward<Args>(args)...);
+      print(fmt, bl::Internal::forward<Args>(args)...);
   }
 
   template<typename... Args>
   inline void info(const char* fmt, Args&&... args) {
     if (_verbosity <= Verbosity::Info)
-      print(fmt, BLInternal::forward<Args>(args)...);
+      print(fmt, bl::Internal::forward<Args>(args)...);
   }
 };
 
@@ -474,8 +479,8 @@ public:
     int x1 = next_x_coord_i();
     int y1 = next_y_coord_i();
 
-    if (x0 > x1) BLInternal::swap(x0, x1);
-    if (y0 > y1) BLInternal::swap(y0, y1);
+    if (x0 > x1) bl::Internal::swap(x0, x1);
+    if (y0 > y1) bl::Internal::swap(y0, y1);
 
     if (x0 == x1) x1++;
     if (y0 == y1) y1++;
@@ -507,7 +512,7 @@ public:
 
 class ContextTester {
 public:
-  static inline constexpr uint32_t kTextureCount = 8;
+  static inline constexpr uint32_t kTextureCount = 32;
 
   enum class Op { kFill, kStroke };
 
@@ -556,14 +561,10 @@ public:
 
   BLResult init_texture(uint32_t id) noexcept {
     static constexpr int sizes[kTextureCount] = {
-      17,
-      19,
-      47,
-      63,
-      121,
-      345,
-      417,
-      512
+        1,   2,   3,   4,   5,   7,   8,  10,
+       12,  16,  17,  19,  24,  31,  32,  33,
+       40,  42,  47,  63,  65,  65, 121, 127,
+      128, 130, 131, 144, 345, 417, 511, 512
     };
 
     static constexpr BLFormat formats[kTextureCount] = {
@@ -578,7 +579,7 @@ public:
     };
 
     int size = sizes[id];
-    BLFormat format = formats[id];
+    BLFormat format = formats[id % 8];
 
     BL_PROPAGATE(_textures[id].create(size, size, format));
 
@@ -732,7 +733,7 @@ public:
         gradient.add_stop(0.5, _rnd.next_rgba32());
         gradient.add_stop(1.0, _rnd.next_rgba32());
         gradient.set_extend_mode(_rnd.next_gradient_extend());
-        return BLVar(BLInternal::move(gradient));
+        return BLVar(bl::Internal::move(gradient));
       }
 
       case StyleId::kGradientRadial:
@@ -756,7 +757,7 @@ public:
         gradient.add_stop(0.5, _rnd.next_rgba32());
         gradient.add_stop(1.0, c);
         gradient.set_extend_mode(_rnd.next_gradient_extend());
-        return BLVar(BLInternal::move(gradient));
+        return BLVar(bl::Internal::move(gradient));
       }
 
       case StyleId::kGradientConic:
@@ -769,7 +770,7 @@ public:
         gradient.add_stop(0.33, _rnd.next_rgba32());
         gradient.add_stop(0.66, _rnd.next_rgba32());
         gradient.add_stop(1.0 , _rnd.next_rgba32());
-        return BLVar(BLInternal::move(gradient));
+        return BLVar(bl::Internal::move(gradient));
       }
 
       case StyleId::kPatternAligned:
@@ -794,7 +795,7 @@ public:
           pattern.translate(0.0, bl_clamp(_rnd.next_double(), kFracMin, kFracMax));
         }
 
-        return BLVar(BLInternal::move(pattern));
+        return BLVar(bl::Internal::move(pattern));
       }
 
       case StyleId::kPatternAffineNearest:
@@ -807,7 +808,7 @@ public:
         pattern.rotate(_rnd.next_double() * (kPI * 2.0));
         pattern.translate(_rnd.next_double() * 300, _rnd.next_double() * 300);
         pattern.scale((_rnd.next_double() + 0.2) * 2.4);
-        return BLVar(BLInternal::move(pattern));
+        return BLVar(bl::Internal::move(pattern));
       }
     }
   }
@@ -827,6 +828,14 @@ public:
     }
 
     switch (command_id) {
+      case CommandId::kBlitRectI:
+        render_blit_i(n);
+        break;
+
+      case CommandId::kBlitRectD:
+        render_blit_d(n);
+        break;
+
       case CommandId::kFillRectI:
         render_rect_i<Op::kFill>(n);
         break;
@@ -906,29 +915,36 @@ public:
     finished(test_name);
   }
 
-  template<Op kOp>
-  void render_path(const BLPath& path, StyleId style_id) {
-    BLVar style = materialize_style(style_id);
+  void render_blit_i(size_t n) {
+    for (size_t i = 0; i < n; i++) {
+      setup_common_options(_ctx);
+      _ctx.set_pattern_quality(BL_PATTERN_QUALITY_NEAREST);
 
-    if (next_style_op() == StyleOp::kExplicit) {
-      if constexpr (kOp == Op::kFill) {
-        _ctx.fill_path(path, style);
-      }
-      else {
-        _ctx.stroke_path(path, style);
-      }
-    }
-    else {
-      if constexpr (kOp == Op::kFill) {
-        _ctx.set_fill_style(style);
-        _ctx.fill_path(path);
-      }
-      else {
-        _ctx.set_stroke_style(style);
-        _ctx.stroke_path(path);
-      }
+      BLRectI rect = _rnd.next_rect_i();
+      BLVar style = materialize_style(StyleId::kPatternAligned);
+
+      uint32_t texture_id = _rnd.next_uint32() % kTextureCount;
+      _ctx.blit_image(BLPointI(rect.x, rect.y), _textures[texture_id]);
+
+      record_iteration(i);
     }
   }
+
+  void render_blit_d(size_t n) {
+    for (size_t i = 0; i < n; i++) {
+      setup_common_options(_ctx);
+      _ctx.set_pattern_quality(BL_PATTERN_QUALITY_NEAREST);
+
+      BLRect rect = _rnd.next_rect_d();
+      BLVar style = materialize_style(StyleId::kPatternAligned);
+
+      uint32_t texture_id = _rnd.next_uint32() % kTextureCount;
+      _ctx.blit_image(BLPoint(rect.x, rect.y), _textures[texture_id]);
+
+      record_iteration(i);
+    }
+  }
+
   template<Op kOp>
   void render_rect_i(size_t n) {
     for (size_t i = 0; i < n; i++) {
@@ -993,6 +1009,30 @@ public:
       }
 
       record_iteration(i);
+    }
+  }
+
+  template<Op kOp>
+  void render_path(const BLPath& path, StyleId style_id) {
+    BLVar style = materialize_style(style_id);
+
+    if (next_style_op() == StyleOp::kExplicit) {
+      if constexpr (kOp == Op::kFill) {
+        _ctx.fill_path(path, style);
+      }
+      else {
+        _ctx.stroke_path(path, style);
+      }
+    }
+    else {
+      if constexpr (kOp == Op::kFill) {
+        _ctx.set_fill_style(style);
+        _ctx.fill_path(path);
+      }
+      else {
+        _ctx.set_stroke_style(style);
+        _ctx.stroke_path(path);
+      }
     }
   }
 

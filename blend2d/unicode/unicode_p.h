@@ -6,8 +6,8 @@
 #ifndef BLEND2D_UNICODE_UNICODE_P_H_INCLUDED
 #define BLEND2D_UNICODE_UNICODE_P_H_INCLUDED
 
-#include <blend2d/support/intops_p.h>
-#include <blend2d/support/memops_p.h>
+#include <blend2d/axl/commons.h>
+#include <blend2d/axl/mem_ops.h>
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -46,14 +46,14 @@ enum CharCode : uint32_t {
 
 //! Flags that can be used to parametrize unicode I/O iterators.
 enum class IOFlags : uint32_t {
-  kNoFlags     = 0u,
+  kNone        = 0u,
   kUnaligned   = 0x00000001u,
   kByteSwap    = 0x00000002u,
   kStrict      = 0x00000004u,
   kCalcIndex   = 0x00000008u,
 
-  kByteOrderLE = BL_BYTE_ORDER_NATIVE == BL_BYTE_ORDER_LE ? 0 : kByteSwap,
-  kByteOrderBE = BL_BYTE_ORDER_NATIVE == BL_BYTE_ORDER_BE ? 0 : kByteSwap
+  kByteOrderLE = axl::kIsLittleEndian ? 0 : kByteSwap,
+  kByteOrderBE = axl::kIsBigEndian    ? 0 : kByteSwap
 };
 
 BL_DEFINE_ENUM_FLAGS(IOFlags)
@@ -76,30 +76,10 @@ BL_INLINE uint32_t utf8_char_size(const T& c) noexcept {
 
 template<typename T>
 [[nodiscard]]
-BL_INLINE bool isValidUtf8(const T& c) noexcept {
+BL_INLINE bool is_valid_utf8(const T& c) noexcept {
   using U = std::make_unsigned_t<T>;
   return U(c) < 128 || (U(c) - U(194) < U(245 - 194));
 }
-
-template<typename T>
-[[nodiscard]]
-constexpr bool is_ascii_alpha(const T& x) noexcept { return T(x | 0x20) >= T('a') && T(x | 0x20) <= T('z'); }
-
-template<typename T>
-[[nodiscard]]
-constexpr bool is_ascii_digit(const T& x) noexcept { return x >= T('0') && x <= T('9'); }
-
-template<typename T>
-[[nodiscard]]
-constexpr bool is_ascii_alnum(const T& x) noexcept { return is_ascii_alpha(x) || (x >= T('0') && x <= T('9')); }
-
-template<typename T>
-[[nodiscard]]
-constexpr T ascii_to_lower(const T& x) noexcept { return x >= T('A') && x <= T('Z') ? T(x |  T(0x20)) : x; }
-
-template<typename T>
-[[nodiscard]]
-constexpr T ascii_to_upper(const T& x) noexcept { return x >= T('a') && x <= T('z') ? T(x & ~T(0x20)) : x; }
 
 //! Tests whether the unicode character `uc` is high or low surrogate.
 template<typename T>
@@ -229,17 +209,17 @@ public:
   [[nodiscard]]
   BL_INLINE size_t native_index(const void* start) const noexcept { return utf8_index(start); }
 
-  template<IOFlags kFlags = IOFlags::kNoFlags>
+  template<IOFlags kFlags = IOFlags::kNone>
   BL_INLINE BLResult next(uint32_t& uc) noexcept {
     size_t uc_size_in_bytes;
     return next<kFlags>(uc, uc_size_in_bytes);
   }
 
-  template<IOFlags kFlags = IOFlags::kNoFlags>
+  template<IOFlags kFlags = IOFlags::kNone>
   BL_INLINE BLResult next(uint32_t& uc, size_t& uc_size_in_bytes) noexcept {
     BL_ASSERT(has_next());
 
-    uc = MemOps::readU8(_ptr);
+    uc = axl::load_u8(_ptr);
     uc_size_in_bytes = 1;
 
     _ptr++;
@@ -262,7 +242,7 @@ public:
           goto TruncatedString;
 
         // All consecutive bytes must be '10xxxxxx'.
-        uint32_t b1 = MemOps::readU8(_ptr - 1) ^ 0x80u;
+        uint32_t b1 = axl::load_u8(_ptr - 1) ^ 0x80u;
         uc = ((uc + kMultiByte - 0xC0u) << 6) + b1;
 
         if (BL_UNLIKELY(b1 > 0x3Fu))
@@ -281,8 +261,8 @@ public:
         if (BL_UNLIKELY(_ptr > _end))
           goto TruncatedString;
 
-        uint32_t b1 = MemOps::readU8(_ptr - 2) ^ 0x80u;
-        uint32_t b2 = MemOps::readU8(_ptr - 1) ^ 0x80u;
+        uint32_t b1 = axl::load_u8(_ptr - 2) ^ 0x80u;
+        uint32_t b2 = axl::load_u8(_ptr - 1) ^ 0x80u;
         uc = ((uc + kMultiByte - 0xE0u) << 12) + (b1 << 6) + b2;
 
         // 1. All consecutive bytes must be '10xxxxxx'.
@@ -309,9 +289,9 @@ public:
             goto TruncatedString;
         }
 
-        uint32_t b1 = MemOps::readU8(_ptr - 3) ^ 0x80u;
-        uint32_t b2 = MemOps::readU8(_ptr - 2) ^ 0x80u;
-        uint32_t b3 = MemOps::readU8(_ptr - 1) ^ 0x80u;
+        uint32_t b1 = axl::load_u8(_ptr - 3) ^ 0x80u;
+        uint32_t b2 = axl::load_u8(_ptr - 2) ^ 0x80u;
+        uint32_t b3 = axl::load_u8(_ptr - 1) ^ 0x80u;
         uc = ((uc + kMultiByte - 0xF0u) << 18) + (b1 << 12) + (b2 << 6) + b3;
 
         // 1. All consecutive bytes must be '10xxxxxx'.
@@ -343,7 +323,7 @@ TruncatedString:
     _ptr++;
   }
 
-  template<IOFlags kFlags = IOFlags::kNoFlags>
+  template<IOFlags kFlags = IOFlags::kNone>
   [[nodiscard]]
   BL_INLINE BLResult validate() noexcept {
     BLResult result = BL_SUCCESS;
@@ -380,7 +360,7 @@ public:
 
   BL_INLINE void reset(const void* data, size_t byte_size) noexcept {
     _ptr = static_cast<const char*>(data);
-    _end = static_cast<const char*>(data) + IntOps::align_down(byte_size, 2);
+    _end = static_cast<const char*>(data) + axl::align_down(byte_size, 2);
     _utf8_index_add = 0;
     _utf16_surrogate_count = 0;
   }
@@ -416,23 +396,23 @@ public:
   //! \name Iterator
   //! \{
 
-  template<IOFlags kFlags = IOFlags::kNoFlags>
+  template<IOFlags kFlags = IOFlags::kNone>
   BL_INLINE BLResult next(uint32_t& uc) noexcept {
     size_t uc_size_in_bytes;
     return next<kFlags>(uc, uc_size_in_bytes);
   }
 
-  template<IOFlags kFlags = IOFlags::kNoFlags>
+  template<IOFlags kFlags = IOFlags::kNone>
   BL_INLINE BLResult next(uint32_t& uc, size_t& uc_size_in_bytes) noexcept {
     BL_ASSERT(has_next());
 
-    uc = readU16<kFlags>(_ptr);
+    uc = read_u16<kFlags>(_ptr);
     _ptr += 2;
 
     if (is_surrogate(uc)) {
       if (BL_LIKELY(is_hi_surrogate(uc))) {
         if (BL_LIKELY(_ptr != _end)) {
-          uint32_t lo = readU16<kFlags>(_ptr);
+          uint32_t lo = read_u16<kFlags>(_ptr);
           if (BL_LIKELY(is_lo_surrogate(lo))) {
             uc = char_from_surrogate(uc, lo);
             _ptr += 2;
@@ -489,7 +469,7 @@ TruncatedString:
   //! \name Validator
   //! \{
 
-  template<IOFlags kFlags = IOFlags::kNoFlags>
+  template<IOFlags kFlags = IOFlags::kNone>
   [[nodiscard]]
   BL_INLINE BLResult validate() noexcept {
     BLResult result = BL_SUCCESS;
@@ -507,12 +487,12 @@ TruncatedString:
   //! \name Utilities
   //! \{
 
-  template<IOFlags kFlags = IOFlags::kNoFlags>
+  template<IOFlags kFlags = IOFlags::kNone>
   [[nodiscard]]
-  static BL_INLINE uint32_t readU16(const char* ptr) noexcept {
-    constexpr uint32_t kByteOrder = bl_test_flag(kFlags, IOFlags::kByteSwap) ? BL_BYTE_ORDER_SWAPPED : BL_BYTE_ORDER_NATIVE;
+  static BL_INLINE uint32_t read_u16(const char* ptr) noexcept {
+    constexpr axl::ByteOrder kBO = bl_test_flag(kFlags, IOFlags::kByteSwap) ? axl::ByteOrder::kSwapped : axl::ByteOrder::kNative;
     constexpr uint32_t kAlignment = bl_test_flag(kFlags, IOFlags::kUnaligned) ? 1 : 2;
-    return MemOps::readU16<kByteOrder, kAlignment>(ptr);
+    return axl::load<kBO, kAlignment, uint16_t>(ptr);
   }
 
   //! \}
@@ -538,7 +518,7 @@ public:
 
   BL_INLINE void reset(const void* data, size_t byte_size) noexcept {
     _ptr = static_cast<const char*>(data);
-    _end = static_cast<const char*>(data) + IntOps::align_down(byte_size, 4);
+    _end = static_cast<const char*>(data) + axl::align_down(byte_size, 4);
     _utf8_index_add = 0;
     _utf16_surrogate_count = 0;
   }
@@ -564,17 +544,17 @@ public:
   [[nodiscard]]
   BL_INLINE size_t native_index(const void* start) const noexcept { return utf32_index(start); }
 
-  template<IOFlags kFlags = IOFlags::kNoFlags>
+  template<IOFlags kFlags = IOFlags::kNone>
   BL_INLINE BLResult next(uint32_t& uc) noexcept {
     size_t uc_size_in_bytes;
     return next<kFlags>(uc, uc_size_in_bytes);
   }
 
-  template<IOFlags kFlags = IOFlags::kNoFlags>
+  template<IOFlags kFlags = IOFlags::kNone>
   BL_INLINE BLResult next(uint32_t& uc, size_t& uc_size_in_bytes) noexcept {
     BL_ASSERT(has_next());
 
-    uc = readU32<kFlags>(_ptr);
+    uc = read_u32<kFlags>(_ptr);
     if (BL_UNLIKELY(uc > kCharMax))
       return bl_make_error(BL_ERROR_INVALID_STRING);
 
@@ -598,7 +578,7 @@ public:
     _ptr += 4;
   }
 
-  template<IOFlags kFlags = IOFlags::kNoFlags>
+  template<IOFlags kFlags = IOFlags::kNone>
   [[nodiscard]]
   BL_INLINE BLResult validate() noexcept {
     BLResult result = BL_SUCCESS;
@@ -611,12 +591,12 @@ public:
     return result;
   }
 
-  template<IOFlags kFlags = IOFlags::kNoFlags>
+  template<IOFlags kFlags = IOFlags::kNone>
   [[nodiscard]]
-  static BL_INLINE uint32_t readU32(const char* ptr) noexcept {
-    constexpr uint32_t kByteOrder = bl_test_flag(kFlags, IOFlags::kByteSwap) ? BL_BYTE_ORDER_SWAPPED : BL_BYTE_ORDER_NATIVE;
-    constexpr uint32_t kAlignment = bl_test_flag(kFlags, IOFlags::kUnaligned) ? 1 : 4;
-    return MemOps::readU32<kByteOrder, kAlignment>(ptr);
+  static BL_INLINE uint32_t read_u32(const char* ptr) noexcept {
+    constexpr axl::ByteOrder bo = bl_test_flag(kFlags, IOFlags::kByteSwap) ? axl::ByteOrder::kSwapped : axl::ByteOrder::kNative;
+    constexpr uint32_t alignment = bl_test_flag(kFlags, IOFlags::kUnaligned) ? 1 : 4;
+    return axl::load<bo, alignment, uint32_t>(ptr);
   }
 };
 
@@ -774,7 +754,7 @@ public:
 // ==========================
 
 //! UTF16 writer that can be parametrized by `ByteOrder` and `Alignment`.
-template<uint32_t ByteOrder = BL_BYTE_ORDER_NATIVE, uint32_t Alignment = 2>
+template<axl::ByteOrder BO = axl::ByteOrder::kNative, uint32_t Alignment = 2>
 class Utf16Writer {
 public:
   typedef uint16_t CharType;
@@ -802,31 +782,31 @@ public:
 
   BL_INLINE BLResult write(uint32_t uc) noexcept {
     if (uc <= 0xFFFFu)
-      return writeBMP(uc);
+      return write_bmp(uc);
     else
-      return writeSMP(uc);
+      return write_smp(uc);
   }
 
-  BL_INLINE BLResult writeBMP(uint32_t uc) noexcept {
+  BL_INLINE BLResult write_bmp(uint32_t uc) noexcept {
     BL_ASSERT(uc <= 0xFFFFu);
 
     if (BL_UNLIKELY(at_end()))
       return bl_make_error(BL_ERROR_NO_SPACE_LEFT);
 
-    _writeMemU16(_ptr, uc);
+    _write_mem_u16(_ptr, uc);
     _ptr++;
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult writeBMPUnsafe(uint32_t uc) noexcept {
+  BL_INLINE BLResult write_bmp_unsafe(uint32_t uc) noexcept {
     BL_ASSERT(remaining_size() >= 1);
 
-    _writeMemU16(_ptr, uc);
+    _write_mem_u16(_ptr, uc);
     _ptr++;
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult writeSMP(uint32_t uc) noexcept {
+  BL_INLINE BLResult write_smp(uint32_t uc) noexcept {
     BL_ASSERT(uc >= 0x10000u && uc <= 0x10FFFFu);
 
     _ptr += 2;
@@ -838,20 +818,20 @@ public:
     uint32_t hi, lo;
     bl_char_to_surrogate(uc, hi, lo);
 
-    _writeMemU16(_ptr - 2, hi);
-    _writeMemU16(_ptr - 1, lo);
+    _write_mem_u16(_ptr - 2, hi);
+    _write_mem_u16(_ptr - 1, lo);
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult writeSMPUnsafe(uint32_t uc) noexcept {
+  BL_INLINE BLResult write_smp_unsafe(uint32_t uc) noexcept {
     BL_ASSERT(remaining_size() >= 2);
     BL_ASSERT(uc >= 0x10000u && uc <= 0x10FFFFu);
 
     uint32_t hi, lo;
     bl_char_to_surrogate(uc, hi, lo);
 
-    _writeMemU16(_ptr + 0, hi);
-    _writeMemU16(_ptr + 1, lo);
+    _write_mem_u16(_ptr + 0, hi);
+    _write_mem_u16(_ptr + 1, lo);
 
     _ptr += 2;
     return BL_SUCCESS;
@@ -860,8 +840,8 @@ public:
   //! \name Utilities
   //! \{
 
-  static BL_INLINE void _writeMemU16(void* dst, uint32_t value) noexcept {
-    MemOps::writeU16<ByteOrder, Alignment>(dst, value);
+  static BL_INLINE void _write_mem_u16(void* dst, uint32_t value) noexcept {
+    axl::store<BO, Alignment, uint16_t>(dst, uint16_t(value));
   }
 
   //! \}
@@ -871,7 +851,7 @@ public:
 // ==========================
 
 //! UTF32 writer that can be parametrized by `ByteOrder` and `Alignment`.
-template<uint32_t ByteOrder = BL_BYTE_ORDER_NATIVE, uint32_t Alignment = 4>
+template<axl::ByteOrder BO = axl::ByteOrder::kNative, uint32_t Alignment = 4>
 class Utf32Writer {
 public:
   typedef uint32_t CharType;
@@ -901,13 +881,13 @@ public:
     if (BL_UNLIKELY(at_end()))
       return bl_make_error(BL_ERROR_NO_SPACE_LEFT);
 
-    _writeMemU32(_ptr, uc);
+    _write_mem_u32(_ptr, uc);
     _ptr++;
     return BL_SUCCESS;
   }
 
-  static BL_INLINE void _writeMemU32(void* dst, uint32_t value) noexcept {
-    MemOps::writeU32<ByteOrder, Alignment>(dst, value);
+  static BL_INLINE void _write_mem_u32(void* dst, uint32_t value) noexcept {
+    axl::store<BO, Alignment, uint32_t>(dst, value);
   }
 };
 

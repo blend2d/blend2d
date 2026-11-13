@@ -59,16 +59,16 @@ public:
     _slider.setOrientation(Qt::Horizontal);
     _slider.setMinimum(4);
     _slider.setMaximum(2000);
-    _slider.setSliderPosition(10);
+    _slider.setSliderPosition(80);
 
     _canvas.on_render_blend2d = std::bind(&MainWindow::on_render_blend2d, this, std::placeholders::_1);
     _canvas.on_render_qt = std::bind(&MainWindow::on_render_qt, this, std::placeholders::_1);
 
-    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(onRendererChanged(int)));
-    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(onLimitFpsChanged(int)));
-    connect(&_operation_select, SIGNAL(activated(int)), SLOT(onOperationChanged(int)));
-    connect(&_style_select, SIGNAL(activated(int)), SLOT(onStyleChanged(int)));
-    connect(&_slider, SIGNAL(valueChanged(int)), SLOT(onPolySizeChanged(int)));
+    connect(&_renderer_select, SIGNAL(activated(int)), SLOT(on_renderer_changed(int)));
+    connect(&_limit_fps_check, SIGNAL(stateChanged(int)), SLOT(on_limit_fps_changed(int)));
+    connect(&_operation_select, SIGNAL(activated(int)), SLOT(on_operation_changed(int)));
+    connect(&_style_select, SIGNAL(activated(int)), SLOT(on_style_changed(int)));
+    connect(&_slider, SIGNAL(valueChanged(int)), SLOT(on_poly_size_changed(int)));
 
     grid->addWidget(new QLabel("Renderer:"), 0, 0);
     grid->addWidget(&_renderer_select, 0, 1);
@@ -87,31 +87,31 @@ public:
     vBox->addWidget(&_canvas);
     setLayout(vBox);
 
-    connect(&_timer, SIGNAL(timeout()), this, SLOT(onTimer()));
-    connect(new QShortcut(QKeySequence(Qt::Key_P), this), SIGNAL(activated()), SLOT(onToggleAnimate()));
+    connect(&_timer, SIGNAL(timeout()), this, SLOT(on_timer()));
+    connect(new QShortcut(QKeySequence(Qt::Key_P), this), SIGNAL(activated()), SLOT(on_toggle_animate()));
 
-    onInit();
+    init_data();
   }
 
   void showEvent(QShowEvent* event) override { _timer.start(); }
   void hideEvent(QHideEvent* event) override { _timer.stop(); }
 
-  void onInit() {
-    setPolySize(50);
+  void init_data() {
+    set_poly_size(80);
     _limit_fps_check.setChecked(true);
-    _updateTitle();
+    _update_window_title();
   }
 
-  double randomSign() noexcept { return _random.next_double() < 0.5 ? 1.0 : -1.0; }
+  double random_sign() noexcept { return _random.next_double() < 0.5 ? 1.0 : -1.0; }
 
-  Q_SLOT void onToggleAnimate() { _animate = !_animate; }
-  Q_SLOT void onStyleChanged(int index) { _canvas.update_canvas(); }
-  Q_SLOT void onRendererChanged(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt());  }
-  Q_SLOT void onLimitFpsChanged(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
-  Q_SLOT void onOperationChanged(int index) { _op = index; }
-  Q_SLOT void onPolySizeChanged(int value) { setPolySize(size_t(value)); }
+  Q_SLOT void on_toggle_animate() { _animate = !_animate; }
+  Q_SLOT void on_style_changed(int index) { _canvas.update_canvas(); }
+  Q_SLOT void on_renderer_changed(int index) { _canvas.set_renderer_type(_renderer_select.itemData(index).toInt());  }
+  Q_SLOT void on_limit_fps_changed(int value) { _timer.setInterval(value ? 1000 / 120 : 0); }
+  Q_SLOT void on_operation_changed(int index) { _op = index; }
+  Q_SLOT void on_poly_size_changed(int value) { set_poly_size(size_t(value)); }
 
-  Q_SLOT void onTimer() {
+  Q_SLOT void on_timer() {
     if (_animate) {
       double w = _canvas.image_width();
       double h = _canvas.image_height();
@@ -135,7 +135,24 @@ public:
     }
 
     _canvas.update_canvas(true);
-    _updateTitle();
+    _update_window_title();
+  }
+
+  void set_poly_size(size_t size) {
+    double w = _canvas.image_width();
+    double h = _canvas.image_height();
+    size_t prev = _poly.size();
+
+    _poly.resize(size);
+    _step.resize(size);
+
+    while (prev < size) {
+      _poly[prev].reset(_random.next_double() * w,
+                        _random.next_double() * h);
+      _step[prev].reset((_random.next_double() * 0.5 + 0.05) * random_sign(),
+                        (_random.next_double() * 0.5 + 0.05) * random_sign());
+      prev++;
+    }
   }
 
   void on_render_blend2d(BLContext& ctx) noexcept {
@@ -378,26 +395,9 @@ public:
     }
   }
 
-  void setPolySize(size_t size) {
-    double w = _canvas.image_width();
-    double h = _canvas.image_height();
-    size_t prev = _poly.size();
-
-    _poly.resize(size);
-    _step.resize(size);
-
-    while (prev < size) {
-      _poly[prev].reset(_random.next_double() * w,
-                        _random.next_double() * h);
-      _step[prev].reset((_random.next_double() * 0.5 + 0.05) * randomSign(),
-                        (_random.next_double() * 0.5 + 0.05) * randomSign());
-      prev++;
-    }
-  }
-
-  void _updateTitle() {
+  void _update_window_title() {
     char buf[256];
-    snprintf(buf, 256, "Paths [%dx%d] [Size=%zu] [RenderTime=%.2fms FPS=%.1f]",
+    snprintf(buf, 256, "bl_demo_paths [%dx%d] [N=%zu] [RenderTime=%.2fms FPS=%.1f]",
       _canvas.image_width(),
       _canvas.image_height(),
       _poly.size(),

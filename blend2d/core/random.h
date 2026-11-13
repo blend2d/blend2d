@@ -3,8 +3,8 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_RANDOM_H_INCLUDED
-#define BLEND2D_RANDOM_H_INCLUDED
+#ifndef BLEND2D_CORE_RANDOM_H_INCLUDED
+#define BLEND2D_CORE_RANDOM_H_INCLUDED
 
 #include <blend2d/core/api.h>
 
@@ -14,14 +14,14 @@
 //! \name BLRandom - C API
 //! \{
 
-BL_BEGIN_C_DECLS
+BL_EXTERN_C_BEGIN
 
 BL_API BLResult BL_CDECL bl_random_reset(BLRandom* self, uint64_t seed) BL_NOEXCEPT_C;
 BL_API uint32_t BL_CDECL bl_random_next_uint32(BLRandom* self) BL_NOEXCEPT_C;
 BL_API uint64_t BL_CDECL bl_random_next_uint64(BLRandom* self) BL_NOEXCEPT_C;
 BL_API double BL_CDECL bl_random_next_double(BLRandom* self) BL_NOEXCEPT_C;
 
-BL_END_C_DECLS
+BL_EXTERN_C_END
 
 //! \}
 //! \}
@@ -57,11 +57,8 @@ struct BLRandom {
 
   BL_INLINE_NODEBUG BLRandom& operator=(const BLRandom& other) noexcept = default;
 
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool operator==(const BLRandom& other) const noexcept { return  equals(other); }
-
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool operator!=(const BLRandom& other) const noexcept { return !equals(other); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator==(const BLRandom& other) const noexcept { return  equals(other); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator!=(const BLRandom& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -78,8 +75,10 @@ struct BLRandom {
   //! \note It would return true only when its internal state matches `other`'s internal state.
   [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRandom& other) const noexcept {
-    return BLInternal::bool_and(bl_equals(data[0], other.data[0]),
-                                bl_equals(data[1], other.data[1]));
+    return bl::Internal::bool_and(
+      bl_equals(data[0], other.data[0]),
+      bl_equals(data[1], other.data[1])
+    );
   }
 
   //! \}
@@ -107,4 +106,4 @@ struct BLRandom {
 
 //! \}
 
-#endif // BLEND2D_RANDOM_H_INCLUDED
+#endif // BLEND2D_CORE_RANDOM_H_INCLUDED

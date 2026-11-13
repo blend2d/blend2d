@@ -3,13 +3,13 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_PATTERN_H_INCLUDED
-#define BLEND2D_PATTERN_H_INCLUDED
+#ifndef BLEND2D_CORE_PATTERN_H_INCLUDED
+#define BLEND2D_CORE_PATTERN_H_INCLUDED
 
 #include <blend2d/core/geometry.h>
 #include <blend2d/core/image.h>
 #include <blend2d/core/matrix.h>
-#include <blend2d/core/object.h>
+#include <blend2d/core/object_layer.h>
 
 //! \addtogroup bl_styling
 //! \{
@@ -40,19 +40,17 @@ BL_DEFINE_ENUM(BLPatternQuality) {
 //! \{
 
 //! Pattern [C API].
-struct BLPatternCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLPattern)
+struct BLPatternCore BL_INHERITS_FROM(BLObjectCore) {
+  BL_DEFINE_OBJECT(BLPattern, bl::ObjectLayer::ObjectInfo<
+    BL_OBJECT_TYPE_PATTERN,
+    bl::ObjectLayer::ObjectMode::kDyn,
+    bl::ObjectLayer::ObjectLayout::kUnknown>
+  )
 };
 
 //! \cond INTERNAL
 //! Pattern [C API Impl].
-//!
-//! The following properties are stored in BLObjectInfo:
-//!
-//!   - Pattern extend mode is stored in BLObjectInfo's 'b' field.
-//!   - Pattern matrix type is stored in BLObjectInfo's 'c' field.
-struct BLPatternImpl BL_CLASS_INHERITS(BLObjectImpl) {
+struct BLPatternImpl {
   //! Image used by the pattern.
   BLImageCore image;
 
@@ -63,7 +61,7 @@ struct BLPatternImpl BL_CLASS_INHERITS(BLObjectImpl) {
 };
 //! \endcond
 
-BL_BEGIN_C_DECLS
+BL_EXTERN_C_BEGIN
 
 BL_API BLResult BL_CDECL bl_pattern_init(BLPatternCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_pattern_init_move(BLPatternCore* self, BLPatternCore* other) BL_NOEXCEPT_C;
@@ -89,11 +87,13 @@ BL_API BLResult BL_CDECL bl_pattern_set_extend_mode(BLPatternCore* self, BLExten
 
 BL_API BLResult BL_CDECL bl_pattern_get_transform(const BLPatternCore* self, BLMatrix2D* transform_out) BL_NOEXCEPT_C;
 BL_API BLTransformType BL_CDECL bl_pattern_get_transform_type(const BLPatternCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API BLResult BL_CDECL bl_pattern_set_transform(BLPatternCore* self, const BLMatrix2D* transform) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_pattern_reset_transform(BLPatternCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_pattern_apply_transform_op(BLPatternCore* self, BLTransformOp op_type, const void* op_data) BL_NOEXCEPT_C;
 
 BL_API bool BL_CDECL bl_pattern_equals(const BLPatternCore* a, const BLPatternCore* b) BL_NOEXCEPT_C;
 
-BL_END_C_DECLS
+BL_EXTERN_C_END
 
 //! \}
 //! \}
@@ -109,14 +109,11 @@ BL_END_C_DECLS
 class BLPattern final : public BLPatternCore {
 public:
   //! \cond INTERNAL
+  static constexpr uint8_t kDefaultMetaFlags = BLObjectDetail::kMetaFlagD;
 
-  //! Object info values of a default constructed BLPattern.
-  static inline constexpr uint32_t kDefaultSignature =
-    BLObjectInfo::pack_type_with_marker(BL_OBJECT_TYPE_PATTERN) |
-    BLObjectInfo::pack_abcp(0u, BL_EXTEND_MODE_REPEAT) | BL_OBJECT_INFO_D_FLAG;
+  using ExtendModeField    = bl::ObjectLayer::PayloadField<BLExtendMode   , 0x000Fu>; // 4 bits.
+  using TransformTypeField = bl::ObjectLayer::PayloadField<BLTransformType, 0x00F0u>; // 4 bits.
 
-  [[nodiscard]]
-  BL_INLINE_NODEBUG BLPatternImpl* _impl() const noexcept { return static_cast<BLPatternImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
@@ -126,14 +123,14 @@ public:
     bl_pattern_init(this);
 
     // Assume a default constructed BLPattern.
-    BL_ASSUME(_d.info.bits == kDefaultSignature);
+    BL_ASSUME(_d._sso_data[BLObjectDetail::kMetaByteIndex] == kDefaultMetaFlags);
   }
 
   BL_INLINE BLPattern(BLPattern&& other) noexcept {
     bl_pattern_init_move(this, &other);
 
     // Assume a default initialized `other`.
-    BL_ASSUME(other._d.info.bits == kDefaultSignature);
+    BL_ASSUME(other._d._sso_data[BLObjectDetail::kMetaByteIndex] == kDefaultMetaFlags);
   }
 
   BL_INLINE BLPattern(const BLPattern& other) noexcept {
@@ -157,7 +154,7 @@ public:
   }
 
   BL_INLINE ~BLPattern() noexcept {
-    if (BLInternal::object_needs_cleanup(_d.info.bits)) {
+    if (bl::ObjectLayer::requires_destroy(this)) {
       bl_pattern_destroy(this);
     }
   }
@@ -187,7 +184,7 @@ public:
     // Reset operation always succeeds.
     BL_ASSUME(result == BL_SUCCESS);
     // Assume a default constructed BLPattern after reset.
-    BL_ASSUME(_d.info.bits == kDefaultSignature);
+    BL_ASSUME(_d._sso_data[BLObjectDetail::kMetaByteIndex] == kDefaultMetaFlags);
 
     return result;
   }
@@ -226,15 +223,13 @@ public:
   //! \name Accessors
   //! \{
 
-  [[nodiscard]]
-  BL_INLINE BLImage get_image() const noexcept {
+  [[nodiscard]] BL_INLINE BLImage get_image() const noexcept {
     BLImage image_out;
     bl_pattern_get_image(this, &image_out);
     return image_out;
   }
 
-  [[nodiscard]]
-  BL_INLINE BLRectI area() const noexcept {
+  [[nodiscard]] BL_INLINE BLRectI area() const noexcept {
     BLRectI area_out;
     bl_pattern_get_area(this, &area_out);
     return area_out;
@@ -252,22 +247,19 @@ public:
   //! Updates the pattern area rectangle to [0, 0, image.width, image.height].
   BL_INLINE_NODEBUG BLResult reset_area() noexcept { return bl_pattern_reset_area(this); }
 
-  [[nodiscard]]
-  BL_INLINE_NODEBUG BLExtendMode extend_mode() const noexcept {
-    return BLExtendMode(_d.b_field());
+  [[nodiscard]] BL_INLINE_NODEBUG BLExtendMode extend_mode() const noexcept {
+    return bl::ObjectLayer::get_payload_field<ExtendModeField>(this);
   }
 
   BL_INLINE BLResult set_extend_mode(BLExtendMode extend_mode) noexcept {
-    if (BL_UNLIKELY(extend_mode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
+    if (BL_UNLIKELY(extend_mode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE)) {
       return bl_make_error(BL_ERROR_INVALID_VALUE);
-
-    _d.info.set_b_field(uint32_t(extend_mode));
-    return BL_SUCCESS;
+    }
+    return bl::ObjectLayer::set_payload_field<ExtendModeField>(this, extend_mode);
   }
 
   BL_INLINE BLResult reset_extend_mode() noexcept {
-    _d.info.set_b_field(uint32_t(BL_EXTEND_MODE_REPEAT));
-    return BL_SUCCESS;
+    return bl::ObjectLayer::set_payload_field<ExtendModeField>(this, BL_EXTEND_MODE_REPEAT);
   }
 
   //! \}
@@ -275,20 +267,17 @@ public:
   //! \name Transformations
   //! \{
 
-  [[nodiscard]]
-  BL_INLINE BLMatrix2D transform() const noexcept {
+  [[nodiscard]] BL_INLINE BLMatrix2D transform() const noexcept {
     BLMatrix2D transform_out;
     bl_pattern_get_transform(this, &transform_out);
     return transform_out;
   }
 
-  [[nodiscard]]
-  BL_INLINE BLTransformType transform_type() const noexcept {
-    return BLTransformType(_d.c_field());
+  [[nodiscard]] BL_INLINE_NODEBUG BLTransformType transform_type() const noexcept {
+    return bl::ObjectLayer::get_payload_field<TransformTypeField>(this);
   }
 
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool has_transform() const noexcept {
+  [[nodiscard]] BL_INLINE_NODEBUG bool has_transform() const noexcept {
     return transform_type() != BL_TRANSFORM_TYPE_IDENTITY;
   }
 
@@ -306,8 +295,8 @@ public:
   }
   //! \endcond
 
-  BL_INLINE BLResult set_transform(const BLMatrix2D& transform) noexcept { return _apply_transform_op(BL_TRANSFORM_OP_ASSIGN, &transform); }
-  BL_INLINE BLResult reset_transform() noexcept { return _apply_transform_op(BL_TRANSFORM_OP_RESET, nullptr); }
+  BL_INLINE BLResult set_transform(const BLMatrix2D& transform) noexcept { return bl_pattern_set_transform(this, &transform); }
+  BL_INLINE BLResult reset_transform() noexcept { return bl_pattern_reset_transform(this); }
 
   BL_INLINE BLResult translate(double x, double y) noexcept { return _apply_transform_op_v(BL_TRANSFORM_OP_TRANSLATE, x, y); }
   BL_INLINE BLResult translate(const BLPointI& p) noexcept { return _apply_transform_op_v(BL_TRANSFORM_OP_TRANSLATE, p.x, p.y); }
@@ -347,4 +336,4 @@ public:
 
 //! \}
 
-#endif // BLEND2D_PATTERN_H_INCLUDED
+#endif // BLEND2D_CORE_PATTERN_H_INCLUDED

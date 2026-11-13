@@ -3,14 +3,14 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_IMAGE_H_INCLUDED
-#define BLEND2D_IMAGE_H_INCLUDED
+#ifndef BLEND2D_CORE_IMAGE_H_INCLUDED
+#define BLEND2D_CORE_IMAGE_H_INCLUDED
 
 #include <blend2d/core/array.h>
 #include <blend2d/core/format.h>
 #include <blend2d/core/geometry.h>
-#include <blend2d/core/imagecodec.h>
-#include <blend2d/core/object.h>
+#include <blend2d/core/image_codec.h>
+#include <blend2d/core/object_layer.h>
 
 //! \addtogroup bl_imaging
 //! \{
@@ -117,14 +117,17 @@ struct BLImageInfo {
 //! \{
 
 //! 2D raster image [C API].
-struct BLImageCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLImage)
+struct BLImageCore BL_INHERITS_FROM(BLObjectCore) {
+  BL_DEFINE_OBJECT(BLImage, bl::ObjectLayer::ObjectInfo<
+    BL_OBJECT_TYPE_IMAGE,
+    bl::ObjectLayer::ObjectMode::kDyn,
+    bl::ObjectLayer::ObjectLayout::kUnknown>
+  )
 };
 
 //! \cond INTERNAL
 //! 2D raster image [C API Impl].
-struct BLImageImpl BL_CLASS_INHERITS(BLObjectImpl) {
+struct BLImageImpl {
   //! Pixel data.
   void* pixel_data;
   //! Image stride.
@@ -141,32 +144,39 @@ struct BLImageImpl BL_CLASS_INHERITS(BLObjectImpl) {
   uint8_t reserved[4];
 };
 //! \endcond
-
-BL_BEGIN_C_DECLS
+BL_EXTERN_C_BEGIN
 
 BL_API BLResult BL_CDECL bl_image_init(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_init_move(BLImageCore* self, BLImageCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_init_weak(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_init_as(BLImageCore* self, int w, int h, BLFormat format) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_image_init_as_from_data(BLImageCore* self, int w, int h, BLFormat format, void* pixel_data, intptr_t stride, BLDataAccessFlags access_flags, BLDestroyExternalDataFunc destroy_func, void* user_data) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_image_init_as_from_data(BLImageCore* self, int w, int h, BLFormat format, void* pixel_data, intptr_t stride, BLDataAccessMode access_mode, BLDestroyExternalDataFunc destroy_func, void* user_data) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_destroy(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_reset(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_assign_move(BLImageCore* self, BLImageCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_assign_weak(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_assign_deep(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_create(BLImageCore* self, int w, int h, BLFormat format) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_image_create_from_data(BLImageCore* self, int w, int h, BLFormat format, void* pixel_data, intptr_t stride, BLDataAccessFlags access_flags, BLDestroyExternalDataFunc destroy_func, void* user_data) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_image_create_from_data(BLImageCore* self, int w, int h, BLFormat format, void* pixel_data, intptr_t stride, BLDataAccessMode access_mode, BLDestroyExternalDataFunc destroy_func, void* user_data) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_get_data(const BLImageCore* self, BLImageData* data_out) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_make_mutable(BLImageCore* self, BLImageData* data_out) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_convert(BLImageCore* self, BLFormat format) BL_NOEXCEPT_C;
 BL_API bool BL_CDECL bl_image_equals(const BLImageCore* a, const BLImageCore* b) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL bl_image_scale(BLImageCore* dst, const BLImageCore* src, const BLSizeI* size, BLImageScaleFilter filter) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_image_read_from_file(BLImageCore* self, const char* file_name, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_image_read_from_data(BLImageCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_image_write_to_file(const BLImageCore* self, const char* file_name, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL bl_image_write_to_data(const BLImageCore* self, BLArrayCore* dst, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
 
-BL_END_C_DECLS
+#if !defined(BL_BUILD_NO_CODECS)
+BL_API BLResult BL_CDECL bl_image_write_to_data(const BLImageCore* self, BLArrayCore* dst, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_image_read_from_data(BLImageCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_image_read_from_data_with_info(BLImageCore* self, const void* data, size_t size, const BLArrayCore* codecs, BLImageInfo* info_out) BL_NOEXCEPT_C;
+#endif
+
+#if !defined(BL_BUILD_NO_CODECS) && !defined(BL_BUILD_NO_FILESYSTEM)
+BL_API BLResult BL_CDECL bl_image_read_from_file(BLImageCore* self, const char* file_name, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_image_read_from_file_with_info(BLImageCore* self, const char* file_name, const BLArrayCore* codecs, BLImageInfo* info_out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL bl_image_write_to_file(const BLImageCore* self, const char* file_name, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
+#endif // !BL_BUILD_NO_CODECS && !BL_BUILD_NO_FILESYSTEM
+
+BL_EXTERN_C_END
 
 //! \}
 //! \}
@@ -194,12 +204,7 @@ public:
   //! \name Internals
   //! \{
 
-  //! Object info values of a default constructed BLImage.
-  static inline constexpr uint32_t kDefaultSignature =
-    BLObjectInfo::pack_type_with_marker(BL_OBJECT_TYPE_IMAGE) | BL_OBJECT_INFO_D_FLAG;
-
-  [[nodiscard]]
-  BL_INLINE_NODEBUG BLImageImpl* _impl() const noexcept { return static_cast<BLImageImpl*>(_d.impl); }
+  static constexpr uint8_t kDefaultMetaFlags = BLObjectDetail::kMetaFlagD;
 
   //! \}
   //! \endcond
@@ -212,7 +217,7 @@ public:
     bl_image_init(this);
 
     // Assume a default constructed BLImage.
-    BL_ASSUME(_d.info.bits == kDefaultSignature);
+    BL_ASSUME(_d._sso_data[BLObjectDetail::kMetaByteIndex] == kDefaultMetaFlags);
   }
 
   //! Move constructor moves `other` image this this image and sets `other` image to a default constructed state.
@@ -223,7 +228,7 @@ public:
     bl_image_init_move(this, &other);
 
     // Assume a default initialized `other`.
-    BL_ASSUME(other._d.info.bits == kDefaultSignature);
+    BL_ASSUME(other._d._sso_data[BLObjectDetail::kMetaByteIndex] == kDefaultMetaFlags);
   }
 
   //! Copy constructor creates a weak copy of `other` image by incrementing the reference count of the underlying
@@ -248,7 +253,7 @@ public:
   //! The pixel data held by the image will only be deallocated if the reference count of the underlying representation
   //! gets decremented to zero.
   BL_INLINE_NODEBUG ~BLImage() {
-    if (BLInternal::object_needs_cleanup(_d.info.bits)) {
+    if (bl::ObjectLayer::requires_destroy(this)) {
       bl_image_destroy(this);
     }
   }
@@ -270,12 +275,9 @@ public:
   BL_INLINE_NODEBUG BLImage& operator=(BLImage&& other) noexcept { bl_image_assign_move(this, &other); return *this; }
 
   //! Tests whether this image is equal with `other` image , see \ref equals() for more details about image equality.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool operator==(const BLImage& other) const noexcept { return  equals(other); }
-
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator==(const BLImage& other) const noexcept { return  equals(other); }
   //! Tests whether this image is not equal with `other` image , see \ref equals() for more details about image equality.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool operator!=(const BLImage& other) const noexcept { return !equals(other); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator!=(const BLImage& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -292,7 +294,7 @@ public:
     // Reset operation always succeeds.
     BL_ASSUME(result == BL_SUCCESS);
     // Assume a default constructed BLImage after reset.
-    BL_ASSUME(_d.info.bits == kDefaultSignature);
+    BL_ASSUME(_d._sso_data[BLObjectDetail::kMetaByteIndex] == kDefaultMetaFlags);
 
     return result;
   }
@@ -313,15 +315,13 @@ public:
   //!
   //! \note You can use `operator bool()`, which does the reverse of \ref is_empty() - it checks whether the image is
   //! actually holding pixel data.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool is_empty() const noexcept { return format() == BL_FORMAT_NONE; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool is_empty() const noexcept { return format() == BL_FORMAT_NONE; }
 
   //! Tests whether the image is equal to `other` image.
   //!
   //! Images are equal when the size, pixel format, and pixel data match. This means that this operation could be
   //! very expensive if the images are large.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG bool equals(const BLImage& other) const noexcept { return bl_image_equals(this, &other); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool equals(const BLImage& other) const noexcept { return bl_image_equals(this, &other); }
 
   //! \}
 
@@ -344,7 +344,7 @@ public:
   //! allocated by other libraries such as AGG, Cairo, Qt, Windows API (DIBSECTION), etc.. The only thing that the user
   //! should pay extra attention to is the passed pixel `format` and `stride`.
   //!
-  //! If the image data you are passing is read-only, pass \ref BL_DATA_ACCESS_READ in `access_flags`, in that case
+  //! If the image data you are passing is read-only, pass \ref BL_DATA_ACCESS_MODE_RO in `access_mode`, in that case
   //! Blend2D would never attempt to modify the passed data and would create a copy instead if such image gets modified.
   //!
   //! Additionally, if you would like to get notified about the destruction of the image (and thus Blend2D not holding
@@ -352,9 +352,26 @@ public:
   BL_INLINE_NODEBUG BLResult create_from_data(
       int w, int h, BLFormat format,
       void* pixel_data, intptr_t stride,
-      BLDataAccessFlags access_flags = BL_DATA_ACCESS_RW,
-      BLDestroyExternalDataFunc destroy_func = nullptr, void* user_data = nullptr) noexcept {
-    return bl_image_create_from_data(this, w, h, format, pixel_data, stride, access_flags, destroy_func, user_data);
+      BLDataAccessMode access_mode,
+      BLDestroyExternalDataFunc destroy_func = nullptr, void* user_data = nullptr
+  ) noexcept {
+    return bl_image_create_from_data(this, w, h, format, pixel_data, stride, access_mode, destroy_func, user_data);
+  }
+
+  BL_INLINE_NODEBUG BLResult create_from_data_const(
+      int w, int h, BLFormat format,
+      const void* pixel_data, intptr_t stride,
+      BLDestroyExternalDataFunc destroy_func = nullptr, void* user_data = nullptr
+  ) noexcept {
+    return bl_image_create_from_data(this, w, h, format, const_cast<void*>(pixel_data), stride, BL_DATA_ACCESS_MODE_RO, destroy_func, user_data);
+  }
+
+  BL_INLINE_NODEBUG BLResult create_from_data_mut(
+      int w, int h, BLFormat format,
+      void* pixel_data, intptr_t stride,
+      BLDestroyExternalDataFunc destroy_func = nullptr, void* user_data = nullptr
+  ) noexcept {
+    return bl_image_create_from_data(this, w, h, format, pixel_data, stride, BL_DATA_ACCESS_MODE_RW, destroy_func, user_data);
   }
 
   //! \}
@@ -363,26 +380,23 @@ public:
   //! \{
 
   //! Returns image width (in pixels).
-  [[nodiscard]]
-  BL_INLINE_NODEBUG int width() const noexcept { return _impl()->size.w; }
-
+  [[nodiscard]] BL_INLINE_NODEBUG int width() const noexcept { return _impl()->size.w; }
   //! Returns image height (in pixels).
-  [[nodiscard]]
-  BL_INLINE_NODEBUG int height() const noexcept { return _impl()->size.h; }
+  [[nodiscard]] BL_INLINE_NODEBUG int height() const noexcept { return _impl()->size.h; }
 
   //! Returns image size (in pixels).
-  [[nodiscard]]
-  BL_INLINE_NODEBUG BLSizeI size() const noexcept { return _impl()->size; }
+  [[nodiscard]] BL_INLINE_NODEBUG BLSizeI size() const noexcept { return _impl()->size; }
 
   //! Returns image format, see \ref BLFormat.
   //!
   //! \note When an image is \ref is_empty(), the pixel format returned is always \ref BL_FORMAT_NONE.
-  [[nodiscard]]
-  BL_INLINE_NODEBUG BLFormat format() const noexcept { return BLFormat(_impl()->format); }
+  [[nodiscard]] BL_INLINE_NODEBUG BLFormat format() const noexcept { return BLFormat(_impl()->format); }
 
   //! Returns image depth (in bits).
-  [[nodiscard]]
-  BL_INLINE_NODEBUG uint32_t depth() const noexcept { return _impl()->depth; }
+  [[nodiscard]] BL_INLINE_NODEBUG uint32_t depth() const noexcept { return _impl()->depth; }
+
+  //! Returns image stride (in bytes).
+  [[nodiscard]] BL_INLINE_NODEBUG intptr_t stride() const noexcept { return _impl()->stride; }
 
   //! Returns immutable in `data_out`, which contains pixel pointer, stride, and other image properties like size and
   //! pixel format.
@@ -410,27 +424,20 @@ public:
     return bl_image_convert(this, format);
   }
 
+  //! Scales the `src` image to the specified `size` by using `filter` and writes the scaled image to `dst`.
+  //!
+  //! If the destination image `dst` doesn't match `size` and the source pixel format the underlying image data will
+  //! be re-created.
+  static BL_INLINE_NODEBUG BLResult scale(BLImage& dst, const BLImage& src, const BLSizeI& size, BLImageScaleFilter filter) noexcept {
+    return bl_image_scale(&dst, &src, &size, filter);
+  }
+
   //! \}
 
   //! \name Image IO
   //! \{
 
-  //! Reads an image from a file specified by `file_name`.
-  //!
-  //! Image reader will automatically detect the image format by checking whether it's supported by available image
-  //! codecs, which can be retrieved by \ref BLImageCodec::built_in_codecs().
-  BL_INLINE_NODEBUG BLResult read_from_file(const char* file_name) noexcept {
-    return bl_image_read_from_file(this, file_name, nullptr);
-  }
-
-  //! Reads an image from a file specified by `file_name` by using image codecs passed via `codecs` parameter.
-  //!
-  //! Image reader will automatically detect the image format by checking whether it's supported by the passed image
-  //! `codecs` - only codecs passed in will be considered.
-  BL_INLINE_NODEBUG BLResult read_from_file(const char* file_name, const BLArray<BLImageCodec>& codecs) noexcept {
-    return bl_image_read_from_file(this, file_name, &codecs);
-  }
-
+#if !defined(BL_BUILD_NO_CODECS)
   //! Reads an image from an existing byte-array starting at `data` and having `size` bytes.
   //!
   //! Image reader will automatically detect the image format by checking whether it's supported by available image
@@ -448,36 +455,74 @@ public:
     return bl_image_read_from_data(this, data, size, &codecs);
   }
 
-  //! Reads an image from an existing byte-buffer passed via `array`.
+  //! Like `read_from_data()`, but fills image information into `info_out` when successful.
+  BL_INLINE_NODEBUG BLResult read_from_data_with_info(const void* data, size_t size, BLImageInfo* info_out) noexcept {
+    return bl_image_read_from_data_with_info(this, data, size, nullptr, info_out);
+  }
+
+  //! Like `read_from_data()`, but fills image information into `info_out` when successful.
+  BL_INLINE_NODEBUG BLResult read_from_data_with_info(const void* data, size_t size, const BLArray<BLImageCodec>& codecs, BLImageInfo* info_out) noexcept {
+    return bl_image_read_from_data_with_info(this, data, size, &codecs, info_out);
+  }
+
+  //! Reads an image from an existing byte-view passed via `data` span or compatible (such as \ref BLArray<uint8_t>).
   //!
   //! Image reader will automatically detect the image format by checking whether it's supported by available image
   //! codecs, which can be retrieved by \ref BLImageCodec::built_in_codecs().
-  BL_INLINE_NODEBUG BLResult read_from_data(const BLArray<uint8_t>& array) noexcept {
-    return bl_image_read_from_data(this, array.data(), array.size(), nullptr);
+  BL_INLINE_NODEBUG BLResult read_from_data(BLSpanConvertible<const uint8_t> auto&& data) noexcept {
+    return bl_image_read_from_data(this, data.data(), data.size(), nullptr);
   }
 
-  //! Reads an image from an existing byte-buffer passed via `array` by using image codecs passed via `codecs` parameter.
+  //! Reads an image from an existing byte-view passed via `data` span or compatible (such as \ref BLArray<uint8_t>) and
+  //! use image codecs passed via `codecs` parameter to select codecs from.
   //!
   //! Image reader will automatically detect the image format by checking whether it's supported by the passed image
   //! `codecs` - only codecs passed in will be considered.
-  BL_INLINE_NODEBUG BLResult read_from_data(const BLArray<uint8_t>& array, const BLArray<BLImageCodec>& codecs) noexcept {
-    return bl_image_read_from_data(this, array.data(), array.size(), &codecs);
+  BL_INLINE_NODEBUG BLResult read_from_data(BLSpanConvertible<const uint8_t> auto&& data, const BLArray<BLImageCodec>& codecs) noexcept {
+    return bl_image_read_from_data(this, data.data(), data.size(), &codecs);
   }
 
-  //! Reads an image from an existing byte-view passed via `view`.
+  //! Like `read_from_data()`, but fills image information into `info_out` when successful.
+  BL_INLINE_NODEBUG BLResult read_from_data_with_info(BLSpanConvertible<const uint8_t> auto&& data, BLImageInfo* info_out) noexcept {
+    return bl_image_read_from_data_with_info(this, data.data(), data.size(), nullptr, info_out);
+  }
+
+  //! Like `read_from_data()`, but fills image information into `info_out` when successful.
+  BL_INLINE_NODEBUG BLResult read_from_data(BLSpanConvertible<const uint8_t> auto&& data, const BLArray<BLImageCodec>& codecs, BLImageInfo* info_out) noexcept {
+    return bl_image_read_from_data_with_info(this, data.data(), data.size(), &codecs, info_out);
+  }
+
+  //! Writes an encoded image to a buffer `dst` using the specified image `codec` to encode the image.
+  BL_INLINE_NODEBUG BLResult write_to_data(BLArray<uint8_t>& dst, const BLImageCodec& codec) const noexcept {
+    return bl_image_write_to_data(this, &dst, reinterpret_cast<const BLImageCodecCore*>(&codec));
+  }
+#endif // !BL_BUILD_NO_CODECS
+
+#if !defined(BL_BUILD_NO_CODECS) && !defined(BL_BUILD_NO_FILESYSTEM)
+  //! Reads an image from a file specified by `file_name`.
   //!
   //! Image reader will automatically detect the image format by checking whether it's supported by available image
   //! codecs, which can be retrieved by \ref BLImageCodec::built_in_codecs().
-  BL_INLINE_NODEBUG BLResult read_from_data(const BLArrayView<uint8_t>& view) noexcept {
-    return bl_image_read_from_data(this, view.data, view.size, nullptr);
+  BL_INLINE_NODEBUG BLResult read_from_file(const char* file_name) noexcept {
+    return bl_image_read_from_file(this, file_name, nullptr);
   }
 
-  //! Reads an image from an existing byte-view passed via `view` by using image codecs passed via `codecs` parameter.
+  //! Reads an image from a file specified by `file_name` by using image codecs passed via `codecs` parameter.
   //!
   //! Image reader will automatically detect the image format by checking whether it's supported by the passed image
   //! `codecs` - only codecs passed in will be considered.
-  BL_INLINE_NODEBUG BLResult read_from_data(const BLArrayView<uint8_t>& view, const BLArray<BLImageCodec>& codecs) noexcept {
-    return bl_image_read_from_data(this, view.data, view.size, &codecs);
+  BL_INLINE_NODEBUG BLResult read_from_file(const char* file_name, const BLArray<BLImageCodec>& codecs) noexcept {
+    return bl_image_read_from_file(this, file_name, &codecs);
+  }
+
+  //! Like `read_from_file()`, but fills image information into `info_out` when successful.
+  BL_INLINE_NODEBUG BLResult read_from_file_with_info(const char* file_name, BLImageInfo* info_out) noexcept {
+    return bl_image_read_from_file_with_info(this, file_name, nullptr, info_out);
+  }
+
+  //! Like `read_from_file()`, but fills image information into `info_out` when successful.
+  BL_INLINE_NODEBUG BLResult read_from_file_with_info(const char* file_name, const BLArray<BLImageCodec>& codecs, BLImageInfo* info_out) noexcept {
+    return bl_image_read_from_file_with_info(this, file_name, &codecs, info_out);
   }
 
   //! Writes an encoded image to a file specified by `file_name`.
@@ -491,21 +536,9 @@ public:
   BL_INLINE_NODEBUG BLResult write_to_file(const char* file_name, const BLImageCodec& codec) const noexcept {
     return bl_image_write_to_file(this, file_name, reinterpret_cast<const BLImageCodecCore*>(&codec));
   }
-
-  //! Writes an encoded image to a buffer `dst` using the specified image `codec` to encode the image.
-  BL_INLINE_NODEBUG BLResult write_to_data(BLArray<uint8_t>& dst, const BLImageCodec& codec) const noexcept {
-    return bl_image_write_to_data(this, &dst, reinterpret_cast<const BLImageCodecCore*>(&codec));
-  }
+#endif // !BL_BUILD_NO_CODECS && !BL_BUILD_NO_FILESYSTEM
 
   //! \}
-
-  //! Scales the `src` image to the specified `size` by using `filter` and writes the scaled image to `dst`.
-  //!
-  //! If the destination image `dst` doesn't match `size` and the source pixel format the underlying image data will
-  //! be re-created.
-  static BL_INLINE_NODEBUG BLResult scale(BLImage& dst, const BLImage& src, const BLSizeI& size, BLImageScaleFilter filter) noexcept {
-    return bl_image_scale(&dst, &src, &size, filter);
-  }
 };
 
 #endif
@@ -513,4 +546,4 @@ public:
 
 //! \}
 
-#endif // BLEND2D_IMAGE_H_INCLUDED
+#endif // BLEND2D_CORE_IMAGE_H_INCLUDED

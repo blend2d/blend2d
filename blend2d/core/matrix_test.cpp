@@ -3,44 +3,44 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/core/api-build_test_p.h>
+#include <blend2d/core/api_build_test_p.h>
 #if defined(BL_TEST)
 
+#include <blend2d/axl/math_p.h>
 #include <blend2d/core/matrix_p.h>
 #include <blend2d/core/runtime_p.h>
 #include <blend2d/simd/simd_p.h>
-#include <blend2d/support/math_p.h>
 
 // BLTransform - Tests
 // ===================
 
-namespace BLTransformTests {
+namespace bl::TransformTests {
 
-UNIT(matrix, BL_TEST_GROUP_GEOMETRY_UTILITIES) {
-  INFO("Testing matrix types");
-  {
-    BLMatrix2D m;
+TEST_CASE(core_transform_constructors) {
+  BLMatrix2D m;
 
-    m = BLMatrix2D::make_identity();
-    EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_IDENTITY);
+  m = BLMatrix2D::make_identity();
+  EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_IDENTITY);
 
-    m = BLMatrix2D::make_translation(1.0, 2.0);
-    EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_TRANSLATE);
+  m = BLMatrix2D::make_translation(1.0, 2.0);
+  EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_TRANSLATE);
 
-    m = BLMatrix2D::make_scaling(2.0, 2.0);
-    EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_SCALE);
+  m = BLMatrix2D::make_scaling(2.0, 2.0);
+  EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_SCALE);
 
-    m.m10 = 3.0;
-    EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_AFFINE);
+  m.m10 = 3.0;
+  EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_AFFINE);
 
-    m.reset(0.0, 1.0, 1.0, 0.0, 0.0, 0.0);
-    EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_SWAP);
+  m.reset(0.0, 1.0, 1.0, 0.0, 0.0, 0.0);
+  EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_SWAP);
 
-    m.reset(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-    EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_INVALID);
-  }
+  m.reset(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  EXPECT_EQ(m.type(), BL_TRANSFORM_TYPE_INVALID);
+}
 
-  INFO("Testing whether special-case transformations match matrix multiplication");
+TEST_CASE(core_transform_ops) {
+
+  TEST_LOG("Testing whether special-case transformations match matrix multiplication");
   {
     enum BL_TEST_MATRIX : uint32_t {
       BL_TEST_MATRIX_IDENTITY,
@@ -48,12 +48,14 @@ UNIT(matrix, BL_TEST_GROUP_GEOMETRY_UTILITIES) {
       BL_TEST_MATRIX_SCALE,
       BL_TEST_MATRIX_SKEW,
       BL_TEST_MATRIX_ROTATE,
+      BL_TEST_MATRIX_ROTATE_PT,
       BL_TEST_MATRIX_COUNT
     };
 
     static const BLPoint pt_offset(128.0, 64.0);
     static const BLPoint pt_scale(1.5, 2.0);
     static const BLPoint pt_skew(1.5, 2.0);
+    static const BLPoint pt_rotate(100.4, 299.1);
     static const double angle = 0.9;
 
     auto test_matrix_name = [](uint32_t type) noexcept -> const char* {
@@ -63,6 +65,7 @@ UNIT(matrix, BL_TEST_GROUP_GEOMETRY_UTILITIES) {
         case BL_TEST_MATRIX_SCALE    : return "Scale";
         case BL_TEST_MATRIX_SKEW     : return "Skew";
         case BL_TEST_MATRIX_ROTATE   : return "Rotate";
+        case BL_TEST_MATRIX_ROTATE_PT: return "RotatePt";
         default: return "Unknown";
       }
     };
@@ -73,6 +76,7 @@ UNIT(matrix, BL_TEST_GROUP_GEOMETRY_UTILITIES) {
         case BL_TEST_MATRIX_SCALE    : return BLMatrix2D::make_scaling(pt_scale);
         case BL_TEST_MATRIX_SKEW     : return BLMatrix2D::make_skewing(pt_skew);
         case BL_TEST_MATRIX_ROTATE   : return BLMatrix2D::make_rotation(angle);
+        case BL_TEST_MATRIX_ROTATE_PT: return BLMatrix2D::make_rotation(angle, pt_rotate);
 
         default:
           return BLMatrix2D::make_identity();
@@ -140,26 +144,41 @@ UNIT(matrix, BL_TEST_GROUP_GEOMETRY_UTILITIES) {
               else
                 n.post_rotate(angle);
               break;
+
+            case BL_TEST_MATRIX_ROTATE_PT:
+              if (!post)
+                n.rotate(angle, pt_rotate);
+              else
+                n.post_rotate(angle, pt_rotate);
+              break;
           }
 
-          if (!compare(m, n)) {
-            INFO("Matrices don't match [%s x %s]\n", test_matrix_name(a_type), test_matrix_name(b_type));
-            INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", a.m00, a.m01, b.m00, b.m01);
-            INFO("  A [% 3.14f | % 3.14f]    B [% 3.14f | % 3.14f]\n", a.m10, a.m11, b.m10, b.m11);
-            INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", a.m20, a.m21, b.m20, b.m21);
-            INFO("\n");
-            INFO("Operation: %s\n", post ? "M = A * B" : "M = B * A");
-            INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", m.m00, m.m01, n.m00, n.m01);
-            INFO("  M [% 3.14f | % 3.14f] != N [% 3.14f | % 3.14f]\n", m.m10, m.m11, n.m10, n.m11);
-            INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", m.m20, m.m21, n.m20, n.m21);
-            EXPECT_TRUE(false);
-          }
+          EXPECT_TRUE(compare(m, n)).message(
+            "Matrices don't match [%s x %s]\n"
+            "    [% 20.14f | % 20.14f]      [% 20.14f | % 20.14f]\n"
+            "  A [% 20.14f | % 20.14f]    B [% 20.14f | % 20.14f]\n"
+            "    [% 20.14f | % 20.14f]      [% 20.14f | % 20.14f]\n"
+            "\n"
+            "Operation: %s\n"
+            "    [% 20.14f | % 20.14f]      [% 20.14f | % 20.14f]\n"
+            "  M [% 20.14f | % 20.14f] != N [% 20.14f | % 20.14f]\n"
+            "    [% 20.14f | % 20.14f]      [% 20.14f | % 20.14f]\n",
+            test_matrix_name(a_type),
+            test_matrix_name(b_type),
+            a.m00, a.m01, b.m00, b.m01,
+            a.m10, a.m11, b.m10, b.m11,
+            a.m20, a.m21, b.m20, b.m21,
+            post ? "M = A * B" : "M = B * A",
+            m.m00, m.m01, n.m00, n.m01,
+            m.m10, m.m11, n.m10, n.m11,
+            m.m20, m.m21, n.m20, n.m21
+          );
         }
       }
     }
   }
 }
 
-} // {BLTransformTests}
+} // {bl::TransformTests}
 
 #endif // BL_TEST

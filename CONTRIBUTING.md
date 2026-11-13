@@ -68,10 +68,10 @@ If you plan to contribute to Blend2D make sure you follow the guidelines describ
 
 ### Source Files
 
-* Source files contain a header, which contains a project name `[Blend2D]`, description, and license that refers to `LICENSE.md` file (when you are creating a new file just copy the header from any other file)
+* Source files contain a header, which contains a project name `[blend2d]`, description, and license that refers to `LICENSE.md` file (when you are creating a new file just copy the header from any other file)
 * Source files that include other Blend2D headers use relative paths starting with `./` or `../`
 * Header guard format is `BLEND2D_FILE_H` for root headers and `BLEND2D_PATH_FILE_H` for headers in a subdirectory
-* Source files (.cpp) must first include `api-build_p.h` and then other headers
+* Source files (.cpp) must first include `api_build_p.h` and then other headers
 * Source files that use compiler intrinsics (SSE, AVX, NEON) must have the following suffix:
   * X86/X64
     * `*_sse2.cpp`         - SSE2
@@ -80,8 +80,7 @@ If you plan to contribute to Blend2D make sure you follow the guidelines describ
     * `*_sse4_1.cpp`       - SSE4.1
     * `*_sse4_2.cpp`       - SSE4.2 + POPCNT + PCLMULQDQ
     * `*_avx.cpp`          - AVX
-    * `*_avx2.cpp`         - AVX2   + POPCNT + BMI + BMI2
-    * `*_avx2fma.cpp`      - AVX2   + POPCNT + BMI + BMI2 + FMA
+    * `*_avx2.cpp`         - AVX2   + POPCNT + BMI + BMI2 + FMA
     * `*_avx512.cpp`       - AVX512 + POPCNT + BMI + BMI2
   * ARM/AArch64
     * `*_asimd.cpp`        - ASIMD
