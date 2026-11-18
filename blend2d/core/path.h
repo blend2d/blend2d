@@ -320,7 +320,7 @@ BL_EXTERN_C_END
 #ifdef __cplusplus
 
 //! 2D vector path [C++ API].
-class BLPath final : public BLPathCore {
+class BLPath /* final */ : public BLPathCore {
 public:
   //! \name Path Segments
   //! \{
@@ -1314,6 +1314,7 @@ static BL_INLINE_NODEBUG T load_weight(const void* p) noexcept {
 //!
 //!     case BL_PATH_CMD_CLOSE:
 //!       printf("Close\n");
+//!       it.advance<BL_PATH_CMD_CLOSE>();
 //!       break;
 //!
 //!     // Should never happen unless path data was corrupted by user, you can
@@ -1427,6 +1428,19 @@ public:
 
   //! Returns a vertex at the given `index`. Similar to `vertex_ptr()`, but the index is already applied.
   BL_INLINE_NODEBUG BLPoint vertex(auto index) const noexcept { return _vertex_ptr[index]; }
+
+  //! Returns the number of vertex of the command the iterator points to at the moment.
+  BL_INLINE_NODEBUG size_t vertex_count() const noexcept {
+    return (command()>>2) & 0x03;
+  }
+
+  //! Advances both control data pointer and vertex pointer.
+  BL_INLINE_NODEBUG void advance() noexcept {
+    advance_vertex_and_control(
+      vertex_count(),
+      command()!=BL_PATH_CMD_CONIC ? 1 : bl::PathDetail::PathAdvance<BL_PATH_CMD_CONIC>::kControlSize
+    );
+  }
 
   //! Returns conic weight.
   //!
